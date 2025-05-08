@@ -1,0 +1,28 @@
+4. Para fazer atualizações futuras:
+Sempre que modificar seu projeto, execute estes comandos:
+
+bash
+git add .
+git commit -m "Descrição das alterações"
+git push origin main
+As atualizações podem levar 1-2 minutos para aparecerem no site.
+
+5. Dicas importantes:
+Seu arquivo principal deve se chamar index.html (renomeie seu MERCADO SIMPLES.html para index.html se necessário)
+
+Verifique se todos os arquivos estão na raiz do repositório
+
+Problemas comuns:
+
+Se aparecer 404, espere mais alguns minutos
+
+Verifique o console do navegador (F12) se algo não carregar
+
+Confira se o caminho dos arquivos está correto
+
+Como renomear seu arquivo principal (se necessário):
+bash
+git mv "MERCADO SIMPLES.html" index.html
+git commit -m "Renomeando arquivo principal para index.html"
+git push origin main
+Seu site já deve estar no ar! 🚀 Qualquer problema, me avise que te ajudo a resolver.
