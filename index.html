@@ -367,6 +367,10 @@
             right: 65px;
         }
         
+        #analises-btn {
+            right: 115px;
+        }
+        
         #fullscreen-exit-btn {
             right: 65px;
             display: none;
@@ -456,6 +460,10 @@
             
             #fullscreen-btn {
                 right: 58px;
+            }
+            
+            #analises-btn {
+                right: 104px;
             }
             
             #fullscreen-exit-btn {
@@ -615,7 +623,6 @@ Nas commodities, o petróleo avança forte: o Brent sobe +1,24%, a US$ 63,62, e 
 Já o minério de ferro cede -0,57% na bolsa de Dalian, enquanto o Bitcoin sobe +1,45%, superando os US$ 102 mil, em um rali silencioso que continua a atrair atenção.
 
 O dia começou com expectativas nas alturas e cautela nas mãos. Os mercados sabem: o que acontecer neste fim de semana na Suíça pode não apenas aliviar tarifas — pode redefinir os contornos da nova ordem econômica mundial.
-
         </div>
         
         <div class="news-widget-container" id="news-widget">
@@ -647,6 +654,10 @@ O dia começou com expectativas nas alturas e cautela nas mãos. Os mercados sab
     
     <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados">
         <i class="fas fa-redo"></i>
+    </button>
+    
+    <button id="analises-btn" class="action-btn" aria-label="Ir para análises">
+        <i class="fas fa-chart-line"></i>
     </button>
     
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
@@ -690,6 +701,7 @@ O dia começou com expectativas nas alturas e cautela nas mãos. Os mercados sab
         const refreshBtn = document.getElementById('refresh-btn');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
+        const analisesBtn = document.getElementById('analises-btn');
         const themeToggle = document.getElementById('theme-toggle');
         
         // Funções de notificação
@@ -959,8 +971,7 @@ O dia começou com expectativas nas alturas e cautela nas mãos. Os mercados sab
         function handleZoom() {
             document.body.style.width = window.innerWidth + 'px';
             document.body.style.height = window.innerHeight + 'px';
-        }
-        
+        }        
         // Event Listeners
         function setupEventListeners() {
             refreshBtn.addEventListener('click', updateDateTime);
