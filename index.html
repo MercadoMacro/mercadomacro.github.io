@@ -15,6 +15,7 @@
     <title>Notícias de Mercado Financeiro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #00ff88;
@@ -335,19 +336,20 @@
             color: white;
         }
         
-        #refresh-btn, #fullscreen-btn {
+        .action-btn {
             position: fixed;
             bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             background-color: var(--card-bg);
             color: var(--text-color);
             border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             z-index: 1000;
-            font-size: 13px;
-            box-sizing: border-box;
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s ease;
             backdrop-filter: blur(5px);
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -359,15 +361,20 @@
         }
         
         #fullscreen-btn {
-            right: 90px;
+            right: 65px;
         }
         
-        #refresh-btn:hover, #fullscreen-btn:hover {
+        #fullscreen-exit-btn {
+            right: 65px;
+            display: none;
+        }
+        
+        .action-btn:hover {
             background-color: var(--darker-bg);
             transform: translateY(-2px);
         }
         
-        #refresh-btn:active, #fullscreen-btn:active {
+        .action-btn:active {
             transform: translateY(0);
         }
 
@@ -389,10 +396,9 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
         
-        .theme-toggle svg {
-            width: 20px;
-            height: 20px;
-            fill: var(--text-color);
+        .theme-toggle i {
+            font-size: 18px;
+            color: var(--text-color);
         }
 
         @media (max-width: 600px) {
@@ -435,16 +441,22 @@
                 font-size: 12px;
             }
             
-            #refresh-btn, #fullscreen-btn, .theme-toggle {
-                padding: 8px 12px;
-                font-size: 12px;
-                bottom: 12px;
+            .action-btn, .theme-toggle {
                 width: 36px;
                 height: 36px;
+                bottom: 12px;
+            }
+            
+            #refresh-btn {
+                right: 12px;
             }
             
             #fullscreen-btn {
-                right: 85px;
+                right: 58px;
+            }
+            
+            #fullscreen-exit-btn {
+                right: 58px;
             }
             
             .page-notification {
@@ -539,7 +551,7 @@
             <div class="logo-divider"></div>
             <div class="logo-main">Mercado</div>
             <div class="logo-sub">Financeiro</div>
-            <div class="logo-byline">By Anderson</div>
+            <div class="logo-byline">By Anderson Danilo</div>
         </div>
         
         <div class="subheader" id="data-atual">Indicadores - 09/05/2025, 00:15</div>
@@ -587,7 +599,9 @@
         <div class="news-widget-container" id="news-widget">
             <div class="news-header">
                 <div class="news-title">Últimas Notícias Financeiras</div>
-                <button id="refresh-news-btn" aria-label="Atualizar lista de notícias">Atualizar Notícias</button>
+                <button id="refresh-news-btn" aria-label="Atualizar lista de notícias">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
             </div>
             <div class="news-content">
                 <div class="skeleton-loading">
@@ -601,13 +615,20 @@
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 09/05/2025 00:15</div>
     </div>
 
-    <button id="fullscreen-btn" aria-label="Alternar modo tela cheia">Tela Cheia</button>
-    <button id="refresh-btn" aria-label="Atualizar dados da página">Atualizar</button>
+    <button id="fullscreen-btn" class="action-btn" aria-label="Modo tela cheia">
+        <i class="fas fa-expand"></i>
+    </button>
+    
+    <button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia">
+        <i class="fas fa-compress"></i>
+    </button>
+    
+    <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados">
+        <i class="fas fa-redo"></i>
+    </button>
     
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1-8.313-12.454z"/>
-        </svg>
+        <i class="fas fa-moon"></i>
     </button>
 
     <script>
@@ -646,6 +667,7 @@
         const refreshNewsBtn = document.getElementById('refresh-news-btn');
         const refreshBtn = document.getElementById('refresh-btn');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
         const themeToggle = document.getElementById('theme-toggle');
         
         // Funções de notificação
@@ -811,7 +833,7 @@
                     </div>
                 `;
                 refreshNewsBtn.disabled = true;
-                refreshNewsBtn.textContent = 'Carregando...';
+                refreshNewsBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Carregando...';
                 
                 const cachedData = getCachedNews();
                 if (cachedData) {
@@ -857,7 +879,7 @@
                 
             } finally {
                 refreshNewsBtn.disabled = false;
-                refreshNewsBtn.textContent = 'Atualizar Notícias';
+                refreshNewsBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
             }
         }
         
@@ -883,11 +905,13 @@
                 document.documentElement.requestFullscreen().catch(err => {
                     console.error(`Erro ao tentar entrar em tela cheia: ${err.message}`);
                 });
-                fullscreenBtn.textContent = 'Sair da Tela Cheia';
+                fullscreenBtn.style.display = 'none';
+                fullscreenExitBtn.style.display = 'flex';
             } else {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
-                    fullscreenBtn.textContent = 'Tela Cheia';
+                    fullscreenExitBtn.style.display = 'none';
+                    fullscreenBtn.style.display = 'flex';
                 }
             }
         }
@@ -896,6 +920,11 @@
             document.body.classList.toggle('light-mode');
             const isLightMode = document.body.classList.contains('light-mode');
             localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            
+            // Atualizar ícone do tema
+            const themeIcon = themeToggle.querySelector('i');
+            themeIcon.classList.toggle('fa-moon', !isLightMode);
+            themeIcon.classList.toggle('fa-sun', isLightMode);
             
             // Atualizar o widget TradingView para o tema correto
             const widget = document.querySelector('.tradingview-widget-container__widget iframe');
@@ -915,11 +944,13 @@
             refreshBtn.addEventListener('click', updateDateTime);
             refreshNewsBtn.addEventListener('click', loadNewsWidget);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
+            fullscreenExitBtn.addEventListener('click', toggleFullscreen);
             themeToggle.addEventListener('click', toggleTheme);
             
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement) {
-                    fullscreenBtn.textContent = 'Tela Cheia';
+                    fullscreenExitBtn.style.display = 'none';
+                    fullscreenBtn.style.display = 'flex';
                 }
             });
             
@@ -937,6 +968,9 @@
             // Verificar preferência de tema salva
             if (localStorage.getItem('themePreference') === 'light') {
                 document.body.classList.add('light-mode');
+                const themeIcon = themeToggle.querySelector('i');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
             }
             
             updateDateTime();
