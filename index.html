@@ -432,6 +432,10 @@
             right: 115px;
         }
 
+        #indicadores-btn {
+            right: 165px;
+        }
+
         #fullscreen-exit-btn {
             right: 65px;
             display: none;
@@ -542,6 +546,10 @@
 
             #analises-btn {
                 right: 104px;
+            }
+
+            #indicadores-btn {
+                right: 150px;
             }
 
             #fullscreen-exit-btn {
@@ -764,6 +772,10 @@
         <i class="fas fa-chart-line"></i>
     </button>
 
+    <button id="indicadores-btn" class="action-btn" aria-label="Ir para indicadores">
+        <i class="fas fa-chart-pie"></i>
+    </button>
+
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
@@ -807,6 +819,7 @@
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
         const analisesBtn = document.getElementById('analises-btn');
+        const indicadoresBtn = document.getElementById('indicadores-btn');
         const themeToggle = document.getElementById('theme-toggle');
 
         // Bionic Reading Implementation
@@ -1195,6 +1208,9 @@
             fullscreenExitBtn.addEventListener('click', toggleFullscreen);
             analisesBtn.addEventListener('click', function() {
                 window.location.href = 'analises.html';
+            });
+            indicadoresBtn.addEventListener('click', function() {
+                window.location.href = 'indicadores.html';
             });
             themeToggle.addEventListener('click', toggleTheme);
             document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
