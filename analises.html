@@ -116,6 +116,13 @@
             color: var(--text-secondary);
         }
         
+        .analises-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        
         .analise-section {
             background: var(--card-bg);
             padding: 16px;
@@ -123,6 +130,8 @@
             margin-bottom: 15px;
             text-align: left;
             border-left: 3px solid var(--primary-color);
+            flex: 1 1 100%;
+            min-width: 0;
         }
         
         .analise-title {
@@ -218,6 +227,19 @@
             color: var(--text-color);
         }
 
+        @media (min-width: 768px) {
+            .analise-section {
+                flex: 1 1 calc(50% - 15px);
+                min-width: 300px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .analise-section {
+                flex: 1 1 calc(33.333% - 15px);
+            }
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 12px;
@@ -292,174 +314,176 @@
         
         <div class="subheader" id="data-atual">Análises - 09/05/2025, 00:15</div>
 
-        <div class="analise-section">
-            <div class="analise-title">📈 Ibovespa: Tendência de Alta</div>
-            <div class="analise-content">
-                O Ibovespa mostra uma forte tendência de alta desde o início do mês, com suporte em 135.000 pontos e resistência em 137.500 pontos. O volume tem acompanhado a movimentação, indicando solidez no movimento.
-            </div>
-            <div class="analise-chart">
-                <!-- TradingView Widget BEGIN -->
-                <div class="tradingview-widget-container">
-                    <div class="tradingview-widget-container__widget"></div>
-                    <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                    {
-                    "symbols": [
-                        [
-                        "BMFBOVESPA:IBOV|1M"
-                        ]
-                    ],
-                    "chartOnly": false,
-                    "width": "100%",
-                    "height": "100%",
-                    "locale": "br",
-                    "colorTheme": "light",
-                    "autosize": true,
-                    "showVolume": false,
-                    "showMA": false,
-                    "hideDateRanges": false,
-                    "hideMarketStatus": false,
-                    "hideSymbolLogo": false,
-                    "scalePosition": "right",
-                    "scaleMode": "Normal",
-                    "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
-                    "fontSize": "10",
-                    "noTimeScale": false,
-                    "valuesTracking": "1",
-                    "changeMode": "price-and-percent",
-                    "chartType": "area",
-                    "maLineColor": "#2962FF",
-                    "maLineWidth": 1,
-                    "maLength": 9,
-                    "headerFontSize": "medium",
-                    "lineWidth": 2,
-                    "lineType": 0,
-                    "dateRanges": [
-                        "1d|1",
-                        "1m|30",
-                        "3m|60",
-                        "12m|1D",
-                        "60m|1W",
-                        "all|1M"
-                    ]
-                    }
-                    </script>
+        <div class="analises-container">
+            <div class="analise-section">
+                <div class="analise-title">📈 Ibovespa: Tendência de Alta</div>
+                <div class="analise-content">
+                    O Ibovespa mostra uma forte tendência de alta desde o início do mês, com suporte em 135.000 pontos e resistência em 137.500 pontos. O volume tem acompanhado a movimentação, indicando solidez no movimento.
                 </div>
-                <!-- TradingView Widget END -->
+                <div class="analise-chart">
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "BMFBOVESPA:IBOV|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": false,
+                        "showMA": false,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+                        "fontSize": "10",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
             </div>
-        </div>
 
-        <div class="analise-section">
-            <div class="analise-title">💵 Dólar: Pressão de Baixa</div>
-            <div class="analise-content">
-                O dólar continua sob pressão de baixa, negociando abaixo da média móvel de 200 dias. O próximo suporte importante está em R$ 5,60, enquanto a resistência imediata é R$ 5,70. O cenário internacional favorável contribui para essa tendência.
-            </div>
-            <div class="analise-chart">
-                <!-- TradingView Widget BEGIN -->
-                <div class="tradingview-widget-container">
-                    <div class="tradingview-widget-container__widget"></div>
-                    <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                    {
-                    "symbols": [
-                        [
-                        "FX_IDC:USDBRL|1M"
-                        ]
-                    ],
-                    "chartOnly": false,
-                    "width": "100%",
-                    "height": "100%",
-                    "locale": "br",
-                    "colorTheme": "light",
-                    "autosize": true,
-                    "showVolume": false,
-                    "showMA": false,
-                    "hideDateRanges": false,
-                    "hideMarketStatus": false,
-                    "hideSymbolLogo": false,
-                    "scalePosition": "right",
-                    "scaleMode": "Normal",
-                    "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
-                    "fontSize": "10",
-                    "noTimeScale": false,
-                    "valuesTracking": "1",
-                    "changeMode": "price-and-percent",
-                    "chartType": "area",
-                    "maLineColor": "#2962FF",
-                    "maLineWidth": 1,
-                    "maLength": 9,
-                    "headerFontSize": "medium",
-                    "lineWidth": 2,
-                    "lineType": 0,
-                    "dateRanges": [
-                        "1d|1",
-                        "1m|30",
-                        "3m|60",
-                        "12m|1D",
-                        "60m|1W",
-                        "all|1M"
-                    ]
-                    }
-                    </script>
+            <div class="analise-section">
+                <div class="analise-title">💵 Dólar: Pressão de Baixa</div>
+                <div class="analise-content">
+                    O dólar continua sob pressão de baixa, negociando abaixo da média móvel de 200 dias. O próximo suporte importante está em R$ 5,60, enquanto a resistência imediata é R$ 5,70. O cenário internacional favorável contribui para essa tendência.
                 </div>
-                <!-- TradingView Widget END -->
+                <div class="analise-chart">
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "FX_IDC:USDBRL|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": false,
+                        "showMA": false,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+                        "fontSize": "10",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
             </div>
-        </div>
 
-        <div class="analise-section">
-            <div class="analise-title">🛢️ Petróleo: Recuperação em Andamento</div>
-            <div class="analise-content">
-                O petróleo Brent mostra sinais de recuperação após testar suporte em US$ 60. O movimento atual sugere possível formação de fundo, com alvo inicial em US$ 65. A demanda global em recuperação e os cortes de produção da OPEC+ sustentam o movimento.
-            </div>
-            <div class="analise-chart">
-                <!-- TradingView Widget BEGIN -->
-                <div class="tradingview-widget-container">
-                    <div class="tradingview-widget-container__widget"></div>
-                    <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                    {
-                    "symbols": [
-                        [
-                        "ACTIVTRADES:BRENT|1M"
-                        ]
-                    ],
-                    "chartOnly": false,
-                    "width": "100%",
-                    "height": "100%",
-                    "locale": "br",
-                    "colorTheme": "light",
-                    "autosize": true,
-                    "showVolume": false,
-                    "showMA": false,
-                    "hideDateRanges": false,
-                    "hideMarketStatus": false,
-                    "hideSymbolLogo": false,
-                    "scalePosition": "right",
-                    "scaleMode": "Normal",
-                    "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
-                    "fontSize": "10",
-                    "noTimeScale": false,
-                    "valuesTracking": "1",
-                    "changeMode": "price-and-percent",
-                    "chartType": "area",
-                    "maLineColor": "#2962FF",
-                    "maLineWidth": 1,
-                    "maLength": 9,
-                    "headerFontSize": "medium",
-                    "lineWidth": 2,
-                    "lineType": 0,
-                    "dateRanges": [
-                        "1d|1",
-                        "1m|30",
-                        "3m|60",
-                        "12m|1D",
-                        "60m|1W",
-                        "all|1M"
-                    ]
-                    }
-                    </script>
+            <div class="analise-section">
+                <div class="analise-title">🛢️ Petróleo: Recuperação em Andamento</div>
+                <div class="analise-content">
+                    O petróleo Brent mostra sinais de recuperação após testar suporte em US$ 60. O movimento atual sugere possível formação de fundo, com alvo inicial em US$ 65. A demanda global em recuperação e os cortes de produção da OPEC+ sustentam o movimento.
                 </div>
-                <!-- TradingView Widget END -->
+                <div class="analise-chart">
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "ACTIVTRADES:BRENT|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": false,
+                        "showMA": false,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+                        "fontSize": "10",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
             </div>
         </div>
 
