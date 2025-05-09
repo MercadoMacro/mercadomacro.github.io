@@ -147,10 +147,9 @@
             box-sizing: border-box;
             border-left: 3px solid var(--primary-color);
             position: relative;
-            padding-top: 50px; /* Espaço para o botão */
+            padding-top: 50px;
         }
 
-        /* Bionic Reading Toggle - Versão dentro do commentary */
         .bionic-toggle-container {
             position: absolute;
             top: 10px;
@@ -177,12 +176,6 @@
         #bionic-toggle:hover {
             background: var(--primary-color);
             color: #0a0a2a;
-        }
-
-        /* Ajuste para light mode */
-        body.light-mode #bionic-toggle {
-            background: rgba(255, 255, 255, 0.6);
-            color: var(--primary-color);
         }
 
         .footer {
@@ -296,6 +289,21 @@
             display: block;
         }
 
+        .favorite-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+
+        .favorite-btn.favorited {
+            color: var(--primary-color);
+        }
+
         .skeleton-loading {
             display: flex;
             flex-direction: column;
@@ -344,8 +352,15 @@
         }
 
         .error {
-            color: var(--error-color);
-            padding: 10px;
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 3px solid var(--error-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .error i {
+            margin-right: 5px;
         }
 
         .retry-btn {
@@ -454,6 +469,17 @@
             color: var(--text-color);
         }
 
+        .news-status {
+            background: rgba(255, 165, 0, 0.1);
+            border-left: 3px solid #FFA500;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 12px;
@@ -475,7 +501,7 @@
             .commentary {
                 font-size: 14px;
                 padding: 14px;
-                padding-top: 45px; /* Ajuste para mobile */
+                padding-top: 45px;
             }
 
             #bionic-toggle {
@@ -617,6 +643,14 @@
         body.light-mode .tradingview-widget-container {
             background: rgba(255, 255, 255, 0.9);
         }
+
+        body.light-mode .news-status {
+            background: rgba(255, 165, 0, 0.15);
+        }
+
+        body.light-mode .error {
+            background: rgba(220, 53, 69, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -738,6 +772,7 @@
         // Configurações
         const CACHE_KEY = 'newsCache_v3';
         const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
+        const FAVORITES_KEY = 'favorites';
         const RSS_URL = 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/';
         const PROXIES = [
             `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
@@ -777,7 +812,7 @@
         // Bionic Reading Implementation
         function applyBionicReading(text, fixation = 3) {
             return text.split(' ').map(word => {
-                if (word.length <= fixation) return word; // Ignora palavras curtas
+                if (word.length <= fixation) return word;
                 const boldPart = word.substring(0, fixation);
                 const rest = word.substring(fixation);
                 return `<strong>${boldPart}</strong>${rest}`;
@@ -811,7 +846,6 @@
                 `;
             }
 
-            // Reatacha o event listener após modificar o HTML
             document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
         }
 
@@ -897,6 +931,39 @@
             }
         }
 
+        // Favorites functions
+        function getFavorites() {
+            try {
+                const favorites = localStorage.getItem(FAVORITES_KEY);
+                return favorites ? JSON.parse(favorites) : [];
+            } catch (e) {
+                console.error('Erro ao ler favoritos:', e);
+                return [];
+            }
+        }
+
+        function saveFavorites(favorites) {
+            try {
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            } catch (e) {
+                console.error('Erro ao salvar favoritos:', e);
+            }
+        }
+
+        function toggleFavorite(newsItem) {
+            let favorites = getFavorites();
+            const index = favorites.findIndex(item => item.link === newsItem.link);
+
+            if (index === -1) {
+                favorites.push(newsItem);
+            } else {
+                favorites.splice(index, 1);
+            }
+
+            saveFavorites(favorites);
+            return favorites;
+        }
+
         // News functions
         async function tryFetchWithProxies() {
             let lastError = null;
@@ -958,18 +1025,26 @@
         }
 
         function renderNews(items) {
-            return items.map(item => `
-                <div class="news-item">
-                    <a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer">
-                        <div class="news-item-title">${item.title}</div>
-                        <div class="news-item-description">${item.description || ''}</div>
-                    </a>
-                </div>
-            `).join('');
+            const favorites = getFavorites();
+            return items.map(item => {
+                const isFavorited = favorites.some(fav => fav.link === item.link);
+                return `
+                    <div class="news-item">
+                        <button class="favorite-btn ${isFavorited ? 'favorited' : ''}" onclick="toggleFavorite(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer">
+                            <div class="news-item-title">${item.title}</div>
+                            <div class="news-item-description">${item.description || ''}</div>
+                        </a>
+                    </div>
+                `;
+            }).join('');
         }
 
         async function loadNewsWidget() {
             try {
+                // Mostrar estado de carregamento
                 newsContent.innerHTML = `
                     <div class="skeleton-loading">
                         <div class="skeleton-item"></div>
@@ -980,37 +1055,45 @@
                 refreshNewsBtn.disabled = true;
                 refreshNewsBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Carregando...';
 
-                const cachedData = getCachedNews();
-                if (cachedData) {
-                    newsContent.innerHTML = renderNews(cachedData);
+                // Verificar conectividade antes de tentar atualizar
+                if (!navigator.onLine) {
+                    throw new Error('Sem conexão com a internet');
                 }
 
-                const xmlString = await tryFetchWithProxies();
-                const newsItems = parseNews(xmlString);
+                // Tentar carregar notícias frescas
+                try {
+                    const xmlString = await tryFetchWithProxies();
+                    const newsItems = parseNews(xmlString);
+                    
+                    // Atualizar cache e UI
+                    cacheNews(newsItems);
+                    newsContent.innerHTML = renderNews(newsItems);
+                    showNotification('Notícias atualizadas com sucesso!');
+                    localStorage.setItem('retryCount', '0'); // Resetar contador de tentativas
+                    return; // Sucesso - sair da função
+                } catch (fetchError) {
+                    console.error('Falha ao buscar notícias:', fetchError);
+                    // Continuar para tentar usar o cache
+                }
 
-                cacheNews(newsItems);
-                newsContent.innerHTML = renderNews(newsItems);
-                showNotification('Notícias atualizadas com sucesso!');
-
-            } catch (error) {
-                console.error('Erro ao carregar notícias:', error);
-                showNotification('Erro ao carregar notícias. Usando dados em cache.', true);
-
+                // Fallback para cache se a busca falhou
                 const cachedData = getCachedNews();
                 if (cachedData) {
                     newsContent.innerHTML = `
-                        <div class="error">
-                            <p>Conexão instável - mostrando notícias em cache</p>
-                            ${renderNews(cachedData)}
-                            <button onclick="loadNewsWidget()" class="retry-btn">
-                                <span class="loading-small"></span> Tentar atualizar
-                            </button>
+                        <div class="news-status">
+                            <i class="fas fa-info-circle" style="color: #FFA500; margin-right: 5px;"></i>
+                            <span>Conexão instável - mostrando notícias armazenadas (${new Date(cachedData.timestamp).toLocaleTimeString()})</span>
                         </div>
+                        ${renderNews(cachedData.data)}
+                        <button onclick="loadNewsWidget()" class="retry-btn">
+                            <span class="loading-small"></span> Tentar atualizar novamente
+                        </button>
                     `;
                 } else {
+                    // Fallback para notícias estáticas se não houver cache
                     newsContent.innerHTML = `
                         <div class="error">
-                            <p>Serviço temporariamente indisponível</p>
+                            <p><i class="fas fa-exclamation-triangle"></i> Serviço temporariamente indisponível</p>
                             <p>Mostrando notícias de exemplo:</p>
                             ${renderNews(FALLBACK_NEWS)}
                             <button onclick="loadNewsWidget()" class="retry-btn">
@@ -1020,11 +1103,31 @@
                     `;
                 }
 
-                setTimeout(loadNewsWidget, 30000);
+                // Agendar nova tentativa com backoff exponencial
+                const retryCount = parseInt(localStorage.getItem('retryCount') || 0);
+                const delay = Math.min(30000 * (Math.pow(2, retryCount)), 300000); // Máximo de 5 minutos
+                localStorage.setItem('retryCount', retryCount + 1);
+                
+                console.log(`Agendando nova tentativa em ${delay/1000} segundos`);
+                setTimeout(loadNewsWidget, delay);
 
+            } catch (error) {
+                console.error('Erro ao carregar notícias:', error);
+                showNotification(`Erro: ${error.message}`, true);
+
+                newsContent.innerHTML = `
+                    <div class="error">
+                        <p><i class="fas fa-exclamation-triangle"></i> ${error.message}</p>
+                        <p>Por favor, verifique sua conexão e tente novamente.</p>
+                        <button onclick="loadNewsWidget()" class="retry-btn">
+                            <span class="loading-small"></span> Tentar novamente
+                        </button>
+                    </div>
+                `;
             } finally {
                 refreshNewsBtn.disabled = false;
                 refreshNewsBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+                localStorage.setItem('lastTry', Date.now());
             }
         }
 
@@ -1133,6 +1236,10 @@
 
             setInterval(loadNewsWidget, 5 * 60 * 1000);
         });
+
+        // Expor funções para o escopo global
+        window.toggleFavorite = toggleFavorite;
+        window.loadNewsWidget = loadNewsWidget;
     </script>
 </body>
 </html>
