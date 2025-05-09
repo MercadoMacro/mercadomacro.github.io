@@ -135,7 +135,6 @@
             flex-direction: column;
         }
 
-        /* Layout Principal - 4 indicadores por linha */
         .indicators-container {
             display: flex;
             flex-wrap: wrap;
@@ -149,46 +148,102 @@
             background: var(--card-bg);
             border-radius: 10px;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-            padding: 14px 12px;
+            padding: 0;
             flex: 0 0 calc(25% - 12px);
             text-align: center;
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
             min-height: 180px;
+            max-height: 200px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            position: relative;
+            transform-style: preserve-3d;
+            overflow: hidden;
+            perspective: 1000px;
         }
 
         .indicator-card:active {
             transform: translateY(2px);
         }
 
-        .indicator-icon {
-            font-size: 22px;
+        .indicator-front, .indicator-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .indicator-back {
+            transform: rotateY(180deg);
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 12px 15px;
+            overflow-y: auto;
+        }
+
+        .indicator-card.flipped .indicator-front {
+            transform: rotateY(180deg);
+        }
+
+        .indicator-card.flipped .indicator-back {
+            transform: rotateY(0deg);
+        }
+
+        .indicator-back strong {
             color: var(--primary-color);
-            margin-bottom: 6px;
+            display: block;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .indicator-icon {
+            font-size: 20px;
+            color: var(--primary-color);
+            margin-bottom: 4px;
         }
 
         .indicator-name {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: var(--primary-color);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            line-height: 1.2;
         }
 
         .indicator-value {
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 700;
-            margin: 6px 0;
+            margin: 4px 0;
+            line-height: 1.2;
         }
 
         .indicator-description {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-secondary);
-            margin-bottom: 2px;
+            margin-bottom: 1px;
+            line-height: 1.2;
+        }
+
+        .indicator-card:nth-child(6) .indicator-front {
+            padding: 8px 10px;
+        }
+
+        .indicator-card:nth-child(6) .indicator-value {
+            font-size: 14px;
         }
 
         .footer {
@@ -276,7 +331,6 @@
             color: var(--text-color);
         }
 
-        /* Light Mode Styles */
         body.light-mode {
             --primary-color: #007bff;
             --dark-bg: #f5f7fa;
@@ -310,20 +364,35 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         }
 
-        /* Melhorias para telas muito pequenas */
         @media (max-width: 768px) {
             .indicator-card {
                 flex: 0 0 calc(50% - 12px);
+                min-height: 190px;
+                max-height: 220px;
+            }
+            
+            .indicator-card:nth-child(6) {
+                min-height: 200px;
             }
         }
 
         @media (max-width: 480px) {
             .indicator-card {
                 flex: 0 0 100%;
+                min-height: 170px;
+                max-height: none;
+            }
+            
+            .indicator-back {
+                font-size: 11px;
+                padding: 10px 12px;
+            }
+            
+            .indicator-card:nth-child(6) {
+                min-height: 190px;
             }
         }
 
-        /* Suporte para dispositivos com notch */
         @supports(padding: max(0px)) {
             .header {
                 padding-top: max(12px, env(safe-area-inset-top));
@@ -353,70 +422,106 @@
         <div class="indicators-container">
             <!-- Linha 1 -->
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-chart-line"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="indicator-name">CDI</div>
+                    <div class="indicator-value">14,65%</div>
+                    <div class="indicator-description">Diário</div>
                 </div>
-                <div class="indicator-name">CDI</div>
-                <div class="indicator-value">14,65%</div>
-                <div class="indicator-description">Diário</div>
+                <div class="indicator-back">
+                    <strong>O que é o CDI?</strong>
+                    O Certificado de Depósito Interbancário (CDI) é um título emitido por bancos para empréstimos entre si, com prazo de um dia útil. A taxa CDI é a média dessas operações e serve como referência para investimentos como CDB, LCI e LCA.
+                </div>
             </div>
 
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-percentage"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="indicator-name">SELIC</div>
+                    <div class="indicator-value">14,65%</div>
+                    <div class="indicator-description">Over</div>
+                    <div class="indicator-value">14,75%</div>
+                    <div class="indicator-description">Meta ao ano</div>
                 </div>
-                <div class="indicator-name">SELIC</div>
-                <div class="indicator-value">14,65%</div>
-                <div class="indicator-description">Over</div>
-                <div class="indicator-value">14,75%</div>
-                <div class="indicator-description">Meta ao ano</div>
+                <div class="indicator-back">
+                    <strong>O que é a SELIC?</strong>
+                    A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país, desde empréstimos até investimentos. A SELIC Over é a taxa efetiva do dia, enquanto a Meta é o valor definido pelo Banco Central.
+                </div>
             </div>
 
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-chart-bar"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="indicator-name">IGP-DI</div>
+                    <div class="indicator-value">0,91%</div>
+                    <div class="indicator-description">Ano</div>
+                    <div class="indicator-value">8,12%</div>
+                    <div class="indicator-description">12 Meses</div>
                 </div>
-                <div class="indicator-name">IGP-DI</div>
-                <div class="indicator-value">0,91%</div>
-                <div class="indicator-description">Ano</div>
-                <div class="indicator-value">8,12%</div>
-                <div class="indicator-description">12 Meses</div>
+                <div class="indicator-back">
+                    <strong>O que é o IGP-DI?</strong>
+                    O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais. É calculado pela FGV e usado em contratos de aluguel e alguns financiamentos.
+                </div>
             </div>
 
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-chart-area"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-chart-area"></i>
+                    </div>
+                    <div class="indicator-name">IGP-M</div>
+                    <div class="indicator-value">1,23%</div>
+                    <div class="indicator-description">Ano</div>
+                    <div class="indicator-value">8,51%</div>
+                    <div class="indicator-description">12 Meses</div>
                 </div>
-                <div class="indicator-name">IGP-M</div>
-                <div class="indicator-value">1,23%</div>
-                <div class="indicator-description">Ano</div>
-                <div class="indicator-value">8,51%</div>
-                <div class="indicator-description">12 Meses</div>
+                <div class="indicator-back">
+                    <strong>O que é o IGP-M?</strong>
+                    O Índice Geral de Preços do Mercado (IGP-M) é semelhante ao IGP-DI, mas com período de coleta diferente. É o índice mais usado em contratos de aluguel e alguns planos de saúde. Também conhecido como "inflação do aluguel".
+                </div>
             </div>
 
             <!-- Linha 2 -->
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-chart-pie"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="indicator-name">IPCA</div>
+                    <div class="indicator-value">2,48%</div>
+                    <div class="indicator-description">Ano</div>
+                    <div class="indicator-value">5,53%</div>
+                    <div class="indicator-description">12 Meses</div>
                 </div>
-                <div class="indicator-name">IPCA</div>
-                <div class="indicator-value">2,48%</div>
-                <div class="indicator-description">Ano</div>
-                <div class="indicator-value">5,53%</div>
-                <div class="indicator-description">12 Meses</div>
+                <div class="indicator-back">
+                    <strong>O que é o IPCA?</strong>
+                    O Índice Nacional de Preços ao Consumidor Amplo (IPCA) é o principal indicador de inflação no Brasil, medido pelo IBGE. Reflete o custo de vida das famílias com renda de 1 a 40 salários mínimos. É o índice usado pelo governo no sistema de metas de inflação.
+                </div>
             </div>
 
             <div class="indicator-card">
-                <div class="indicator-icon">
-                    <i class="fas fa-piggy-bank"></i>
+                <div class="indicator-front">
+                    <div class="indicator-icon">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <div class="indicator-name">POUPANÇA</div>
+                    <div class="indicator-value">2,61%</div>
+                    <div class="indicator-description">Ano</div>
+                    <div class="indicator-value">0,68%</div>
+                    <div class="indicator-description">Mês</div>
+                    <div class="indicator-value">7,41%</div>
+                    <div class="indicator-description">12 Meses</div>
                 </div>
-                <div class="indicator-name">POUPANÇA</div>
-                <div class="indicator-value">2,61%</div>
-                <div class="indicator-description">Ano</div>
-                <div class="indicator-value">0,68%</div>
-                <div class="indicator-description">Mês</div>
-                <div class="indicator-value">7,41%</div>
-                <div class="indicator-description">12 Meses</div>
+                <div class="indicator-back">
+                    <strong>Como funciona a Poupança?</strong>
+                    A caderneta de poupança rende 0,5% ao mês + TR (Taxa Referencial) quando a SELIC está acima de 8,5% ao ano. Abaixo disso, rende 70% da SELIC + TR. É isenta de IR para pessoas físicas e tem garantia do FGC até R$ 250 mil por CPF e instituição financeira.
+                </div>
             </div>
         </div>
 
@@ -544,6 +649,21 @@
             }
         }
 
+        // Função para virar o card ao ser clicado
+        function flipCard(card) {
+            const isFlipped = card.classList.contains('flipped');
+            
+            // Fecha todos os cards primeiro
+            document.querySelectorAll('.indicator-card').forEach(otherCard => {
+                otherCard.classList.remove('flipped');
+            });
+            
+            // Se o card clicado não estava virado, vira ele
+            if (!isFlipped) {
+                card.classList.add('flipped');
+            }
+        }
+
         // Event Listeners
         function setupEventListeners() {
             document.getElementById('back-btn').addEventListener('click', function() {
@@ -563,14 +683,23 @@
                 }
             });
 
-            // Melhor feedback tátil para mobile
+            // Adiciona evento de clique para virar os cards
             document.querySelectorAll('.indicator-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    flipCard(this);
+                });
+                
+                // Melhor feedback tátil para mobile
                 card.addEventListener('touchstart', function() {
-                    this.style.transform = 'translateY(2px)';
+                    if (!this.classList.contains('flipped')) {
+                        this.style.transform = 'translateY(2px)';
+                    }
                 }, {passive: true});
 
                 card.addEventListener('touchend', function() {
-                    this.style.transform = '';
+                    if (!this.classList.contains('flipped')) {
+                        this.style.transform = '';
+                    }
                 }, {passive: true});
             });
         }
