@@ -27,6 +27,11 @@
             --error-color: #ff6b6b;
         }
 
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -39,7 +44,7 @@
             -webkit-text-size-adjust: 100%;
             -ms-text-size-adjust: 100%;
             text-size-adjust: 100%;
-            line-height: 1.6;
+            line-height: 1.5;
             transition: background 0.3s ease, color 0.3s ease;
             display: flex;
             flex-direction: column;
@@ -53,25 +58,28 @@
         .header {
             background: linear-gradient(135deg, #0a0a2a 0%, #1a1a4a 100%);
             color: var(--text-color);
-            padding: 15px;
+            padding: 12px 15px 8px;
             text-align: center;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 10;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
         .logo {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             position: relative;
             padding: 0 10px;
         }
 
         .logo-main {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 800;
-            line-height: 1;
-            letter-spacing: -1px;
-            margin-bottom: 5px;
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+            margin-bottom: 3px;
             text-transform: uppercase;
             background: linear-gradient(to right, #ffffff, var(--primary-color));
             -webkit-background-clip: text;
@@ -82,11 +90,11 @@
 
         .logo-sub {
             display: block;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 400;
             color: var(--text-secondary);
-            letter-spacing: 2px;
-            margin-top: 5px;
+            letter-spacing: 1.5px;
+            margin-top: 2px;
             text-transform: uppercase;
         }
 
@@ -94,131 +102,173 @@
             position: absolute;
             right: 10px;
             bottom: 0;
-            font-size: 10px;
+            font-size: 8px;
             font-style: italic;
             color: var(--text-secondary);
         }
 
         .logo-divider {
-            width: 40px;
+            width: 30px;
             height: 2px;
             background: linear-gradient(to right, var(--primary-color), transparent);
-            margin: 6px auto;
+            margin: 4px auto;
             border-radius: 2px;
         }
 
         .subheader {
-            font-size: 12px;
-            margin-bottom: 5px;
+            font-size: 10px;
+            margin-bottom: 0;
             color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .container {
             flex: 1;
             width: 100%;
             margin: 0 auto;
-            padding: 15px 5%;
+            padding: 10px 4%;
             box-sizing: border-box;
             text-align: center;
             display: flex;
             flex-direction: column;
         }
 
-        /* Layout Principal - 3 colunas */
+        /* Layout Principal - Scroll horizontal em mobile */
         .indicators-container {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            padding: 10px;
-            max-width: 1200px;
-            margin: 0 auto;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 8px 0 15px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scroll-padding: 0 15px;
+            width: 100%;
         }
 
         .indicator-card {
             background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            width: calc(33.333% - 20px);
-            min-width: 160px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            padding: 14px 12px;
+            flex: 0 0 85%;
+            scroll-snap-align: start;
             text-align: center;
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-sizing: border-box;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        /* Dica PRO - Scroll horizontal em mobile */
-        @media (max-width: 768px) {
+        /* Esconde a barra de scroll */
+        .indicators-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Indicadores de scroll (pontos) */
+        .scroll-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin: 5px 0 10px;
+        }
+        
+        .scroll-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .scroll-dot.active {
+            background-color: var(--primary-color);
+            transform: scale(1.2);
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .indicator-card {
+                flex: 0 0 45%;
+            }
+        }
+
+        @media (min-width: 769px) {
             .indicators-container {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                justify-content: flex-start;
-                padding-bottom: 15px;
-                scroll-snap-type: x mandatory;
-                -webkit-overflow-scrolling: touch;
+                flex-wrap: wrap;
+                justify-content: center;
+                overflow-x: visible;
+                padding: 10px;
             }
             
             .indicator-card {
-                flex: 0 0 85%;
-                scroll-snap-align: start;
-                margin-right: 15px;
+                width: calc(33.333% - 15px);
+                flex: 1 1 auto;
+                min-width: 160px;
+                min-height: 200px;
             }
             
-            /* Esconde a barra de scroll */
-            .indicators-container::-webkit-scrollbar {
+            .scroll-indicator {
                 display: none;
             }
         }
 
         @media (min-width: 769px) and (max-width: 1024px) {
             .indicator-card {
-                width: calc(50% - 15px);
+                width: calc(50% - 12px);
             }
         }
 
-        .indicator-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        .indicator-card:active {
+            transform: translateY(2px);
         }
 
         .indicator-icon {
-            font-size: 24px;
+            font-size: 22px;
             color: var(--primary-color);
             margin-bottom: 6px;
         }
 
         .indicator-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .indicator-value {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             margin: 6px 0;
         }
 
         .indicator-description {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
+            margin-bottom: 2px;
         }
 
         .footer {
-            font-size: 10px;
-            margin-top: 15px;
-            text-align: right;
+            font-size: 9px;
+            margin-top: 10px;
+            text-align: center;
             color: var(--text-secondary);
-            padding: 0 10px;
+            padding: 5px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
         .action-btn {
             position: fixed;
             bottom: 15px;
-            width: 36px;
-            height: 36px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background-color: var(--card-bg);
             color: var(--text-color);
@@ -230,8 +280,7 @@
             justify-content: center;
             transition: all 0.2s ease;
             backdrop-filter: blur(5px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
         }
 
         #back-btn {
@@ -239,37 +288,41 @@
         }
 
         #refresh-btn {
-            right: 60px;
+            right: 65px;
         }
 
         #fullscreen-btn {
-            right: 105px;
+            right: 115px;
         }
 
         #fullscreen-exit-btn {
-            right: 105px;
+            right: 115px;
             display: none;
         }
 
         #edit-btn {
-            right: 150px;
+            right: 165px;
         }
 
-        .action-btn:hover {
+        .action-btn i {
+            font-size: 16px;
+        }
+
+        .action-btn:hover, .action-btn:active {
             background-color: var(--darker-bg);
-            transform: translateY(-2px);
+            transform: scale(1.1);
         }
 
         .action-btn:active {
-            transform: translateY(0);
+            transform: scale(0.95);
         }
 
         .theme-toggle {
             position: fixed;
             bottom: 15px;
             left: 15px;
-            width: 36px;
-            height: 36px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -279,11 +332,11 @@
             justify-content: center;
             z-index: 1000;
             backdrop-filter: blur(5px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
         }
 
         .theme-toggle i {
-            font-size: 16px;
+            font-size: 18px;
             color: var(--text-color);
         }
 
@@ -301,6 +354,7 @@
 
         body.light-mode .header {
             background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         body.light-mode .logo-main {
@@ -317,10 +371,43 @@
         body.light-mode .indicator-card {
             border: 1px solid rgba(0, 0, 0, 0.1);
             background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         }
 
-        body.light-mode .indicator-card:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        body.light-mode .scroll-dot {
+            background-color: rgba(0,0,0,0.2);
+        }
+        
+        body.light-mode .scroll-dot.active {
+            background-color: var(--primary-color);
+        }
+
+        /* Melhorias para telas muito pequenas */
+        @media (max-width: 360px) {
+            .logo-main {
+                font-size: 20px;
+            }
+            
+            .indicator-card {
+                flex: 0 0 82%;
+            }
+            
+            #edit-btn {
+                right: 155px;
+            }
+        }
+
+        /* Suporte para dispositivos com notch */
+        @supports(padding: max(0px)) {
+            .header {
+                padding-top: max(12px, env(safe-area-inset-top));
+                padding-left: max(15px, env(safe-area-inset-left));
+                padding-right: max(15px, env(safe-area-inset-right));
+            }
+            
+            .action-btn, .theme-toggle {
+                bottom: max(15px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
@@ -406,6 +493,15 @@
                 <div class="indicator-description">12 Meses</div>
             </div>
         </div>
+        
+        <div class="scroll-indicator" id="scroll-indicator">
+            <div class="scroll-dot active"></div>
+            <div class="scroll-dot"></div>
+            <div class="scroll-dot"></div>
+            <div class="scroll-dot"></div>
+            <div class="scroll-dot"></div>
+            <div class="scroll-dot"></div>
+        </div>
 
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 09/05/2025 15:12</div>
     </div>
@@ -478,9 +574,20 @@
             themeIcon.classList.toggle('fa-sun', isLightMode);
         }
 
-        function handleZoom() {
-            document.body.style.width = window.innerWidth + 'px';
-            document.body.style.height = window.innerHeight + 'px';
+        function handleScrollIndicator() {
+            const container = document.querySelector('.indicators-container');
+            const dots = document.querySelectorAll('.scroll-dot');
+            const cardWidth = document.querySelector('.indicator-card').offsetWidth;
+            const gap = 12; // Mesmo valor do gap no CSS
+            
+            container.addEventListener('scroll', () => {
+                const scrollPosition = container.scrollLeft;
+                const activeIndex = Math.round(scrollPosition / (cardWidth + gap));
+                
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === activeIndex);
+                });
+            });
         }
 
         function quickEdit() {
@@ -536,18 +643,6 @@
             }
         }
 
-        function adjustForMobile() {
-            if (window.innerWidth <= 768) {
-                document.querySelector('.logo-main').style.fontSize = '24px';
-                document.querySelector('.logo-sub').style.fontSize = '10px';
-                document.querySelector('.subheader').style.fontSize = '11px';
-            } else {
-                document.querySelector('.logo-main').style.fontSize = '28px';
-                document.querySelector('.logo-sub').style.fontSize = '12px';
-                document.querySelector('.subheader').style.fontSize = '12px';
-            }
-        }
-
         // Event Listeners
         function setupEventListeners() {
             document.getElementById('back-btn').addEventListener('click', function() {
@@ -567,18 +662,15 @@
                 }
             });
 
-            let resizeTimer;
-            window.addEventListener('resize', () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    handleZoom();
-                    adjustForMobile();
-                }, 250);
-            });
-
-            window.addEventListener('orientationchange', () => {
-                handleZoom();
-                adjustForMobile();
+            // Melhor feedback tátil para mobile
+            document.querySelectorAll('.indicator-card').forEach(card => {
+                card.addEventListener('touchstart', function() {
+                    this.style.transform = 'translateY(2px)';
+                }, {passive: true});
+                
+                card.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                }, {passive: true});
             });
         }
 
@@ -594,8 +686,14 @@
 
             updateDateTime();
             setupEventListeners();
-            handleZoom();
-            adjustForMobile();
+            handleScrollIndicator();
+            
+            // Melhorar performance em mobile
+            if ('connection' in navigator && navigator.connection.saveData) {
+                document.querySelectorAll('i').forEach(icon => {
+                    icon.style.transition = 'none';
+                });
+            }
         });
     </script>
 </body>
