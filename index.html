@@ -971,13 +971,17 @@ O dia começou com expectativas nas alturas e cautela nas mãos. Os mercados sab
         function handleZoom() {
             document.body.style.width = window.innerWidth + 'px';
             document.body.style.height = window.innerHeight + 'px';
-        }        
+        }
+        
         // Event Listeners
         function setupEventListeners() {
             refreshBtn.addEventListener('click', updateDateTime);
             refreshNewsBtn.addEventListener('click', loadNewsWidget);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
             fullscreenExitBtn.addEventListener('click', toggleFullscreen);
+            analisesBtn.addEventListener('click', function() {
+                window.location.href = 'analises.html';
+            });
             themeToggle.addEventListener('click', toggleTheme);
             
             document.addEventListener('fullscreenchange', () => {
