@@ -2,9 +2,12 @@
 Sempre que modificar seu projeto, execute estes comandos:
 
 bash
+
 git add .
 git commit -m "Descrição das alterações"
 git push origin main
+
+
 As atualizações podem levar 1-2 minutos para aparecerem no site.
 
 5. Dicas importantes:

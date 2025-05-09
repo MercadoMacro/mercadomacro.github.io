@@ -57,10 +57,10 @@
             flex-direction: column;
         }
         
-        /* Widget TradingView no rodapé */
+        /* Widget TradingView */
         .tradingview-widget-container {
-            margin-top: auto;
             width: 100%;
+            margin: 15px 0;
             background: transparent;
         }
         
@@ -449,25 +449,9 @@
             <div class="logo-byline">By Anderson</div>
         </div>
         
-        <div class="subheader" id="data-atual">Indicadores - 08/05/2025</div>
+        <div class="subheader" id="data-atual">Indicadores - 08/05/2025, 23:04</div>
 
-        <div class="commentary" id="commentary">
-            O Ibovespa subiu 2,12% nesta quinta-feira, encerrando aos 136.231 pontos, impulsionado pelo forte desempenho do Bradesco, que avançou quase 16% após divulgar o maior lucro em quase dois anos. A varejista Azzas também se destacou, com alta de mais de 23% após resultado positivo da fusão entre Arezzo e Grupo Soma. Na ponta negativa, Minerva Foods caiu 7,16% e Grupo Ultra recuou cerca de 4%. O dólar caiu 1,46%, cotado a R$ 5,6613, refletindo otimismo com as falas de Trump sobre redução de tarifas contra a China. No exterior, bolsas americanas fecharam em alta, com o Nasdaq subindo 1,07%. O petróleo teve forte valorização, com WTI e Brent subindo 3,17% e 2,81%, respectivamente. A alta refletiu o otimismo com novos acordos comerciais entre EUA, Reino Unido e China. Papéis da Petrobras acompanharam, com ganhos acima de 1%. A expectativa gira em torno de avanços nas negociações comerciais nos próximos dias.
-        </div>
-        
-        <div class="news-widget-container" id="news-widget">
-            <div class="news-header">
-                <div class="news-title">Últimas Notícias Financeiras</div>
-                <button id="refresh-news-btn">Atualizar Notícias</button>
-            </div>
-            <div class="news-content">
-                <div class="loading"></div>
-            </div>
-        </div>
-
-        <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 08/05/2025 09:00</div>
-        
-        <!-- Widget TradingView no rodapé - transparente e sem texto -->
+        <!-- Widget TradingView adicionado aqui -->
         <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <div class="tradingview-widget-copyright"></div>
@@ -503,6 +487,22 @@
             }
             </script>
         </div>
+        
+        <div class="commentary" id="commentary">
+            O Ibovespa subiu 2,12% nesta quinta-feira, encerrando aos 136.231 pontos, impulsionado pelo forte desempenho do Bradesco, que avançou quase 16% após divulgar o maior lucro em quase dois anos. A varejista Azzas também se destacou, com alta de mais de 23% após resultado positivo da fusão entre Arezzo e Grupo Soma. Na ponta negativa, Minerva Foods caiu 7,16% e Grupo Ultra recuou cerca de 4%. O dólar caiu 1,46%, cotado a R$ 5,6613, refletindo otimismo com as falas de Trump sobre redução de tarifas contra a China. No exterior, bolsas americanas fecharam em alta, com o Nasdaq subindo 1,07%. O petróleo teve forte valorização, com WTI e Brent subindo 3,17% e 2,81%, respectivamente. A alta refletiu o otimismo com novos acordos comerciais entre EUA, Reino Unido e China. Papéis da Petrobras acompanharam, com ganhos acima de 1%. A expectativa gira em torno de avanços nas negociações comerciais nos próximos dias.
+        </div>
+        
+        <div class="news-widget-container" id="news-widget">
+            <div class="news-header">
+                <div class="news-title">Últimas Notícias Financeiras</div>
+                <button id="refresh-news-btn">Atualizar Notícias</button>
+            </div>
+            <div class="news-content">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 08/05/2025 09:00</div>
     </div>
 
     <button id="fullscreen-btn">Tela Cheia</button>
