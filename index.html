@@ -39,7 +39,7 @@
             -ms-text-size-adjust: 100%;
             text-size-adjust: 100%;
             line-height: 1.6;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, color 0.3s ease;
             display: flex;
             flex-direction: column;
         }
@@ -61,7 +61,6 @@
             flex-direction: column;
         }
         
-        /* Widget TradingView ajustado */
         .tradingview-widget-container {
             width: 100%;
             margin: 5px 0;
@@ -89,7 +88,8 @@
             background: linear-gradient(to right, #ffffff, var(--primary-color));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 10px rgba(0,255,136,0.3);
+            text-shadow: none;
+            transition: all 0.3s ease;
         }
         
         .logo-sub {
@@ -108,7 +108,7 @@
             bottom: 0;
             font-size: 11px;
             font-style: italic;
-            color: rgba(255,255,255,0.5);
+            color: var(--text-secondary);
         }
         
         .logo-divider {
@@ -122,7 +122,7 @@
         .subheader {
             font-size: 14px;
             margin-bottom: 5px;
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--text-secondary);
         }
         
         .commentary {
@@ -142,7 +142,7 @@
             font-size: 11px;
             margin-top: 15px;
             text-align: right;
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-secondary);
         }
         
         .news-widget-container {
@@ -165,7 +165,7 @@
             margin-bottom: 12px;
             position: sticky;
             top: 0;
-            background: rgba(26, 26, 74, 0.95);
+            background: var(--card-bg);
             padding: 10px;
             border-radius: 6px;
             z-index: 10;
@@ -181,7 +181,7 @@
         
         #refresh-news-btn {
             background-color: var(--primary-color);
-            color: var(--dark-bg);
+            color: #0a0a2a;
             border: none;
             padding: 6px 12px;
             border-radius: 20px;
@@ -235,7 +235,7 @@
         
         .news-item-description {
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-secondary);
             margin-bottom: 5px;
             line-height: 1.5;
         }
@@ -246,7 +246,6 @@
             display: block;
         }
         
-        /* Skeleton Loading */
         .skeleton-loading {
             display: flex;
             flex-direction: column;
@@ -301,7 +300,7 @@
         
         .retry-btn {
             background: var(--darker-bg);
-            color: white;
+            color: var(--text-color);
             border: 1px solid var(--primary-color);
             padding: 5px 10px;
             border-radius: 4px;
@@ -341,8 +340,8 @@
             bottom: 15px;
             padding: 10px 15px;
             border-radius: 20px;
-            background-color: rgba(26, 26, 74, 0.9);
-            color: white;
+            background-color: var(--card-bg);
+            color: var(--text-color);
             border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             z-index: 1000;
@@ -364,7 +363,7 @@
         }
         
         #refresh-btn:hover, #fullscreen-btn:hover {
-            background-color: rgba(26, 26, 74, 1);
+            background-color: var(--darker-bg);
             transform: translateY(-2px);
         }
         
@@ -372,7 +371,6 @@
             transform: translateY(0);
         }
 
-        /* Dark/Light Mode Toggle */
         .theme-toggle {
             position: fixed;
             bottom: 15px;
@@ -380,7 +378,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: rgba(26, 26, 74, 0.9);
+            background: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             display: flex;
@@ -501,6 +499,13 @@
             background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
         }
 
+        body.light-mode .logo-main {
+            background: linear-gradient(to right, #1a1a1a, #0056b3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+        }
+
         body.light-mode .news-widget-container,
         body.light-mode .commentary {
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -517,6 +522,14 @@
         body.light-mode .skeleton-item {
             background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 75%);
         }
+
+        body.light-mode ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+        }
+
+        body.light-mode ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
@@ -529,9 +542,8 @@
             <div class="logo-byline">By Anderson</div>
         </div>
         
-        <div class="subheader" id="data-atual">Indicadores - 08/05/2025, 23:19</div>
+        <div class="subheader" id="data-atual">Indicadores - 09/05/2025, 00:15</div>
 
-        <!-- Widget TradingView com espaçamento reduzido -->
         <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <div class="tradingview-widget-copyright"></div>
@@ -586,7 +598,7 @@
             </div>
         </div>
 
-        <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 08/05/2025 09:00</div>
+        <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 09/05/2025 00:15</div>
     </div>
 
     <button id="fullscreen-btn" aria-label="Alternar modo tela cheia">Tela Cheia</button>
