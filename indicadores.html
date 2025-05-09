@@ -135,18 +135,13 @@
             flex-direction: column;
         }
 
-        /* Layout Principal - Scroll horizontal em mobile */
+        /* Layout Principal - 4 indicadores por linha */
         .indicators-container {
             display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            justify-content: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 12px;
             padding: 8px 0 15px;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            scroll-padding: 0 15px;
             width: 100%;
         }
 
@@ -155,8 +150,7 @@
             border-radius: 10px;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
             padding: 14px 12px;
-            flex: 0 0 85%;
-            scroll-snap-align: start;
+            flex: 0 0 calc(25% - 12px);
             text-align: center;
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -164,64 +158,6 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-        }
-
-        /* Esconde a barra de scroll */
-        .indicators-container::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* Indicadores de scroll (pontos) */
-        .scroll-indicator {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            margin: 5px 0 10px;
-        }
-        
-        .scroll-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: rgba(255,255,255,0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .scroll-dot.active {
-            background-color: var(--primary-color);
-            transform: scale(1.2);
-        }
-
-        @media (min-width: 481px) and (max-width: 768px) {
-            .indicator-card {
-                flex: 0 0 45%;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .indicators-container {
-                flex-wrap: wrap;
-                justify-content: center;
-                overflow-x: visible;
-                padding: 10px;
-            }
-            
-            .indicator-card {
-                width: calc(33.333% - 15px);
-                flex: 1 1 auto;
-                min-width: 160px;
-                min-height: 200px;
-            }
-            
-            .scroll-indicator {
-                display: none;
-            }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .indicator-card {
-                width: calc(50% - 12px);
-            }
         }
 
         .indicator-card:active {
@@ -374,26 +310,16 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         }
 
-        body.light-mode .scroll-dot {
-            background-color: rgba(0,0,0,0.2);
-        }
-        
-        body.light-mode .scroll-dot.active {
-            background-color: var(--primary-color);
+        /* Melhorias para telas muito pequenas */
+        @media (max-width: 768px) {
+            .indicator-card {
+                flex: 0 0 calc(50% - 12px);
+            }
         }
 
-        /* Melhorias para telas muito pequenas */
-        @media (max-width: 360px) {
-            .logo-main {
-                font-size: 20px;
-            }
-            
+        @media (max-width: 480px) {
             .indicator-card {
-                flex: 0 0 82%;
-            }
-            
-            #edit-btn {
-                right: 155px;
+                flex: 0 0 100%;
             }
         }
 
@@ -404,7 +330,7 @@
                 padding-left: max(15px, env(safe-area-inset-left));
                 padding-right: max(15px, env(safe-area-inset-right));
             }
-            
+
             .action-btn, .theme-toggle {
                 bottom: max(15px, env(safe-area-inset-bottom));
             }
@@ -457,7 +383,6 @@
                 <div class="indicator-description">12 Meses</div>
             </div>
 
-            <!-- Linha 2 -->
             <div class="indicator-card">
                 <div class="indicator-icon">
                     <i class="fas fa-chart-area"></i>
@@ -469,6 +394,7 @@
                 <div class="indicator-description">12 Meses</div>
             </div>
 
+            <!-- Linha 2 -->
             <div class="indicator-card">
                 <div class="indicator-icon">
                     <i class="fas fa-chart-pie"></i>
@@ -492,15 +418,6 @@
                 <div class="indicator-value">7,41%</div>
                 <div class="indicator-description">12 Meses</div>
             </div>
-        </div>
-        
-        <div class="scroll-indicator" id="scroll-indicator">
-            <div class="scroll-dot active"></div>
-            <div class="scroll-dot"></div>
-            <div class="scroll-dot"></div>
-            <div class="scroll-dot"></div>
-            <div class="scroll-dot"></div>
-            <div class="scroll-dot"></div>
         </div>
 
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 09/05/2025 15:12</div>
@@ -572,22 +489,6 @@
             const themeIcon = document.getElementById('theme-toggle').querySelector('i');
             themeIcon.classList.toggle('fa-moon', !isLightMode);
             themeIcon.classList.toggle('fa-sun', isLightMode);
-        }
-
-        function handleScrollIndicator() {
-            const container = document.querySelector('.indicators-container');
-            const dots = document.querySelectorAll('.scroll-dot');
-            const cardWidth = document.querySelector('.indicator-card').offsetWidth;
-            const gap = 12; // Mesmo valor do gap no CSS
-            
-            container.addEventListener('scroll', () => {
-                const scrollPosition = container.scrollLeft;
-                const activeIndex = Math.round(scrollPosition / (cardWidth + gap));
-                
-                dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === activeIndex);
-                });
-            });
         }
 
         function quickEdit() {
@@ -667,7 +568,7 @@
                 card.addEventListener('touchstart', function() {
                     this.style.transform = 'translateY(2px)';
                 }, {passive: true});
-                
+
                 card.addEventListener('touchend', function() {
                     this.style.transform = '';
                 }, {passive: true});
@@ -686,8 +587,7 @@
 
             updateDateTime();
             setupEventListeners();
-            handleScrollIndicator();
-            
+
             // Melhorar performance em mobile
             if ('connection' in navigator && navigator.connection.saveData) {
                 document.querySelectorAll('i').forEach(icon => {
