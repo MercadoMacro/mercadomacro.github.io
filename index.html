@@ -1,12 +1,16 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <meta name="description" content="Notícias atualizadas sobre o mercado financeiro, cotações e análises">
     <meta name="keywords" content="mercado financeiro, ações, dólar, ibovespa, investimentos">
+    <meta name="author" content="Anderson">
     <meta property="og:title" content="Notícias de Mercado Financeiro">
     <meta property="og:description" content="Acompanhe as últimas notícias do mercado financeiro">
+    <meta property="og:image" content="https://example.com/finance-thumbnail.jpg">
+    <meta property="og:url" content="https://example.com">
+    <meta name="theme-color" content="#0a0a2a">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <title>Notícias de Mercado Financeiro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -16,7 +20,7 @@
             --primary-color: #00ff88;
             --dark-bg: #0a0a2a;
             --darker-bg: #1a1a4a;
-            --text-color: #ffffff;
+            --text-color: #f8f8f8;
             --text-secondary: rgba(255, 255, 255, 0.7);
             --card-bg: rgba(0, 0, 0, 0.25);
             --error-color: #ff6b6b;
@@ -60,7 +64,7 @@
         /* Widget TradingView ajustado */
         .tradingview-widget-container {
             width: 100%;
-            margin: 5px 0;  /* Espaçamento reduzido */
+            margin: 5px 0;
             background: transparent;
         }
         
@@ -70,7 +74,7 @@
         
         .logo {
             text-align: center;
-            margin-bottom: 15px;  /* Reduzido de 25px */
+            margin-bottom: 15px;
             position: relative;
             padding: 0 10px;
         }
@@ -117,7 +121,7 @@
         
         .subheader {
             font-size: 14px;
-            margin-bottom: 5px;  /* Reduzido de 15px */
+            margin-bottom: 5px;
             color: rgba(255, 255, 255, 0.85);
         }
         
@@ -128,7 +132,7 @@
             text-align: justify;
             font-size: 15px;
             line-height: 1.7;
-            margin-top: 10px;  /* Reduzido de 20px */
+            margin-top: 10px;
             width: 100%;
             box-sizing: border-box;
             border-left: 3px solid var(--primary-color);
@@ -136,7 +140,7 @@
         
         .footer {
             font-size: 11px;
-            margin-top: 15px;  /* Reduzido de 25px */
+            margin-top: 15px;
             text-align: right;
             color: rgba(255, 255, 255, 0.6);
         }
@@ -145,7 +149,7 @@
             background: var(--card-bg);
             border-radius: 10px;
             padding: 12px;
-            margin-top: 15px;  /* Reduzido de 20px */
+            margin-top: 15px;
             max-height: 50vh;
             overflow-y: auto;
             position: relative;
@@ -242,6 +246,21 @@
             display: block;
         }
         
+        /* Skeleton Loading */
+        .skeleton-loading {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .skeleton-item {
+            height: 80px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+        
         .loading {
             color: rgba(255, 255, 255, 0.7);
             font-style: italic;
@@ -268,6 +287,11 @@
         
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
         
         .error {
@@ -348,6 +372,31 @@
             transform: translateY(0);
         }
 
+        /* Dark/Light Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(26, 26, 74, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-color);
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 12px;
@@ -388,10 +437,12 @@
                 font-size: 12px;
             }
             
-            #refresh-btn, #fullscreen-btn {
+            #refresh-btn, #fullscreen-btn, .theme-toggle {
                 padding: 8px 12px;
                 font-size: 12px;
                 bottom: 12px;
+                width: 36px;
+                height: 36px;
             }
             
             #fullscreen-btn {
@@ -437,6 +488,35 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(255,255,255,0.3);
         }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            --primary-color: #007bff;
+            --dark-bg: #f5f7fa;
+            --darker-bg: #e1e5eb;
+            --text-color: #333333;
+            --text-secondary: rgba(51, 51, 51, 0.7);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --error-color: #dc3545;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+        }
+
+        body.light-mode .news-widget-container,
+        body.light-mode .commentary {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .news-item {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-mode .news-item:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .skeleton-item {
+            background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 75%);
+        }
     </style>
 </head>
 <body>
@@ -446,7 +526,7 @@
             <div class="logo-divider"></div>
             <div class="logo-main">Mercado</div>
             <div class="logo-sub">Financeiro</div>
-            <div class="logo-byline">By Anderson Danilo</div>
+            <div class="logo-byline">By Anderson</div>
         </div>
         
         <div class="subheader" id="data-atual">Indicadores - 08/05/2025, 23:19</div>
@@ -495,22 +575,32 @@
         <div class="news-widget-container" id="news-widget">
             <div class="news-header">
                 <div class="news-title">Últimas Notícias Financeiras</div>
-                <button id="refresh-news-btn">Atualizar Notícias</button>
+                <button id="refresh-news-btn" aria-label="Atualizar lista de notícias">Atualizar Notícias</button>
             </div>
             <div class="news-content">
-                <div class="loading"></div>
+                <div class="skeleton-loading">
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                </div>
             </div>
         </div>
 
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 08/05/2025 09:00</div>
     </div>
 
-    <button id="fullscreen-btn">Tela Cheia</button>
-    <button id="refresh-btn">Atualizar</button>
+    <button id="fullscreen-btn" aria-label="Alternar modo tela cheia">Tela Cheia</button>
+    <button id="refresh-btn" aria-label="Atualizar dados da página">Atualizar</button>
+    
+    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1-8.313-12.454z"/>
+        </svg>
+    </button>
 
     <script>
         // Configurações
-        const CACHE_KEY = 'newsCache_v2';
+        const CACHE_KEY = 'newsCache_v3';
         const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
         const RSS_URL = 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/';
         const PROXIES = [
@@ -544,6 +634,7 @@
         const refreshNewsBtn = document.getElementById('refresh-news-btn');
         const refreshBtn = document.getElementById('refresh-btn');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const themeToggle = document.getElementById('theme-toggle');
         
         // Funções de notificação
         function showNotification(message, isError = false) {
@@ -700,7 +791,13 @@
         
         async function loadNewsWidget() {
             try {
-                newsContent.innerHTML = '<div class="loading"></div>';
+                newsContent.innerHTML = `
+                    <div class="skeleton-loading">
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                    </div>
+                `;
                 refreshNewsBtn.disabled = true;
                 refreshNewsBtn.textContent = 'Carregando...';
                 
@@ -783,6 +880,19 @@
             }
         }
         
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            
+            // Atualizar o widget TradingView para o tema correto
+            const widget = document.querySelector('.tradingview-widget-container__widget iframe');
+            if (widget) {
+                const src = widget.src;
+                widget.src = src.replace(/(colorTheme=)(dark|light)/, `$1${isLightMode ? 'light' : 'dark'}`);
+            }
+        }
+        
         function handleZoom() {
             document.body.style.width = window.innerWidth + 'px';
             document.body.style.height = window.innerHeight + 'px';
@@ -793,6 +903,7 @@
             refreshBtn.addEventListener('click', updateDateTime);
             refreshNewsBtn.addEventListener('click', loadNewsWidget);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
+            themeToggle.addEventListener('click', toggleTheme);
             
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement) {
@@ -811,6 +922,11 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Verificar preferência de tema salva
+            if (localStorage.getItem('themePreference') === 'light') {
+                document.body.classList.add('light-mode');
+            }
+            
             updateDateTime();
             loadNewsWidget();
             setupEventListeners();
