@@ -36,6 +36,8 @@
             text-size-adjust: 100%;
             line-height: 1.6;
             transition: background 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
         
         :focus {
@@ -44,12 +46,26 @@
         }
         
         .container {
+            flex: 1;
             max-width: 100%;
             width: 100%;
             margin: 0 auto;
             padding: 15px;
             box-sizing: border-box;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Widget TradingView no rodapé */
+        .tradingview-widget-container {
+            margin-top: auto;
+            width: 100%;
+            background: transparent;
+        }
+        
+        .tradingview-widget-copyright {
+            display: none !important;
         }
         
         .logo {
@@ -273,6 +289,29 @@
             gap: 5px;
         }
         
+        .page-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: #00ff88;
+            color: #0a0a2a;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .page-notification.error {
+            background: #ff6b6b;
+            color: white;
+        }
+        
         #refresh-btn, #fullscreen-btn {
             position: fixed;
             bottom: 15px;
@@ -358,6 +397,12 @@
             #fullscreen-btn {
                 right: 85px;
             }
+            
+            .page-notification {
+                max-width: 90%;
+                font-size: 14px;
+                padding: 10px 15px;
+            }
         }
 
         @keyframes fadeIn {
@@ -421,6 +466,43 @@
         </div>
 
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 08/05/2025 09:00</div>
+        
+        <!-- Widget TradingView no rodapé - transparente e sem texto -->
+        <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <div class="tradingview-widget-copyright"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            {
+                "symbols": [
+                    {
+                        "proName": "FOREXCOM:SPXUSD",
+                        "title": "S&P 500"
+                    },
+                    {
+                        "proName": "BITSTAMP:BTCUSD",
+                        "title": "Bitcoin"
+                    },
+                    {
+                        "proName": "BMFBOVESPA:IBOV",
+                        "title": "IBOVESPA"
+                    },
+                    {
+                        "proName": "NASDAQ:IXIC",
+                        "title": "NASDAQ"
+                    },
+                    {
+                        "proName": "FX_IDC:USDBRL",
+                        "title": "Dólar"
+                    }
+                ],
+                "showSymbolLogo": true,
+                "isTransparent": true,
+                "displayMode": "compact",
+                "colorTheme": "dark",
+                "locale": "br"
+            }
+            </script>
+        </div>
     </div>
 
     <button id="fullscreen-btn">Tela Cheia</button>
@@ -433,7 +515,7 @@
         const RSS_URL = 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/';
         const PROXIES = [
             `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
-            `https://cors-anywhere.herokuapp.com/${RSS_URL}`,
+            `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,
             `https://thingproxy.freeboard.io/fetch/${RSS_URL}`
         ];
         
@@ -462,6 +544,60 @@
         const refreshNewsBtn = document.getElementById('refresh-news-btn');
         const refreshBtn = document.getElementById('refresh-btn');
         const fullscreenBtn = document.getElementById('fullscreen-btn');
+        
+        // Funções de notificação
+        function showNotification(message, isError = false) {
+            if (!("Notification" in window)) {
+                showInPageNotification(message, isError);
+                return;
+            }
+            
+            if (Notification.permission === "granted") {
+                sendBrowserNotification(message, isError);
+            } 
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        sendBrowserNotification(message, isError);
+                    } else {
+                        showInPageNotification(message, isError);
+                    }
+                });
+            } else {
+                showInPageNotification(message, isError);
+            }
+        }
+
+        function sendBrowserNotification(message, isError) {
+            const iconUrl = isError 
+                ? 'https://mercadomacro.github.io/error-icon.png'
+                : 'https://mercadomacro.github.io/news-icon.png';
+            
+            const notification = new Notification('Mercado Macro', {
+                body: message,
+                icon: iconUrl
+            });
+            
+            setTimeout(() => notification.close(), 5000);
+        }
+
+        function showInPageNotification(message, isError) {
+            const notification = document.createElement('div');
+            notification.className = `page-notification ${isError ? 'error' : 'success'}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(-20px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
         
         // Cache functions
         function getCachedNews() {
@@ -501,7 +637,7 @@
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         },
-                        signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
+                        signal: AbortSignal.timeout(5000)
                     });
                     
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -525,7 +661,6 @@
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlString, "text/xml");
                 
-                // Verifica se há erros no XML
                 const errorNode = xmlDoc.querySelector('parsererror');
                 if (errorNode) throw new Error('Erro ao analisar XML');
                 
@@ -548,7 +683,7 @@
                     }));
             } catch (error) {
                 console.error('Erro ao analisar notícias:', error);
-                return FALLBACK_NEWS; // Retorna fallback se houver erro na análise
+                return FALLBACK_NEWS;
             }
         }
         
@@ -565,29 +700,26 @@
         
         async function loadNewsWidget() {
             try {
-                // Mostrar estado de carregamento
                 newsContent.innerHTML = '<div class="loading"></div>';
                 refreshNewsBtn.disabled = true;
                 refreshNewsBtn.textContent = 'Carregando...';
                 
-                // Tentar obter do cache primeiro
                 const cachedData = getCachedNews();
                 if (cachedData) {
                     newsContent.innerHTML = renderNews(cachedData);
                 }
                 
-                // Buscar dados atualizados
                 const xmlString = await tryFetchWithProxies();
                 const newsItems = parseNews(xmlString);
                 
-                // Atualizar cache e renderizar
                 cacheNews(newsItems);
                 newsContent.innerHTML = renderNews(newsItems);
+                showNotification('Notícias atualizadas com sucesso!');
                 
             } catch (error) {
                 console.error('Erro ao carregar notícias:', error);
+                showNotification('Erro ao carregar notícias. Usando dados em cache.', true);
                 
-                // Tentar usar cache mesmo que expirado
                 const cachedData = getCachedNews();
                 if (cachedData) {
                     newsContent.innerHTML = `
@@ -600,7 +732,6 @@
                         </div>
                     `;
                 } else {
-                    // Usar fallback estático
                     newsContent.innerHTML = `
                         <div class="error">
                             <p>Serviço temporariamente indisponível</p>
@@ -613,7 +744,6 @@
                     `;
                 }
                 
-                // Tentar novamente após 30 segundos
                 setTimeout(loadNewsWidget, 30000);
                 
             } finally {
@@ -686,7 +816,10 @@
             setupEventListeners();
             handleZoom();
             
-            // Atualizar notícias a cada 5 minutos
+            setTimeout(() => {
+                showNotification('Bem-vindo ao Mercado Macro! Atualizando notícias...');
+            }, 1000);
+            
             setInterval(loadNewsWidget, 5 * 60 * 1000);
         });
     </script>
