@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <meta name="description" content="Análises detalhadas do mercado financeiro">
+    <meta name="keywords" content="análises financeiras, gráficos, tendências, investimentos">
+    <meta name="author" content="Anderson">
+    <meta property="og:title" content="Análises de Mercado Financeiro">
+    <meta property="og:description" content="Análises detalhadas e gráficos do mercado financeiro">
+    <meta property="og:image" content="https://example.com/analises-thumbnail.jpg">
+    <meta property="og:url" content="https://mercadomacro.github.io/analises.html">
+    <meta name="theme-color" content="#0a0a2a">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <title>Análises de Mercado Financeiro</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00ff88;
+            --primary-light: #66ffb3;
+            --primary-dark: #00cc6a;
+            --dark-bg: #0a0a2a;
+            --darker-bg: #1a1a4a;
+            --text-color: #f8f8f8;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --error-color: #ff6b6b;
+            --up-trend: #00C853;
+            --down-trend: #FF3D00;
+            --neutral-trend: #FFC107;
+            --stocks-color: #4CAF50;
+            --forex-color: #2196F3;
+            --commodities-color: #FF9800;
+            --crypto-color: #9C27B0;
+            --transition-speed: 0.3s;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            line-height: 1.6;
+            transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        :focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px 15px;
+            box-sizing: border-box;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            padding: 0 10px;
+        }
+        
+        .logo-main {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--primary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            transition: all var(--transition-speed) ease;
+        }
+        
+        .logo-sub {
+            display: block;
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: 3px;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+        
+        .logo-byline {
+            position: absolute;
+            right: 10px;
+            bottom: 0;
+            font-size: 11px;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        .logo-divider {
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(to right, var(--primary-color), transparent);
+            margin: 8px auto;
+            border-radius: 3px;
+        }
+        
+        .subheader {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .filters-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            border: none;
+            color: var(--text-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+        
+        .filter-btn:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+        }
+        
+        .filter-btn.active {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+        }
+        
+        .analises-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .analise-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 0;
+            text-align: left;
+            border-left: 4px solid var(--primary-color);
+            flex: 1 1 100%;
+            min-width: 0;
+            transition: all var(--transition-speed) ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analise-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .analise-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .analise-category {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .category-stocks {
+            background-color: var(--stocks-color);
+        }
+        
+        .category-forex {
+            background-color: var(--forex-color);
+        }
+        
+        .category-commodities {
+            background-color: var(--commodities-color);
+        }
+        
+        .category-crypto {
+            background-color: var(--crypto-color);
+        }
+        
+        .analise-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .up-trend {
+            color: var(--up-trend);
+        }
+        
+        .down-trend {
+            color: var(--down-trend);
+        }
+        
+        .neutral-trend {
+            color: var(--neutral-trend);
+        }
+        
+        .analise-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .analise-summary {
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .analise-content {
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+        
+        .analise-drivers {
+            margin: 15px 0;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+        }
+        
+        .drivers-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary-light);
+        }
+        
+        .driver-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .driver-icon {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+        
+        .analise-technicals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .technical-indicator {
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .indicator-value {
+            font-weight: 700;
+            margin-left: 5px;
+        }
+        
+        .analise-chart {
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .chart-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .chart-period-btn {
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .chart-period-btn:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+        }
+        
+        .chart-period-btn.active {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+        }
+        
+        .tradingview-widget-container {
+            width: 100%;
+            height: 100%;
+            background: transparent !important;
+        }
+        
+        .tradingview-widget-container__widget {
+            background: transparent !important;
+        }
+        
+        .analise-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .analise-timestamp {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .analise-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+        
+        .action-btn:hover {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            transform: scale(1.1);
+        }
+        
+        .footer {
+            font-size: 12px;
+            margin-top: 30px;
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 15px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .floating-btn {
+            position: fixed;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #home-btn {
+            right: 20px;
+        }
+        
+        #top-btn {
+            right: 80px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        #top-btn.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .floating-btn:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+            color: var(--dark-bg);
+        }
+        
+        .floating-btn:active {
+            transform: translateY(0);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .theme-toggle i {
+            font-size: 20px;
+            color: var(--text-color);
+        }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            --primary-color: #0066cc;
+            --primary-light: #4d94ff;
+            --primary-dark: #004d99;
+            --dark-bg: #f5f7fa;
+            --darker-bg: #e1e5eb;
+            --text-color: #333333;
+            --text-secondary: rgba(51, 51, 51, 0.7);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --error-color: #dc3545;
+            --up-trend: #2e7d32;
+            --down-trend: #c62828;
+            --neutral-trend: #f9a825;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+        }
+
+        body.light-mode .logo-main {
+            background: linear-gradient(to right, #1a1a1a, var(--primary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.light-mode .analise-section {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        body.light-mode .analise-section:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.light-mode .analise-summary,
+        body.light-mode .analise-drivers {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        body.light-mode .technical-indicator {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        body.light-mode .action-btn {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        body.light-mode .action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        @media (min-width: 768px) {
+            .analise-section {
+                flex: 1 1 calc(50% - 20px);
+                min-width: 300px;
+            }
+            
+            .logo-main {
+                font-size: 42px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .analise-section {
+                flex: 1 1 calc(33.333% - 20px);
+            }
+            
+            .container {
+                padding: 30px 20px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px 12px;
+            }
+            
+            .logo-main {
+                font-size: 32px;
+            }
+            
+            .logo-sub {
+                font-size: 12px;
+            }
+            
+            .logo-byline {
+                font-size: 10px;
+                right: 5px;
+            }
+            
+            .analise-section {
+                padding: 16px;
+            }
+            
+            .analise-title {
+                font-size: 18px;
+            }
+            
+            .floating-btn, .theme-toggle {
+                width: 45px;
+                height: 45px;
+                bottom: 15px;
+            }
+            
+            #home-btn {
+                right: 15px;
+            }
+            
+            #top-btn {
+                right: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-main">Análises</div>
+            <div class="logo-divider"></div>
+            <div class="logo-main">Mercado</div>
+            <div class="logo-sub">Financeiro</div>
+            <div class="logo-byline">By Anderson Danilo</div>
+        </div>
+        
+        <div class="subheader" id="data-atual">Análises - 09/05/2025, 00:15</div>
+
+        <div class="filters-container">
+            <button class="filter-btn active" data-filter="all">Todos</button>
+            <button class="filter-btn" data-filter="stocks">Ações</button>
+            <button class="filter-btn" data-filter="forex">Moedas</button>
+            <button class="filter-btn" data-filter="commodities">Commodities</button>
+            <button class="filter-btn" data-filter="crypto">Cripto</button>
+        </div>
+
+        <div class="analises-container">
+            <div class="analise-section" data-category="stocks">
+                <div class="analise-meta">
+                    <span class="analise-category category-stocks">Ações</span>
+                    <span class="analise-trend up-trend"><i class="fas fa-arrow-up"></i> Tendência de Alta</span>
+                </div>
+                <div class="analise-title">
+                    <i class="fas fa-chart-line"></i> Ibovespa: Resistência em 137.500
+                </div>
+                <div class="analise-summary">
+                    O Ibovespa mantém tendência de alta com volume crescente, buscando testar a resistência em 137.500 pontos.
+                </div>
+                <div class="analise-content">
+                    O índice brasileiro mostra força desde o início do mês, com suporte consolidado em 135.000 pontos. O volume tem acompanhado a movimentação, indicando solidez no movimento. Setores financeiro e de commodities lideram os ganhos.
+                </div>
+                
+                <div class="analise-drivers">
+                    <div class="drivers-title">Principais Drivers:</div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-dollar-sign"></i></span>
+                        <span>Queda do dólar beneficiando empresas com dívida em USD</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-percentage"></i></span>
+                        <span>Expectativa de manutenção dos juros pelo COPOM</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-globe-americas"></i></span>
+                        <span>Melhora no cenário internacional</span>
+                    </div>
+                </div>
+                
+                <div class="analise-technicals">
+                    <div class="technical-indicator">
+                        <span>RSI:</span>
+                        <span class="indicator-value">62</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Média 200d:</span>
+                        <span class="indicator-value">131.200</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Suporte:</span>
+                        <span class="indicator-value">135.000</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Resistência:</span>
+                        <span class="indicator-value">137.500</span>
+                    </div>
+                </div>
+                
+                <div class="analise-chart">
+                    <div class="chart-controls">
+                        <button class="chart-period-btn active" data-period="1D">1D</button>
+                        <button class="chart-period-btn" data-period="1W">1W</button>
+                        <button class="chart-period-btn" data-period="1M">1M</button>
+                    </div>
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "BMFBOVESPA:IBOV|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": true,
+                        "showMA": true,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "Montserrat, sans-serif",
+                        "fontSize": "12",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
+                
+                <div class="analise-footer">
+                    <div class="analise-timestamp">
+                        <i class="far fa-clock"></i>
+                        <span>Atualizado: 09/05/2025 09:45</span>
+                    </div>
+                    <div class="analise-actions">
+                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analise-section" data-category="forex">
+                <div class="analise-meta">
+                    <span class="analise-category category-forex">Moedas</span>
+                    <span class="analise-trend down-trend"><i class="fas fa-arrow-down"></i> Tendência de Baixa</span>
+                </div>
+                <div class="analise-title">
+                    <i class="fas fa-dollar-sign"></i> Dólar: Pressão de Baixa
+                </div>
+                <div class="analise-summary">
+                    O dólar opera abaixo da média de 200 dias com próximo suporte em R$ 5,60. Cenário internacional favorável mantém pressão de baixa.
+                </div>
+                <div class="analise-content">
+                    O par USD/BRL continua sua trajetória de baixa, negociando abaixo da média móvel de 200 dias. O próximo suporte importante está em R$ 5,60, enquanto a resistência imediata é R$ 5,70. Fluxo positivo de capitais estrangeiros e melhora no cenário global contribuem para essa tendência.
+                </div>
+                
+                <div class="analise-drivers">
+                    <div class="drivers-title">Principais Drivers:</div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-chart-line"></i></span>
+                        <span>Commodities em alta favorecem moeda brasileira</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-money-bill-wave"></i></span>
+                        <span>Fluxo positivo de investimentos estrangeiros</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-globe-europe"></i></span>
+                        <span>Dólar fraco no mercado internacional</span>
+                    </div>
+                </div>
+                
+                <div class="analise-technicals">
+                    <div class="technical-indicator">
+                        <span>RSI:</span>
+                        <span class="indicator-value">38</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Média 200d:</span>
+                        <span class="indicator-value">5.72</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Suporte:</span>
+                        <span class="indicator-value">5.60</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Resistência:</span>
+                        <span class="indicator-value">5.70</span>
+                    </div>
+                </div>
+                
+                <div class="analise-chart">
+                    <div class="chart-controls">
+                        <button class="chart-period-btn active" data-period="1D">1D</button>
+                        <button class="chart-period-btn" data-period="1W">1W</button>
+                        <button class="chart-period-btn" data-period="1M">1M</button>
+                    </div>
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "FX_IDC:USDBRL|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": false,
+                        "showMA": true,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "Montserrat, sans-serif",
+                        "fontSize": "12",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
+                
+                <div class="analise-footer">
+                    <div class="analise-timestamp">
+                        <i class="far fa-clock"></i>
+                        <span>Atualizado: 09/05/2025 09:30</span>
+                    </div>
+                    <div class="analise-actions">
+                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analise-section" data-category="commodities">
+                <div class="analise-meta">
+                    <span class="analise-category category-commodities">Commodities</span>
+                    <span class="analise-trend up-trend"><i class="fas fa-arrow-up"></i> Recuperação</span>
+                </div>
+                <div class="analise-title">
+                    <i class="fas fa-gas-pump"></i> Petróleo: Formação de Fundo
+                </div>
+                <div class="analise-summary">
+                    O Brent mostra sinais de recuperação após testar suporte em US$ 60, com alvo inicial em US$ 65. Cortes da OPEC+ sustentam movimento.
+                </div>
+                <div class="analise-content">
+                    O petróleo Brent apresenta sinais de recuperação após testar o suporte em US$ 60. O movimento atual sugere possível formação de fundo, com alvo inicial em US$ 65. A demanda global em recuperação e os cortes de produção da OPEC+ sustentam o movimento. A média móvel de 50 dias atua agora como resistência dinâmica.
+                </div>
+                
+                <div class="analise-drivers">
+                    <div class="drivers-title">Principais Drivers:</div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-oil-can"></i></span>
+                        <span>Cortes de produção da OPEC+ sendo mantidos</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-plane-departure"></i></span>
+                        <span>Retomada da demanda por combustíveis de aviação</span>
+                    </div>
+                    <div class="driver-item">
+                        <span class="driver-icon"><i class="fas fa-industry"></i></span>
+                        <span>Reabertura de economias asiáticas</span>
+                    </div>
+                </div>
+                
+                <div class="analise-technicals">
+                    <div class="technical-indicator">
+                        <span>RSI:</span>
+                        <span class="indicator-value">55</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Média 50d:</span>
+                        <span class="indicator-value">63.20</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Suporte:</span>
+                        <span class="indicator-value">60.00</span>
+                    </div>
+                    <div class="technical-indicator">
+                        <span>Resistência:</span>
+                        <span class="indicator-value">65.00</span>
+                    </div>
+                </div>
+                
+                <div class="analise-chart">
+                    <div class="chart-controls">
+                        <button class="chart-period-btn active" data-period="1D">1D</button>
+                        <button class="chart-period-btn" data-period="1W">1W</button>
+                        <button class="chart-period-btn" data-period="1M">1M</button>
+                    </div>
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+                        {
+                        "symbols": [
+                            [
+                            "ACTIVTRADES:BRENT|1M"
+                            ]
+                        ],
+                        "chartOnly": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "locale": "br",
+                        "colorTheme": "light",
+                        "autosize": true,
+                        "showVolume": true,
+                        "showMA": true,
+                        "hideDateRanges": false,
+                        "hideMarketStatus": false,
+                        "hideSymbolLogo": false,
+                        "scalePosition": "right",
+                        "scaleMode": "Normal",
+                        "fontFamily": "Montserrat, sans-serif",
+                        "fontSize": "12",
+                        "noTimeScale": false,
+                        "valuesTracking": "1",
+                        "changeMode": "price-and-percent",
+                        "chartType": "area",
+                        "maLineColor": "#2962FF",
+                        "maLineWidth": 1,
+                        "maLength": 9,
+                        "headerFontSize": "medium",
+                        "lineWidth": 2,
+                        "lineType": 0,
+                        "dateRanges": [
+                            "1d|1",
+                            "1m|30",
+                            "3m|60",
+                            "12m|1D",
+                            "60m|1W",
+                            "all|1M"
+                        ]
+                        }
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
+                </div>
+                
+                <div class="analise-footer">
+                    <div class="analise-timestamp">
+                        <i class="far fa-clock"></i>
+                        <span>Atualizado: 09/05/2025 09:15</span>
+                    </div>
+                    <div class="analise-actions">
+                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer" id="footer">Atualizado em 09/05/2025 00:15 | © 2025 Mercado Macro</div>
+    </div>
+
+    <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial">
+        <i class="fas fa-home"></i>
+    </button>
+    
+    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    
+    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <script>
+        // Função para atualizar data e hora
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+            };
+            const formattedDate = now.toLocaleDateString('pt-BR', options);
+            
+            document.getElementById('data-atual').textContent = `Análises - ${formattedDate}`;
+            document.getElementById('footer').textContent = `Atualizado em ${formattedDate} | © ${now.getFullYear()} Mercado Macro`;
+        }
+
+        // Alternar tema claro/escuro
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            
+            // Atualizar ícone do tema
+            const themeIcon = document.querySelector('#theme-toggle i');
+            themeIcon.classList.toggle('fa-moon', !isLightMode);
+            themeIcon.classList.toggle('fa-sun', isLightMode);
+            
+            // Recarregar widgets TradingView para aplicar o tema correto
+            if (typeof TradingView !== 'undefined') {
+                window.location.reload();
+            }
+        }
+
+        // Filtro de categorias
+        function setupFilters() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    const filter = this.dataset.filter;
+                    const analysisSections = document.querySelectorAll('.analise-section');
+                    
+                    analysisSections.forEach(section => {
+                        if (filter === 'all' || section.dataset.category === filter) {
+                            section.style.display = 'block';
+                        } else {
+                            section.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+
+        // Controle de períodos do gráfico
+        function setupChartPeriods() {
+            document.querySelectorAll('.chart-period-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const parentChart = this.closest('.analise-chart');
+                    const periodButtons = parentChart.querySelectorAll('.chart-period-btn');
+                    
+                    // Remove active class from all buttons in this chart
+                    periodButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    // Aqui você implementaria a lógica para mudar o período do gráfico
+                    // Como estamos usando widgets do TradingView, isso requer recarregar o widget
+                    // Na prática, você precisaria de uma implementação mais sofisticada
+                });
+            });
+        }
+
+        // Botão voltar ao topo
+        function setupBackToTop() {
+            const backToTopButton = document.getElementById('top-btn');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopButton.classList.add('visible');
+                } else {
+                    backToTopButton.classList.remove('visible');
+                }
+            });
+            
+            backToTopButton.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('home-btn').addEventListener('click', function() {
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar preferência de tema salva
+            if (localStorage.getItem('themePreference') === 'light') {
+                document.body.classList.add('light-mode');
+                const themeIcon = document.querySelector('#theme-toggle i');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            }
+            
+            updateDateTime();
+            setupFilters();
+            setupChartPeriods();
+            setupBackToTop();
+            
+            // Atualizar data/hora a cada minuto
+            setInterval(updateDateTime, 60000);
+        });
+    </script>
+</body>
+</html>
