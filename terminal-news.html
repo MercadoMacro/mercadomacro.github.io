@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Terminal News - Painel de Notícias Financeiras</title>
+  <style>
+    :root {
+      --terminal-bg: #1b1c1d;
+      --terminal-border: #333;
+      --terminal-text: #eee;
+      --terminal-accent: #f1c40f;
+      --terminal-link: #00ffcc;
+      --terminal-hover: #f39c12;
+      --terminal-success: #2ecc71;
+      --button-bg: #333;
+      --button-hover: #444;
+    }
+    
+    body {
+      background: var(--terminal-bg);
+      font-family: 'Courier New', Courier, monospace;
+      margin: 0;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      position: relative;
+    }
+
+    .refresh-all {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--button-bg);
+      color: var(--terminal-text);
+      border: 1px solid var(--terminal-accent);
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+      transition: all 0.2s ease;
+    }
+
+    .refresh-all:hover {
+      background: var(--button-hover);
+      transform: translateY(-2px);
+    }
+
+    .refresh-all:active {
+      transform: translateY(0);
+    }
+
+    .news-widget {
+      background-color: #000;
+      border: 2px solid var(--terminal-border);
+      border-radius: 6px;
+      padding: 1rem;
+      color: var(--terminal-text);
+      height: fit-content;
+      position: relative;
+    }
+
+    .refresh-widget {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      color: var(--terminal-text);
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .refresh-widget:hover {
+      color: var(--terminal-accent);
+    }
+
+    .news-widget h3 {
+      font-size: 1.1rem;
+      color: var(--terminal-accent);
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--terminal-border);
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      padding-right: 30px;
+    }
+
+    .news-widget h3 i {
+      margin-right: 8px;
+    }
+
+    .news-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .news-list li {
+      margin: 0.6rem 0;
+      border-left: 3px solid var(--terminal-success);
+      padding-left: 0.5rem;
+    }
+
+    .news-list a {
+      text-decoration: none;
+      color: var(--terminal-link);
+      font-size: 0.9rem;
+      display: inline-block;
+      transition: color 0.2s;
+    }
+
+    .news-list a:hover {
+      color: var(--terminal-hover);
+    }
+
+    .timestamp {
+      font-size: 0.7rem;
+      color: #777;
+      margin-top: 10px;
+      text-align: right;
+    }
+
+    /* Botões flutuantes */
+    .action-btn {
+      position: fixed;
+      bottom: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: #000;
+      color: var(--terminal-text);
+      border: 1px solid var(--terminal-accent);
+      cursor: pointer;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .action-btn:hover {
+      background-color: var(--terminal-accent);
+      color: #000;
+      transform: translateY(-3px);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
+    }
+
+    #home-btn {
+      right: 90px;
+    }
+
+    #analises-btn {
+      right: 160px;
+    }
+
+    #indicadores-btn {
+      right: 230px;
+    }
+
+    #calculadoras-btn {
+      right: 300px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr;
+        padding-bottom: 80px;
+      }
+      
+      .refresh-all {
+        bottom: 80px;
+        right: 20px;
+      }
+
+      .action-btn {
+        width: 40px;
+        height: 40px;
+        bottom: 20px;
+      }
+
+      #home-btn {
+        right: 70px;
+      }
+
+      #analises-btn {
+        right: 120px;
+      }
+
+      #indicadores-btn {
+        right: 170px;
+      }
+
+      #calculadoras-btn {
+        right: 220px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #home-btn {
+        right: 60px;
+      }
+
+      #analises-btn {
+        right: 110px;
+      }
+
+      #indicadores-btn {
+        display: none;
+      }
+
+      #calculadoras-btn {
+        display: none;
+      }
+    }
+  </style>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- Widget 1 - ADVFN -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.advfn)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
+  <ul class="news-list" id="advfn-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="advfn-timestamp"></div>
+</div>
+
+<!-- Widget 2 - Investing.com Brasil -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.investing)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
+  <ul class="news-list" id="investing-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="investing-timestamp"></div>
+</div>
+
+<!-- Widget 3 - InfoMoney -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.infomoney)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
+  <ul class="news-list" id="infomoney-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="infomoney-timestamp"></div>
+</div>
+
+<!-- Widget 4 - Bloomberg Brasil -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.bloomberg)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-globe"></i> Bloomberg BR</h3>
+  <ul class="news-list" id="bloomberg-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="bloomberg-timestamp"></div>
+</div>
+
+<!-- Widget 5 - Reuters Brasil -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.reuters)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-business-time"></i> Reuters BR</h3>
+  <ul class="news-list" id="reuters-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="reuters-timestamp"></div>
+</div>
+
+<!-- Widget 6 - Valor Econômico -->
+<div class="news-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.valor)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-coins"></i> Valor Econômico</h3>
+  <ul class="news-list" id="valor-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="valor-timestamp"></div>
+</div>
+
+<!-- Botão para atualizar todos os feeds -->
+<button class="refresh-all" id="refresh-all">
+  <i class="fas fa-sync-alt"></i> Atualizar Tudo
+</button>
+
+<!-- Botões flutuantes -->
+<button id="home-btn" class="action-btn" aria-label="Página inicial">
+  <i class="fas fa-home"></i>
+</button>
+
+<button id="analises-btn" class="action-btn" aria-label="Análises">
+  <i class="fas fa-chart-line"></i>
+</button>
+
+<button id="indicadores-btn" class="action-btn" aria-label="Indicadores">
+  <i class="fas fa-chart-pie"></i>
+</button>
+
+<button id="calculadoras-btn" class="action-btn" aria-label="Calculadoras">
+  <i class="fas fa-calculator"></i>
+</button>
+
+<script>
+  // Configuração dos feeds RSS - Você pode editar aqui
+  const rssFeeds = {
+    advfn: {
+      url: 'https://br.advfn.com/common/news/feeds/paperbr/rss',
+      elementId: 'advfn-news',
+      timestampId: 'advfn-timestamp'
+    },
+    investing: {
+      url: 'https://br.investing.com/rss/news.rss',
+      elementId: 'investing-news',
+      timestampId: 'investing-timestamp'
+    },
+    infomoney: {
+      url: 'https://www.infomoney.com.br/feed/',
+      elementId: 'infomoney-news',
+      timestampId: 'infomoney-timestamp'
+    },
+    bloomberg: {
+      url: 'https://www.bloomberg.com/feeds/bbiz/sitemap_pt-br.xml',
+      elementId: 'bloomberg-news',
+      timestampId: 'bloomberg-timestamp'
+    },
+    reuters: {
+      url: 'https://br.reuters.com/tools/rss',
+      elementId: 'reuters-news',
+      timestampId: 'reuters-timestamp'
+    },
+    valor: {
+      url: 'https://www.valor.com.br/rss',
+      elementId: 'valor-news',
+      timestampId: 'valor-timestamp'
+    }
+  };
+
+  // Função para carregar notícias
+  async function loadNews(feedConfig) {
+    try {
+      // Mostra estado de carregamento
+      const list = document.getElementById(feedConfig.elementId);
+      list.innerHTML = '<li><i class="fas fa-spinner fa-spin"></i> Atualizando...</li>';
+      
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedConfig.url)}`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      
+      list.innerHTML = '';
+
+      // Mostra até 6 notícias
+      const itemsToShow = data.items.slice(0, 6);
+      
+      if (itemsToShow.length === 0) {
+        list.innerHTML = '<li>Nenhuma notícia encontrada.</li>';
+      } else {
+        itemsToShow.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`;
+          list.appendChild(li);
+        });
+      }
+      
+      // Atualiza timestamp
+      const now = new Date();
+      document.getElementById(feedConfig.timestampId).textContent = 
+        `Atualizado: ${now.toLocaleTimeString('pt-BR')}`;
+    } catch (error) {
+      document.getElementById(feedConfig.elementId).innerHTML = 
+        '<li><i class="fas fa-exclamation-triangle"></i> Erro ao carregar notícias.</li>';
+      console.error(`Erro no feed ${feedConfig.elementId}:`, error);
+    }
+  }
+
+  // Função para atualizar todos os feeds
+  function refreshAllFeeds() {
+    const refreshBtn = document.getElementById('refresh-all');
+    
+    // Animação de carregamento
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+    refreshBtn.disabled = true;
+    
+    // Atualiza todos os feeds
+    const promises = Object.values(rssFeeds).map(feed => loadNews(feed));
+    
+    // Restaura o botão quando terminar
+    Promise.all(promises).finally(() => {
+      setTimeout(() => {
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Tudo';
+        refreshBtn.disabled = false;
+      }, 1000);
+    });
+  }
+
+  // Carrega todos os feeds quando a página é aberta
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshAllFeeds();
+    
+    // Configura o botão de atualizar tudo
+    document.getElementById('refresh-all').addEventListener('click', refreshAllFeeds);
+    
+    // Configura os botões flutuantes
+    document.getElementById('home-btn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+    
+    document.getElementById('analises-btn').addEventListener('click', () => {
+      window.location.href = 'analises.html';
+    });
+    
+    document.getElementById('indicadores-btn').addEventListener('click', () => {
+      window.location.href = 'indicadores.html';
+    });
+    
+    document.getElementById('calculadoras-btn').addEventListener('click', () => {
+      window.location.href = 'calculadoras.html';
+    });
+  });
+
+  // Atualiza os feeds a cada 5 minutos
+  setInterval(refreshAllFeeds, 300000);
+</script>
+
+</body>
+</html>
