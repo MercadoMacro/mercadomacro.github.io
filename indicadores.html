@@ -164,10 +164,6 @@
             perspective: 1000px;
         }
 
-        .indicator-card:active {
-            transform: translateY(2px);
-        }
-
         .indicator-front, .indicator-back {
             backface-visibility: hidden;
             position: absolute;
@@ -258,8 +254,8 @@
         .action-btn {
             position: fixed;
             bottom: 15px;
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background-color: var(--card-bg);
             color: var(--text-color);
@@ -271,7 +267,8 @@
             justify-content: center;
             transition: all 0.2s ease;
             backdrop-filter: blur(5px);
-            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
         }
 
         #back-btn {
@@ -299,21 +296,21 @@
             font-size: 16px;
         }
 
-        .action-btn:hover, .action-btn:active {
+        .action-btn:hover {
             background-color: var(--darker-bg);
-            transform: scale(1.1);
+            transform: translateY(-2px);
         }
 
         .action-btn:active {
-            transform: scale(0.95);
+            transform: translateY(0);
         }
 
         .theme-toggle {
             position: fixed;
             bottom: 15px;
             left: 15px;
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -323,7 +320,7 @@
             justify-content: center;
             z-index: 1000;
             backdrop-filter: blur(5px);
-            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
         .theme-toggle i {
@@ -373,6 +370,34 @@
             
             .indicator-card:nth-child(6) {
                 min-height: 200px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .action-btn, .theme-toggle {
+                width: 36px;
+                height: 36px;
+                bottom: 12px;
+            }
+
+            #back-btn {
+                right: 12px;
+            }
+
+            #refresh-btn {
+                right: 58px;
+            }
+
+            #fullscreen-btn {
+                right: 104px;
+            }
+
+            #edit-btn {
+                right: 150px;
+            }
+
+            #fullscreen-exit-btn {
+                right: 104px;
             }
         }
 
@@ -685,7 +710,9 @@
 
             // Adiciona evento de clique para virar os cards
             document.querySelectorAll('.indicator-card').forEach(card => {
-                card.addEventListener('click', function() {
+                card.addEventListener('click', function(e) {
+                    // Impede que o clique no card seja acionado quando clicar em um botão
+                    if (e.target.closest('.action-btn')) return;
                     flipCard(this);
                 });
                 
