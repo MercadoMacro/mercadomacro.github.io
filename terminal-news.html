@@ -28,32 +28,6 @@
       position: relative;
     }
 
-    .refresh-all {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--button-bg);
-      color: var(--terminal-text);
-      border: 1px solid var(--terminal-accent);
-      border-radius: 4px;
-      padding: 8px 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 100;
-      transition: all 0.2s ease;
-    }
-
-    .refresh-all:hover {
-      background: var(--button-hover);
-      transform: translateY(-2px);
-    }
-
-    .refresh-all:active {
-      transform: translateY(0);
-    }
-
     .news-widget {
       background-color: #000;
       border: 2px solid var(--terminal-border);
@@ -157,20 +131,33 @@
       transform: translateY(0);
     }
 
-    #home-btn {
+    #refresh-btn {
+      right: 20px;
+    }
+
+    #fullscreen-btn {
       right: 90px;
     }
 
-    #analises-btn {
+    #fullscreen-exit-btn {
+      right: 90px;
+      display: none;
+    }
+
+    #home-btn {
       right: 160px;
     }
 
-    #indicadores-btn {
+    #analises-btn {
       right: 230px;
     }
 
-    #calculadoras-btn {
+    #indicadores-btn {
       right: 300px;
+    }
+
+    #calculadoras-btn {
+      right: 370px;
     }
 
     @media (max-width: 768px) {
@@ -179,41 +166,60 @@
         padding-bottom: 80px;
       }
       
-      .refresh-all {
-        bottom: 80px;
-        right: 20px;
-      }
-
       .action-btn {
         width: 40px;
         height: 40px;
         bottom: 20px;
       }
 
-      #home-btn {
+      #refresh-btn {
+        right: 20px;
+      }
+
+      #fullscreen-btn {
         right: 70px;
       }
 
-      #analises-btn {
+      #fullscreen-exit-btn {
+        right: 70px;
+      }
+
+      #home-btn {
         right: 120px;
       }
 
-      #indicadores-btn {
+      #analises-btn {
         right: 170px;
       }
 
-      #calculadoras-btn {
+      #indicadores-btn {
         right: 220px;
+      }
+
+      #calculadoras-btn {
+        right: 270px;
       }
     }
 
     @media (max-width: 480px) {
-      #home-btn {
+      #refresh-btn {
+        right: 15px;
+      }
+
+      #fullscreen-btn {
         right: 60px;
       }
 
+      #fullscreen-exit-btn {
+        right: 60px;
+      }
+
+      #home-btn {
+        right: 105px;
+      }
+
       #analises-btn {
-        right: 110px;
+        right: 150px;
       }
 
       #indicadores-btn {
@@ -301,12 +307,19 @@
   <div class="timestamp" id="valor-timestamp"></div>
 </div>
 
-<!-- Botão para atualizar todos os feeds -->
-<button class="refresh-all" id="refresh-all">
-  <i class="fas fa-sync-alt"></i> Atualizar Tudo
+<!-- Botões flutuantes -->
+<button id="refresh-btn" class="action-btn" aria-label="Atualizar tudo">
+  <i class="fas fa-sync-alt"></i>
 </button>
 
-<!-- Botões flutuantes -->
+<button id="fullscreen-btn" class="action-btn" aria-label="Modo tela cheia">
+  <i class="fas fa-expand"></i>
+</button>
+
+<button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia">
+  <i class="fas fa-compress"></i>
+</button>
+
 <button id="home-btn" class="action-btn" aria-label="Página inicial">
   <i class="fas fa-home"></i>
 </button>
@@ -397,10 +410,10 @@
 
   // Função para atualizar todos os feeds
   function refreshAllFeeds() {
-    const refreshBtn = document.getElementById('refresh-all');
+    const refreshBtn = document.getElementById('refresh-btn');
     
     // Animação de carregamento
-    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     refreshBtn.disabled = true;
     
     // Atualiza todos os feeds
@@ -409,20 +422,39 @@
     // Restaura o botão quando terminar
     Promise.all(promises).finally(() => {
       setTimeout(() => {
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Tudo';
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
         refreshBtn.disabled = false;
       }, 1000);
     });
+  }
+
+  // Função para alternar tela cheia
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Erro ao tentar entrar em tela cheia: ${err.message}`);
+      });
+      fullscreenBtn.style.display = 'none';
+      fullscreenExitBtn.style.display = 'flex';
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        fullscreenExitBtn.style.display = 'none';
+        fullscreenBtn.style.display = 'flex';
+      }
+    }
   }
 
   // Carrega todos os feeds quando a página é aberta
   document.addEventListener('DOMContentLoaded', () => {
     refreshAllFeeds();
     
-    // Configura o botão de atualizar tudo
-    document.getElementById('refresh-all').addEventListener('click', refreshAllFeeds);
-    
     // Configura os botões flutuantes
+    document.getElementById('refresh-btn').addEventListener('click', refreshAllFeeds);
+    
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+    document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
+    
     document.getElementById('home-btn').addEventListener('click', () => {
       window.location.href = 'index.html';
     });
@@ -437,6 +469,14 @@
     
     document.getElementById('calculadoras-btn').addEventListener('click', () => {
       window.location.href = 'calculadoras.html';
+    });
+
+    // Verifica mudanças no modo de tela cheia
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        fullscreenExitBtn.style.display = 'none';
+        fullscreenBtn.style.display = 'flex';
+      }
     });
   });
 
