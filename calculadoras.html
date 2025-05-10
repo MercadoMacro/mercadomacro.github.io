@@ -370,6 +370,10 @@
             right: 165px;
         }
 
+        #home-btn {
+            right: 215px;
+        }
+
         #fullscreen-exit-btn {
             right: 65px;
             display: none;
@@ -419,6 +423,10 @@
             
             #indicadores-btn {
                 right: 150px;
+            }
+            
+            #home-btn {
+                right: 196px;
             }
             
             #fullscreen-exit-btn {
@@ -725,6 +733,9 @@
     <button id="indicadores-btn" class="action-btn" aria-label="Ir para indicadores">
         <i class="fas fa-chart-pie"></i>
     </button>
+    <button id="home-btn" class="action-btn" aria-label="Voltar para página inicial">
+        <i class="fas fa-home"></i>
+    </button>
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
@@ -1011,6 +1022,10 @@
             
             document.getElementById('indicadores-btn').addEventListener('click', function() {
                 window.location.href = 'indicadores.html';
+            });
+
+            document.getElementById('home-btn').addEventListener('click', function() {
+                window.location.href = 'index.html';
             });
         });
     </script>
