@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Terminal News - Painel de Notícias Financeiras</title>
+  <title>Terminal News - Cripto & Finanças</title>
   <style>
     :root {
       --terminal-bg: #1b1c1d;
       --terminal-border: #333;
       --terminal-text: #eee;
       --terminal-accent: #f1c40f;
+      --crypto-accent: #00ff88;
+      --finance-accent: #3498db;
       --terminal-link: #00ffcc;
       --terminal-hover: #f39c12;
       --terminal-success: #2ecc71;
@@ -38,6 +40,14 @@
       position: relative;
     }
 
+    .crypto-widget {
+      border-top: 3px solid var(--crypto-accent);
+    }
+
+    .finance-widget {
+      border-top: 3px solid var(--finance-accent);
+    }
+
     .refresh-widget {
       position: absolute;
       top: 10px;
@@ -58,13 +68,20 @@
 
     .news-widget h3 {
       font-size: 1.1rem;
-      color: var(--terminal-accent);
       margin-bottom: 0.5rem;
       border-bottom: 1px solid var(--terminal-border);
       padding-bottom: 0.5rem;
       display: flex;
       align-items: center;
       padding-right: 30px;
+    }
+
+    .crypto-widget h3 {
+      color: var(--crypto-accent);
+    }
+
+    .finance-widget h3 {
+      color: var(--finance-accent);
     }
 
     .news-widget h3 i {
@@ -235,76 +252,94 @@
 </head>
 <body>
 
-<!-- Widget 1 - ADVFN -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.advfn)">
+<!-- Seção Criptomoedas -->
+<div class="news-widget crypto-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.guiadobitcoin)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
-  <ul class="news-list" id="advfn-news">
+  <h3><i class="fas fa-coins"></i> Guia do Bitcoin</h3>
+  <ul class="news-list" id="guiadobitcoin-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="advfn-timestamp"></div>
+  <div class="timestamp" id="guiadobitcoin-timestamp"></div>
 </div>
 
-<!-- Widget 2 - Investing.com Brasil -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.investing)">
+<div class="news-widget crypto-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.noticiabrasil)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
-  <ul class="news-list" id="investing-news">
+  <h3><i class="fas fa-newspaper"></i> Notícia Brasil</h3>
+  <ul class="news-list" id="noticiabrasil-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="investing-timestamp"></div>
+  <div class="timestamp" id="noticiabrasil-timestamp"></div>
 </div>
 
-<!-- Widget 3 - InfoMoney -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.infomoney)">
+<div class="news-widget crypto-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.cointelegraph)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
-  <ul class="news-list" id="infomoney-news">
+  <h3><i class="fab fa-bitcoin"></i> Cointelegraph</h3>
+  <ul class="news-list" id="cointelegraph-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="infomoney-timestamp"></div>
+  <div class="timestamp" id="cointelegraph-timestamp"></div>
 </div>
 
-<!-- Widget 4 - Bloomberg Brasil -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.bloomberg)">
+<!-- Seção Mercado Financeiro -->
+<div class="news-widget finance-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.dukascopy)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-globe"></i> Bloomberg BR</h3>
-  <ul class="news-list" id="bloomberg-news">
+  <h3><i class="fas fa-chart-line"></i> Dukascopy</h3>
+  <ul class="news-list" id="dukascopy-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="bloomberg-timestamp"></div>
+  <div class="timestamp" id="dukascopy-timestamp"></div>
 </div>
 
-<!-- Widget 5 - Reuters Brasil -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.reuters)">
+<div class="news-widget finance-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.forexlive)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-business-time"></i> Reuters BR</h3>
-  <ul class="news-list" id="reuters-news">
+  <h3><i class="fas fa-dollar-sign"></i> ForexLive</h3>
+  <ul class="news-list" id="forexlive-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="reuters-timestamp"></div>
+  <div class="timestamp" id="forexlive-timestamp"></div>
 </div>
 
-<!-- Widget 6 - Valor Econômico -->
-<div class="news-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.valor)">
+<div class="news-widget finance-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.fxmarkets)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-coins"></i> Valor Econômico</h3>
-  <ul class="news-list" id="valor-news">
+  <h3><i class="fas fa-exchange-alt"></i> FX Markets</h3>
+  <ul class="news-list" id="fxmarkets-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="valor-timestamp"></div>
+  <div class="timestamp" id="fxmarkets-timestamp"></div>
+</div>
+
+<div class="news-widget finance-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.fxstreet)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-chart-bar"></i> FXStreet</h3>
+  <ul class="news-list" id="fxstreet-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="fxstreet-timestamp"></div>
+</div>
+
+<div class="news-widget finance-widget">
+  <button class="refresh-widget" onclick="loadNews(rssFeeds.ing)">
+    <i class="fas fa-sync-alt"></i>
+  </button>
+  <h3><i class="fas fa-university"></i> ING Think</h3>
+  <ul class="news-list" id="ing-news">
+    <li>Carregando notícias...</li>
+  </ul>
+  <div class="timestamp" id="ing-timestamp"></div>
 </div>
 
 <!-- Botões flutuantes -->
@@ -337,37 +372,58 @@
 </button>
 
 <script>
-  // Configuração dos feeds RSS - Você pode editar aqui
+  // Configuração dos feeds RSS
   const rssFeeds = {
-    advfn: {
-      url: 'https://br.advfn.com/common/news/feeds/paperbr/rss',
-      elementId: 'advfn-news',
-      timestampId: 'advfn-timestamp'
+    // Criptomoedas
+    guiadobitcoin: {
+      url: 'https://guiadobitcoin.com.br/noticias/feed/',
+      elementId: 'guiadobitcoin-news',
+      timestampId: 'guiadobitcoin-timestamp',
+      category: 'crypto'
     },
-    investing: {
-      url: 'https://br.investing.com/rss/news.rss',
-      elementId: 'investing-news',
-      timestampId: 'investing-timestamp'
+    noticiabrasil: {
+      url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml',
+      elementId: 'noticiabrasil-news',
+      timestampId: 'noticiabrasil-timestamp',
+      category: 'crypto'
     },
-    infomoney: {
-      url: 'https://www.infomoney.com.br/feed/',
-      elementId: 'infomoney-news',
-      timestampId: 'infomoney-timestamp'
+    cointelegraph: {
+      url: 'https://br.cointelegraph.com/rss/tag/bitcoin',
+      elementId: 'cointelegraph-news',
+      timestampId: 'cointelegraph-timestamp',
+      category: 'crypto'
     },
-    bloomberg: {
-      url: 'https://www.bloomberg.com/feeds/bbiz/sitemap_pt-br.xml',
-      elementId: 'bloomberg-news',
-      timestampId: 'bloomberg-timestamp'
+    
+    // Mercado Financeiro
+    dukascopy: {
+      url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/',
+      elementId: 'dukascopy-news',
+      timestampId: 'dukascopy-timestamp',
+      category: 'finance'
     },
-    reuters: {
-      url: 'https://br.reuters.com/tools/rss',
-      elementId: 'reuters-news',
-      timestampId: 'reuters-timestamp'
+    forexlive: {
+      url: 'https://www.forexlive.com/feed',
+      elementId: 'forexlive-news',
+      timestampId: 'forexlive-timestamp',
+      category: 'finance'
     },
-    valor: {
-      url: 'https://www.valor.com.br/rss',
-      elementId: 'valor-news',
-      timestampId: 'valor-timestamp'
+    fxmarkets: {
+      url: 'https://www.fx-markets.com/feeds/rss',
+      elementId: 'fxmarkets-news',
+      timestampId: 'fxmarkets-timestamp',
+      category: 'finance'
+    },
+    fxstreet: {
+      url: 'https://www.fxstreet.com/rss/news',
+      elementId: 'fxstreet-news',
+      timestampId: 'fxstreet-timestamp',
+      category: 'finance'
+    },
+    ing: {
+      url: 'https://think.ing.com/rss/',
+      elementId: 'ing-news',
+      timestampId: 'ing-timestamp',
+      category: 'finance'
     }
   };
 
@@ -380,12 +436,17 @@
       
       const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedConfig.url)}`;
       const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       list.innerHTML = '';
 
       // Mostra até 6 notícias
-      const itemsToShow = data.items.slice(0, 6);
+      const itemsToShow = data.items ? data.items.slice(0, 6) : [];
       
       if (itemsToShow.length === 0) {
         list.innerHTML = '<li>Nenhuma notícia encontrada.</li>';
