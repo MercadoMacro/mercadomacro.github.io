@@ -9,9 +9,9 @@
       --terminal-bg: #1b1c1d;
       --terminal-border: #333;
       --terminal-text: #eee;
-      --terminal-accent: #f1c40f; /* Amarelo para títulos */
-      --crypto-accent: #f1c40f;  /* Amarelo também para cripto */
-      --finance-accent: #f1c40f; /* Amarelo também para finanças */
+      --terminal-accent: #f1c40f;
+      --crypto-accent: #00ff88;
+      --finance-accent: #3498db;
       --terminal-link: #00ffcc;
       --terminal-hover: #f39c12;
       --terminal-success: #2ecc71;
@@ -68,13 +68,20 @@
 
     .news-widget h3 {
       font-size: 1.1rem;
-      color: var(--terminal-accent); /* Todos os títulos em amarelo */
       margin-bottom: 0.5rem;
       border-bottom: 1px solid var(--terminal-border);
       padding-bottom: 0.5rem;
       display: flex;
       align-items: center;
       padding-right: 30px;
+    }
+
+    .crypto-widget h3 {
+      color: var(--crypto-accent);
+    }
+
+    .finance-widget h3 {
+      color: var(--finance-accent);
     }
 
     .news-widget h3 i {
@@ -279,52 +286,7 @@
   <div class="timestamp" id="cointelegraph-timestamp"></div>
 </div>
 
-<!-- Seção Mercado Financeiro Original -->
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.advfn)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
-  <ul class="news-list" id="advfn-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="advfn-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.investing)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
-  <ul class="news-list" id="investing-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="investing-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.infomoney)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
-  <ul class="news-list" id="infomoney-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="infomoney-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.valor)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-coins"></i> Valor Econômico</h3>
-  <ul class="news-list" id="valor-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="valor-timestamp"></div>
-</div>
-
-<!-- Seção Mercado Financeiro Internacional -->
+<!-- Seção Mercado Financeiro -->
 <div class="news-widget finance-widget">
   <button class="refresh-widget" onclick="loadNews(rssFeeds.dukascopy)">
     <i class="fas fa-sync-alt"></i>
@@ -432,33 +394,7 @@
       category: 'crypto'
     },
     
-    // Mercado Financeiro Original
-    advfn: {
-      url: 'https://br.advfn.com/common/news/feeds/paperbr/rss',
-      elementId: 'advfn-news',
-      timestampId: 'advfn-timestamp',
-      category: 'finance'
-    },
-    investing: {
-      url: 'https://br.investing.com/rss/news.rss',
-      elementId: 'investing-news',
-      timestampId: 'investing-timestamp',
-      category: 'finance'
-    },
-    infomoney: {
-      url: 'https://www.infomoney.com.br/feed/',
-      elementId: 'infomoney-news',
-      timestampId: 'infomoney-timestamp',
-      category: 'finance'
-    },
-    valor: {
-      url: 'https://www.valor.com.br/rss',
-      elementId: 'valor-news',
-      timestampId: 'valor-timestamp',
-      category: 'finance'
-    },
-    
-    // Mercado Financeiro Internacional
+    // Mercado Financeiro
     dukascopy: {
       url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/',
       elementId: 'dukascopy-news',
@@ -491,7 +427,6 @@
     }
   };
 
-  // [Restante do código JavaScript permanece exatamente igual]
   // Função para carregar notícias
   async function loadNews(feedConfig) {
     try {
