@@ -436,6 +436,10 @@
             right: 165px;
         }
 
+        #calculadoras-btn {
+            right: 215px;
+        }
+
         #fullscreen-exit-btn {
             right: 65px;
             display: none;
@@ -550,6 +554,10 @@
 
             #indicadores-btn {
                 right: 150px;
+            }
+
+            #calculadoras-btn {
+                right: 196px;
             }
 
             #fullscreen-exit-btn {
@@ -770,6 +778,10 @@ Com volume negociado de R$ 29,7 bilhões, o dia foi mais um retrato do equilíbr
         <i class="fas fa-chart-pie"></i>
     </button>
 
+    <button id="calculadoras-btn" class="action-btn" aria-label="Ir para calculadoras">
+        <i class="fas fa-calculator"></i>
+    </button>
+
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
@@ -814,6 +826,7 @@ Com volume negociado de R$ 29,7 bilhões, o dia foi mais um retrato do equilíbr
         const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
         const analisesBtn = document.getElementById('analises-btn');
         const indicadoresBtn = document.getElementById('indicadores-btn');
+        const calculadorasBtn = document.getElementById('calculadoras-btn');
         const themeToggle = document.getElementById('theme-toggle');
 
         // Bionic Reading Implementation
@@ -1205,6 +1218,9 @@ Com volume negociado de R$ 29,7 bilhões, o dia foi mais um retrato do equilíbr
             });
             indicadoresBtn.addEventListener('click', function() {
                 window.location.href = 'indicadores.html';
+            });
+            calculadorasBtn.addEventListener('click', function() {
+                window.location.href = 'calculadoras.html';
             });
             themeToggle.addEventListener('click', toggleTheme);
             document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
