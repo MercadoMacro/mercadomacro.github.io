@@ -409,8 +409,11 @@
 </button>
 
 <script>
+  // Variáveis globais para os botões de tela cheia
+  let fullscreenBtn, fullscreenExitBtn;
+
   // Configurações de cache
-  const CACHE_KEY = 'terminalNewsCache_v2';
+  const CACHE_KEY = 'terminalNewsCache_v3';
   const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
 
   // Configuração dos feeds RSS
@@ -468,9 +471,9 @@
       timestampId: 'dukascopy-timestamp',
       category: 'finance',
       proxies: [
-        `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
-        `https://corsproxy.io/?${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
-        `https://thingproxy.freeboard.io/fetch/${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`
+        `https://api.allorigins.win/get?charset=ISO-8859-1&url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
+        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
+        `https://cors-anywhere.herokuapp.com/${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`
       ]
     },
     forexlive: {
@@ -505,11 +508,11 @@
     const itemsToShow = items.slice(0, 6);
     
     if (itemsToShow.length === 0) {
-      listElement.innerHTML = '<li>Nenhuma notícia encontrada.</li>';
+      listElement.innerHTML = '<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada.</li>';
     } else {
       itemsToShow.forEach(item => {
         const li = document.createElement('li');
-        li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`;
+        li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>`;
         listElement.appendChild(li);
       });
     }
@@ -538,7 +541,7 @@
       
       let data;
       
-      // Tratamento especial para Dukascopy com múltiplos proxies
+      // Tratamento especial para feeds com múltiplos proxies
       if (feedConfig.proxies) {
         for (const proxyUrl of feedConfig.proxies) {
           try {
@@ -550,8 +553,10 @@
             // Ajuste para diferentes formatos de proxy
             if (proxyUrl.includes('allorigins.win')) {
               const xmlText = result.contents;
+              // Converta para UTF-8 se necessário
+              const decodedText = decodeURIComponent(escape(xmlText));
               const parser = new DOMParser();
-              const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+              const xmlDoc = parser.parseFromString(decodedText, "text/xml");
               const items = xmlDoc.getElementsByTagName("item");
               data = { 
                 items: Array.from(items).map(item => ({
@@ -559,6 +564,9 @@
                   link: item.getElementsByTagName("link")[0].textContent
                 })) 
               };
+            } else if (proxyUrl.includes('rss2json.com')) {
+              // Formato padrão do rss2json
+              data = result;
             } else {
               // Outros proxies podem retornar o XML diretamente
               const xmlText = await result.text();
@@ -576,19 +584,6 @@
             break; // Se conseguir com um proxy, sai do loop
           } catch (e) {
             console.log(`Proxy ${proxyUrl} falhou, tentando próximo...`, e);
-          }
-        }
-        
-        // Fallback se todos os proxies falharem
-        if (!data) {
-          try {
-            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedConfig.url)}&_=${Date.now()}`;
-            const response = await fetch(apiUrl);
-            if (response.ok) {
-              data = await response.json();
-            }
-          } catch (e) {
-            console.log('Fallback também falhou', e);
           }
         }
       } else {
@@ -658,13 +653,14 @@
 
   // Carrega todos os feeds quando a página é aberta
   document.addEventListener('DOMContentLoaded', () => {
+    // Inicializa os botões de tela cheia
+    fullscreenBtn = document.getElementById('fullscreen-btn');
+    fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
+    
     refreshAllFeeds();
     
     // Configura os botões flutuantes
     document.getElementById('refresh-btn').addEventListener('click', refreshAllFeeds);
-    
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
     fullscreenBtn.addEventListener('click', toggleFullscreen);
     fullscreenExitBtn.addEventListener('click', toggleFullscreen);
     
