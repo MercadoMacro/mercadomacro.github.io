@@ -469,12 +469,7 @@
       url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/',
       elementId: 'dukascopy-news',
       timestampId: 'dukascopy-timestamp',
-      category: 'finance',
-      proxies: [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
-        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
-        `https://cors-anywhere.herokuapp.com/${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`
-      ]
+      category: 'finance'
     },
     forexlive: {
       url: 'https://www.forexlive.com/feed',
@@ -522,7 +517,7 @@
       `Atualizado: ${now.toLocaleTimeString('pt-BR')}`;
   }
 
-  // Função para carregar notícias com tratamento especial para Dukascopy
+  // Função para carregar notícias usando allorigins
   async function loadNews(feedConfig) {
     try {
       const list = document.getElementById(feedConfig.elementId);
@@ -539,60 +534,22 @@
         return;
       }
       
-      let data;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedConfig.url)}`;
+      const response = await fetch(proxyUrl);
       
-      // Tratamento especial para feeds com múltiplos proxies
-      if (feedConfig.proxies) {
-        for (const proxyUrl of feedConfig.proxies) {
-          try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) continue;
-            
-            const result = await response.json();
-            
-            // Ajuste para diferentes formatos de proxy
-            if (proxyUrl.includes('allorigins.win')) {
-              const xmlText = result.contents;
-              // Converta para UTF-8 se necessário
-              const decodedText = decodeURIComponent(escape(xmlText));
-              const parser = new DOMParser();
-              const xmlDoc = parser.parseFromString(decodedText, "text/xml");
-              const items = xmlDoc.getElementsByTagName("item");
-              data = { 
-                items: Array.from(items).map(item => ({
-                  title: item.getElementsByTagName("title")[0].textContent,
-                  link: item.getElementsByTagName("link")[0].textContent
-                })) 
-              };
-            } else if (proxyUrl.includes('rss2json.com')) {
-              // Formato padrão do rss2json
-              data = result;
-            } else {
-              // Outros proxies podem retornar o XML diretamente
-              const xmlText = await result.text();
-              const parser = new DOMParser();
-              const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-              const items = xmlDoc.getElementsByTagName("item");
-              data = { 
-                items: Array.from(items).map(item => ({
-                  title: item.getElementsByTagName("title")[0].textContent,
-                  link: item.getElementsByTagName("link")[0].textContent
-                })) 
-              };
-            }
-            
-            break; // Se conseguir com um proxy, sai do loop
-          } catch (e) {
-            console.log(`Proxy ${proxyUrl} falhou, tentando próximo...`, e);
-          }
-        }
-      } else {
-        // Código original para outros feeds
-        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedConfig.url)}&_=${Date.now()}`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        data = await response.json();
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const xmlText = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+      const items = xmlDoc.getElementsByTagName("item");
+      
+      const data = { 
+        items: Array.from(items).map(item => ({
+          title: item.getElementsByTagName("title")[0].textContent,
+          link: item.getElementsByTagName("link")[0].textContent
+        })) 
+      };
       
       if (!data || !data.items) throw new Error('Dados do feed inválidos');
       
