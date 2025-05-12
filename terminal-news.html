@@ -471,7 +471,7 @@
       timestampId: 'dukascopy-timestamp',
       category: 'finance',
       proxies: [
-        `https://api.allorigins.win/get?charset=ISO-8859-1&url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
         `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`,
         `https://cors-anywhere.herokuapp.com/${encodeURIComponent('https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/')}`
       ]

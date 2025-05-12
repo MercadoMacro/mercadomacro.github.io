@@ -816,7 +816,7 @@ Por outro lado, no universo cripto, o Bitcoin operava em leve queda de 0,23%, co
             },
             {
                 name: 'AllOrigins',
-                url: 'https://api.allorigins.win/get?url=https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance',
+                url: 'https://api.allorigins.win/raw?url=https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance',
                 buildUrl: feedUrl => `${RSS_SOURCES[1].url}?charset=ISO-8859-1&url=${encodeURIComponent(feedUrl)}`,
                 processor: data => {
                     if (!data.contents) throw new Error('Conteúdo AllOrigins vazio');
