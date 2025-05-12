@@ -517,7 +517,7 @@
       `Atualizado: ${now.toLocaleTimeString('pt-BR')}`;
   }
 
-  // Função para carregar notícias usando allorigins
+  // Função para carregar notícias com fallback
   async function loadNews(feedConfig) {
     try {
       const list = document.getElementById(feedConfig.elementId);
@@ -534,22 +534,39 @@
         return;
       }
       
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedConfig.url)}`;
-      const response = await fetch(proxyUrl);
+      let data;
       
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
-      const xmlText = await response.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      const items = xmlDoc.getElementsByTagName("item");
-      
-      const data = { 
-        items: Array.from(items).map(item => ({
-          title: item.getElementsByTagName("title")[0].textContent,
-          link: item.getElementsByTagName("link")[0].textContent
-        })) 
-      };
+      // Tentar primeiro com feed2json
+      try {
+        const feed2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedConfig.url)}`;
+        const response = await fetch(feed2jsonUrl);
+        
+        if (response.ok) {
+          data = await response.json();
+        } else {
+          throw new Error('feed2json failed');
+        }
+      } catch (feed2jsonError) {
+        console.log('Feed2json falhou, tentando allorigins...', feed2jsonError);
+        
+        // Fallback para allorigins
+        const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedConfig.url)}`;
+        const response = await fetch(alloriginsUrl);
+        
+        if (!response.ok) throw new Error('Allorigins também falhou');
+        
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const items = xmlDoc.getElementsByTagName("item");
+        
+        data = { 
+          items: Array.from(items).map(item => ({
+            title: item.getElementsByTagName("title")[0].textContent,
+            link: item.getElementsByTagName("link")[0].textContent
+          })) 
+        };
+      }
       
       if (!data || !data.items) throw new Error('Dados do feed inválidos');
       
