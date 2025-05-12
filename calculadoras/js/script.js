@@ -298,11 +298,11 @@
 
             // Botões de navegação
             document.getElementById('analises-btn').addEventListener('click', function() {
-                window.location.href = 'analises.html';
+                window.location.href = '/analises.html';
             });
 
             document.getElementById('indicadores-btn').addEventListener('click', function() {
-                window.location.href = 'indicadores.html';
+                window.location.href = '/indicadores.html';
             });
 
             document.getElementById('home-btn').addEventListener('click', function() {
