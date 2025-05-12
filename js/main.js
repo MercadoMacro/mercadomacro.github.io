@@ -472,7 +472,7 @@
             document.getElementById('indicadores-btn').addEventListener('click', () => 
                 window.location.href = 'indicadores.html');
             document.getElementById('calculadoras-btn').addEventListener('click', () => 
-                window.location.href = 'calculadoras.html');
+                window.location.href = 'calculadoras/calculadoras.html');
             document.getElementById('terminal-btn').addEventListener('click', () => 
                 window.location.href = 'terminal-news.html');
 
