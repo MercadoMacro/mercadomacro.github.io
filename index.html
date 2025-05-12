@@ -802,7 +802,7 @@ Por outro lado, no universo cripto, o Bitcoin operava em leve queda de 0,23%, co
         const RSS_SOURCES = [
             {
                 name: 'RSS2JSON',
-                url: 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.dukascopy.com%2Ffxspider%2Fpt%2Frss%2Fnews_sector%2Ffinance',
+                url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance',
                 buildUrl: feedUrl => `${RSS_SOURCES[0].url}?rss_url=${encodeURIComponent(feedUrl)}`,
                 processor: data => {
                     if (!data.items) throw new Error('Formato RSS2JSON inválido');
