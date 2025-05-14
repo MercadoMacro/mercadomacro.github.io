@@ -42,13 +42,13 @@ body {
 
 .logo {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     position: relative;
     padding: 0 10px;
 }
 
 .logo-main {
-    font-size: 36px;
+    font-size: 20px;
     font-weight: 800;
     line-height: 1;
     letter-spacing: -1px;
@@ -63,7 +63,7 @@ body {
 
 .logo-sub {
     display: block;
-    font-size: 14px;
+    font-size: 7px;
     font-weight: 400;
     color: var(--text-secondary);
     letter-spacing: 3px;
@@ -73,9 +73,9 @@ body {
 
 .logo-byline {
     position: absolute;
-    right: 10px;
+    right: 3px;
     bottom: 0;
-    font-size: 11px;
+    font-size: 7px;
     font-style: italic;
     color: var(--text-secondary);
 }
@@ -89,8 +89,8 @@ body {
 }
 
 .subheader {
-    font-size: 14px;
-    margin-bottom: 5px;
+    font-size: 9px;
+    margin-bottom: -40px;
     color: var(--text-secondary);
 }
 
