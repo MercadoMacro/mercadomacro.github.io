@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Botão home
     document.getElementById('home-btn').addEventListener('click', function() {
-        window.location.href = 'index.html';
+        window.location.href = '/index.html';
     });
 
     // Configurar modal HP12C
