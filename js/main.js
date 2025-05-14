@@ -7,7 +7,7 @@ const FAVORITES_KEY = 'favorites';
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
-const SCREENSHOT_LOGO_URL = 'https://mercadomacro.github.io/logo.png'; // Substitua pela URL do seu logo
+const SCREENSHOT_LOGO_URL = ''; // Substitua pela URL do seu logo
 
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
