@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Calculadoras financeiras completas para investimentos">
     <meta name="keywords" content="calculadora financeira, CDB, LCI, LCA, amortização, preço médio">
     <meta name="author" content="Anderson">
@@ -10,113 +10,103 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="css/styles.css" rel="stylesheet">
+    <!-- Bibliotecas para exportação -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <!-- CABEÇALHO IDÊNTICO AO DA PÁGINA PRINCIPAL -->
     <div class="header">
         <div class="logo">
             <div class="logo-main">CALCULADORAS</div>
             <div class="logo-divider"></div>
-            <div class="logo-main">FINANCEIRAS</div>
-            <div class="logo-sub">FERRAMENTAS COMPLETAS</div>
-            <div class="logo-byline">By Anderson Danilo</div>
         </div>
     </div>
 
-    <!-- Botão flutuante para abrir a calculadora HP12C -->
-<button class="hp12c-btn" id="hp12cButton" title="Abrir Calculadora HP12C" aria-label="Abrir Calculadora HP12C">
-  <img src="http://mercadomacro.github.io/hp12c_logo_orange_white.png" alt="Ícone HP 12C" style="width: 125%; height: 100%; border-radius: 50%;" />
-</button>
+    <button class="hp12c-btn" id="hp12cButton" title="Abrir Calculadora HP12C" aria-label="Abrir Calculadora HP12C">
+        <img src="http://mercadomacro.github.io/hp12c_logo_orange_white.png" alt="Ícone HP 12C" class="hp12c-icon"/>
+    </button>
 
-    <!-- Modal da HP12C -->
     <div class="hp12c-modal" id="hp12cModal">
         <div class="hp12c-modal-content">
             <div class="hp12c-modal-header">
                 <span class="hp12c-modal-title">Calculadora HP12C</span>
-                <button class="hp12c-close-btn" id="hp12cCloseBtn">&times;</button>
+                <button class="hp12c-close-btn" id="hp12cCloseBtn" aria-label="Fechar calculadora">&times;</button>
             </div>
             <div class="hp12c-iframe-container">
-                <iframe src="https://www.vichinsky.com.br/hp12c/hp12c.php"></iframe>
+                <iframe src="https://www.vichinsky.com.br/hp12c/hp12c.php" title="Calculadora HP12C Virtual"></iframe>
             </div>
         </div>
     </div>
 
-    <!-- CONTAINER PRINCIPAL -->
     <div class="container">
-        <!-- CALCULADORA DE PREÇO MÉDIO -->
-        <div class="calculator">
+        <div class="calculator" id="price-average-calc">
             <h2><i class="fas fa-chart-line"></i> Calculadora de Preço Médio</h2>
-
             <div class="operations-list" id="operations-container">
                 <div class="operation-card" id="operation1">
                     <div class="operation-header">
                         <div class="operation-number">1</div>
-                        <button class="remove-operation" onclick="removeOperation(1)">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button class="remove-operation" aria-label="Remover operação"><i class="fas fa-times"></i></button>
                     </div>
-
                     <div class="input-group">
-                        <label>Quantidade</label>
+                        <label for="quantity1">Quantidade</label>
                         <div class="input-field">
                             <i class="fas fa-hashtag"></i>
-                            <input type="number" id="quantity1" placeholder="Ex: 100" step="any" min="0">
+                            <input type="number" id="quantity1" placeholder="Ex: 100" step="any" min="0" required>
                         </div>
                         <div class="error-message" id="quantity-error1"></div>
                     </div>
-
                     <div class="input-group">
-                        <label>Preço Unitário (R$)</label>
+                        <label for="price1">Preço Unitário (R$)</label>
                         <div class="input-field">
                             <i class="fas fa-dollar-sign"></i>
-                            <input type="number" id="price1" placeholder="Ex: 25.50" step="0.01" min="0">
+                            <input type="number" id="price1" placeholder="Ex: 25.50" step="0.01" min="0" required>
                         </div>
                         <div class="error-message" id="price-error1"></div>
                     </div>
                 </div>
             </div>
-
             <div class="button-group">
                 <button class="btn btn-secondary" id="add-operation">
                     <i class="fas fa-plus"></i> Adicionar Operação
                 </button>
             </div>
-
             <div class="input-group">
-                <label>Quantidade Atual (Opcional)</label>
+                <label for="current-quantity">Quantidade Atual (Opcional)</label>
                 <div class="input-field">
                     <i class="fas fa-boxes"></i>
                     <input type="number" id="current-quantity" placeholder="Quantidade que você já possui" step="any" min="0">
                 </div>
             </div>
-
             <div class="input-group">
-                <label>Preço Médio Atual (R$ - Opcional)</label>
+                <label for="current-price">Preço Médio Atual (R$ - Opcional)</label>
                 <div class="input-field">
                     <i class="fas fa-dollar-sign"></i>
                     <input type="number" id="current-price" placeholder="Seu preço médio atual" step="0.01" min="0">
                 </div>
             </div>
-
-            <button class="calculate-btn" id="calculate">
+            <button class="calculate-btn" id="calculate-average">
                 <i class="fas fa-calculator"></i> Calcular Preço Médio
             </button>
-
-            <div class="result" id="results" style="display: none;">
+            <div class="result" id="average-results">
                 <h3><i class="fas fa-chart-pie"></i> Resultados</h3>
-                <p>
-                    <span>Quantidade Total:</span>
-                    <span class="result-value" id="total-quantity">0</span>
-                </p>
-                <p>
-                    <span>Investimento Total:</span>
-                    <span class="result-value" id="total-investment">R$ 0,00</span>
-                </p>
-                <p>
-                    <span>Preço Médio:</span>
-                    <span class="result-value" id="average-price">R$ 0,00</span>
-                </p>
+                <p><span>Quantidade Total:</span> <span class="result-value" id="total-quantity">0</span></p>
+                <p><span>Investimento Total:</span> <span class="result-value" id="total-investment">R$ 0,00</span></p>
+                <p><span>Preço Médio:</span> <span class="result-value" id="average-price">R$ 0,00</span></p>
+                <button class="btn btn-secondary copy-btn" data-target="average-results">
+                    <i class="fas fa-copy"></i> Copiar Resultados
+                </button>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="average-results">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="average-results">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="image" data-target="average-results">
+                        <i class="fas fa-image"></i> Imagem
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -147,18 +137,23 @@
             </button>
             <div class="result" id="amortization-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
-                <p>
-                    <span>Valor da Parcela:</span>
-                    <span class="result-value" id="monthly-payment"></span>
-                </p>
-                <p>
-                    <span>Total de Juros:</span>
-                    <span class="result-value" id="total-loan-interest"></span>
-                </p>
-                <p>
-                    <span>Total Pago:</span>
-                    <span class="result-value" id="total-paid"></span>
-                </p>
+                <p><span>Valor da Parcela:</span> <span class="result-value" id="monthly-payment"></span></p>
+                <p><span>Total de Juros:</span> <span class="result-value" id="total-loan-interest"></span></p>
+                <p><span>Total Pago:</span> <span class="result-value" id="total-paid"></span></p>
+                <button class="btn btn-secondary copy-btn" data-target="amortization-result">
+                    <i class="fas fa-copy"></i> Copiar Resultados
+                </button>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="amortization-result">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="amortization-result">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="image" data-target="amortization-result">
+                        <i class="fas fa-image"></i> Imagem
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -190,22 +185,24 @@
             </button>
             <div class="result" id="cdb-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
-                <p>
-                    <span>Rendimento Bruto:</span>
-                    <span class="result-value" id="cdb-gross"></span>
-                </p>
-                <p>
-                    <span>Imposto de Renda:</span>
-                    <span class="result-value" id="cdb-tax"></span>
-                </p>
-                <p>
-                    <span>Rendimento Líquido:</span>
-                    <span class="result-value" id="cdb-net"></span>
-                </p>
-                <p>
-                    <span>Valor Final:</span>
-                    <span class="result-value" id="cdb-final"></span>
-                </p>
+                <p><span>Rendimento Bruto:</span> <span class="result-value" id="cdb-gross"></span></p>
+                <p><span>Imposto de Renda:</span> <span class="result-value" id="cdb-tax"></span></p>
+                <p><span>Rendimento Líquido:</span> <span class="result-value" id="cdb-net"></span></p>
+                <p><span>Valor Final:</span> <span class="result-value" id="cdb-final"></span></p>
+                <button class="btn btn-secondary copy-btn" data-target="cdb-result">
+                    <i class="fas fa-copy"></i> Copiar Resultados
+                </button>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="cdb-result">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="cdb-result">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="image" data-target="cdb-result">
+                        <i class="fas fa-image"></i> Imagem
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -233,44 +230,46 @@
             </button>
             <div class="result" id="compound-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
-                <p>
-                    <span>Valor Investido:</span>
-                    <span class="result-value" id="total-invested"></span>
-                </p>
-                <p>
-                    <span>Juros Acumulados:</span>
-                    <span class="result-value" id="total-interest"></span>
-                </p>
-                <p>
-                    <span>Valor Final:</span>
-                    <span class="result-value" id="final-amount"></span>
-                </p>
+                <p><span>Valor Investido:</span> <span class="result-value" id="total-invested"></span></p>
+                <p><span>Juros Acumulados:</span> <span class="result-value" id="total-interest"></span></p>
+                <p><span>Valor Final:</span> <span class="result-value" id="final-amount"></span></p>
+                <button class="btn btn-secondary copy-btn" data-target="compound-result">
+                    <i class="fas fa-copy"></i> Copiar Resultados
+                </button>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="compound-result">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="compound-result">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button class="btn btn-secondary export-btn" data-format="image" data-target="compound-result">
+                        <i class="fas fa-image"></i> Imagem
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- BOTÕES FLUTUANTES -->
-    <button id="fullscreen-btn" class="action-btn" aria-label="Modo tela cheia">
-        <i class="fas fa-expand"></i>
-    </button>
-    <button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia">
-        <i class="fas fa-compress"></i>
-    </button>
-    <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados">
-        <i class="fas fa-redo"></i>
-    </button>
-    <button id="analises-btn" class="action-btn" aria-label="Ir para análises">
-        <i class="fas fa-chart-line"></i>
-    </button>
-    <button id="indicadores-btn" class="action-btn" aria-label="Ir para indicadores">
-        <i class="fas fa-chart-pie"></i>
-    </button>
-    <button id="home-btn" class="action-btn" aria-label="Voltar para página inicial">
-        <i class="fas fa-home"></i>
-    </button>
+    <!-- Botões flutuantes simplificados -->
+    <div class="floating-buttons">
+        <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados">
+            <i class="fas fa-redo"></i>
+        </button>
+        <button id="home-btn" class="action-btn" aria-label="Voltar para página inicial">
+            <i class="fas fa-home"></i>
+        </button>
+        <button id="top-btn" class="action-btn" aria-label="Voltar ao topo">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <!-- Botão de tema à esquerda -->
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
 
     <script src="js/script.js"></script>
 </body>
