@@ -7,6 +7,7 @@ const FAVORITES_KEY = 'favorites';
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
+const SCREENSHOT_LOGO_URL = 'https://example.com/logo.png'; // Substitua pela URL do seu logo
 
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
@@ -94,12 +95,16 @@ function updateCommentary(content) {
             <button id="bionic-toggle" aria-label="Ativar Bionic Reading">
                 <i class="fas fa-eye"></i>
             </button>
+            <button id="screenshot-btn" aria-label="Gerar imagem da notícia">
+                <i class="fas fa-camera"></i>
+            </button>
         </div>`;
     
     commentary.innerHTML = `${bionicToggleContainer}${content}`;
     
-    // Reatacha o event listener do botão bionic
+    // Reatacha os event listeners
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
+    document.getElementById('screenshot-btn').addEventListener('click', captureNewsScreenshot);
     
     // Armazena o conteúdo original para o modo bionic
     commentary.dataset.originalText = content;
@@ -118,6 +123,74 @@ async function updateCommentaryContent() {
         }
         return false;
     }
+}
+
+// =============================================
+// FUNÇÕES DE CAPTURA DE TELA
+// =============================================
+
+async function captureNewsScreenshot() {
+    try {
+        showNotification('Preparando imagem...');
+        
+        // Adiciona a biblioteca html2canvas dinamicamente
+        await loadScript('https://html2canvas.hertzen.com/dist/html2canvas.min.js');
+        
+        const container = document.querySelector('.container');
+        const logo = await loadImage(SCREENSHOT_LOGO_URL);
+        
+        // Temporariamente adiciona o logo para a captura
+        const logoElement = document.createElement('div');
+        logoElement.style.position = 'absolute';
+        logoElement.style.top = '20px';
+        logoElement.style.left = '20px';
+        logoElement.style.zIndex = '99999';
+        logoElement.innerHTML = `<img src="${SCREENSHOT_LOGO_URL}" style="max-width: 150px; height: auto;">`;
+        document.body.appendChild(logoElement);
+        
+        // Captura a imagem
+        const canvas = await html2canvas(container, {
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: document.body.classList.contains('light-mode') ? '#f5f7fa' : '#0a0a2a'
+        });
+        
+        // Remove o logo temporário
+        document.body.removeChild(logoElement);
+        
+        // Cria um link para download
+        const link = document.createElement('a');
+        link.download = `noticia-mercado-${new Date().toISOString().slice(0,10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        showNotification('Imagem gerada com sucesso!');
+    } catch (error) {
+        console.error('Erro ao capturar screenshot:', error);
+        showNotification('Erro ao gerar imagem', true);
+    }
+}
+
+function loadScript(url) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+function loadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+    });
 }
 
 // =============================================
@@ -460,6 +533,9 @@ function toggleBionicReading() {
                 <button id="bionic-toggle" aria-label="Desativar Bionic Reading">
                     <i class="fas fa-eye-slash"></i>
                 </button>
+                <button id="screenshot-btn" aria-label="Gerar imagem da notícia">
+                    <i class="fas fa-camera"></i>
+                </button>
             </div>
             ${applyBionicReading(originalText)}
         `;
@@ -469,12 +545,16 @@ function toggleBionicReading() {
                 <button id="bionic-toggle" aria-label="Ativar Bionic Reading">
                     <i class="fas fa-eye"></i>
                 </button>
+                <button id="screenshot-btn" aria-label="Gerar imagem da notícia">
+                    <i class="fas fa-camera"></i>
+                </button>
             </div>
             ${commentary.dataset.originalText}
         `;
     }
 
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
+    document.getElementById('screenshot-btn').addEventListener('click', captureNewsScreenshot);
 }
 
 function applyBionicReading(text, fixation = 3) {
@@ -502,6 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
+    document.getElementById('screenshot-btn').addEventListener('click', captureNewsScreenshot);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);

@@ -136,9 +136,11 @@ body {
     top: 10px;
     left: 10px;
     z-index: 1;
+    display: flex;
+    gap: 5px;
 }
 
-#bionic-toggle {
+#bionic-toggle, #screenshot-btn {
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--primary-color);
     color: var(--primary-color);
@@ -154,7 +156,7 @@ body {
     gap: 5px;
 }
 
-#bionic-toggle:hover {
+#bionic-toggle:hover, #screenshot-btn:hover {
     background: var(--primary-color);
     color: #0a0a2a;
 }
@@ -523,7 +525,7 @@ body {
         padding-top: 45px;
     }
 
-    #bionic-toggle {
+    #bionic-toggle, #screenshot-btn {
         padding: 3px 8px;
         font-size: 10px;
     }
