@@ -118,17 +118,37 @@ body {
 
 .commentary {
     background: var(--card-bg);
-    padding: 16px;
+    padding: 20px;
     border-radius: 10px;
-    text-align: justify;
-    font-size: 15px;
-    line-height: 1.7;
-    margin-top: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    border-left: 3px solid var(--primary-color);
+    margin-top: 15px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-family: 'Montserrat', sans-serif;
     position: relative;
     padding-top: 50px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.commentary-content {
+    font-size: 15px;
+    text-align: justify;
+}
+
+.emoji {
+    font-size: 1.2em;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.bullet {
+    color: var(--primary-color);
+    margin-right: 8px;
+    font-weight: bold;
+}
+
+.sub-bullet {
+    color: var(--text-secondary);
+    margin-right: 8px;
 }
 
 .bionic-toggle-container {
@@ -157,6 +177,38 @@ body {
 #bionic-toggle:hover {
     background: var(--primary-color);
     color: #0a0a2a;
+}
+
+.loading-commentary {
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-commentary {
+    color: var(--error-color);
+    font-size: 14px;
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.error-commentary i {
+    font-size: 16px;
+}
+
+.commentary.bionic-enabled .commentary-content {
+    font-family: 'Montserrat', monospace;
+}
+
+.commentary.bionic-enabled strong {
+    font-weight: 800;
+    color: var(--primary-color);
 }
 
 .footer {
@@ -298,31 +350,6 @@ body {
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 8px;
-}
-
-.loading-commentary {
-    color: var(--text-secondary);
-    font-style: italic;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-}
-
-.error-commentary {
-    color: var(--error-color);
-    font-size: 14px;
-    margin-top: 10px;
-    padding: 8px;
-    background: rgba(255, 107, 107, 0.1);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.error-commentary i {
-    font-size: 16px;
 }
 
 .loading {

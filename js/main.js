@@ -87,6 +87,14 @@ async function fetchGoogleDocContent() {
     }
 }
 
+function formatDocContent(content) {
+    return content
+        .replace(/\n/g, '<br>')
+        .replace(/•/g, '<span class="bullet">•</span>')
+        .replace(/◦/g, '<span class="sub-bullet">◦</span>')
+        .replace(/(📅|📉|💵|🛢️|🇧🇷|🔍)/g, '<span class="emoji">$1</span>');
+}
+
 function updateCommentary(content) {
     const commentary = document.getElementById('commentary');
     const bionicToggleContainer = commentary.querySelector('.bionic-toggle-container')?.outerHTML || 
@@ -96,19 +104,17 @@ function updateCommentary(content) {
             </button>
         </div>`;
     
-    commentary.innerHTML = `${bionicToggleContainer}${content}`;
+    commentary.innerHTML = `${bionicToggleContainer}<div class="commentary-content">${content}</div>`;
     
-    // Reatacha o event listener do botão bionic
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
-    
-    // Armazena o conteúdo original para o modo bionic
     commentary.dataset.originalText = content;
 }
 
 async function updateCommentaryContent() {
     try {
         const content = await fetchGoogleDocContent();
-        updateCommentary(content);
+        const formattedContent = formatDocContent(content);
+        updateCommentary(formattedContent);
         return true;
     } catch (error) {
         console.error('Falha ao atualizar comentário:', error);
