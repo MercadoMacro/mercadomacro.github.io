@@ -140,7 +140,6 @@
       transform: translateY(0);
     }
 
-    /* Estilos para o alternador de tema */
     .theme-toggle {
       position: fixed;
       bottom: 20px;
@@ -169,7 +168,6 @@
       color: #000;
     }
 
-    /* Estilo para o botão de voltar ao topo */
     #top-btn {
       right: 160px;
       opacity: 0;
@@ -182,7 +180,6 @@
       visibility: visible;
     }
 
-    /* Posicionamento dos botões */
     #refresh-btn {
       right: 20px;
     }
@@ -191,7 +188,6 @@
       right: 90px;
     }
 
-    /* Estilos para o modo claro */
     body.light-mode {
       --terminal-bg: #f5f7fa;
       --terminal-border: #e1e5eb;
@@ -212,7 +208,6 @@
       border-left: 3px solid var(--terminal-accent);
     }
 
-    /* Ajustes para mobile */
     @media (max-width: 768px) {
       body {
         grid-template-columns: 1fr;
@@ -426,6 +421,20 @@
   const CACHE_KEY = 'terminalNewsCache_v3';
   const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
 
+  // Serviços de proxy alternativos (sem necessidade de ativação)
+  const PROXY_SERVICES = [
+    {
+      name: 'allorigins',
+      url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+    },
+    {
+      name: 'codetabs',
+      url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
+    }
+  ];
+
+  let currentProxyIndex = 0;
+
   // Configuração dos feeds RSS
   const rssFeeds = {
     // Criptomoedas
@@ -527,7 +536,7 @@
       `Atualizado: ${now.toLocaleTimeString('pt-BR')}`;
   }
 
-  // Função para carregar notícias usando apenas allorigins
+  // Função para carregar notícias com fallback entre dois proxies
   async function loadNews(feedConfig) {
     try {
       const list = document.getElementById(feedConfig.elementId);
@@ -544,30 +553,52 @@
         return;
       }
       
-      // Usar allorigins como única fonte
-      const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedConfig.url)}`;
-      const response = await fetch(alloriginsUrl);
+      // Tentar com os dois proxies alternadamente
+      let lastError = null;
       
-      if (!response.ok) throw new Error('Falha ao acessar o feed via AllOrigins');
+      for (let i = 0; i < PROXY_SERVICES.length; i++) {
+        const proxy = PROXY_SERVICES[i];
+        
+        try {
+          const proxyUrl = proxy.url(feedConfig.url);
+          console.log(`Tentando com proxy: ${proxy.name}`);
+          
+          const response = await fetch(proxyUrl);
+          
+          if (!response.ok) throw new Error(`Proxy ${proxy.name} retornou status ${response.status}`);
+          
+          const xmlText = await response.text();
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+          const items = xmlDoc.getElementsByTagName("item");
+          
+          const data = { 
+            items: Array.from(items).map(item => ({
+              title: item.getElementsByTagName("title")[0].textContent,
+              link: item.getElementsByTagName("link")[0].textContent
+            })) 
+          };
+          
+          if (!data || !data.items || data.items.length === 0) {
+            throw new Error('Dados do feed inválidos ou vazios');
+          }
+          
+          // Salvar no cache e renderizar
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+          localStorage.setItem(`${cacheKey}_time`, Date.now());
+          renderNews(list, feedConfig.timestampId, data.items);
+          return;
+          
+        } catch (error) {
+          lastError = error;
+          console.warn(`Falha com proxy ${proxy.name}:`, error);
+          // Continuar para o próximo proxy
+        }
+      }
       
-      const xmlText = await response.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      const items = xmlDoc.getElementsByTagName("item");
+      // Se todos os proxies falharam
+      throw lastError || new Error('Todos os proxies falharam');
       
-      const data = { 
-        items: Array.from(items).map(item => ({
-          title: item.getElementsByTagName("title")[0].textContent,
-          link: item.getElementsByTagName("link")[0].textContent
-        })) 
-      };
-      
-      if (!data || !data.items) throw new Error('Dados do feed inválidos');
-      
-      // Salvar no cache e renderizar
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      localStorage.setItem(`${cacheKey}_time`, Date.now());
-      renderNews(list, feedConfig.timestampId, data.items);
     } catch (error) {
       document.getElementById(feedConfig.elementId).innerHTML = 
         '<li><i class="fas fa-exclamation-triangle"></i> Erro ao carregar notícias.</li>';
