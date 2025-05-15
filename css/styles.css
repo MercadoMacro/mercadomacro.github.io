@@ -261,6 +261,8 @@ body {
 }
 
 .news-item-description {
+    white-space: pre-line; /* Isso preserva quebras de linha do texto */
+    text-align: justify;
     font-size: 13px;
     color: var(--text-secondary);
     margin-bottom: 5px;

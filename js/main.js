@@ -332,6 +332,8 @@ function renderNewsList(items, fromCache = false, isFallback = false) {
         ${statusHtml}
         ${items.map(item => {
             const isFavorited = favorites.some(fav => fav.link === item.link);
+            // Adicionamos .replace(/\\n/g, '<br>') para converter quebras de linha
+            const description = (item.description || '').replace(/\n/g, '<br>');
             return `
                 <div class="news-item">
                     <button class="favorite-btn ${isFavorited ? 'favorited' : ''}" 
@@ -340,7 +342,7 @@ function renderNewsList(items, fromCache = false, isFallback = false) {
                     </button>
                     <a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer">
                         <div class="news-item-title">${item.title}</div>
-                        <div class="news-item-description">${item.description || ''}</div>
+                        <div class="news-item-description">${description}</div>
                         <div class="news-item-date">${formatDate(item.pubDate)}</div>
                     </a>
                 </div>
