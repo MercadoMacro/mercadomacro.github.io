@@ -129,6 +129,11 @@ body {
     border-left: 3px solid var(--primary-color);
     position: relative;
     padding-top: 50px;
+    white-space: pre-line;
+}
+
+.commentary-content {
+    white-space: pre-line;
 }
 
 .bionic-toggle-container {
@@ -261,12 +266,18 @@ body {
 }
 
 .news-item-description {
-    white-space: pre-line; /* Isso preserva quebras de linha do texto */
+    white-space: pre-line;
     text-align: justify;
     font-size: 13px;
     color: var(--text-secondary);
     margin-bottom: 5px;
     line-height: 1.5;
+}
+
+.news-item-description br {
+    content: "";
+    display: block;
+    margin-bottom: 0.5em;
 }
 
 .news-link {

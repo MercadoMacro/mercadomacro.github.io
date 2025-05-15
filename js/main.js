@@ -7,7 +7,7 @@ const FAVORITES_KEY = 'favorites';
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
-const SCREENSHOT_LOGO_URL = 'https://mercadomacro.github.io/logo.png'; // Substitua pela URL do seu logo
+const SCREENSHOT_LOGO_URL = 'https://mercadomacro.github.io/logo.png';
 
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
@@ -100,7 +100,13 @@ function updateCommentary(content) {
             </button>
         </div>`;
     
-    commentary.innerHTML = `${bionicToggleContainer}${content}`;
+    // Tratamento robusto para quebras de linha
+    const formattedContent = content
+        .replace(/\n/g, '<br>')
+        .replace(/<br><br>/g, '<br>')
+        .trim();
+    
+    commentary.innerHTML = `${bionicToggleContainer}<div class="commentary-content">${formattedContent}</div>`;
     
     // Reatacha os event listeners
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
@@ -133,13 +139,11 @@ async function captureNewsScreenshot() {
     try {
         showNotification('Preparando imagem...');
         
-        // Adiciona a biblioteca html2canvas dinamicamente
         await loadScript('https://html2canvas.hertzen.com/dist/html2canvas.min.js');
         
         const container = document.querySelector('.container');
         const logo = await loadImage(SCREENSHOT_LOGO_URL);
         
-        // Temporariamente adiciona o logo para a captura
         const logoElement = document.createElement('div');
         logoElement.style.position = 'absolute';
         logoElement.style.top = '20px';
@@ -148,7 +152,6 @@ async function captureNewsScreenshot() {
         logoElement.innerHTML = `<img src="${SCREENSHOT_LOGO_URL}" style="max-width: 150px; height: auto;">`;
         document.body.appendChild(logoElement);
         
-        // Captura a imagem
         const canvas = await html2canvas(container, {
             scale: 2,
             logging: false,
@@ -157,10 +160,8 @@ async function captureNewsScreenshot() {
             backgroundColor: document.body.classList.contains('light-mode') ? '#f5f7fa' : '#0a0a2a'
         });
         
-        // Remove o logo temporário
         document.body.removeChild(logoElement);
         
-        // Cria um link para download
         const link = document.createElement('a');
         link.download = `noticia-mercado-${new Date().toISOString().slice(0,10)}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -332,8 +333,11 @@ function renderNewsList(items, fromCache = false, isFallback = false) {
         ${statusHtml}
         ${items.map(item => {
             const isFavorited = favorites.some(fav => fav.link === item.link);
-            // Adicionamos .replace(/\\n/g, '<br>') para converter quebras de linha
-            const description = (item.description || '').replace(/\n/g, '<br>');
+            const description = (item.description || '')
+                .replace(/\n/g, '<br>')
+                .replace(/<br><br>/g, '<br>')
+                .trim();
+                
             return `
                 <div class="news-item">
                     <button class="favorite-btn ${isFavorited ? 'favorited' : ''}" 
@@ -573,14 +577,12 @@ function applyBionicReading(text, fixation = 3) {
 // =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Configurar tema
     if (localStorage.getItem('themePreference') === 'light') {
         document.body.classList.add('light-mode');
         const themeIcon = document.querySelector('#theme-toggle i');
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     }
 
-    // Configurar eventos
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
     document.getElementById('bionic-toggle').addEventListener('click', toggleBionicReading);
@@ -597,7 +599,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('terminal-btn').addEventListener('click', () => 
         window.location.href = 'terminal-news.html');
 
-    // Iniciar
     updateDateTime();
     loadNewsWidget();
     updateCommentaryContent();
@@ -605,15 +606,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(loadNewsWidget, 300000);
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
 
-    // Mostrar notificação de boas-vindas
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
     }, 1000);
 });
-
-// =============================================
-// EXPORTAÇÃO PARA ESCOPO GLOBAL
-// =============================================
 
 window.toggleFavorite = toggleFavorite;
 window.loadNewsWidget = loadNewsWidget;
