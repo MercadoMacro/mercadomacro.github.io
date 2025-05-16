@@ -88,27 +88,43 @@ async function fetchGoogleDocContent() {
 }
 
 function updateCommentary(content) {
-    const commentary = document.getElementById('commentary');
+    const commentaryContent = document.getElementById('commentary-content');
     
     // Processamento do conteúdo
     const formattedContent = content
-        // Linhas com emoji no início (títulos/seções)
         .replace(/^([📌☐✔] .+)/gm, '<div class="commentary-highlight">$1</div>')
-        // Negritos
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        // Listas com bullets
         .replace(/^• (.+)/gm, '<li>$1</li>')
-        // Quebras de linha normais (Shift+Enter)
         .replace(/\n/g, '<br>')
-        // Separadores de parágrafo (Enter duplo)
         .replace(/<br>/g, '</div><div class="commentary-paragraph">')
-        // Correção para listas
         .replace(/<li>(.+?)<br>/g, '<li>$1</li>');
     
-    commentary.innerHTML = `
+    commentaryContent.innerHTML = `
         <div class="commentary-content">
             <div class="commentary-paragraph">${formattedContent}</div>
         </div>`;
+}
+
+async function updateCommentaryContent() {
+    const commentaryContent = document.getElementById('commentary-content');
+    try {
+        commentaryContent.innerHTML = `
+            <div class="loading-commentary">
+                <span class="loading-small"></span> Carregando análise do mercado...
+            </div>`;
+        
+        const content = await fetchGoogleDocContent();
+        updateCommentary(content);
+        return true;
+    } catch (error) {
+        console.error('Falha ao atualizar comentário:', error);
+        commentaryContent.innerHTML = `
+            <div class="error-commentary">
+                <i class="fas fa-exclamation-triangle"></i> 
+                Falha ao atualizar análise. Tentando novamente em 1 minuto...
+            </div>`;
+        return false;
+    }
 }
 
 async function updateCommentaryContent() {
