@@ -618,7 +618,7 @@ body.light-mode .box-header i {
     }
 
     .logo-main {
-        font-size: 28px;
+        font-size: 20px;
     }
 
     .logo-sub {
@@ -626,7 +626,7 @@ body.light-mode .box-header i {
     }
 
     .logo-byline {
-        font-size: 10px;
+        font-size: 8px;
         right: 5px;
     }
 
