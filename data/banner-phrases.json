@@ -1,150 +1,364 @@
 {
   "phrases": [
-    "Sucesso é a soma de pequenos esforços repetidos diariamente.",
-    "Acredite no seu potencial e vá além das metas.",
-    "Todo sonho é possível com disciplina e foco.",
-    "Cada passo dado com coragem aproxima você do sucesso.",
-    "As metas existem para serem superadas.",
-    "Comece onde está, use o que tem, faça o que puder.",
-    "Você é mais forte do que imagina.",
-    "Grandes conquistas nascem de grandes desafios.",
-    "O impossível é apenas uma opinião.",
-    "A consistência é o caminho mais curto até o sucesso.",
-    "A motivação te inicia, o hábito te mantém.",
-    "Conquiste o dia antes que ele conquiste você.",
-    "Pense grande, comece pequeno, aja agora.",
-    "Todo esforço vale a pena quando o objetivo é claro.",
-    "A ação transforma planos em conquistas.",
-    "O que você faz hoje constrói seu amanhã.",
-    "Tenha metas tão claras que elas te guiem mesmo nos dias difíceis.",
-    "Foque no progresso, não na perfeição.",
-    "Metas são sonhos com prazo.",
-    "O sucesso é construído passo a passo.",
-    "Não espere o momento perfeito, faça o momento acontecer.",
-    "Visualize a vitória e ela se tornará possível.",
-    "A persistência supera o talento.",
-    "Desistir não é uma opção para quem tem metas.",
-    "A disciplina é o elo entre objetivo e realização.",
-    "Transforme dificuldades em combustível para crescer.",
-    "Você é o único responsável pelo seu sucesso.",
-    "Grandes vitórias começam com decisões corajosas.",
-    "A jornada vale tanto quanto a chegada.",
-    "Com foco, qualquer meta é atingível.",
-    "Acredite, levante-se e conquiste.",
-    "Toda meta vencida aumenta sua confiança.",
-    "O sucesso recompensa quem age.",
-    "Fracassos são degraus para o sucesso.",
-    "Cada novo dia é uma chance de chegar mais perto.",
-    "Vença a si mesmo todos os dias.",
-    "Quem foca, realiza.",
-    "Seja implacável com suas metas.",
-    "Você nasceu para realizar grandes feitos.",
-    "Não importa o ritmo, desde que você não pare.",
-    "Onde há esforço, há progresso.",
-    "A mente direciona, a ação concretiza.",
-    "Alimente sua motivação todos os dias.",
-    "Coragem é a base de toda realização.",
-    "Invista em você como investe nos seus sonhos.",
-    "Seja consistente e os resultados virão.",
-    "Você tem tudo que precisa para vencer.",
-    "Determinação é o que separa metas de conquistas.",
-    "Sucesso não é sorte, é estratégia.",
-    "Tenha metas maiores que seus medos.",
-    "Foco diário gera resultados extraordinários.",
-    "Não existe crescimento sem desafio.",
-    "A meta de hoje é a vitória de amanhã.",
-    "Paciência e persistência vencem o impossível.",
-    "Você é capaz de muito mais.",
-    "Seja comprometido com seus objetivos.",
-    "O sucesso começa com uma atitude positiva.",
-    "Seja movido pelo propósito, não pelo medo.",
-    "Sua meta precisa ser maior que sua desculpa.",
-    "Quem quer faz, quem não quer arruma desculpa.",
-    "É nos dias difíceis que se formam os vencedores.",
-    "Cresça 1% todos os dias.",
-    "Transforme esforço em hábito e hábito em vitória.",
-    "Você é o autor do seu destino.",
-    "Planeje, execute e vença.",
-    "Sucesso é persistência com propósito.",
-    "Não espere por oportunidades, crie-as.",
-    "Construa uma vida que você não queira tirar férias.",
-    "Seja sua melhor versão todos os dias.",
-    "A meta é clara, a direção é certa.",
-    "Acredite até o fim. Depois, acredite mais um pouco.",
-    "Comprometimento é a chave do sucesso.",
-    "Você tem o que é preciso. Agora vá.",
-    "Aja como se já tivesse vencido.",
-    "O esforço de hoje constrói o orgulho de amanhã.",
-    "Uma meta sem ação é só um desejo.",
-    "Seja o exemplo do que você deseja alcançar.",
-    "Persista. Sua hora vai chegar.",
-    "Nunca subestime o poder da constância.",
-    "Cada dia conta. Faça valer a pena.",
-    "Acredite mais em você do que no obstáculo.",
-    "Transforme foco em força.",
-    "Seu futuro depende do que você faz agora.",
-    "Nada resiste à força de uma mente determinada.",
-    "Você nunca falha até que desista.",
-    "Trace metas e vá até o fim.",
-    "Realizar é melhor do que apenas sonhar.",
-    "Toda meta tem um preço. Está disposto a pagar?",
-    "Seja intenso com seus objetivos.",
-    "Chegar lá exige começar agora.",
-    "Não pare até se orgulhar.",
-    "Seja fiel às suas metas, mesmo nos dias difíceis.",
-    "A meta é difícil? Então vale a pena.",
-    "Disciplina pesa gramas, arrependimento pesa toneladas.",
-    "É sua vez. É seu momento.",
-    "Aja todos os dias como se a meta já fosse sua.",
-    "Com dedicação, o impossível vira rotina.",
-    "A cada esforço, um passo a mais.",
-    "Nada é tão poderoso quanto uma mente focada.",
-    "Meta alcançada, vida transformada.",
-    "A vontade de vencer tem que ser maior que o medo de tentar.",
-    "Você nasceu para impactar, não apenas existir.",
-    "Concentre-se naquilo que você pode controlar.",
-    "Meta clara, caminho definido, ação constante.",
-    "Levante com um propósito, durma com progresso.",
-    "Metas ousadas criam pessoas extraordinárias.",
-    "Nunca negocie seus objetivos com a preguiça.",
-    "Sucesso é a soma de direção e persistência.",
-    "Você chegou até aqui, vá até o fim.",
-    "Comprometa-se com seu crescimento.",
-    "Persistência é o nome do jogo.",
-    "Seja guiado por metas, não por distrações.",
-    "Você é capaz de reinventar seu caminho.",
-    "Tenha metas que te desafiem.",
-    "Foque no que depende de você.",
-    "Desempenho supera desculpas.",
-    "Meta é direção, foco é combustível.",
-    "Você pode, você consegue, você vai.",
-    "Sonhe grande, realize maior.",
-    "Foque, trabalhe, vença.",
-    "A vitória é de quem age, não de quem espera.",
-    "Tenha metas que te façam levantar animado.",
-    "Toda meta exige renúncia. Escolha o que vale mais.",
-    "O caminho é longo, mas a vitória é certa.",
-    "É no desconforto que nasce a força.",
-    "Desempenho diário, progresso constante.",
-    "Meta alcançada é meta superada.",
-    "Hoje é o melhor dia para começar.",
-    "Seja fiel ao seu propósito.",
-    "Meta dada é meta cumprida.",
-    "Vença um pouco todos os dias.",
-    "Você é o seu maior investimento.",
-    "Meta firme, coração forte.",
-    "O esforço nunca é em vão.",
-    "Todo dia é dia de avançar.",
-    "Pense como vencedor, aja como realizador.",
-    "Você tem tudo para vencer. Só precisa decidir.",
-    "Vá até onde for preciso pelas suas metas.",
-    "Não existe sucesso sem trabalho duro.",
-    "O sucesso é uma escada, suba um degrau por dia.",
-    "A diferença entre meta e realidade é ação.",
-    "Nunca pare de melhorar.",
-    "Quanto maior o desafio, maior a glória.",
-    "Você é o resultado do que repete.",
-    "As metas moldam o seu destino.",
-    "Faça do seu objetivo sua obsessão positiva."
+    {
+      "text": "Um investimento em conhecimento paga os melhores juros.",
+      "author": "Benjamin Franklin"
+    },
+    {
+      "text": "Quanto mais você aprende, mais você ganha.",
+      "author": "Warren Buffett"
+    },
+    {
+      "text": "Não é quanto dinheiro você ganha, mas quanto dinheiro você guarda, o quanto ele funciona para você e por quantas gerações você o guarda.",
+      "author": "Robert Kiyosaki"
+    },
+    {
+      "text": "A riqueza não consiste em ter grandes posses, mas em ter poucas necessidades.",
+      "author": "Epicteto"
+    },
+    {
+      "text": "Não me diga o que você valoriza, mostre-me seu orçamento e eu direi o que você valoriza.",
+      "author": "Joe Biden"
+    },
+    {
+      "text": "O dinheiro cresce na árvore da persistência.",
+      "author": "Provérbio japonês"
+    },
+    {
+      "text": "O mercado de ações está cheio de pessoas que sabem o preço de tudo, mas o valor de nada.",
+      "author": "Philip Fisher"
+    },
+    {
+      "text": "A paz financeira não é a aquisição de coisas. É aprender a viver com menos do que você ganha, para poder devolver dinheiro e ter dinheiro para investir.",
+      "author": "Dave Ramsey"
+    },
+    {
+      "text": "Muitas pessoas gastam dinheiro que não ganharam, para comprar coisas que não querem, para impressionar pessoas de quem não gostam.",
+      "author": "Will Rogers"
+    },
+    {
+      "text": "Você deve obter controle sobre seu dinheiro ou a falta dele o controlará para sempre.",
+      "author": "Dave Ramsey"
+    },
+    {
+      "text": "É bom ter dinheiro e as coisas que o dinheiro pode comprar, mas também é bom verificar de vez em quando e ter certeza de que você não perdeu as coisas que o dinheiro não pode comprar.",
+      "author": "George Lorimer"
+    },
+    {
+      "text": "Uma pessoa sábia deve ter dinheiro na cabeça, mas não no coração.",
+      "author": "Jonathan Swift"
+    },
+    {
+      "text": "Se você vive para ter tudo, o que você tem nunca é suficiente.",
+      "author": "Vicki Robin"
+    },
+    {
+      "text": "Não economize o que resta depois de gastar, mas gaste o que sobra depois de economizar.",
+      "author": "Warren Buffett"
+    },
+    {
+      "text": "O dinheiro é um mestre terrível, mas um excelente servo.",
+      "author": "P.T. Barnum"
+    },
+    {
+      "text": "Grandes coisas nos negócios nunca são feitas por uma pessoa. Elas são feitas por uma equipe de pessoas.",
+      "author": "Steve Jobs"
+    },
+    {
+      "text": "Não deixe que o medo de perder seja maior do que a emoção de vencer.",
+      "author": "Robert Kiyosaki"
+    },
+    {
+      "text": "Você não constrói um negócio, você constrói pessoas, depois as pessoas constroem o negócio.",
+      "author": "Zig Ziglar"
+    },
+    {
+      "text": "A inovação distingue um líder de um seguidor.",
+      "author": "Steve Jobs"
+    },
+    {
+      "text": "Arrisque mais do que os outros acham seguro. Sonhe mais do que os outros acham que é prático.",
+      "author": "Howard Schultz"
+    },
+    {
+      "text": "A única maneira de fazer um ótimo trabalho é amar o que você faz.",
+      "author": "Steve Jobs"
+    },
+    {
+      "text": "Não se trata de ideias. Trata-se de fazer as ideias acontecerem.",
+      "author": "Scott Belsky"
+    },
+    {
+      "text": "Seus clientes mais insatisfeitos são sua maior fonte de aprendizado.",
+      "author": "Bill Gates"
+    },
+    {
+      "text": "Você perde 100% das fotos que não tira.",
+      "author": "Wayne Gretzky"
+    },
+    {
+      "text": "O fracasso não é o oposto do sucesso; é parte do sucesso.",
+      "author": "Arianna Huffington"
+    },
+    {
+      "text": "Não se envergonhe de seus fracassos, aprenda com eles e comece de novo.",
+      "author": "Richard Branson"
+    },
+    {
+      "text": "O segredo da mudança é concentrar toda a sua energia não em combater o velho, mas em construir o novo.",
+      "author": "Sócrates"
+    },
+    {
+      "text": "No final das contas, uma visão sem a capacidade de executá-la é provavelmente uma alucinação.",
+      "author": "Steve Case"
+    },
+    {
+      "text": "Sucesso é caminhar de fracasso em fracasso sem perder o entusiasmo.",
+      "author": "Winston Churchill"
+    },
+    {
+      "text": "Se você não tentar, perderá a oportunidade de ter sucesso.",
+      "author": "Maya Angelou"
+    },
+    {
+      "text": "Sucesso é gostar de si mesmo, gostar do que você faz e gostar de como você faz.",
+      "author": "Maya Angelou"
+    },
+    {
+      "text": "Não se preocupe em ter sucesso, mas trabalhe para ser significativo e o sucesso virá naturalmente.",
+      "author": "Oprah Winfrey"
+    },
+    {
+      "text": "Liderança não tem a ver com títulos, posições ou fluxogramas. É sobre uma vida influenciando outra.",
+      "author": "John C. Maxwell"
+    },
+    {
+      "text": "Uma pessoa que nunca cometeu um erro nunca tentou nada novo.",
+      "author": "Albert Einstein"
+    },
+    {
+      "text": "No mundo dos negócios, o espelho retrovisor é sempre mais claro do que o para-brisa.",
+      "author": "Warren Buffett"
+    },
+    {
+      "text": "O sucesso parece estar ligado à ação. Pessoas bem-sucedidas continuam se movendo. Eles cometem erros, mas não desistem.",
+      "author": "Conrad Hilton"
+    },
+    {
+      "text": "Nunca sonhei com o sucesso. Eu trabalhei para isso.",
+      "author": "Estée Lauder"
+    },
+    {
+      "text": "Contrate um personagem. Treine suas habilidades.",
+      "author": "Peter Schutz"
+    },
+    {
+      "text": "Cerque-se de pessoas excelentes; delegue autoridade; saia do caminho.",
+      "author": "Ronald Reagan"
+    },
+    {
+      "text": "As oportunidades de negócios são como ônibus, sempre há outro chegando.",
+      "author": "Richard Branson"
+    },
+    {
+      "text": "A função da liderança é produzir mais líderes, não mais seguidores.",
+      "author": "Ralph Nader"
+    },
+    {
+      "text": "A melhor maneira de prever o futuro é criá-lo.",
+      "author": "Peter Drucker"
+    },
+    {
+      "text": "Sempre que você vê um negócio bem-sucedido, alguém já tomou uma decisão corajosa.",
+      "author": "Peter F. Drucker"
+    },
+    {
+      "text": "Tempo, perseverança e dez anos de tentativas acabarão por fazer com que você pareça um sucesso instantâneo.",
+      "author": "Biz Stone"
+    },
+    {
+      "text": "Se você quiser fazer alguma coisa, encontre uma maneira. Caso contrário, encontre uma desculpa.",
+      "author": "Jim Rohn"
+    },
+    {
+      "text": "Os melhores líderes são aqueles mais interessados em se cercar de assistentes e associados mais inteligentes do que eles.",
+      "author": "John C. Maxwell"
+    },
+    {
+      "text": "Líderes excepcionais se esforçam para aumentar a autoestima de seus funcionários.",
+      "author": "Sam Walton"
+    },
+    {
+      "text": "Não observe o relógio; faça o que ele faz. Continue.",
+      "author": "Sam Levenson"
+    },
+    {
+      "text": "Se você não está falhando, você não está crescendo.",
+      "author": "H. Stanley Judd"
+    },
+    {
+      "text": "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo.",
+      "author": "Roy T. Bennett"
+    },
+    {
+      "text": "Faça o que puder com tudo o que você tem, onde quer que esteja.",
+      "author": "Theodore Roosevelt"
+    },
+    {
+      "text": "Dinheiro pode não comprar felicidade, mas eu prefiro chorar em um Jaguar do que em um ônibus.",
+      "author": "Françoise Sagan"
+    },
+    {
+      "text": "O que você tentaria fazer se soubesse que não poderia falhar?",
+      "author": "Robert Schuller"
+    },
+    {
+      "text": "Se você não construir seu sonho, outra pessoa o contratará para ajudá-los a construir o deles.",
+      "author": "Dhirubhai Ambani"
+    },
+    {
+      "text": "Qualidade significa fazer a coisa certa quando ninguém está olhando.",
+      "author": "Henry Ford"
+    },
+    {
+      "text": "Um líder é alguém que conhece o caminho, segue o caminho e mostra o caminho.",
+      "author": "John C. Maxwell"
+    },
+    {
+      "text": "Os desafios são o que tornam a vida interessante, e superá-los é o que torna a vida significativa.",
+      "author": "Joshua J. Marine"
+    },
+    {
+      "text": "Inovação é a capacidade de ver a mudança como uma oportunidade, não uma ameaça.",
+      "author": "Steve Jobs"
+    },
+    {
+      "text": "O esforço só libera totalmente sua recompensa depois que uma pessoa se recusa a desistir.",
+      "author": "Napoleon Hill"
+    },
+    {
+      "text": "Não espere para golpear até que o ferro esteja quente; mas torne-o quente batendo.",
+      "author": "William Butler Yeats"
+    },
+    {
+      "text": "A falta de dinheiro é a raiz de todo mal.",
+      "author": "Mark Twain"
+    },
+    {
+      "text": "Você não precisa ter uma empresa de 100 pessoas para desenvolver essa ideia.",
+      "author": "Larry Page"
+    },
+    {
+      "text": "O sucesso não é definitivo; o fracasso não é fatal: é a coragem de continuar contando.",
+      "author": "Winston Churchill"
+    },
+    {
+      "text": "Bons líderes de negócios criam uma visão, articulam a visão, assumem apaixonadamente a visão e a conduzem incansavelmente até a conclusão.",
+      "author": "Jack Welch"
+    },
+    {
+      "text": "Se você realmente olhar de perto, a maioria dos sucessos da noite para o dia levou muito tempo.",
+      "author": "Steve Jobs"
+    },
+    {
+      "text": "Não se preocupe com o fracasso; você só precisa estar certo uma vez.",
+      "author": "Drew Houston"
+    },
+    {
+      "text": "É bom comemorar o sucesso, mas é mais importante aprender as lições do fracasso.",
+      "author": "Bill Gates"
+    },
+    {
+      "text": "O fracasso é simplesmente a oportunidade de começar de novo, desta vez de forma mais inteligente.",
+      "author": "Henry Ford"
+    },
+    {
+      "text": "Só há uma maneira de evitar críticas: não faça nada, não diga nada e não seja nada.",
+      "author": "Aristóteles"
+    },
+    {
+      "text": "Eu não falhei. Acabei de descobrir 10.000 maneiras que não funcionam.",
+      "author": "Thomas Edison"
+    },
+    {
+      "text": "No meio da dificuldade está a oportunidade.",
+      "author": "Albert Einstein"
+    },
+    {
+      "text": "O trabalho em equipe é o segredo que faz com que pessoas comuns alcancem resultados incomuns.",
+      "author": "Ifeanyi Enoch Onuoha"
+    },
+    {
+      "text": "Sozinhos, podemos fazer tão pouco; juntos, podemos fazer muito.",
+      "author": "Helen Keller"
+    },
+    {
+      "text": "Reunir-se é um começo; manter-se juntos é progresso; trabalhar juntos é sucesso.",
+      "author": "Henry Ford"
+    },
+    {
+      "text": "Ninguém pode assobiar uma sinfonia. É preciso uma orquestra inteira para tocá-la.",
+      "author": "H.E. Luccock"
+    },
+    {
+      "text": "Nenhum de nós é tão inteligente quanto todos nós.",
+      "author": "Ken Blanchard"
+    },
+    {
+      "text": "Cerque-se de uma equipe confiável e leal. Isso faz toda a diferença.",
+      "author": "Alison Pincus"
+    },
+    {
+      "text": "A força da equipe é cada membro individual. A força de cada membro é a equipe.",
+      "author": "Phil Jackson"
+    },
+    {
+      "text": "Acho que é possível que pessoas comuns escolham ser extraordinárias.",
+      "author": "Elon Musk"
+    },
+    {
+      "text": "O verdadeiro empreendedor é um realizador, não um sonhador.",
+      "author": "Nolan Bushnell"
+    },
+    {
+      "text": "Inovar é pegar duas coisas que já existem e juntá-las de uma nova maneira.",
+      "author": "Tom Freston"
+    },
+    {
+      "text": "Um navio no porto é seguro, mas não é para isso que os navios são construídos.",
+      "author": "John A. Shedd"
+    },
+    {
+      "text": "Se você não está disposto a arriscar o normal, terá que se contentar com o comum.",
+      "author": "Jim Rohn"
+    },
+    {
+      "text": "O maior risco é não correr nenhum risco.",
+      "author": "Mark Zuckerberg"
+    },
+    {
+      "text": "Faça uma coisa todos os dias que te assuste.",
+      "author": "Eleanor Roosevelt"
+    },
+    {
+      "text": "Não tenha medo de desistir do bom para ir atrás do ótimo.",
+      "author": "John D. Rockefeller"
+    },
+    {
+      "text": "O risco vem de não saber o que você está fazendo.",
+      "author": "Warren Buffett"
+    },
+    {
+      "text": "A maneira de começar é parar de falar e começar a fazer.",
+      "author": "Walt Disney"
+    },
+    {
+      "text": "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo.",
+      "author": "Roy T. Bennett"
+    },
+    {
+      "text": "O caminho para o sucesso e o caminho para o fracasso são quase exatamente os mesmos.",
+      "author": "Colin R. Davis"
+    }
   ]
 }
