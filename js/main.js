@@ -8,6 +8,31 @@ const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
 
+
+// Variável para armazenar as frases do banner
+let BANNER_PHRASES = [];
+
+// Função para carregar as frases do banner
+async function loadBannerPhrases() {
+    try {
+        const response = await fetch('data/banner-phrases.json'); // Corrigi o nome do arquivo
+        if (!response.ok) throw new Error('Falha ao carregar frases');
+        const data = await response.json();
+        BANNER_PHRASES = data.phrases;
+        if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) {
+            throw new Error('Nenhuma frase encontrada no arquivo');
+        }
+        updateBanner();
+    } catch (error) {
+        console.error('Erro ao carregar frases do banner:', error);
+        BANNER_PHRASES = [
+            "Acompanhe as últimas movimentações do mercado financeiro"
+        ];
+        updateBanner();
+    }
+}
+
+
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
     {
@@ -66,6 +91,9 @@ const FALLBACK_NEWS = [
     }
 ];
 
+
+
+
 // =============================================
 // FUNÇÕES DO GOOGLE DOCS
 // =============================================
@@ -105,6 +133,16 @@ function updateCommentary(content) {
         </div>`;
 }
 
+function updateBanner() {
+    const banner = document.getElementById('random-banner');
+    if (banner) {
+        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
+        banner.textContent = randomPhrase;
+        banner.style.whiteSpace = 'nowrap';
+        banner.style.textOverflow = 'ellipsis';
+    }
+}
+
 async function updateCommentaryContent() {
     const commentaryContent = document.getElementById('commentary-content');
     try {
@@ -127,20 +165,7 @@ async function updateCommentaryContent() {
     }
 }
 
-async function updateCommentaryContent() {
-    try {
-        const content = await fetchGoogleDocContent();
-        updateCommentary(content);
-        return true;
-    } catch (error) {
-        console.error('Falha ao atualizar comentário:', error);
-        const commentary = document.getElementById('commentary');
-        if (!commentary.textContent.includes('Carregando') && !commentary.textContent.includes('Erro')) {
-            commentary.innerHTML += `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> Falha ao atualizar análise. Tentando novamente em 1 minuto...</div>`;
-        }
-        return false;
-    }
-}
+
 
 // =============================================
 // FUNÇÕES PRINCIPAIS
@@ -478,12 +503,14 @@ function toggleTheme() {
 // INICIALIZAÇÃO
 // =============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (localStorage.getItem('themePreference') === 'light') {
         document.body.classList.add('light-mode');
         const themeIcon = document.querySelector('#theme-toggle i');
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     }
+
+    await loadBannerPhrases(); // Carrega as frases primeiro
 
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
@@ -505,7 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateDateTime, 60000);
     setInterval(loadNewsWidget, 300000);
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
-
+    setInterval(updateBanner, 300000); // Atualiza o banner periodicamente
+    
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
     }, 1000);
