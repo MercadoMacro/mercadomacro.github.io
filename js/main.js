@@ -8,14 +8,13 @@ const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
 
-
 // Variável para armazenar as frases do banner
 let BANNER_PHRASES = [];
 
 // Função para carregar as frases do banner
 async function loadBannerPhrases() {
     try {
-        const response = await fetch('data/banner-phrases.json'); // Corrigi o nome do arquivo
+        const response = await fetch('data/banner-phrases.json');
         if (!response.ok) throw new Error('Falha ao carregar frases');
         const data = await response.json();
         BANNER_PHRASES = data.phrases;
@@ -32,6 +31,41 @@ async function loadBannerPhrases() {
     }
 }
 
+// Função para atualizar o banner
+function updateBanner() {
+    const banner = document.getElementById('random-banner');
+    if (banner) {
+        // Cria a estrutura interna se não existir
+        if (!banner.querySelector('.banner-text')) {
+            const bannerText = document.createElement('div');
+            bannerText.className = 'banner-text';
+            banner.innerHTML = '';
+            banner.appendChild(bannerText);
+        }
+        
+        const bannerText = banner.querySelector('.banner-text');
+        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
+        bannerText.textContent = randomPhrase;
+        
+        // Reinicia a animação
+        bannerText.style.animation = 'none';
+        void bannerText.offsetWidth; // Trigger reflow
+        
+        // Ajusta o comportamento baseado no tamanho da tela
+        if (window.innerWidth > 768) {
+            bannerText.style.animation = 'none';
+            bannerText.style.position = 'static';
+            bannerText.style.left = 'auto';
+            bannerText.style.transform = 'none';
+            banner.style.justifyContent = 'center';
+        } else {
+            bannerText.style.animation = 'scrollBanner 20s linear infinite';
+            bannerText.style.position = 'absolute';
+            bannerText.style.left = '100%';
+            banner.style.justifyContent = 'flex-start';
+        }
+    }
+}
 
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
@@ -91,13 +125,9 @@ const FALLBACK_NEWS = [
     }
 ];
 
-
-
-
 // =============================================
 // FUNÇÕES DO GOOGLE DOCS
 // =============================================
-
 async function fetchGoogleDocContent() {
     try {
         const url = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DOC_ID}/export?mimeType=text/plain&key=${GOOGLE_API_KEY}`;
@@ -133,16 +163,6 @@ function updateCommentary(content) {
         </div>`;
 }
 
-function updateBanner() {
-    const banner = document.getElementById('random-banner');
-    if (banner) {
-        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
-        banner.textContent = randomPhrase;
-        banner.style.whiteSpace = 'nowrap';
-        banner.style.textOverflow = 'ellipsis';
-    }
-}
-
 async function updateCommentaryContent() {
     const commentaryContent = document.getElementById('commentary-content');
     try {
@@ -165,12 +185,9 @@ async function updateCommentaryContent() {
     }
 }
 
-
-
 // =============================================
 // FUNÇÕES PRINCIPAIS
 // =============================================
-
 async function fetchNews() {
     let lastError = null;
     
@@ -244,7 +261,6 @@ async function loadNewsWidget() {
 // =============================================
 // FUNÇÕES AUXILIARES
 // =============================================
-
 function updateLoadingState(isLoading) {
     const refreshNewsBtn = document.getElementById('refresh-news-btn');
     if (isLoading) {
@@ -371,7 +387,6 @@ function formatDate(dateString) {
 // =============================================
 // FUNÇÕES DE CACHE
 // =============================================
-
 function getCachedNews() {
     try {
         const cached = localStorage.getItem(CACHE_KEY);
@@ -408,7 +423,6 @@ function cacheNews(data) {
 // =============================================
 // FUNÇÕES DE FAVORITOS
 // =============================================
-
 function getFavorites() {
     try {
         return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
@@ -445,7 +459,6 @@ function toggleFavorite(newsItem) {
 // =============================================
 // FUNÇÕES DE INTERFACE
 // =============================================
-
 function showNotification(message, isError = false) {
     const notification = document.createElement('div');
     notification.className = `page-notification ${isError ? 'error' : 'success'}`;
@@ -502,7 +515,6 @@ function toggleTheme() {
 // =============================================
 // INICIALIZAÇÃO
 // =============================================
-
 document.addEventListener('DOMContentLoaded', async () => {
     if (localStorage.getItem('themePreference') === 'light') {
         document.body.classList.add('light-mode');
@@ -510,7 +522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     }
 
-    await loadBannerPhrases(); // Carrega as frases primeiro
+    await loadBannerPhrases();
 
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
@@ -526,13 +538,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('terminal-btn').addEventListener('click', () => 
         window.location.href = 'terminal-news.html');
 
+    // Adiciona listener para redimensionamento
+    window.addEventListener('resize', updateBanner);
+
     updateDateTime();
     loadNewsWidget();
     updateCommentaryContent();
     setInterval(updateDateTime, 60000);
     setInterval(loadNewsWidget, 300000);
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
-    setInterval(updateBanner, 300000); // Atualiza o banner periodicamente
+    setInterval(updateBanner, 300000);
     
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
