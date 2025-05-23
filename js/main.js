@@ -59,7 +59,7 @@ function updateBanner() {
             bannerText.style.transform = 'none';
             banner.style.justifyContent = 'center';
         } else {
-            bannerText.style.animation = 'scrollBanner 20s linear infinite';
+            bannerText.style.animation = 'scrollBanner 7s linear infinite';
             bannerText.style.position = 'absolute';
             bannerText.style.left = '100%';
             banner.style.justifyContent = 'flex-start';
