@@ -1,364 +1,94 @@
 {
   "phrases": [
-    {
-      "text": "Um investimento em conhecimento paga os melhores juros.",
-      "author": "Benjamin Franklin"
-    },
-    {
-      "text": "Quanto mais você aprende, mais você ganha.",
-      "author": "Warren Buffett"
-    },
-    {
-      "text": "Não é quanto dinheiro você ganha, mas quanto dinheiro você guarda, o quanto ele funciona para você e por quantas gerações você o guarda.",
-      "author": "Robert Kiyosaki"
-    },
-    {
-      "text": "A riqueza não consiste em ter grandes posses, mas em ter poucas necessidades.",
-      "author": "Epicteto"
-    },
-    {
-      "text": "Não me diga o que você valoriza, mostre-me seu orçamento e eu direi o que você valoriza.",
-      "author": "Joe Biden"
-    },
-    {
-      "text": "O dinheiro cresce na árvore da persistência.",
-      "author": "Provérbio japonês"
-    },
-    {
-      "text": "O mercado de ações está cheio de pessoas que sabem o preço de tudo, mas o valor de nada.",
-      "author": "Philip Fisher"
-    },
-    {
-      "text": "A paz financeira não é a aquisição de coisas. É aprender a viver com menos do que você ganha, para poder devolver dinheiro e ter dinheiro para investir.",
-      "author": "Dave Ramsey"
-    },
-    {
-      "text": "Muitas pessoas gastam dinheiro que não ganharam, para comprar coisas que não querem, para impressionar pessoas de quem não gostam.",
-      "author": "Will Rogers"
-    },
-    {
-      "text": "Você deve obter controle sobre seu dinheiro ou a falta dele o controlará para sempre.",
-      "author": "Dave Ramsey"
-    },
-    {
-      "text": "É bom ter dinheiro e as coisas que o dinheiro pode comprar, mas também é bom verificar de vez em quando e ter certeza de que você não perdeu as coisas que o dinheiro não pode comprar.",
-      "author": "George Lorimer"
-    },
-    {
-      "text": "Uma pessoa sábia deve ter dinheiro na cabeça, mas não no coração.",
-      "author": "Jonathan Swift"
-    },
-    {
-      "text": "Se você vive para ter tudo, o que você tem nunca é suficiente.",
-      "author": "Vicki Robin"
-    },
-    {
-      "text": "Não economize o que resta depois de gastar, mas gaste o que sobra depois de economizar.",
-      "author": "Warren Buffett"
-    },
-    {
-      "text": "O dinheiro é um mestre terrível, mas um excelente servo.",
-      "author": "P.T. Barnum"
-    },
-    {
-      "text": "Grandes coisas nos negócios nunca são feitas por uma pessoa. Elas são feitas por uma equipe de pessoas.",
-      "author": "Steve Jobs"
-    },
-    {
-      "text": "Não deixe que o medo de perder seja maior do que a emoção de vencer.",
-      "author": "Robert Kiyosaki"
-    },
-    {
-      "text": "Você não constrói um negócio, você constrói pessoas, depois as pessoas constroem o negócio.",
-      "author": "Zig Ziglar"
-    },
-    {
-      "text": "A inovação distingue um líder de um seguidor.",
-      "author": "Steve Jobs"
-    },
-    {
-      "text": "Arrisque mais do que os outros acham seguro. Sonhe mais do que os outros acham que é prático.",
-      "author": "Howard Schultz"
-    },
-    {
-      "text": "A única maneira de fazer um ótimo trabalho é amar o que você faz.",
-      "author": "Steve Jobs"
-    },
-    {
-      "text": "Não se trata de ideias. Trata-se de fazer as ideias acontecerem.",
-      "author": "Scott Belsky"
-    },
-    {
-      "text": "Seus clientes mais insatisfeitos são sua maior fonte de aprendizado.",
-      "author": "Bill Gates"
-    },
-    {
-      "text": "Você perde 100% das fotos que não tira.",
-      "author": "Wayne Gretzky"
-    },
-    {
-      "text": "O fracasso não é o oposto do sucesso; é parte do sucesso.",
-      "author": "Arianna Huffington"
-    },
-    {
-      "text": "Não se envergonhe de seus fracassos, aprenda com eles e comece de novo.",
-      "author": "Richard Branson"
-    },
-    {
-      "text": "O segredo da mudança é concentrar toda a sua energia não em combater o velho, mas em construir o novo.",
-      "author": "Sócrates"
-    },
-    {
-      "text": "No final das contas, uma visão sem a capacidade de executá-la é provavelmente uma alucinação.",
-      "author": "Steve Case"
-    },
-    {
-      "text": "Sucesso é caminhar de fracasso em fracasso sem perder o entusiasmo.",
-      "author": "Winston Churchill"
-    },
-    {
-      "text": "Se você não tentar, perderá a oportunidade de ter sucesso.",
-      "author": "Maya Angelou"
-    },
-    {
-      "text": "Sucesso é gostar de si mesmo, gostar do que você faz e gostar de como você faz.",
-      "author": "Maya Angelou"
-    },
-    {
-      "text": "Não se preocupe em ter sucesso, mas trabalhe para ser significativo e o sucesso virá naturalmente.",
-      "author": "Oprah Winfrey"
-    },
-    {
-      "text": "Liderança não tem a ver com títulos, posições ou fluxogramas. É sobre uma vida influenciando outra.",
-      "author": "John C. Maxwell"
-    },
-    {
-      "text": "Uma pessoa que nunca cometeu um erro nunca tentou nada novo.",
-      "author": "Albert Einstein"
-    },
-    {
-      "text": "No mundo dos negócios, o espelho retrovisor é sempre mais claro do que o para-brisa.",
-      "author": "Warren Buffett"
-    },
-    {
-      "text": "O sucesso parece estar ligado à ação. Pessoas bem-sucedidas continuam se movendo. Eles cometem erros, mas não desistem.",
-      "author": "Conrad Hilton"
-    },
-    {
-      "text": "Nunca sonhei com o sucesso. Eu trabalhei para isso.",
-      "author": "Estée Lauder"
-    },
-    {
-      "text": "Contrate um personagem. Treine suas habilidades.",
-      "author": "Peter Schutz"
-    },
-    {
-      "text": "Cerque-se de pessoas excelentes; delegue autoridade; saia do caminho.",
-      "author": "Ronald Reagan"
-    },
-    {
-      "text": "As oportunidades de negócios são como ônibus, sempre há outro chegando.",
-      "author": "Richard Branson"
-    },
-    {
-      "text": "A função da liderança é produzir mais líderes, não mais seguidores.",
-      "author": "Ralph Nader"
-    },
-    {
-      "text": "A melhor maneira de prever o futuro é criá-lo.",
-      "author": "Peter Drucker"
-    },
-    {
-      "text": "Sempre que você vê um negócio bem-sucedido, alguém já tomou uma decisão corajosa.",
-      "author": "Peter F. Drucker"
-    },
-    {
-      "text": "Tempo, perseverança e dez anos de tentativas acabarão por fazer com que você pareça um sucesso instantâneo.",
-      "author": "Biz Stone"
-    },
-    {
-      "text": "Se você quiser fazer alguma coisa, encontre uma maneira. Caso contrário, encontre uma desculpa.",
-      "author": "Jim Rohn"
-    },
-    {
-      "text": "Os melhores líderes são aqueles mais interessados em se cercar de assistentes e associados mais inteligentes do que eles.",
-      "author": "John C. Maxwell"
-    },
-    {
-      "text": "Líderes excepcionais se esforçam para aumentar a autoestima de seus funcionários.",
-      "author": "Sam Walton"
-    },
-    {
-      "text": "Não observe o relógio; faça o que ele faz. Continue.",
-      "author": "Sam Levenson"
-    },
-    {
-      "text": "Se você não está falhando, você não está crescendo.",
-      "author": "H. Stanley Judd"
-    },
-    {
-      "text": "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo.",
-      "author": "Roy T. Bennett"
-    },
-    {
-      "text": "Faça o que puder com tudo o que você tem, onde quer que esteja.",
-      "author": "Theodore Roosevelt"
-    },
-    {
-      "text": "Dinheiro pode não comprar felicidade, mas eu prefiro chorar em um Jaguar do que em um ônibus.",
-      "author": "Françoise Sagan"
-    },
-    {
-      "text": "O que você tentaria fazer se soubesse que não poderia falhar?",
-      "author": "Robert Schuller"
-    },
-    {
-      "text": "Se você não construir seu sonho, outra pessoa o contratará para ajudá-los a construir o deles.",
-      "author": "Dhirubhai Ambani"
-    },
-    {
-      "text": "Qualidade significa fazer a coisa certa quando ninguém está olhando.",
-      "author": "Henry Ford"
-    },
-    {
-      "text": "Um líder é alguém que conhece o caminho, segue o caminho e mostra o caminho.",
-      "author": "John C. Maxwell"
-    },
-    {
-      "text": "Os desafios são o que tornam a vida interessante, e superá-los é o que torna a vida significativa.",
-      "author": "Joshua J. Marine"
-    },
-    {
-      "text": "Inovação é a capacidade de ver a mudança como uma oportunidade, não uma ameaça.",
-      "author": "Steve Jobs"
-    },
-    {
-      "text": "O esforço só libera totalmente sua recompensa depois que uma pessoa se recusa a desistir.",
-      "author": "Napoleon Hill"
-    },
-    {
-      "text": "Não espere para golpear até que o ferro esteja quente; mas torne-o quente batendo.",
-      "author": "William Butler Yeats"
-    },
-    {
-      "text": "A falta de dinheiro é a raiz de todo mal.",
-      "author": "Mark Twain"
-    },
-    {
-      "text": "Você não precisa ter uma empresa de 100 pessoas para desenvolver essa ideia.",
-      "author": "Larry Page"
-    },
-    {
-      "text": "O sucesso não é definitivo; o fracasso não é fatal: é a coragem de continuar contando.",
-      "author": "Winston Churchill"
-    },
-    {
-      "text": "Bons líderes de negócios criam uma visão, articulam a visão, assumem apaixonadamente a visão e a conduzem incansavelmente até a conclusão.",
-      "author": "Jack Welch"
-    },
-    {
-      "text": "Se você realmente olhar de perto, a maioria dos sucessos da noite para o dia levou muito tempo.",
-      "author": "Steve Jobs"
-    },
-    {
-      "text": "Não se preocupe com o fracasso; você só precisa estar certo uma vez.",
-      "author": "Drew Houston"
-    },
-    {
-      "text": "É bom comemorar o sucesso, mas é mais importante aprender as lições do fracasso.",
-      "author": "Bill Gates"
-    },
-    {
-      "text": "O fracasso é simplesmente a oportunidade de começar de novo, desta vez de forma mais inteligente.",
-      "author": "Henry Ford"
-    },
-    {
-      "text": "Só há uma maneira de evitar críticas: não faça nada, não diga nada e não seja nada.",
-      "author": "Aristóteles"
-    },
-    {
-      "text": "Eu não falhei. Acabei de descobrir 10.000 maneiras que não funcionam.",
-      "author": "Thomas Edison"
-    },
-    {
-      "text": "No meio da dificuldade está a oportunidade.",
-      "author": "Albert Einstein"
-    },
-    {
-      "text": "O trabalho em equipe é o segredo que faz com que pessoas comuns alcancem resultados incomuns.",
-      "author": "Ifeanyi Enoch Onuoha"
-    },
-    {
-      "text": "Sozinhos, podemos fazer tão pouco; juntos, podemos fazer muito.",
-      "author": "Helen Keller"
-    },
-    {
-      "text": "Reunir-se é um começo; manter-se juntos é progresso; trabalhar juntos é sucesso.",
-      "author": "Henry Ford"
-    },
-    {
-      "text": "Ninguém pode assobiar uma sinfonia. É preciso uma orquestra inteira para tocá-la.",
-      "author": "H.E. Luccock"
-    },
-    {
-      "text": "Nenhum de nós é tão inteligente quanto todos nós.",
-      "author": "Ken Blanchard"
-    },
-    {
-      "text": "Cerque-se de uma equipe confiável e leal. Isso faz toda a diferença.",
-      "author": "Alison Pincus"
-    },
-    {
-      "text": "A força da equipe é cada membro individual. A força de cada membro é a equipe.",
-      "author": "Phil Jackson"
-    },
-    {
-      "text": "Acho que é possível que pessoas comuns escolham ser extraordinárias.",
-      "author": "Elon Musk"
-    },
-    {
-      "text": "O verdadeiro empreendedor é um realizador, não um sonhador.",
-      "author": "Nolan Bushnell"
-    },
-    {
-      "text": "Inovar é pegar duas coisas que já existem e juntá-las de uma nova maneira.",
-      "author": "Tom Freston"
-    },
-    {
-      "text": "Um navio no porto é seguro, mas não é para isso que os navios são construídos.",
-      "author": "John A. Shedd"
-    },
-    {
-      "text": "Se você não está disposto a arriscar o normal, terá que se contentar com o comum.",
-      "author": "Jim Rohn"
-    },
-    {
-      "text": "O maior risco é não correr nenhum risco.",
-      "author": "Mark Zuckerberg"
-    },
-    {
-      "text": "Faça uma coisa todos os dias que te assuste.",
-      "author": "Eleanor Roosevelt"
-    },
-    {
-      "text": "Não tenha medo de desistir do bom para ir atrás do ótimo.",
-      "author": "John D. Rockefeller"
-    },
-    {
-      "text": "O risco vem de não saber o que você está fazendo.",
-      "author": "Warren Buffett"
-    },
-    {
-      "text": "A maneira de começar é parar de falar e começar a fazer.",
-      "author": "Walt Disney"
-    },
-    {
-      "text": "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo.",
-      "author": "Roy T. Bennett"
-    },
-    {
-      "text": "O caminho para o sucesso e o caminho para o fracasso são quase exatamente os mesmos.",
-      "author": "Colin R. Davis"
-    }
+    "Um investimento em conhecimento paga os melhores juros. — Benjamin Franklin",
+    "Quanto mais você aprende, mais você ganha. — Warren Buffett",
+    "Não é quanto dinheiro você ganha, mas quanto dinheiro você guarda, o quanto ele funciona para você e por quantas gerações você o guarda. — Robert Kiyosaki",
+    "A riqueza não consiste em ter grandes posses, mas em ter poucas necessidades. — Epicteto",
+    "Não me diga o que você valoriza, mostre-me seu orçamento e eu direi o que você valoriza. — Joe Biden",
+    "O dinheiro cresce na árvore da persistência. — Provérbio japonês",
+    "O mercado de ações está cheio de pessoas que sabem o preço de tudo, mas o valor de nada. — Philip Fisher",
+    "A paz financeira não é a aquisição de coisas. É aprender a viver com menos do que você ganha, para poder devolver dinheiro e ter dinheiro para investir. — Dave Ramsey",
+    "Muitas pessoas gastam dinheiro que não ganharam, para comprar coisas que não querem, para impressionar pessoas de quem não gostam. — Will Rogers",
+    "Você deve obter controle sobre seu dinheiro ou a falta dele o controlará para sempre. — Dave Ramsey",
+    "É bom ter dinheiro e as coisas que o dinheiro pode comprar, mas também é bom verificar de vez em quando e ter certeza de que você não perdeu as coisas que o dinheiro não pode comprar. — George Lorimer",
+    "Uma pessoa sábia deve ter dinheiro na cabeça, mas não no coração. — Jonathan Swift",
+    "Se você vive para ter tudo, o que você tem nunca é suficiente. — Vicki Robin",
+    "Não economize o que resta depois de gastar, mas gaste o que sobra depois de economizar. — Warren Buffett",
+    "O dinheiro é um mestre terrível, mas um excelente servo. — P.T. Barnum",
+    "Grandes coisas nos negócios nunca são feitas por uma pessoa. Elas são feitas por uma equipe de pessoas. — Steve Jobs",
+    "Não deixe que o medo de perder seja maior do que a emoção de vencer. — Robert Kiyosaki",
+    "Você não constrói um negócio, você constrói pessoas, depois as pessoas constroem o negócio. — Zig Ziglar",
+    "A inovação distingue um líder de um seguidor. — Steve Jobs",
+    "Arrisque mais do que os outros acham seguro. Sonhe mais do que os outros acham que é prático. — Howard Schultz",
+    "A única maneira de fazer um ótimo trabalho é amar o que você faz. — Steve Jobs",
+    "Não se trata de ideias. Trata-se de fazer as ideias acontecerem. — Scott Belsky",
+    "Seus clientes mais insatisfeitos são sua maior fonte de aprendizado. — Bill Gates",
+    "Você perde 100% das fotos que não tira. — Wayne Gretzky",
+    "O fracasso não é o oposto do sucesso; é parte do sucesso. — Arianna Huffington",
+    "Não se envergonhe de seus fracassos, aprenda com eles e comece de novo. — Richard Branson",
+    "O segredo da mudança é concentrar toda a sua energia não em combater o velho, mas em construir o novo. — Sócrates",
+    "No final das contas, uma visão sem a capacidade de executá-la é provavelmente uma alucinação. — Steve Case",
+    "Sucesso é caminhar de fracasso em fracasso sem perder o entusiasmo. — Winston Churchill",
+    "Se você não tentar, perderá a oportunidade de ter sucesso. — Maya Angelou",
+    "Sucesso é gostar de si mesmo, gostar do que você faz e gostar de como você faz. — Maya Angelou",
+    "Não se preocupe em ter sucesso, mas trabalhe para ser significativo e o sucesso virá naturalmente. — Oprah Winfrey",
+    "Liderança não tem a ver com títulos, posições ou fluxogramas. É sobre uma vida influenciando outra. — John C. Maxwell",
+    "Uma pessoa que nunca cometeu um erro nunca tentou nada novo. — Albert Einstein",
+    "No mundo dos negócios, o espelho retrovisor é sempre mais claro do que o para-brisa. — Warren Buffett",
+    "O sucesso parece estar ligado à ação. Pessoas bem-sucedidas continuam se movendo. Eles cometem erros, mas não desistem. — Conrad Hilton",
+    "Nunca sonhei com o sucesso. Eu trabalhei para isso. — Estée Lauder",
+    "Contrate um personagem. Treine suas habilidades. — Peter Schutz",
+    "Cerque-se de pessoas excelentes; delegue autoridade; saia do caminho. — Ronald Reagan",
+    "As oportunidades de negócios são como ônibus, sempre há outro chegando. — Richard Branson",
+    "A função da liderança é produzir mais líderes, não mais seguidores. — Ralph Nader",
+    "A melhor maneira de prever o futuro é criá-lo. — Peter Drucker",
+    "Sempre que você vê um negócio bem-sucedido, alguém já tomou uma decisão corajosa. — Peter F. Drucker",
+    "Tempo, perseverança e dez anos de tentativas acabarão por fazer com que você pareça um sucesso instantâneo. — Biz Stone",
+    "Se você quiser fazer alguma coisa, encontre uma maneira. Caso contrário, encontre uma desculpa. — Jim Rohn",
+    "Os melhores líderes são aqueles mais interessados em se cercar de assistentes e associados mais inteligentes do que eles. — John C. Maxwell",
+    "Líderes excepcionais se esforçam para aumentar a autoestima de seus funcionários. — Sam Walton",
+    "Não observe o relógio; faça o que ele faz. Continue. — Sam Levenson",
+    "Se você não está falhando, você não está crescendo. — H. Stanley Judd",
+    "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo. — Roy T. Bennett",
+    "Faça o que puder com tudo o que você tem, onde quer que esteja. — Theodore Roosevelt",
+    "Dinheiro pode não comprar felicidade, mas eu prefiro chorar em um Jaguar do que em um ônibus. — Françoise Sagan",
+    "O que você tentaria fazer se soubesse que não poderia falhar? — Robert Schuller",
+    "Se você não construir seu sonho, outra pessoa o contratará para ajudá-los a construir o deles. — Dhirubhai Ambani",
+    "Qualidade significa fazer a coisa certa quando ninguém está olhando. — Henry Ford",
+    "Um líder é alguém que conhece o caminho, segue o caminho e mostra o caminho. — John C. Maxwell",
+    "Os desafios são o que tornam a vida interessante, e superá-los é o que torna a vida significativa. — Joshua J. Marine",
+    "Inovação é a capacidade de ver a mudança como uma oportunidade, não uma ameaça. — Steve Jobs",
+    "O esforço só libera totalmente sua recompensa depois que uma pessoa se recusa a desistir. — Napoleon Hill",
+    "Não espere para golpear até que o ferro esteja quente; mas torne-o quente batendo. — William Butler Yeats",
+    "A falta de dinheiro é a raiz de todo mal. — Mark Twain",
+    "Você não precisa ter uma empresa de 100 pessoas para desenvolver essa ideia. — Larry Page",
+    "O sucesso não é definitivo; o fracasso não é fatal: é a coragem de continuar contando. — Winston Churchill",
+    "Bons líderes de negócios criam uma visão, articulam a visão, assumem apaixonadamente a visão e a conduzem incansavelmente até a conclusão. — Jack Welch",
+    "Se você realmente olhar de perto, a maioria dos sucessos da noite para o dia levou muito tempo. — Steve Jobs",
+    "Não se preocupe com o fracasso; você só precisa estar certo uma vez. — Drew Houston",
+    "É bom comemorar o sucesso, mas é mais importante aprender as lições do fracasso. — Bill Gates",
+    "O fracasso é simplesmente a oportunidade de começar de novo, desta vez de forma mais inteligente. — Henry Ford",
+    "Só há uma maneira de evitar críticas: não faça nada, não diga nada e não seja nada. — Aristóteles",
+    "Eu não falhei. Acabei de descobrir 10.000 maneiras que não funcionam. — Thomas Edison",
+    "No meio da dificuldade está a oportunidade. — Albert Einstein",
+    "O trabalho em equipe é o segredo que faz com que pessoas comuns alcancem resultados incomuns. — Ifeanyi Enoch Onuoha",
+    "Sozinhos, podemos fazer tão pouco; juntos, podemos fazer muito. — Helen Keller",
+    "Reunir-se é um começo; manter-se juntos é progresso; trabalhar juntos é sucesso. — Henry Ford",
+    "Ninguém pode assobiar uma sinfonia. É preciso uma orquestra inteira para tocá-la. — H.E. Luccock",
+    "Nenhum de nós é tão inteligente quanto todos nós. — Ken Blanchard",
+    "Cerque-se de uma equipe confiável e leal. Isso faz toda a diferença. — Alison Pincus",
+    "A força da equipe é cada membro individual. A força de cada membro é a equipe. — Phil Jackson",
+    "Acho que é possível que pessoas comuns escolham ser extraordinárias. — Elon Musk",
+    "O verdadeiro empreendedor é um realizador, não um sonhador. — Nolan Bushnell",
+    "Inovar é pegar duas coisas que já existem e juntá-las de uma nova maneira. — Tom Freston",
+    "Um navio no porto é seguro, mas não é para isso que os navios são construídos. — John A. Shedd",
+    "Se você não está disposto a arriscar o normal, terá que se contentar com o comum. — Jim Rohn",
+    "O maior risco é não correr nenhum risco. — Mark Zuckerberg",
+    "Faça uma coisa todos os dias que te assuste. — Eleanor Roosevelt",
+    "Não tenha medo de desistir do bom para ir atrás do ótimo. — John D. Rockefeller",
+    "O risco vem de não saber o que você está fazendo. — Warren Buffett",
+    "A maneira de começar é parar de falar e começar a fazer. — Walt Disney",
+    "O sucesso não é o quão alto você subiu, mas como você faz uma diferença positiva no mundo. — Roy T. Bennett",
+    "O caminho para o sucesso e o caminho para o fracasso são quase exatamente os mesmos. — Colin R. Davis"
   ]
 }
