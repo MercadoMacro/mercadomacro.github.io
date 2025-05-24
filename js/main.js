@@ -25,7 +25,10 @@ async function loadBannerPhrases() {
     } catch (error) {
         console.error('Erro ao carregar frases do banner:', error);
         BANNER_PHRASES = [
-            "Acompanhe as últimas movimentações do mercado financeiro"
+            "Acompanhe as últimas movimentações do mercado financeiro",
+            "Análises em tempo real para seus investimentos",
+            "Notícias atualizadas do mercado financeiro",
+            "Cotações e indicadores em tempo real"
         ];
         updateBanner();
     }
@@ -499,6 +502,8 @@ function toggleFullscreen() {
         document.getElementById('fullscreen-exit-btn').style.display = 'flex';
     } else {
         document.exitFullscreen();
+        document.getElementById('fullscreen-btn').style.display = 'flex';
+        document.getElementById('fullscreen-exit-btn').style.display = 'none';
     }
 }
 
