@@ -25,10 +25,7 @@ async function loadBannerPhrases() {
     } catch (error) {
         console.error('Erro ao carregar frases do banner:', error);
         BANNER_PHRASES = [
-            "Acompanhe as últimas movimentações do mercado financeiro",
-            "Análises em tempo real para seus investimentos",
-            "Notícias atualizadas do mercado financeiro",
-            "Cotações e indicadores em tempo real"
+            "Acompanhe as últimas movimentações do mercado financeiro"
         ];
         updateBanner();
     }
@@ -502,8 +499,6 @@ function toggleFullscreen() {
         document.getElementById('fullscreen-exit-btn').style.display = 'flex';
     } else {
         document.exitFullscreen();
-        document.getElementById('fullscreen-btn').style.display = 'flex';
-        document.getElementById('fullscreen-exit-btn').style.display = 'none';
     }
 }
 
@@ -529,7 +524,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadBannerPhrases();
 
-    // Configuração dos botões de ação
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
@@ -543,12 +537,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'calculadoras/calculadoras.html');
     document.getElementById('terminal-btn').addEventListener('click', () => 
         window.location.href = 'terminal-news.html');
-
-    // Garante que todos os botões de navegação estão visíveis
-    document.getElementById('analises-btn').style.display = 'flex';
-    document.getElementById('indicadores-btn').style.display = 'flex';
-    document.getElementById('calculadoras-btn').style.display = 'flex';
-    document.getElementById('terminal-btn').style.display = 'flex';
 
     // Adiciona listener para redimensionamento
     window.addEventListener('resize', updateBanner);
