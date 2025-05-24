@@ -529,6 +529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadBannerPhrases();
 
+    // Configuração dos botões de ação
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
@@ -542,6 +543,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'calculadoras/calculadoras.html');
     document.getElementById('terminal-btn').addEventListener('click', () => 
         window.location.href = 'terminal-news.html');
+
+    // Garante que todos os botões de navegação estão visíveis
+    document.getElementById('analises-btn').style.display = 'flex';
+    document.getElementById('indicadores-btn').style.display = 'flex';
+    document.getElementById('calculadoras-btn').style.display = 'flex';
+    document.getElementById('terminal-btn').style.display = 'flex';
 
     // Adiciona listener para redimensionamento
     window.addEventListener('resize', updateBanner);

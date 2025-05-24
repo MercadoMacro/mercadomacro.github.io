@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, minimum-scale=0.5, user-scalable=yes">
     <meta name="description" content="Notícias atualizadas sobre o mercado financeiro, cotações e análises">
     <meta name="keywords" content="mercado financeiro, ações, dólar, ibovespa, investimentos">
     <meta name="author" content="Anderson">
@@ -12,6 +12,7 @@
     <meta property="og:url" content="https://example.com">
     <meta name="theme-color" content="#0a0a2a">
     <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="HandheldFriendly" content="true">
     <title>Notícias de Mercado Financeiro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
@@ -236,35 +237,36 @@
         <div class="footer" id="footer">Fonte: Dados em atualização...</div>
     </div>
 
-    <button id="fullscreen-btn" class="action-btn" aria-label="Modo tela cheia">
+    <!-- Botões de Ação - Todos visíveis em mobile -->
+    <button id="fullscreen-btn" class="action-btn" aria-label="Modo tela cheia" title="Tela cheia">
         <i class="fas fa-expand"></i>
     </button>
 
-    <button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia">
+    <button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia" title="Sair da tela cheia">
         <i class="fas fa-compress"></i>
     </button>
 
-    <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados">
+    <button id="refresh-btn" class="action-btn" aria-label="Atualizar dados" title="Atualizar">
         <i class="fas fa-redo"></i>
     </button>
 
-    <button id="analises-btn" class="action-btn" aria-label="Ir para análises">
+    <button id="analises-btn" class="action-btn" aria-label="Ir para análises" title="Análises">
         <i class="fas fa-chart-line"></i>
     </button>
 
-    <button id="indicadores-btn" class="action-btn" aria-label="Ir para indicadores">
+    <button id="indicadores-btn" class="action-btn" aria-label="Ir para indicadores" title="Indicadores">
         <i class="fas fa-chart-pie"></i>
     </button>
 
-    <button id="calculadoras-btn" class="action-btn" aria-label="Ir para calculadoras">
+    <button id="calculadoras-btn" class="action-btn" aria-label="Ir para calculadoras" title="Calculadoras">
         <i class="fas fa-calculator"></i>
     </button>
 
-    <button id="terminal-btn" class="action-btn" aria-label="Ir para terminal de notícias">
+    <button id="terminal-btn" class="action-btn" aria-label="Ir para terminal de notícias" title="Terminal">
         <i class="fas fa-newspaper"></i>
     </button>
 
-    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro" title="Tema">
         <i class="fas fa-moon"></i>
     </button>
 
