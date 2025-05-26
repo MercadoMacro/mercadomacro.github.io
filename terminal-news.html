@@ -269,11 +269,11 @@
   <button class="refresh-widget" onclick="loadNews(rssFeeds.guiadobitcoin)">
     <i class="fas fa-sync-alt"></i>
   </button>
-  <h3><i class="fas fa-coins"></i> Guia do Bitcoin</h3>
-  <ul class="news-list" id="guiadobitcoin-news">
+  <h3><i class="fas fa-coins"></i> Zero Hedge</h3>
+  <ul class="news-list" id="zerohedge-news">
     <li>Carregando notícias...</li>
   </ul>
-  <div class="timestamp" id="guiadobitcoin-timestamp"></div>
+  <div class="timestamp" id="zerohedge-timestamp"></div>
 </div>
 
 <div class="news-widget crypto-widget">
@@ -439,9 +439,9 @@
   const rssFeeds = {
     // Criptomoedas
     guiadobitcoin: {
-      url: 'https://guiadobitcoin.com.br/noticias/feed/',
-      elementId: 'guiadobitcoin-news',
-      timestampId: 'guiadobitcoin-timestamp',
+      url: 'https://cms.zerohedge.com/fullrss2.xml',
+      elementId: 'zerohedge-news',
+      timestampId: 'zerohedge-timestamp',
       category: 'crypto'
     },
     noticiabrasil: {
