@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>Análise de Perfil do Investidor</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #00AA6C;
+            --dark-bg: #1A1A2E;
+            --darker-bg: #16213E;
+            --text-color: #FFFFFF;
+            --text-secondary: #CCCCCC;
+            --card-bg: #2A2A4A;
+            --conservador: #3498DB;
+            --moderado: #F39C12;
+            --arrojado: #E74C3C;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--darker-bg);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .logo-main {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .question {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .question p {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .option {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .option:hover {
+            background: rgba(0, 170, 108, 0.2);
+        }
+
+        .option input {
+            margin-right: 10px;
+        }
+
+        .option label {
+            cursor: pointer;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #008A5C;
+            transform: translateY(-2px);
+        }
+
+        #result {
+            display: none;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 25px auto;
+            background: var(--darker-bg);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        #progressBarContainer {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progressBar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        #questionCounter {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .profile-type {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .conservador {
+            background: rgba(52, 152, 219, 0.2);
+            color: var(--conservador);
+            border-left: 4px solid var(--conservador);
+        }
+
+        .moderado {
+            background: rgba(243, 156, 18, 0.2);
+            color: var(--moderado);
+            border-left: 4px solid var(--moderado);
+        }
+
+        .arrojado {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--arrojado);
+            border-left: 4px solid var(--arrojado);
+        }
+
+        .selic-metrics {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .metric {
+            background: var(--darker-bg);
+            padding: 15px;
+            border-radius: 6px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .metric .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .metric .value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .metric .date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        #selicTrendAnalysis {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--darker-bg);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .allocation-item {
+            margin: 15px 0;
+        }
+
+        .allocation-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .allocation-bar {
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .allocation-progress {
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .allocation-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .selic-metrics {
+                flex-direction: column;
+            }
+            
+            .metric {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-main">ANÁLISE DE PERFIL</div>
+        <div class="logo-sub">DO INVESTIDOR</div>
+    </div>
+
+    <div class="container">
+        <div id="progressBarContainer">
+            <div id="progressBar"></div>
+        </div>
+        
+        <div id="questionCounter">Pergunta 1 de 7</div>
+        
+        <form id="investmentForm">
+            <!-- Questions will be inserted here by JavaScript -->
+        </form>
+
+        <div id="result">
+            <div id="profileType" class="profile-type"></div>
+            <p id="profileDescription"></p>
+            
+            <div id="economicContext"></div>
+            
+            <div class="chart-container">
+                <canvas id="allocationChart"></canvas>
+            </div>
+            
+            <div id="allocationDetails"></div>
+            
+            <button onclick="window.printResults()" style="margin-top: 20px; width: 100%;">Imprimir Relatório</button>
+            <button onclick="resetQuestionnaire()" style="margin-top: 10px; width: 100%; background: var(--darker-bg);">Refazer Questionário</button>
+            
+            <div style="margin-top: 20px; font-size: 12px; color: var(--text-secondary);">
+                <p>Esta análise foi realizada conforme as diretrizes da ANBIMA e Resolução CVM 30.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Questions data
+        const questions = [
+            {
+                text: "1. Qual seu objetivo principal ao investir?",
+                options: [
+                    "Preservar o capital com baixo risco, aceitando retornos menores",
+                    "Crescimento moderado do capital, com equilíbrio entre risco e retorno",
+                    "Maximizar ganhos no longo prazo, aceitando volatilidade e riscos significativos"
+                ]
+            },
+            {
+                text: "2. Por quanto tempo você pretende manter os investimentos?",
+                options: [
+                    "Até 1 ano (curto prazo)",
+                    "De 1 a 3 anos (médio prazo)",
+                    "Mais de 3 anos (longo prazo)"
+                ]
+            },
+            {
+                text: "3. Como você reagiria a uma queda de 20% no valor de seus investimentos?",
+                options: [
+                    "Venderia tudo para evitar maiores perdas",
+                    "Aguardaria a recuperação do mercado, sem fazer movimentações",
+                    "Aproveitaria para comprar mais ativos, vendo oportunidade"
+                ]
+            },
+            {
+                text: "4. Qual sua experiência com investimentos?",
+                options: [
+                    "Nenhuma ou pouca experiência (apenas poupança ou produtos simples)",
+                    "Alguma experiência com produtos tradicionais (CDB, LCI, LCA, fundos conservadores)",
+                    "Experiente com diversos tipos de investimentos (ações, FIIs, derivativos, etc.)"
+                ]
+            },
+            {
+                text: "5. Qual sua faixa de renda mensal?",
+                options: [
+                    "Até R$ 5.000",
+                    "De R$ 5.001 a R$ 15.000",
+                    "Acima de R$ 15.000"
+                ]
+            },
+            {
+                text: "6. Qual a importância dos investimentos no seu planejamento financeiro?",
+                options: [
+                    "Complemento para reserva de emergência e objetivos de curto prazo",
+                    "Parte importante para objetivos de médio prazo (3-5 anos)",
+                    "Estratégia principal para construção de patrimônio no longo prazo"
+                ]
+            },
+            {
+                text: "7. Como você avalia seu conhecimento sobre produtos de investimento?",
+                options: [
+                    "Conheço apenas produtos básicos como poupança e CDB",
+                    "Entendo sobre diversos produtos, mas não sobre estratégias complexas",
+                    "Tenho conhecimento avançado sobre diferentes classes de ativos e estratégias"
+                ]
+            }
+        ];
+
+        // Global variables
+        let currentQuestion = 1;
+        const totalQuestions = questions.length;
+        let selicData = null;
+        let averageSelic = null;
+        let allocationChart = null;
+        let chartConfig = null;
+
+        // Initialize the form
+        function initForm() {
+            const form = document.getElementById('investmentForm');
+            
+            questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question';
+                questionDiv.id = `q${index+1}`;
+                questionDiv.style.display = index === 0 ? 'block' : 'none';
+                
+                const questionText = document.createElement('p');
+                questionText.textContent = question.text;
+                questionDiv.appendChild(questionText);
+                
+                question.options.forEach((option, i) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'option';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.id = `q${index+1}o${i+1}`;
+                    input.name = `q${index+1}`;
+                    input.value = i+1;
+                    input.required = true;
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `q${index+1}o${i+1}`;
+                    label.textContent = option;
+                    
+                    optionDiv.appendChild(input);
+                    optionDiv.appendChild(label);
+                    questionDiv.appendChild(optionDiv);
+                });
+                
+                form.appendChild(questionDiv);
+            });
+            
+            // Add navigation buttons
+            const navButtons = document.createElement('div');
+            navButtons.style.display = 'flex';
+            navButtons.style.justifyContent = 'space-between';
+            navButtons.style.marginTop = '20px';
+            
+            const prevButton = document.createElement('button');
+            prevButton.type = 'button';
+            prevButton.id = 'prevBtn';
+            prevButton.textContent = 'Voltar';
+            prevButton.style.display = 'none';
+            prevButton.onclick = prevQuestion;
+            
+            const nextButton = document.createElement('button');
+            nextButton.type = 'button';
+            nextButton.id = 'nextBtn';
+            nextButton.textContent = 'Próxima';
+            nextButton.onclick = nextQuestion;
+            
+            navButtons.appendChild(prevButton);
+            navButtons.appendChild(nextButton);
+            
+            const submitButton = document.createElement('button');
+            submitButton.type = 'button';
+            submitButton.id = 'submitBtn';
+            submitButton.textContent = 'Analisar Perfil';
+            submitButton.style.display = 'none';
+            submitButton.style.width = '100%';
+            submitButton.style.marginTop = '20px';
+            submitButton.onclick = analyzeProfile;
+            
+            form.appendChild(navButtons);
+            form.appendChild(submitButton);
+        }
+
+        // Format date to DD/MM/YYYY
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+        
+        // Fetch SELIC data from BCB API
+        async function fetchSelicData() {
+            const today = new Date();
+            const startDate = new Date();
+            startDate.setMonth(today.getMonth() - 3); // Last 3 months
+            
+            try {
+                const response = await fetch(
+                    `https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados?formato=json` +
+                    `&dataInicial=${formatDate(startDate)}` +
+                    `&dataFinal=${formatDate(today)}`
+                );
+                
+                if (!response.ok) throw new Error('Erro na resposta da API');
+                
+                const data = await response.json();
+                selicData = data;
+                averageSelic = calculateAverageSelic(data);
+                
+                // Cache for 1 day
+                localStorage.setItem('selicCache', JSON.stringify({
+                    data: data,
+                    timestamp: Date.now()
+                }));
+                
+                return data;
+            } catch (error) {
+                console.error("Erro ao buscar dados da SELIC:", error);
+                
+                // Try cache if available
+                const cache = localStorage.getItem('selicCache');
+                if (cache) {
+                    const { data, timestamp } = JSON.parse(cache);
+                    if (Date.now() - timestamp < 86400000) { // 24 hours
+                        selicData = data;
+                        averageSelic = calculateAverageSelic(data);
+                        return data;
+                    }
+                }
+                
+                return null;
+            }
+        }
+        
+        // Calculate SELIC average
+        function calculateAverageSelic(data) {
+            if (!data || data.length === 0) return null;
+            
+            const sum = data.reduce((total, item) => {
+                return total + parseFloat(item.valor);
+            }, 0);
+            
+            return (sum / data.length).toFixed(2);
+        }
+        
+        // Update progress bar
+        function updateProgressBar() {
+            const progress = ((currentQuestion - 1) / totalQuestions) * 100;
+            document.getElementById("progressBar").style.width = `${progress}%`;
+        }
+        
+        // Update question counter
+        function updateQuestionCounter() {
+            document.getElementById("questionCounter").textContent = `Pergunta ${currentQuestion} de ${totalQuestions}`;
+        }
+        
+        // Next question
+        function nextQuestion() {
+            const currentQ = document.getElementById(`q${currentQuestion}`);
+            const selectedOption = currentQ.querySelector(`input[name="q${currentQuestion}"]:checked`);
+            
+            if (!selectedOption) {
+                alert("Por favor, selecione uma opção para continuar.");
+                return;
+            }
+            
+            currentQ.style.display = 'none';
+            currentQuestion++;
+            updateProgressBar();
+            updateQuestionCounter();
+            
+            if (currentQuestion <= totalQuestions) {
+                document.getElementById(`q${currentQuestion}`).style.display = 'block';
+                document.getElementById('prevBtn').style.display = 'inline-block';
+                
+                if (currentQuestion === totalQuestions) {
+                    document.getElementById('nextBtn').style.display = 'none';
+                    document.getElementById('submitBtn').style.display = 'block';
+                }
+            }
+        }
+        
+        // Previous question
+        function prevQuestion() {
+            if (currentQuestion > 1) {
+                document.getElementById(`q${currentQuestion}`).style.display = 'none';
+                currentQuestion--;
+                document.getElementById(`q${currentQuestion}`).style.display = 'block';
+                updateProgressBar();
+                updateQuestionCounter();
+                
+                document.getElementById('nextBtn').style.display = 'inline-block';
+                document.getElementById('submitBtn').style.display = 'none';
+                
+                if (currentQuestion === 1) {
+                    document.getElementById('prevBtn').style.display = 'none';
+                }
+            }
+        }
+
+        // Analyze profile
+        async function analyzeProfile() {
+            // Collect answers
+            const answers = [];
+            for (let i = 1; i <= totalQuestions; i++) {
+                const selectedOption = document.querySelector(`input[name="q${i}"]:checked`);
+                if (!selectedOption) {
+                    alert(`Por favor, responda a pergunta ${i}.`);
+                    document.getElementById(`q${i}`).style.display = 'block';
+                    currentQuestion = i;
+                    updateQuestionCounter();
+                    updateProgressBar();
+                    return;
+                }
+                answers.push(parseInt(selectedOption.value));
+            }
+            
+            // Calculate score
+            const totalScore = answers.reduce((sum, value) => sum + value, 0);
+            
+            // Determine profile
+            let profileType, profileDescription, suitabilityLevel;
+            
+            if (totalScore <= 10) {
+                profileType = "Conservador";
+                suitabilityLevel = "Baixa tolerância a risco";
+                profileDescription = "Seu perfil indica preferência por segurança e proteção do capital, com baixa tolerância a flutuações no valor dos investimentos. Recomenda-se priorizar produtos de baixa volatilidade e alta liquidez, com foco em preservação do patrimônio.";
+            } else if (totalScore <= 16) {
+                profileType = "Moderado";
+                suitabilityLevel = "Tolerância média a risco";
+                profileDescription = "Você busca equilíbrio entre risco e retorno, aceitando alguma volatilidade por ganhos potenciais superiores. Sua carteira pode combinar ativos mais seguros com outros de maior potencial de retorno, adequados ao seu horizonte de investimento.";
+            } else {
+                profileType = "Arrojado";
+                suitabilityLevel = "Alta tolerância a risco";
+                profileDescription = "Você demonstra compreensão dos riscos e disposição para aceitar volatilidade significativa em busca de retornos superiores no longo prazo. Pode considerar alocações mais diversificadas incluindo ativos com maior risco e potencial de retorno.";
+            }
+
+            // Get base allocation and adjust for SELIC
+            const allocation = getBaseAllocation(profileType);
+            const adjustedAllocation = adjustAllocationForSelic(allocation, averageSelic);
+            
+            // Display results
+            displayResults(profileType, suitabilityLevel, profileDescription, adjustedAllocation, totalScore);
+        }
+
+        // Get base allocation based on profile
+        function getBaseAllocation(profileType) {
+            if (profileType === "Conservador") {
+                return [
+                    { name: "Renda Fixa (Tesouro Direto, CDBs, LCIs/LCAs)", value: 70, description: "Produtos de baixo risco com garantia do FGC ou do Tesouro Nacional" },
+                    { name: "Fundos Imobiliários", value: 15, description: "FIIs tradicionais com foco em receita recorrente" },
+                    { name: "Ações (Blue Chips e ETFs)", value: 10, description: "Ações de empresas sólidas e ETFs de baixa volatilidade" },
+                    { name: "Fundos Multimercados Conservadores", value: 5, description: "Fundos com estratégias defensivas e baixa exposição a risco" }
+                ];
+            } else if (profileType === "Moderado") {
+                return [
+                    { name: "Renda Fixa (Tesouro IPCA+, CDBs pós-fixados)", value: 50, description: "Combinação de produtos com proteção contra inflação e retorno real" },
+                    { name: "Fundos Imobiliários Diversificados", value: 20, description: "Carteira diversificada de FIIs com diferentes perfis" },
+                    { name: "Ações (Empresas de qualidade e setores cíclicos)", value: 20, description: "Seleção de ações com fundamentos sólidos e potencial de crescimento" },
+                    { name: "Fundos de Investimento (Ações e Multimercados)", value: 10, description: "Fundos com gestão profissional e estratégias moderadas" }
+                ];
+            } else {
+                return [
+                    { name: "Renda Fixa (Somente para reserva de liquidez)", value: 20, description: "Apenas para necessidades de curto prazo e emergências" },
+                    { name: "Fundos Imobiliários (FIIs e REITs)", value: 25, description: "Exposição a imóveis físicos e papéis com potencial de valorização" },
+                    { name: "Ações (Diversificadas e Small Caps)", value: 40, description: "Carteira diversificada incluindo empresas de maior crescimento" },
+                    { name: "Produtos Estruturados e Derivativos", value: 15, description: "Para investidores com conhecimento avançado, com limites de exposição" }
+                ];
+            }
+        }
+
+        // Adjust allocation based on SELIC rate
+        function adjustAllocationForSelic(allocation, currentSelic) {
+            if (!currentSelic) return allocation;
+            
+            const selic = parseFloat(currentSelic);
+            let interestScenario = "neutro";
+            if (selic > 10) interestScenario = "alto";
+            else if (selic < 6) interestScenario = "baixo";
+            
+            // Deep copy of allocation array
+            const adjustedAllocation = JSON.parse(JSON.stringify(allocation));
+            
+            if (interestScenario === "alto") {
+                // Find Fixed Income item
+                const rfIndex = adjustedAllocation.findIndex(item => item.name.includes("Renda Fixa"));
+                if (rfIndex !== -1) {
+                    // Calculate maximum possible increase without exceeding 80%
+                    const aumentoMaximo = 80 - adjustedAllocation[rfIndex].value;
+                    const aumento = Math.min(adjustedAllocation[rfIndex].value * 0.1, aumentoMaximo);
+                    
+                    // Adjust Fixed Income
+                    adjustedAllocation[rfIndex].value += aumento;
+                    adjustedAllocation[rfIndex].description = `Priorize títulos prefixados (SELIC atual: ${selic}% a.a.) - ` + 
+                                                             adjustedAllocation[rfIndex].description;
+                    
+                    // Redistribute reduction proportionally to other items
+                    const outrosItens = adjustedAllocation.filter((_, index) => index !== rfIndex);
+                    const totalOutros = outrosItens.reduce((sum, item) => sum + item.value, 0);
+                    
+                    outrosItens.forEach(item => {
+                        const proporcao = item.value / totalOutros;
+                        item.value -= aumento * proporcao;
+                        item.value = parseFloat(item.value.toFixed(2));
+                    });
+                }
+            } else if (interestScenario === "baixo") {
+                // Find Fixed Income item
+                const rfIndex = adjustedAllocation.findIndex(item => item.name.includes("Renda Fixa"));
+                if (rfIndex !== -1) {
+                    // Calculate maximum possible reduction without going below 20%
+                    const reducaoMaxima = adjustedAllocation[rfIndex].value - 20;
+                    const reducao = Math.min(adjustedAllocation[rfIndex].value * 0.1, reducaoMaxima);
+                    
+                    // Adjust Fixed Income
+                    adjustedAllocation[rfIndex].value -= reducao;
+                    adjustedAllocation[rfIndex].description = `Priorize IPCA+ e pós-fixados longos (SELIC atual: ${selic}% a.a.) - ` + 
+                                                             adjustedAllocation[rfIndex].description;
+                    
+                    // Redistribute increase proportionally to other items
+                    const outrosItens = adjustedAllocation.filter((_, index) => index !== rfIndex);
+                    const totalOutros = outrosItens.reduce((sum, item) => sum + item.value, 0);
+                    
+                    outrosItens.forEach(item => {
+                        const proporcao = item.value / totalOutros;
+                        item.value += reducao * proporcao;
+                        item.value = parseFloat(item.value.toFixed(2));
+                    });
+                }
+            } else {
+                // Neutral scenario - just add SELIC info
+                const rfIndex = adjustedAllocation.findIndex(item => item.name.includes("Renda Fixa"));
+                if (rfIndex !== -1) {
+                    adjustedAllocation[rfIndex].description = `SELIC atual: ${selic}% a.a. - ` + 
+                                                             adjustedAllocation[rfIndex].description;
+                }
+            }
+            
+            // Ensure sum is exactly 100% (rounding correction)
+            const soma = adjustedAllocation.reduce((sum, item) => sum + item.value, 0);
+            if (soma !== 100) {
+                const diferenca = 100 - soma;
+                adjustedAllocation[adjustedAllocation.length - 1].value += diferenca;
+                adjustedAllocation[adjustedAllocation.length - 1].value = parseFloat(
+                    adjustedAllocation[adjustedAllocation.length - 1].value.toFixed(2));
+            }
+            
+            return adjustedAllocation;
+        }
+
+        // Display results
+        function displayResults(profileType, suitabilityLevel, description, allocation, score) {
+            // Show profile type
+            const profileElement = document.getElementById('profileType');
+            profileElement.textContent = `Perfil: ${profileType} (${suitabilityLevel})`;
+            profileElement.className = `profile-type ${profileType.toLowerCase()}`;
+            
+            // Show description
+            document.getElementById('profileDescription').innerHTML = `
+                <p>${description}</p>
+                <p><strong>Pontuação:</strong> ${score} pontos (em uma escala de 7 a 21)</p>
+            `;
+            
+            // Show economic context
+            displayEconomicContext(selicData, averageSelic);
+            
+            // Show allocation details
+            const details = document.getElementById('allocationDetails');
+            details.innerHTML = '';
+            
+            allocation.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'allocation-item';
+                
+                const header = document.createElement('div');
+                header.className = 'allocation-header';
+                header.innerHTML = `<strong>${item.name}</strong> <span>${item.value}%</span>`;
+                
+                const bar = document.createElement('div');
+                bar.className = 'allocation-bar';
+                
+                const progress = document.createElement('div');
+                progress.className = 'allocation-progress';
+                progress.style.width = `${item.value}%`;
+                progress.style.background = profileType === "Conservador" ? 'var(--conservador)' : 
+                                          profileType === "Moderado" ? 'var(--moderado)' : 'var(--arrojado)';
+                
+                const desc = document.createElement('div');
+                desc.className = 'allocation-desc';
+                desc.textContent = item.description;
+                
+                bar.appendChild(progress);
+                itemDiv.appendChild(header);
+                itemDiv.appendChild(bar);
+                itemDiv.appendChild(desc);
+                details.appendChild(itemDiv);
+            });
+            
+            // Create chart
+            createChart(allocation, profileType);
+            
+            // Show result section
+            document.getElementById('result').style.display = 'block';
+            window.scrollTo({
+                top: document.getElementById('result').offsetTop,
+                behavior: 'smooth'
+            });
+        }
+
+        // Display economic context with SELIC data
+        function displayEconomicContext(data, average) {
+            if (!data || !average) return;
+            
+            const lastEntry = data[data.length - 1];
+            const ctxElement = document.getElementById('economicContext');
+            
+            ctxElement.innerHTML = `
+                <h4>Contexto de Juros Atual</h4>
+                <div class="selic-metrics">
+                    <div class="metric">
+                        <span class="label">Última SELIC:</span>
+                        <span class="value">${lastEntry.valor}% a.a.</span>
+                        <span class="date">(em ${lastEntry.data})</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Média últimos 3 meses:</span>
+                        <span class="value">${average}% a.a.</span>
+                    </div>
+                </div>
+                <div id="selicTrendAnalysis"></div>
+            `;
+            
+            // Add trend analysis
+            displayTrendAnalysis(data);
+        }
+
+        // Display SELIC trend analysis
+        function displayTrendAnalysis(data) {
+            if (!data || data.length < 2) return;
+            
+            const firstValue = parseFloat(data[0].valor);
+            const lastValue = parseFloat(data[data.length - 1].valor);
+            const trend = lastValue - firstValue;
+            
+            let trendText = "";
+            if (Math.abs(trend) < 0.5) {
+                trendText = "A SELIC está estável recentemente";
+            } else if (trend > 0) {
+                trendText = `A SELIC está em tendência de alta (+${trend.toFixed(2)}pp)`;
+            } else {
+                trendText = `A SELIC está em tendência de baixa (${trend.toFixed(2)}pp)`;
+            }
+            
+            const analysisElement = document.getElementById('selicTrendAnalysis');
+            analysisElement.innerHTML = `
+                <p><strong>Análise de Tendência:</strong> ${trendText}</p>
+                <p>${getInvestmentImplications(trend, lastValue)}</p>
+            `;
+        }
+
+        // Get investment implications based on SELIC
+        function getInvestmentImplications(trend, currentValue) {
+            const current = parseFloat(currentValue);
+            
+            if (current > 10) {
+                return "Cenário de juros altos: títulos prefixados e CDBs pós-fixados são particularmente atraentes, com retornos reais positivos.";
+            } else if (current > 6) {
+                return "Cenário de juros moderados: considere uma mistura de títulos prefixados e atrelados à inflação, com diversificação em ativos de risco.";
+            } else {
+                return "Cenário de juros baixos: priorize títulos IPCA+ e diversifique em ativos de risco para buscar retorno acima da inflação.";
+            }
+        }
+
+        // Create allocation chart
+        function createChart(allocation, profileType) {
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (allocationChart) {
+                allocationChart.destroy();
+            }
+            
+            // Define colors based on profile type
+            let colors;
+            if (profileType === "Conservador") {
+                colors = [
+                    'rgba(52, 152, 219, 0.8)',
+                    'rgba(52, 152, 219, 0.6)',
+                    'rgba(52, 152, 219, 0.4)',
+                    'rgba(52, 152, 219, 0.2)'
+                ];
+            } else if (profileType === "Moderado") {
+                colors = [
+                    'rgba(243, 156, 18, 0.8)',
+                    'rgba(243, 156, 18, 0.6)',
+                    'rgba(243, 156, 18, 0.4)',
+                    'rgba(243, 156, 18, 0.2)'
+                ];
+            } else {
+                colors = [
+                    'rgba(231, 76, 60, 0.8)',
+                    'rgba(231, 76, 60, 0.6)',
+                    'rgba(231, 76, 60, 0.4)',
+                    'rgba(231, 76, 60, 0.2)'
+                ];
+            }
+            
+            // Create chart configuration
+            chartConfig = {
+                type: 'doughnut',
+                data: {
+                    labels: allocation.map(item => item.name),
+                    datasets: [{
+                        data: allocation.map(item => item.value),
+                        backgroundColor: colors,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    color: 'var(--text-color)'
+                                },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            },
+                            bodyFont: {
+                                size: 14
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    },
+                    onClick: (e) => e.stopPropagation() // Prevent chart from disappearing on click
+                }
+            };
+            
+            // Create new chart
+            allocationChart = new Chart(ctx, chartConfig);
+        }
+
+        // Print results
+        window.printResults = function() {
+            const printWindow = window.open('', '', 'width=800,height=600');
+            
+            // Clone the result div to avoid modifying the original
+            const resultClone = document.getElementById('result').cloneNode(true);
+            
+            // Remove the buttons from the print version
+            const buttons = resultClone.querySelectorAll('button');
+            buttons.forEach(button => button.remove());
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Relatório de Perfil do Investidor</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #000;
+                            padding: 20px;
+                        }
+                        .chart-container {
+                            width: 100%;
+                            max-width: 400px;
+                            margin: 20px auto;
+                        }
+                        h1 {
+                            color: #006341;
+                            text-align: center;
+                            margin-bottom: 20px;
+                        }
+                        .profile-type {
+                            font-size: 24px;
+                            font-weight: bold;
+                            text-align: center;
+                            margin: 20px 0;
+                            padding: 10px;
+                            border-radius: 5px;
+                        }
+                        .conservador {
+                            background: #e1f0fa;
+                            color: #1a5276;
+                            border-left: 5px solid #3498db;
+                        }
+                        .moderado {
+                            background: #fef5e7;
+                            color: #7d6608;
+                            border-left: 5px solid #f39c12;
+                        }
+                        .arrojado {
+                            background: #fdedec;
+                            color: #943126;
+                            border-left: 5px solid #e74c3c;
+                        }
+                        .allocation-item {
+                            margin: 15px 0;
+                        }
+                        .allocation-header {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 5px;
+                            font-weight: bold;
+                        }
+                        .allocation-bar {
+                            height: 10px;
+                            background: #eee;
+                            border-radius: 5px;
+                            overflow: hidden;
+                        }
+                        .allocation-progress {
+                            height: 100%;
+                            border-radius: 5px;
+                        }
+                        .allocation-desc {
+                            font-size: 13px;
+                            color: #666;
+                            margin-top: 5px;
+                        }
+                    </style>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+                </head>
+                <body>
+                    <h1>Relatório de Perfil do Investidor</h1>
+                    <div>${resultClone.innerHTML}</div>
+                    <div style="text-align:center;margin-top:30px;font-size:12px;">
+                        Gerado em ${new Date().toLocaleDateString()}
+                    </div>
+                    <script>
+                        // Recreate chart in print window
+                        window.onload = function() {
+                            const ctx = document.querySelector('canvas').getContext('2d');
+                            new Chart(ctx, ${JSON.stringify(chartConfig)});
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+            // Print after short delay to ensure content is loaded
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        };
+        
+        // Reset questionnaire
+        function resetQuestionnaire() {
+            // Reset form answers
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Hide results and show first question
+            document.getElementById('result').style.display = 'none';
+            
+            // Reset question navigation
+            currentQuestion = 1;
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`q${i}`).style.display = i === 1 ? 'block' : 'none';
+            }
+            
+            // Reset buttons
+            document.getElementById('prevBtn').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            document.getElementById('submitBtn').style.display = 'none';
+            
+            // Reset progress indicators
+            updateQuestionCounter();
+            updateProgressBar();
+            
+            // Scroll to top
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            
+            // Clear any existing chart
+            if (allocationChart) {
+                allocationChart.destroy();
+                allocationChart = null;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            initForm();
+            updateQuestionCounter();
+            await fetchSelicData();
+        });
+    </script>
+</body>
+</html>
