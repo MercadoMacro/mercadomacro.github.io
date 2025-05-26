@@ -288,10 +288,6 @@
             display: none;
         }
 
-        #edit-btn {
-            right: 165px;
-        }
-
         .action-btn i {
             font-size: 16px;
         }
@@ -429,10 +425,6 @@
 
             #fullscreen-btn {
                 right: 104px;
-            }
-
-            #edit-btn {
-                right: 150px;
             }
 
             #fullscreen-exit-btn {
@@ -596,7 +588,7 @@
         <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em 09/05/2025 15:12</div>
     </div>
 
-    <a href="api.html" class="profile-btn" aria-label="Análise de Perfil do Investidor">
+    <a href="API.html" class="profile-btn" aria-label="Análise de Perfil do Investidor">
         <i class="fas fa-user-tie"></i>
     </a>
 
@@ -614,10 +606,6 @@
 
     <button id="fullscreen-exit-btn" class="action-btn" aria-label="Sair do modo tela cheia">
         <i class="fas fa-compress"></i>
-    </button>
-
-    <button id="edit-btn" class="action-btn" aria-label="Editar indicadores">
-        <i class="fas fa-edit"></i>
     </button>
 
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
@@ -668,59 +656,6 @@
             themeIcon.classList.toggle('fa-sun', isLightMode);
         }
 
-        function quickEdit() {
-            const indicators = {
-                "CDI": {
-                    "Diário": "14,65%"
-                },
-                "SELIC": {
-                    "Over": "14,65%",
-                    "Meta ao ano": "14,75%"
-                },
-                "IGP-DI": {
-                    "Ano": "0,91%",
-                    "12 Meses": "8,12%"
-                },
-                "IGP-M": {
-                    "Ano": "1,23%",
-                    "12 Meses": "8,51%"
-                },
-                "IPCA": {
-                    "Ano": "2,48%",
-                    "12 Meses": "5,53%"
-                },
-                "POUPANÇA": {
-                    "Ano": "2,61%",
-                    "Mês": "0,68%",
-                    "12 Meses": "7,41%",
-                    "Anualizada": "8,34%"
-                }
-            };
-
-            if (confirm("Deseja editar os valores dos indicadores?")) {
-                for (const [name, values] of Object.entries(indicators)) {
-                    for (const [desc, currentValue] of Object.entries(values)) {
-                        const newValue = prompt(`${name} - ${desc} (Atual: ${currentValue})`, currentValue);
-                        if (newValue !== null) {
-                            // Atualiza todos os elementos correspondentes
-                            document.querySelectorAll('.indicator-name').forEach(el => {
-                                if (el.textContent === name) {
-                                    const card = el.closest('.indicator-card');
-                                    Array.from(card.querySelectorAll('.indicator-description')).forEach((descEl, i) => {
-                                        if (descEl.textContent === desc) {
-                                            card.querySelectorAll('.indicator-value')[i].textContent = newValue;
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    }
-                }
-                updateDateTime();
-                alert("Valores atualizados com sucesso!");
-            }
-        }
-
         // Função para virar o card ao ser clicado
         function flipCard(card) {
             const isFlipped = card.classList.contains('flipped');
@@ -746,7 +681,6 @@
             document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
             document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
             document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-            document.getElementById('edit-btn').addEventListener('click', quickEdit);
 
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement) {
