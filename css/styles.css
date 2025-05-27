@@ -175,9 +175,9 @@ body {
 }
 
 .logo-byline {
-    position: absolute;
+    position: right;
     right: 3px;
-    margin-bottom: -17px;
+    margin-bottom: -15px;
     bottom: 0;
     font-size: 7px;
     font-style: italic;
@@ -654,15 +654,15 @@ body {
     }
 
     .logo-main {
-        font-size: 15px;
+        font-size: 13px;
     }
 
     .logo-sub {
-        font-size: 7px;
+        font-size: 6px;
     }
 
     .logo-byline {
-        font-size: 8px;
+        font-size: 6px;
         right: 5px;
     }
 
