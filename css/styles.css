@@ -235,17 +235,19 @@ body {
 }
 
 .commentary {
+    flex: 1;
+    min-width: 0;
     background: var(--card-bg);
-    padding: 16px;
     border-radius: 10px;
-    text-align: justify;
-    font-size: 15px;
-    line-height: 1.2;
-    margin-top: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    border-left: 3px solid var(--primary-color);
+    padding: 20px;
     position: relative;
+    border-left: 3px solid var(--primary-color);
+    max-height: 600px;
+    height: auto; /* Adicionado */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease; /* Adicionado */
 }
 
 .commentary-highlight {
@@ -424,6 +426,46 @@ body {
     right: 10px;
     top: 10px;
 }
+
+
+/* Estilo do botão de expansão */
+.expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: auto;
+    padding: 5px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expand-btn:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Estilo para o box expandido */
+.commentary.expanded {
+    transition: height 0.3s ease;
+}
+
+/* Ajuste para o box commentary */
+.commentary {
+
+    transition: height 0.3s ease, max-height 0.3s ease;
+}
+
+/* Ajuste para mobile */
+@media (max-width: 768px) {
+    .commentary.expanded {
+        height: 500px !important;
+    }
+}
+
 
 .favorite-btn.favorited {
     color: var(--primary-color);

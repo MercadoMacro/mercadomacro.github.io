@@ -510,6 +510,43 @@ function toggleTheme() {
 }
 
 // =============================================
+// EXPANÇÃO
+// =============================================
+
+function setupCommentaryExpansion() {
+    const commentaryBox = document.getElementById('box-commentary');
+    if (!commentaryBox) return;
+    
+    const expandBtn = document.createElement('button');
+    expandBtn.id = 'expand-commentary-btn';
+    expandBtn.className = 'expand-btn';
+    expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
+    expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i>';
+    
+    const boxHeader = commentaryBox.querySelector('.box-header');
+    if (boxHeader) {
+        boxHeader.appendChild(expandBtn);
+        
+        expandBtn.addEventListener('click', function() {
+            commentaryBox.classList.toggle('expanded');
+            
+            const icon = this.querySelector('i');
+            if (commentaryBox.classList.contains('expanded')) {
+                icon.classList.replace('fa-expand-alt', 'fa-compress-alt');
+                expandBtn.setAttribute('aria-label', 'Recolher conteúdo');
+                commentaryBox.style.maxHeight = 'none';
+                commentaryBox.style.height = '700px';
+            } else {
+                icon.classList.replace('fa-compress-alt', 'fa-expand-alt');
+                expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
+                commentaryBox.style.maxHeight = '600px';
+                commentaryBox.style.height = 'auto';
+            }
+        });
+    }
+}
+
+// =============================================
 // DRAG AND DROP FUNCTIONS
 // =============================================
 function saveBoxOrder() {
@@ -581,6 +618,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const themeIcon = document.querySelector('#theme-toggle i');
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     }
+setupCommentaryExpansion();
 
     await loadBannerPhrases();
 
