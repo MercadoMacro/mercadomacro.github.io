@@ -741,6 +741,27 @@ body {
     #terminal-btn { right: 265px; }
     #fullscreen-exit-btn { right: 65px; }
 }
+@media (max-width: 600px) {
+    html {
+        font-size: 14px;
+    }
+
+    .logo-main {
+        font-size: 18px;
+    }
+
+    .logo-sub {
+        font-size: 6px;
+    }
+
+    .news-item-title {
+        font-size: 14px;
+    }
+
+    .news-item-description {
+        font-size: 12px;
+    }
+}
 
     .page-notification {
         max-width: 90%;
