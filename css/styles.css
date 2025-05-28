@@ -705,78 +705,42 @@ body {
 }
 
 @media (max-width: 600px) {
+    body {
+        zoom: 0.9; /* Reduz ligeiramente o zoom para melhorar o espaçamento */
+        touch-action: manipulation; /* Melhora a resposta ao toque */
+    }
+
     .container {
-        padding: 12px;
-    }
-
-    .logo-main {
-        font-size: 20px;
-    }
-
-    .logo-sub {
-        font-size: 6px;
-    }
-
-    .logo-byline {
-        font-size: 6px;
-        right: 5px;
-    }
-
-    .commentary {
-        font-size: 5px;
-        padding: 14px;
-    }
-
-    .news-widget-container {
-        max-height: 55vh;
         padding: 10px;
     }
 
-    .news-item {
-        padding: 12px;
+    .content-row {
+        gap: 10px;
     }
 
-    .news-item-title {
-        font-size: 14px;
+    .market-overview-container,
+    .commentary {
+        padding: 15px;
     }
 
-    .news-item-description {
-        font-size: 12px;
+    .news-widget-container {
+        max-height: 60vh; /* Ajusta a altura para melhor visualização */
     }
 
     .action-btn, .theme-toggle {
-        width: 36px;
-        height: 36px;
-        bottom: 12px;
+        width: 40px;
+        height: 40px;
+        bottom: 15px;
     }
 
-    #refresh-btn {
-        right: 12px;
-    }
-
-    #fullscreen-btn {
-        right: 58px;
-    }
-
-    #analises-btn {
-        right: 104px;
-    }
-
-    #indicadores-btn {
-        right: 150px;
-    }
-
-    #calculadoras-btn {
-        right: 196px;
-    }
-
-    #terminal-btn {
-        right: 242px;
-    }
-
-    #fullscreen-exit-btn {
-        right: 58px;
-    }
+    #refresh-btn { right: 15px; }
+    #fullscreen-btn { right: 65px; }
+    #analises-btn { right: 115px; }
+    #indicadores-btn { right: 165px; }
+    #calculadoras-btn { right: 215px; }
+    #terminal-btn { right: 265px; }
+    #fullscreen-exit-btn { right: 65px; }
+}
 
     .page-notification {
         max-width: 90%;
