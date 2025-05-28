@@ -4,7 +4,6 @@
 const CACHE_KEY = 'newsCache_v5';
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
 const FAVORITES_KEY = 'favorites';
-const BOX_ORDER_KEY = 'boxOrder'; // Nova chave para salvar a ordem dos boxes
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
@@ -36,6 +35,7 @@ async function loadBannerPhrases() {
 function updateBanner() {
     const banner = document.getElementById('random-banner');
     if (banner) {
+        // Cria a estrutura interna se não existir
         if (!banner.querySelector('.banner-text')) {
             const bannerText = document.createElement('div');
             bannerText.className = 'banner-text';
@@ -47,9 +47,11 @@ function updateBanner() {
         const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
         bannerText.textContent = randomPhrase;
         
+        // Reinicia a animação
         bannerText.style.animation = 'none';
-        void bannerText.offsetWidth;
+        void bannerText.offsetWidth; // Trigger reflow
         
+        // Ajusta o comportamento baseado no tamanho da tela
         if (window.innerWidth > 768) {
             bannerText.style.animation = 'none';
             bannerText.style.position = 'static';
@@ -146,6 +148,7 @@ async function fetchGoogleDocContent() {
 function updateCommentary(content) {
     const commentaryContent = document.getElementById('commentary-content');
     
+    // Processamento do conteúdo
     const formattedContent = content
         .replace(/^([📌☐✔] .+)/gm, '<div class="commentary-highlight">$1</div>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -510,69 +513,6 @@ function toggleTheme() {
 }
 
 // =============================================
-// DRAG AND DROP FUNCTIONS
-// =============================================
-function saveBoxOrder() {
-    const container = document.getElementById('draggable-container');
-    const boxes = Array.from(container.children).map(box => box.id);
-    localStorage.setItem(BOX_ORDER_KEY, JSON.stringify(boxes));
-    console.log('Ordem salva:', boxes);
-}
-
-function loadBoxOrder() {
-    const container = document.getElementById('draggable-container');
-    const savedOrder = JSON.parse(localStorage.getItem(BOX_ORDER_KEY));
-    
-    if (savedOrder && savedOrder.length === container.children.length) {
-        console.log('Carregando ordem:', savedOrder);
-        savedOrder.forEach(id => {
-            const box = document.getElementById(id);
-            if (box && box.parentNode === container) {
-                container.appendChild(box);
-            }
-        });
-    }
-}
-
-function setupDragAndDrop() {
-    const container = document.getElementById('draggable-container');
-    const boxes = document.querySelectorAll('.draggable-box');
-
-    // Carrega a ordem salva ao iniciar
-    loadBoxOrder();
-
-    boxes.forEach(box => {
-        box.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', box.id);
-            box.classList.add('dragging');
-        });
-
-        box.addEventListener('dragend', () => {
-            box.classList.remove('dragging');
-            saveBoxOrder();
-            showNotification('Layout salvo!');
-        });
-    });
-
-    container.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const draggingBox = document.querySelector('.dragging');
-        const otherBox = e.target.closest('.draggable-box');
-        
-        if (otherBox && otherBox !== draggingBox) {
-            const rect = otherBox.getBoundingClientRect();
-            const nextPosition = (e.clientY < rect.top + rect.height / 2) ? 'before' : 'after';
-            
-            if (nextPosition === 'before') {
-                container.insertBefore(draggingBox, otherBox);
-            } else {
-                container.insertBefore(draggingBox, otherBox.nextSibling);
-            }
-        }
-    });
-}
-
-// =============================================
 // INICIALIZAÇÃO
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -598,6 +538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('terminal-btn').addEventListener('click', () => 
         window.location.href = 'terminal-news.html');
 
+    // Adiciona listener para redimensionamento
     window.addEventListener('resize', updateBanner);
 
     updateDateTime();
@@ -608,12 +549,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
     setInterval(updateBanner, 300000);
     
-    // Inicializa o drag and drop
-    setupDragAndDrop();
-    
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
     }, 1000);
+	
+	const draggableBoxes = document.querySelectorAll('.draggable-box');
+    const container = document.getElementById('draggable-container');
+
+    draggableBoxes.forEach(box => {
+        box.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', box.id);
+            box.classList.add('dragging');
+        });
+
+        box.addEventListener('dragend', () => {
+            box.classList.remove('dragging');
+        });
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggingBox = document.querySelector('.dragging');
+        const otherBox = e.target.closest('.draggable-box');
+        
+        if (otherBox && otherBox !== draggingBox) {
+            const rect = otherBox.getBoundingClientRect();
+            const nextPosition = (e.clientY < rect.top + rect.height / 2) ? 'before' : 'after';
+            
+            if (nextPosition === 'before') {
+                container.insertBefore(draggingBox, otherBox);
+            } else {
+                container.insertBefore(draggingBox, otherBox.nextSibling);
+            }
+        }
+    });
+	
 });
 
 window.toggleFavorite = toggleFavorite;
