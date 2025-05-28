@@ -31,7 +31,7 @@ body {
     flex-direction: row;
     gap: 15px;
     width: 100%;
-    margin-top: 15px;
+    margin-top: -20px;
 }
 
 .market-overview-container,
