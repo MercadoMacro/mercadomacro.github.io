@@ -114,6 +114,21 @@ body {
     margin-bottom: 3px;
 }
 
+.draggable-box {
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.2s ease;
+}
+
+.draggable-box:active {
+    cursor: grabbing;
+}
+
+.draggable-box.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--primary-color);
+}
+
 /* Estilo do banner atualizado */
 .banner {
     flex: 1;

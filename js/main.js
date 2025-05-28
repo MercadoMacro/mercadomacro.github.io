@@ -552,6 +552,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
     }, 1000);
+	
+	const draggableBoxes = document.querySelectorAll('.draggable-box');
+    const container = document.getElementById('draggable-container');
+
+    draggableBoxes.forEach(box => {
+        box.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', box.id);
+            box.classList.add('dragging');
+        });
+
+        box.addEventListener('dragend', () => {
+            box.classList.remove('dragging');
+        });
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggingBox = document.querySelector('.dragging');
+        const otherBox = e.target.closest('.draggable-box');
+        
+        if (otherBox && otherBox !== draggingBox) {
+            const rect = otherBox.getBoundingClientRect();
+            const nextPosition = (e.clientY < rect.top + rect.height / 2) ? 'before' : 'after';
+            
+            if (nextPosition === 'before') {
+                container.insertBefore(draggingBox, otherBox);
+            } else {
+                container.insertBefore(draggingBox, otherBox.nextSibling);
+            }
+        }
+    });
+	
 });
 
 window.toggleFavorite = toggleFavorite;
