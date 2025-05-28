@@ -4,6 +4,7 @@
 const CACHE_KEY = 'newsCache_v5';
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
 const FAVORITES_KEY = 'favorites';
+const BOX_ORDER_KEY = 'boxOrder'; // Nova chave para salvar a ordem dos boxes
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
@@ -35,7 +36,6 @@ async function loadBannerPhrases() {
 function updateBanner() {
     const banner = document.getElementById('random-banner');
     if (banner) {
-        // Cria a estrutura interna se não existir
         if (!banner.querySelector('.banner-text')) {
             const bannerText = document.createElement('div');
             bannerText.className = 'banner-text';
@@ -47,11 +47,9 @@ function updateBanner() {
         const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
         bannerText.textContent = randomPhrase;
         
-        // Reinicia a animação
         bannerText.style.animation = 'none';
-        void bannerText.offsetWidth; // Trigger reflow
+        void bannerText.offsetWidth;
         
-        // Ajusta o comportamento baseado no tamanho da tela
         if (window.innerWidth > 768) {
             bannerText.style.animation = 'none';
             bannerText.style.position = 'static';
@@ -148,7 +146,6 @@ async function fetchGoogleDocContent() {
 function updateCommentary(content) {
     const commentaryContent = document.getElementById('commentary-content');
     
-    // Processamento do conteúdo
     const formattedContent = content
         .replace(/^([📌☐✔] .+)/gm, '<div class="commentary-highlight">$1</div>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -513,50 +510,75 @@ function toggleTheme() {
 }
 
 // =============================================
-// INICIALIZAÇÃO
+// EXPANÇÃO
 // =============================================
-document.addEventListener('DOMContentLoaded', async () => {
-    if (localStorage.getItem('themePreference') === 'light') {
-        document.body.classList.add('light-mode');
-        const themeIcon = document.querySelector('#theme-toggle i');
-        themeIcon.classList.replace('fa-moon', 'fa-sun');
-    }
 
-    await loadBannerPhrases();
-
-    document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
-    document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
-    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
-    document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
-    document.getElementById('analises-btn').addEventListener('click', () => 
-        window.location.href = 'analises.html');
-    document.getElementById('indicadores-btn').addEventListener('click', () => 
-        window.location.href = 'indicadores.html');
-    document.getElementById('calculadoras-btn').addEventListener('click', () => 
-        window.location.href = 'calculadoras/calculadoras.html');
-    document.getElementById('terminal-btn').addEventListener('click', () => 
-        window.location.href = 'terminal-news.html');
-
-    // Adiciona listener para redimensionamento
-    window.addEventListener('resize', updateBanner);
-
-    updateDateTime();
-    loadNewsWidget();
-    updateCommentaryContent();
-    setInterval(updateDateTime, 60000);
-    setInterval(loadNewsWidget, 300000);
-    setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
-    setInterval(updateBanner, 300000);
+function setupCommentaryExpansion() {
+    const commentaryBox = document.getElementById('box-commentary');
+    if (!commentaryBox) return;
     
-    setTimeout(() => {
-        showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
-    }, 1000);
-	
-	const draggableBoxes = document.querySelectorAll('.draggable-box');
-    const container = document.getElementById('draggable-container');
+    const expandBtn = document.createElement('button');
+    expandBtn.id = 'expand-commentary-btn';
+    expandBtn.className = 'expand-btn';
+    expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
+    expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i>';
+    
+    const boxHeader = commentaryBox.querySelector('.box-header');
+    if (boxHeader) {
+        boxHeader.appendChild(expandBtn);
+        
+        expandBtn.addEventListener('click', function() {
+            commentaryBox.classList.toggle('expanded');
+            
+            const icon = this.querySelector('i');
+            if (commentaryBox.classList.contains('expanded')) {
+                icon.classList.replace('fa-expand-alt', 'fa-compress-alt');
+                expandBtn.setAttribute('aria-label', 'Recolher conteúdo');
+                commentaryBox.style.maxHeight = 'none';
+                commentaryBox.style.height = '700px';
+            } else {
+                icon.classList.replace('fa-compress-alt', 'fa-expand-alt');
+                expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
+                commentaryBox.style.maxHeight = '600px';
+                commentaryBox.style.height = 'auto';
+            }
+        });
+    }
+}
 
-    draggableBoxes.forEach(box => {
+// =============================================
+// DRAG AND DROP FUNCTIONS
+// =============================================
+function saveBoxOrder() {
+    const container = document.getElementById('draggable-container');
+    const boxes = Array.from(container.children).map(box => box.id);
+    localStorage.setItem(BOX_ORDER_KEY, JSON.stringify(boxes));
+    console.log('Ordem salva:', boxes);
+}
+
+function loadBoxOrder() {
+    const container = document.getElementById('draggable-container');
+    const savedOrder = JSON.parse(localStorage.getItem(BOX_ORDER_KEY));
+    
+    if (savedOrder && savedOrder.length === container.children.length) {
+        console.log('Carregando ordem:', savedOrder);
+        savedOrder.forEach(id => {
+            const box = document.getElementById(id);
+            if (box && box.parentNode === container) {
+                container.appendChild(box);
+            }
+        });
+    }
+}
+
+function setupDragAndDrop() {
+    const container = document.getElementById('draggable-container');
+    const boxes = document.querySelectorAll('.draggable-box');
+
+    // Carrega a ordem salva ao iniciar
+    loadBoxOrder();
+
+    boxes.forEach(box => {
         box.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', box.id);
             box.classList.add('dragging');
@@ -564,6 +586,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         box.addEventListener('dragend', () => {
             box.classList.remove('dragging');
+            saveBoxOrder();
+            showNotification('Layout salvo!');
         });
     });
 
@@ -583,7 +607,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-	
+}
+
+// =============================================
+// INICIALIZAÇÃO
+// =============================================
+document.addEventListener('DOMContentLoaded', async () => {
+    if (localStorage.getItem('themePreference') === 'light') {
+        document.body.classList.add('light-mode');
+        const themeIcon = document.querySelector('#theme-toggle i');
+        themeIcon.classList.replace('fa-moon', 'fa-sun');
+    }
+setupCommentaryExpansion();
+
+    await loadBannerPhrases();
+
+    document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
+    document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+    document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
+    document.getElementById('analises-btn').addEventListener('click', () => 
+        window.location.href = 'analises.html');
+    document.getElementById('indicadores-btn').addEventListener('click', () => 
+        window.location.href = 'indicadores.html');
+    document.getElementById('calculadoras-btn').addEventListener('click', () => 
+        window.location.href = 'calculadoras/calculadoras.html');
+    document.getElementById('terminal-btn').addEventListener('click', () => 
+        window.location.href = 'terminal-news.html');
+
+    window.addEventListener('resize', updateBanner);
+
+    updateDateTime();
+    loadNewsWidget();
+    updateCommentaryContent();
+    setInterval(updateDateTime, 60000);
+    setInterval(loadNewsWidget, 300000);
+    setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
+    setInterval(updateBanner, 300000);
+    
+    // Inicializa o drag and drop
+    setupDragAndDrop();
+    
+    setTimeout(() => {
+        showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
+    }, 1000);
 });
 
 window.toggleFavorite = toggleFavorite;

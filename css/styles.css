@@ -303,6 +303,7 @@ body {
     font-weight: 700;
 }
 
+
 .footer {
     font-size: 11px;
     margin-top: 15px;
@@ -647,6 +648,8 @@ body {
     right: 65px;
     display: none;
 }
+
+
 
 .action-btn:hover {
     background-color: var(--darker-bg);
