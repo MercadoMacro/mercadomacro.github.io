@@ -4,10 +4,66 @@
 const CACHE_KEY = 'newsCache_v5';
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
 const FAVORITES_KEY = 'favorites';
-const BOX_ORDER_KEY = 'boxOrder';
+const BOX_ORDER_KEY = 'boxOrder'; // Nova chave para salvar a ordem dos boxes
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
+
+// Variável para armazenar as frases do banner
+let BANNER_PHRASES = [];
+
+// Função para carregar as frases do banner
+async function loadBannerPhrases() {
+    try {
+        const response = await fetch('data/banner-phrases.json');
+        if (!response.ok) throw new Error('Falha ao carregar frases');
+        const data = await response.json();
+        BANNER_PHRASES = data.phrases;
+        if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) {
+            throw new Error('Nenhuma frase encontrada no arquivo');
+        }
+        updateBanner();
+    } catch (error) {
+        console.error('Erro ao carregar frases do banner:', error);
+        BANNER_PHRASES = [
+            "Acompanhe as últimas movimentações do mercado financeiro"
+        ];
+        updateBanner();
+    }
+}
+
+// Função para atualizar o banner
+function updateBanner() {
+    const banner = document.getElementById('random-banner');
+    if (banner) {
+        if (!banner.querySelector('.banner-text')) {
+            const bannerText = document.createElement('div');
+            bannerText.className = 'banner-text';
+            banner.innerHTML = '';
+            banner.appendChild(bannerText);
+        }
+        
+        const bannerText = banner.querySelector('.banner-text');
+        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
+        bannerText.textContent = randomPhrase;
+        
+        bannerText.style.animation = 'none';
+        void bannerText.offsetWidth;
+        
+        if (window.innerWidth > 768) {
+            bannerText.style.animation = 'none';
+            bannerText.style.position = 'static';
+            bannerText.style.left = 'auto';
+            bannerText.style.transform = 'none';
+            banner.style.justifyContent = 'center';
+        } else {
+            bannerText.style.animation = 'scrollBanner 7s linear infinite';
+            bannerText.style.position = 'absolute';
+            bannerText.style.left = '100%';
+            banner.style.justifyContent = 'flex-start';
+        }
+    }
+}
 
 // Serviços de proxy prioritários
 const RSS_SOURCES = [
@@ -66,147 +122,6 @@ const FALLBACK_NEWS = [
         pubDate: new Date().toISOString()
     }
 ];
-
-// Variável para armazenar as frases do banner
-let BANNER_PHRASES = [];
-
-
-// =============================================
-// FUNÇÕES DO BANNER
-// =============================================
-async function loadBannerPhrases() {
-    try {
-        const response = await fetch('data/banner-phrases.json');
-        if (!response.ok) throw new Error('Falha ao carregar frases');
-        const data = await response.json();
-        BANNER_PHRASES = data.phrases;
-        if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) {
-            throw new Error('Nenhuma frase encontrada no arquivo');
-        }
-        updateBanner();
-    } catch (error) {
-        console.error('Erro ao carregar frases do banner:', error);
-        BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"];
-        updateBanner();
-    }
-}
-
-function updateBanner() {
-    const banner = document.getElementById('random-banner');
-    if (banner) {
-        if (!banner.querySelector('.banner-text')) {
-            const bannerText = document.createElement('div');
-            bannerText.className = 'banner-text';
-            banner.innerHTML = '';
-            banner.appendChild(bannerText);
-        }
-        
-        const bannerText = banner.querySelector('.banner-text');
-        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
-        bannerText.textContent = randomPhrase;
-        
-        bannerText.style.animation = 'none';
-        void bannerText.offsetWidth;
-        
-        if (window.innerWidth > 768) {
-            bannerText.style.animation = 'none';
-            bannerText.style.position = 'static';
-            bannerText.style.left = 'auto';
-            bannerText.style.transform = 'none';
-            banner.style.justifyContent = 'center';
-        } else {
-            bannerText.style.animation = 'scrollBanner 7s linear infinite';
-            bannerText.style.position = 'absolute';
-            bannerText.style.left = '100%';
-            banner.style.justifyContent = 'flex-start';
-        }
-    }
-}
-
-// =============================================
-// FUNÇÕES DE CAPTURA E COMPARTILHAMENTO
-// =============================================
-async function captureAndShareCommentary() {
-    try {
-        showNotification('Preparando imagem para compartilhamento...');
-        
-        // Captura o box como imagem
-        const box = document.getElementById('box-commentary');
-        const canvas = await html2canvas(box, {
-            scale: 2,
-            backgroundColor: getComputedStyle(document.body).backgroundColor,
-            logging: false,
-            useCORS: true
-        });
-
-        // Converte para URL da imagem
-        const imageUrl = canvas.toDataURL('image/png');
-
-        // Tenta usar a API de compartilhamento nativo (mobile)
-        if (navigator.share) {
-            const blob = await (await fetch(imageUrl)).blob();
-            const file = new File([blob], 'analise-mercado.png', { type: 'image/png' });
-            
-            await navigator.share({
-                title: 'Análise do Mercado Financeiro',
-                text: 'Confira esta análise do mercado:',
-                files: [file]
-            });
-        } 
-        // Fallback para desktop
-        else {
-            const newWindow = window.open('', '_blank');
-            newWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Compartilhar Análise</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-                        img { max-width: 100%; height: auto; margin: 20px 0; border: 1px solid #ddd; }
-                        .share-options { margin-top: 20px; }
-                        .share-btn { 
-                            display: inline-block; 
-                            margin: 5px; 
-                            padding: 10px 15px; 
-                            background: #00ff88; 
-                            color: #0a0a2a; 
-                            border-radius: 5px; 
-                            text-decoration: none;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h2>Análise do Mercado Financeiro</h2>
-                    <img src="${imageUrl}" alt="Análise do Mercado">
-                    <div class="share-options">
-                        <p>Compartilhe esta análise:</p>
-                        <a href="https://twitter.com/intent/tweet?text=Confira%20esta%20análise%20do%20mercado%20financeiro&url=${encodeURIComponent(window.location.href)}" 
-                           class="share-btn" target="_blank">Twitter</a>
-                        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" 
-                           class="share-btn" target="_blank">Facebook</a>
-                        <a href="https://api.whatsapp.com/send?text=Confira%20esta%20análise%20do%20mercado%20financeiro%20${encodeURIComponent(window.location.href)}" 
-                           class="share-btn" target="_blank">WhatsApp</a>
-                        <a href="${imageUrl}" download="analise-mercado.png" class="share-btn">Baixar Imagem</a>
-                    </div>
-                </body>
-                </html>
-            `);
-        }
-    } catch (error) {
-        console.error("Erro ao compartilhar:", error);
-        if (error.name !== 'AbortError') {
-            showNotification("Erro ao compartilhar. Tente novamente.", true);
-        }
-    }
-}
-
-function setupCommentarySharing() {
-    const shareBtn = document.getElementById('capture-share-btn');
-    if (!shareBtn) return;
-
-    shareBtn.addEventListener('click', captureAndShareCommentary);
-}
 
 // =============================================
 // FUNÇÕES DO GOOGLE DOCS
@@ -268,7 +183,7 @@ async function updateCommentaryContent() {
 }
 
 // =============================================
-// FUNÇÕES DE NOTÍCIAS
+// FUNÇÕES PRINCIPAIS
 // =============================================
 async function fetchNews() {
     let lastError = null;
@@ -595,8 +510,9 @@ function toggleTheme() {
 }
 
 // =============================================
-// FUNÇÕES DE EXPANSÃO DO BOX
+// EXPANÇÃO
 // =============================================
+
 function setupCommentaryExpansion() {
     const commentaryBox = document.getElementById('box-commentary');
     if (!commentaryBox) return;
@@ -631,7 +547,7 @@ function setupCommentaryExpansion() {
 }
 
 // =============================================
-// FUNÇÕES DE DRAG AND DROP
+// DRAG AND DROP FUNCTIONS
 // =============================================
 function saveBoxOrder() {
     const container = document.getElementById('draggable-container');
@@ -659,6 +575,7 @@ function setupDragAndDrop() {
     const container = document.getElementById('draggable-container');
     const boxes = document.querySelectorAll('.draggable-box');
 
+    // Carrega a ordem salva ao iniciar
     loadBoxOrder();
 
     boxes.forEach(box => {
@@ -696,49 +613,46 @@ function setupDragAndDrop() {
 // INICIALIZAÇÃO
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // Configura tema
     if (localStorage.getItem('themePreference') === 'light') {
         document.body.classList.add('light-mode');
         const themeIcon = document.querySelector('#theme-toggle i');
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     }
+setupCommentaryExpansion();
 
-    // Inicializa componentes
-    setupCommentaryExpansion();
-    setupCommentarySharing();
-    setupDragAndDrop();
     await loadBannerPhrases();
 
-    // Configura eventos
     document.getElementById('refresh-btn').addEventListener('click', updateDateTime);
     document.getElementById('refresh-news-btn').addEventListener('click', loadNewsWidget);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
-    document.getElementById('analises-btn').addEventListener('click', () => window.location.href = 'analises.html');
-    document.getElementById('indicadores-btn').addEventListener('click', () => window.location.href = 'indicadores.html');
-    document.getElementById('calculadoras-btn').addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
-    document.getElementById('terminal-btn').addEventListener('click', () => window.location.href = 'terminal-news.html');
+    document.getElementById('analises-btn').addEventListener('click', () => 
+        window.location.href = 'analises.html');
+    document.getElementById('indicadores-btn').addEventListener('click', () => 
+        window.location.href = 'indicadores.html');
+    document.getElementById('calculadoras-btn').addEventListener('click', () => 
+        window.location.href = 'calculadoras/calculadoras.html');
+    document.getElementById('terminal-btn').addEventListener('click', () => 
+        window.location.href = 'terminal-news.html');
 
     window.addEventListener('resize', updateBanner);
 
-    // Carrega dados iniciais
     updateDateTime();
     loadNewsWidget();
     updateCommentaryContent();
-    
-    // Configura intervalos
     setInterval(updateDateTime, 60000);
     setInterval(loadNewsWidget, 300000);
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
     setInterval(updateBanner, 300000);
     
-    // Mensagem de boas-vindas
+    // Inicializa o drag and drop
+    setupDragAndDrop();
+    
     setTimeout(() => {
         showNotification('Bem-vindo ao Mercado Macro! Atualizando dados...');
     }, 1000);
 });
 
-// Funções globais
 window.toggleFavorite = toggleFavorite;
 window.loadNewsWidget = loadNewsWidget;
