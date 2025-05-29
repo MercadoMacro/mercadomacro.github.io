@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="header">
+    <div id="scroll-progress-bar"></div> <div class="header">
         <div class="logo-container">
             <div class="logo">
                 <div class="logo-main">NOTÍCIAS</div>
@@ -28,14 +28,12 @@
                 <div class="logo-byline">By Anderson Danilo</div>
             </div>
             <div class="banner" id="random-banner">
-                <!-- Frases serão inseridas aqui via JavaScript -->
-            </div>
+                </div>
         </div>
         <div class="subheader" id="data-atual">Indicadores - Carregando...</div>
     </div>
 
     <div class="container">
-        <!-- Restante do conteúdo permanece igual -->
         <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <div class="tradingview-widget-copyright"></div>
@@ -44,16 +42,16 @@
                 "symbols": [
                     {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500 Index"},
                     {"description": "IBOVESPA", "proName": "BMFBOVESPA:IBOV"},
-					{"description": "IBOV FUTURO","proName": "BMFBOVESPA:WIN1!"},
+                    {"description": "IBOV FUTURO","proName": "BMFBOVESPA:WIN1!"},
                     {"description": "SP500", "proName": "CAPITALCOM:US500"},
-					{"description": "DXY", "proName": "FXOPEN:DXY"},
+                    {"description": "DXY", "proName": "FXOPEN:DXY"},
                     {"description": "NASDAQ", "proName": "BLACKBULL:NAS100"},
                     {"description": "WTI", "proName": "PYTH:WTI3!"},
                     {"description": "BRENT", "proName": "ACTIVTRADES:BRENT"},
                     {"description": "GOLD", "proName": "THINKMARKETS:XAUUSD"},
                     {"description": "BITCOIN", "proName": "BITSTAMP:BTCUSD"},
-					{"description": "USD/BRL","proName": "ACTIVTRADES:USDBRL"},
-					{"description": "VIX","proName": "CAPITALCOM:VIX"}
+                    {"description": "USD/BRL","proName": "ACTIVTRADES:USDBRL"},
+                    {"description": "VIX","proName": "CAPITALCOM:VIX"}
                 ],
                 "showSymbolLogo": true,
                 "isTransparent": true,
@@ -65,29 +63,29 @@
         </div>
 
         <div class="content-row" id="draggable-container">
-		
-		        <div class="commentary draggable-box" draggable="true" id="box-commentary">
-                 <div class="box-header">
-                 <i class="fas fa-bullseye"></i>
-                 <h2>Radar Financeiro</h2>
-				
-                 </div>
-                 <div id="commentary-content">
-                     <div class="loading-commentary">
+
+            <div class="content-box draggable-box" draggable="true" id="box-commentary">
+                <div class="box-header">
+                    <i class="fas fa-bullseye"></i>
+                    <h2>Radar Financeiro</h2>
+                    </div>
+                <div id="commentary-content" class="box-content">
+                    <div class="loading-commentary">
                         <span class="loading-small"></span> Carregando análise do mercado...
                     </div>
                 </div>
             </div>
-        <div class="market-overview-container draggable-box" draggable="true" id="box-market">
 
+            <div class="content-box draggable-box" draggable="true" id="box-market">
                 <div class="box-header">
                     <i class="fas fa-chart-line"></i>
                     <h2>Monitor de Mercado</h2>
                 </div>
-                <div class="tradingview-widget-container">
-                  <div class="tradingview-widget-container__widget"></div>
-                  <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+                <div class="box-content">
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
+                         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
                   {
                   "colorTheme": "dark",
                   "dateRange": "12M",
@@ -109,131 +107,31 @@
                   "belowLineFillColorFallingBottom": "rgba(0, 255, 136, 0)",
                   "symbolActiveColor": "rgba(0, 255, 136, 0.12)",
                   "tabs": [
-                    {
-                      "title": "Indices",
-                      "symbols": [
-                        {
-                          "s": "FOREXCOM:SPXUSD",
-                          "d": "S&P 500 Index"
-                        },
-                        {
-                          "s": "FOREXCOM:NSXUSD",
-                          "d": "US 100 Cash CFD"
-                        },
-                        {
-                          "s": "FOREXCOM:DJI",
-                          "d": "Dow Jones Industrial Average Index"
-                        },
-                        {
-                          "s": "INDEX:NKY",
-                          "d": "Japan 225"
-                        },
-                        {
-                          "s": "INDEX:DEU40",
-                          "d": "DAX Index"
-                        },
-                        {
-                          "s": "FOREXCOM:UKXGBP",
-                          "d": "FTSE 100 Index"
-                        }
-                      ],
-                      "originalTitle": "Indices"
-                    },
-                    {
-                      "title": "Forex",
-                      "symbols": [
-                        {
-                          "s": "FX:EURUSD",
-                          "d": "EUR to USD"
-                        },
-                        {
-                          "s": "FX:GBPUSD",
-                          "d": "GBP to USD"
-                        },
-                        {
-                          "s": "FX:USDJPY",
-                          "d": "USD to JPY"
-                        },
-                        {
-                          "s": "FX:USDCHF",
-                          "d": "USD to CHF"
-                        },
-                        {
-                          "s": "FX:AUDUSD",
-                          "d": "AUD to USD"
-                        },
-                        {
-                          "s": "FX:USDCAD",
-                          "d": "USD to CAD"
-                        }
-                      ],
-                      "originalTitle": "Forex"
-                    },
-                    {
-                      "title": "Futures",
-                      "symbols": [
-                        {
-                          "s": "BMFBOVESPA:ISP1!",
-                          "d": "S&P 500 Index Futures"
-                        },
-                        {
-                          "s": "BMFBOVESPA:EUR1!",
-                          "d": "Euro Futures"
-                        },
-                        {
-                          "s": "PYTH:WTI3!",
-                          "d": "WTI CRUDE OIL"
-                        },
-                        {
-                          "s": "BMFBOVESPA:ETH1!",
-                          "d": "Hydrous ethanol"
-                        },
-                        {
-                          "s": "BMFBOVESPA:CCM1!",
-                          "d": "Corn"
-                        }
-                      ],
-                      "originalTitle": "Futures"
-                    },
-                    {
-                      "title": "Bonds",
-                      "symbols": [
-                        {
-                          "s": "EUREX:FGBL1!",
-                          "d": "Euro Bund"
-                        },
-                        {
-                          "s": "EUREX:FBTP1!",
-                          "d": "Euro BTP"
-                        },
-                        {
-                          "s": "EUREX:FGBM1!",
-                          "d": "Euro BOBL"
-                        }
-                      ],
-                      "originalTitle": "Bonds"
-                    }
+                    { "title": "Indices", "symbols": [ {"s": "FOREXCOM:SPXUSD", "d": "S&P 500 Index"}, {"s": "FOREXCOM:NSXUSD", "d": "US 100 Cash CFD"}, {"s": "FOREXCOM:DJI", "d": "Dow Jones Industrial Average Index"}, {"s": "INDEX:NKY", "d": "Japan 225"}, {"s": "INDEX:DEU40", "d": "DAX Index"}, {"s": "FOREXCOM:UKXGBP", "d": "FTSE 100 Index"} ], "originalTitle": "Indices" },
+                    { "title": "Forex", "symbols": [ {"s": "FX:EURUSD", "d": "EUR to USD"}, {"s": "FX:GBPUSD", "d": "GBP to USD"}, {"s": "FX:USDJPY", "d": "USD to JPY"}, {"s": "FX:USDCHF", "d": "USD to CHF"}, {"s": "FX:AUDUSD", "d": "AUD to USD"}, {"s": "FX:USDCAD", "d": "USD to CAD"} ], "originalTitle": "Forex" },
+                    { "title": "Futures", "symbols": [ {"s": "BMFBOVESPA:ISP1!", "d": "S&P 500 Index Futures"}, {"s": "BMFBOVESPA:EUR1!", "d": "Euro Futures"}, {"s": "PYTH:WTI3!", "d": "WTI CRUDE OIL"}, {"s": "BMFBOVESPA:ETH1!", "d": "Hydrous ethanol"}, {"s": "BMFBOVESPA:CCM1!", "d": "Corn"} ], "originalTitle": "Futures" },
+                    { "title": "Bonds", "symbols": [ {"s": "EUREX:FGBL1!", "d": "Euro Bund"}, {"s": "EUREX:FBTP1!", "d": "Euro BTP"}, {"s": "EUREX:FGBM1!", "d": "Euro BOBL"} ], "originalTitle": "Bonds" }
                   ]
                 }
                   </script>
+                    </div>
                 </div>
             </div>
 
-
-        </div>
-
-        <div class="news-widget-container" id="news-widget">
-            <div class="news-header">
-                <div class="news-title">Últimas Notícias Financeiras</div>
-                <button id="refresh-news-btn" aria-label="Atualizar lista de notícias">
-                    <i class="fas fa-sync-alt"></i> Atualizar
-                </button>
-            </div>
-            <div class="news-content">
-                <div class="skeleton-loading">
-                    <div class="skeleton-item"></div>
-                    <div class="skeleton-item"></div>
-                    <div class="skeleton-item"></div>
+            <div class="content-box draggable-box" draggable="true" id="news-widget">
+                <div class="box-header">
+                    <i class="far fa-newspaper"></i> <h2>Últimas Notícias</h2>
+                    <div class="box-actions">
+                         <button id="refresh-news-btn" aria-label="Atualizar lista de notícias">
+                            <i class="fas fa-sync-alt"></i> </button>
+                    </div>
+                </div>
+                <div class="news-content box-content">
+                    <div class="skeleton-loading">
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                    </div>
                 </div>
             </div>
         </div>
