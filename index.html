@@ -167,9 +167,26 @@
         <i class="fas fa-newspaper"></i>
     </button>
 
+    <button id="economic-calendar-toggle-btn" class="action-btn" aria-label="Abrir Calendário Econômico">
+        <i class="fas fa-calendar-alt"></i>
+    </button>
+
     <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
+
+    <div id="economic-calendar-overlay" class="overlay-panel">
+        <div class="overlay-content" id="economic-calendar-content-panel">
+            <div class="overlay-header">
+                <h3>Calendário Econômico</h3>
+                <button id="close-calendar-btn" aria-label="Fechar Calendário Econômico"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="overlay-main-content">
+                <div id="economicCalendarWidget">
+                    </div>
+            </div>
+        </div>
+    </div>
 
     <script src="js/main.js"></script>
 </body>

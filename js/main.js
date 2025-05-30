@@ -811,7 +811,6 @@ function updateScrollProgressBar() {
     if (!progressBar) return;
 
     const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-    // Considera o scrollHeight do body se o html for menor (comum em algumas estruturas)
     const scrollHeight = Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
         document.body.offsetHeight, document.documentElement.offsetHeight,
@@ -824,6 +823,40 @@ function updateScrollProgressBar() {
     } else {
         progressBar.style.width = '0%'; 
     }
+}
+
+// =============================================
+// FUNÇÃO PARA CARREGAR WIDGET DE CALENDÁRIO ECONÔMICO
+// =============================================
+function loadEconomicCalendarWidget() {
+    const widgetContainer = document.getElementById('economicCalendarWidget');
+    if (!widgetContainer) {
+        console.error('Economic calendar widget container not found.');
+        return;
+    }
+
+    widgetContainer.innerHTML = ''; // Clear previous widget instance to allow reloading with new theme
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.type = 'text/javascript';
+    script.dataset.type = 'calendar-widget'; // Important for the Tradays script
+    script.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13';
+
+    // Determine the theme for the widget based on the body class
+    const currentThemeIsLight = document.body.classList.contains('light-mode');
+    const widgetTheme = currentThemeIsLight ? 0 : 1; // 0 for light, 1 for dark (Tradays specific)
+
+    // The configuration is provided as the text content of the script tag
+    script.text = JSON.stringify({
+        "width": "415",
+        "height": "100%",
+        "mode": "1", // Mode 2 is "Widget". Mode 1 is "List".
+        "lang": "pt",
+        "theme": widgetTheme
+    });
+
+    widgetContainer.appendChild(script);
 }
 
 
@@ -878,14 +911,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('calculadoras-btn')?.addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
     document.getElementById('terminal-btn')?.addEventListener('click', () => window.location.href = 'terminal-news.html');
 
+    // EVENT LISTENERS FOR ECONOMIC CALENDAR
+    const calendarToggleBtn = document.getElementById('economic-calendar-toggle-btn');
+    const calendarOverlay = document.getElementById('economic-calendar-overlay');
+    const calendarContentPanel = document.getElementById('economic-calendar-content-panel');
+    const closeCalendarBtn = document.getElementById('close-calendar-btn');
+
+    if (calendarToggleBtn && calendarOverlay && calendarContentPanel && closeCalendarBtn) {
+        calendarToggleBtn.addEventListener('click', () => {
+            calendarOverlay.classList.add('is-active');
+            calendarContentPanel.classList.add('is-visible');
+            loadEconomicCalendarWidget(); // Load/reload widget with current theme
+        });
+
+        const closeCalendarOverlay = () => {
+            calendarContentPanel.classList.remove('is-visible');
+            calendarOverlay.classList.remove('is-active');
+            // Optional: You might want to clear the widget content if it causes issues when hidden
+            // const widgetContainer = document.getElementById('economicCalendarWidget');
+            // if (widgetContainer) widgetContainer.innerHTML = '';
+        };
+
+        closeCalendarBtn.addEventListener('click', closeCalendarOverlay);
+
+        calendarOverlay.addEventListener('click', (event) => {
+            // Close if clicked on the backdrop (overlay-panel) itself,
+            // not on the content panel or its children.
+            if (event.target === calendarOverlay) {
+                closeCalendarOverlay();
+            }
+        });
+    }
+
     window.addEventListener('resize', updateBanner);
-    window.addEventListener('scroll', updateScrollProgressBar); // ADICIONADO: Listener para barra de progresso
+    window.addEventListener('scroll', updateScrollProgressBar); 
 
     updateDateTime();
     loadNewsWidget();
     updateCommentaryContent();
-    updateScrollProgressBar(); // ADICIONADO: Chama uma vez no load para estado inicial correto
-    setupScrollAnimations(); // ADICIONADO: Configura animações de entrada
+    updateScrollProgressBar(); 
+    setupScrollAnimations(); 
 
     setInterval(updateDateTime, 60000);
     setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
