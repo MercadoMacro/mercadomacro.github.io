@@ -671,7 +671,7 @@ body {
         min-height: 32px;
     }
     body {
-        /* zoom: 0.8;  Comentado ou removido - pode causar problemas de layout e não é padrão */
+        zoom: 0.8;  
         touch-action: manipulation;
     }
 	
