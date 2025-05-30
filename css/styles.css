@@ -675,10 +675,10 @@ body {
     }
 	
 	.subheader {
-    font-size: 9px;
+    font-size: 7px;
     font-weight: 800;
     line-height: 1;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
     margin-bottom: -20px;
     text-transform: uppercase;
     background: linear-gradient(to right, #ffffff, var(--primary-color));
@@ -835,7 +835,7 @@ body.light-mode .page-notification.error {
     height: 100vh; /* Full viewport height */
     position: fixed;
     top: 0;
-    left: -420px; /* Start off-screen (width + a bit for shadow) */
+    left: -450px; /* Start off-screen (width + a bit for shadow) */
     background: var(--card-bg);
     box-shadow: 2px 0 15px rgba(0,0,0,0.3);
     transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
