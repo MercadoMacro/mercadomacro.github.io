@@ -250,8 +250,18 @@ body {
 
 .subheader {
     font-size: 9px;
-    margin-bottom: -30px; 
-    color: var(--text-secondary);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 1.5px;
+    margin-bottom: -5px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, #ffffff, var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    transition: all 0.3s ease;
+}
+	
 }
 
 .container {
@@ -663,6 +673,20 @@ body {
         zoom: 0.9;
         touch-action: manipulation;
     }
+	
+	.subheader {
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 1.5px;
+    margin-bottom: -20px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, #ffffff, var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    transition: all 0.3s ease;
+}
     .container { padding: 10px; }
     .content-row { gap: 10px; }
     .content-box { padding: 15px; } 
@@ -806,7 +830,7 @@ body.light-mode .page-notification.error {
 
 /* Overlay Content Panel (Actual Calendar Panel) */
 .overlay-content {
-    width: 415px; /* Default width */
+    width: 450px; /* Default width */
     max-width: 95vw; /* Max width for smaller screens */
     height: 100vh; /* Full viewport height */
     position: fixed;
