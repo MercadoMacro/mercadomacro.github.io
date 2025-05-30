@@ -670,9 +670,10 @@ body {
         min-height: 32px;
     }
     body {
-        zoom: 0.9;
+        zoom: 0.8;
         touch-action: manipulation;
     }
+	
 	
 	.subheader {
     font-size: 7px;
@@ -830,12 +831,12 @@ body.light-mode .page-notification.error {
 
 /* Overlay Content Panel (Actual Calendar Panel) */
 .overlay-content {
-    width: 450px; /* Default width */
+    width: 100%; /* Default width */
     max-width: 95vw; /* Max width for smaller screens */
     height: 100vh; /* Full viewport height */
     position: fixed;
     top: 0;
-    left: -450px; /* Start off-screen (width + a bit for shadow) */
+    left: -420px; /* Start off-screen (width + a bit for shadow) */
     background: var(--card-bg);
     box-shadow: 2px 0 15px rgba(0,0,0,0.3);
     transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);

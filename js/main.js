@@ -849,7 +849,7 @@ function loadEconomicCalendarWidget() {
 
     // The configuration is provided as the text content of the script tag
     script.text = JSON.stringify({
-        "width": "430",
+        "width": "100%",
         "height": "100%",
         "mode": "1", // Mode 2 is "Widget". Mode 1 is "List".
         "lang": "pt",
