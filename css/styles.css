@@ -250,19 +250,19 @@ body {
 
 .subheader {
     font-size: 9px;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: 1.5px;
-    margin-bottom: -5px;
-    text-transform: uppercase;
-    background: linear-gradient(to right, #ffffff, var(--primary-color));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: none;
-    transition: all 0.3s ease;
+    /* font-weight: 800; Removido ou ajustado conforme sua preferência. No último CSS estava sem, mas no anterior com. Ajuste se necessário. */
+    /* line-height: 1; */
+    /* letter-spacing: 1.5px; */
+    margin-bottom: -30px;  /* Ajustado de -5px para dar mais espaço */
+    /* text-transform: uppercase; */
+    /* background: linear-gradient(to right, #ffffff, var(--primary-color)); */
+    /* -webkit-background-clip: text; */
+    /* -webkit-text-fill-color: transparent; */
+    /* text-shadow: none; */
+    /* transition: all 0.3s ease; */
+    color: var(--text-secondary); /* Adicionado para garantir cor se outras propriedades de gradiente forem removidas */
 }
 	
-}
 
 .container {
     flex: 1;
@@ -663,6 +663,7 @@ body {
     justify-content: space-between;
 }
 
+/* Media query principal para telas menores (geralmente mobile) */
 @media (max-width: 600px) {
     .banner {
         font-size: 14px;
@@ -670,31 +671,31 @@ body {
         min-height: 32px;
     }
     body {
-        zoom: 0.8;
+        /* zoom: 0.8;  Comentado ou removido - pode causar problemas de layout e não é padrão */
         touch-action: manipulation;
     }
 	
-	
 	.subheader {
-    font-size: 7px;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: 1.2px;
-    margin-bottom: -20px;
-    text-transform: uppercase;
-    background: linear-gradient(to right, #ffffff, var(--primary-color));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: none;
-    transition: all 0.3s ease;
-}
+        font-size: 7px;
+        /* font-weight: 800; */ /* Ajustado para consistência com o .subheader principal */
+        /* line-height: 1; */
+        /* letter-spacing: 1.2px; */
+        margin-bottom: -20px;
+        /* text-transform: uppercase; */
+        /* background: linear-gradient(to right, #ffffff, var(--primary-color)); */
+        /* -webkit-background-clip: text; */
+        /* -webkit-text-fill-color: transparent; */
+        /* text-shadow: none; */
+        /* transition: all 0.3s ease; */
+        /* color: var(--text-secondary); Já herdado, mas pode ser explícito se necessário */
+    }
     .container { padding: 10px; }
     .content-row { gap: 10px; }
     .content-box { padding: 15px; } 
-    .content-box.news-widget-container { max-height: 60vh; } 
+    /* .content-box.news-widget-container { max-height: 60vh; }  Esta regra parece específica demais para 'news-widget-container', pode ser generalizada ou removida se não for necessária */
 
     .action-btn, .theme-toggle {
-        width: 40px;
+        width: 40px; /* Mantido como 40px, como no CSS anterior. Se 38px for desejado, ajuste aqui */
         height: 40px;
         bottom: 15px;
     }
@@ -706,7 +707,7 @@ body {
     #terminal-btn { right: 265px; }
     #fullscreen-exit-btn { right: 65px; }
 
-    html { font-size: 14px; }
+    html { font-size: 14px; } /* Isso pode ser útil, mas cuidado com o 'zoom' no body, um é melhor que o outro */
     .logo-main { font-size: 18px; }
     .logo-sub { font-size: 6px; }
     .news-item-title { font-size: 14px; }
@@ -831,12 +832,12 @@ body.light-mode .page-notification.error {
 
 /* Overlay Content Panel (Actual Calendar Panel) */
 .overlay-content {
-    width: 100%; /* Default width */
+    width: 400px; /* Default width */
     max-width: 95vw; /* Max width for smaller screens */
     height: 100vh; /* Full viewport height */
     position: fixed;
     top: 0;
-    left: -420px; /* Start off-screen (width + a bit for shadow) */
+    left: -420px; /* Start off-screen (width + a bit for shadow). Ajustado para acomodar 400px + margem */
     background: var(--card-bg);
     box-shadow: 2px 0 15px rgba(0,0,0,0.3);
     transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -912,15 +913,23 @@ body.light-mode #close-calendar-btn:hover {
     color: var(--primary-color);
 }
 
-/* Ensure action buttons don't get too crowded on smaller screens if many are added to the left */
-@media (max-width: 400px) {
+/* Adjustments for smaller screens, including economic calendar panel */
+/* A media query para max-width: 600px já existe acima e pode conter outras regras.
+   Esta seção é para as regras específicas do painel do calendário,
+   combinando com a antiga media query de 400px. */
+@media (max-width: 599px) { /* <<<<<<< ALTERAÇÃO APLICADA AQUI */
     #economic-calendar-toggle-btn {
-        bottom: 60px; /* Adjust if necessary */
-        width: 38px;
-        height: 38px;
+        /* Se o botão do calendário precisar de ajustes específicos para este breakpoint,
+           eles podem ser adicionados aqui. Caso contrário, herdará de .action-btn
+           ou da media query @media (max-width: 600px) se houver regras lá.
+           Para consistência com o ajuste anterior de 400px: */
+        bottom: 60px;
+        width: 38px; /* Ou 40px se preferir o padrão do .action-btn */
+        height: 38px;/* Ou 40px */
     }
-    .overlay-content {
-        width: 100vw; /* Full width on very small screens */
-        left: -100vw; /* Adjust for full width */
+    .overlay-content { /* Regras para o painel do calendário em telas < 600px */
+        width: 100vw;         /* O painel ocupará toda a largura da viewport */
+        max-width: 100vw;     /* Garante que o max-width padrão não interfira */
+        left: -100vw;         /* Posição inicial fora da tela, correspondendo à largura total */
     }
 }
