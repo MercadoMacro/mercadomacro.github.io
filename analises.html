@@ -3,602 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <meta name="description" content="Análises detalhadas do mercado financeiro">
-    <meta name="keywords" content="análises financeiras, gráficos, tendências, investimentos">
+    <meta name="description" content="Painel de acompanhamento do mercado financeiro com gráficos, heatmap, calendário econômico e status das bolsas em tempo real.">
+    <meta name="keywords" content="calendário econômico, bolsas de valores, heatmap, gráficos financeiros, mercado financeiro, painel de mercado, ações, moedas, commodities, criptomoedas, s&p500, ibovespa">
     <meta name="author" content="Anderson">
-    <meta property="og:title" content="Análises de Mercado Financeiro">
-    <meta property="og:description" content="Análises detalhadas e gráficos do mercado financeiro">
-    <meta property="og:image" content="https://example.com/analises-thumbnail.jpg">
-    <meta property="og:url" content="https://mercadomacro.github.io/analises.html">
-    <meta name="theme-color" content="#0a0a2a">
+    <meta property="og:title" content="Painel de Mercado Financeiro - Mercado Macro">
+    <meta property="og:description" content="Acompanhe os principais ativos financeiros com gráficos detalhados, heatmap do mercado, calendário econômico e status das bolsas.">
+    <meta property="og:image" content="https://example.com/painel-thumbnail.jpg"> 
+    <meta property="og:url" content="https://mercadomacro.github.io/painel.html"> 
+    <meta name="theme-color" content="#0d1117">
     <meta http-equiv="X-Frame-Options" content="DENY">
-    <title>Análises de Mercado Financeiro</title>
+    <title>Painel Financeiro</title> 
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
-            --primary-color: #00ff88;
-            --primary-light: #66ffb3;
-            --primary-dark: #00cc6a;
-            --dark-bg: #0a0a2a;
-            --darker-bg: #1a1a4a;
-            --text-color: #f8f8f8;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --card-bg: rgba(0, 0, 0, 0.25);
-            --error-color: #ff6b6b;
-            --up-trend: #00C853;
-            --down-trend: #FF3D00;
-            --neutral-trend: #FFC107;
-            --stocks-color: #4CAF50;
-            --forex-color: #2196F3;
-            --commodities-color: #FF9800;
-            --crypto-color: #9C27B0;
+            --primary-color: #00d180; 
+            --primary-light: #5bffb0;
+            --primary-dark: #009e53;
+            --dark-bg: #0d1117;
+            --darker-bg: #010409;
+            --text-color: #c9d1d9;
+            --text-secondary: rgba(139, 148, 158, 0.7);
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --card-bg-rgb-dark: 22, 27, 34;
+            --card-bg-rgb-light: 248, 249, 250; 
+            --card-bg-rgb: var(--card-bg-rgb-dark);
+            --border-color: rgba(48, 54, 61, 0.8);
+            --error-color: #ff7b72;
+            --stocks-color: #2f81f7;
+            --forex-color: #a371f7;
+            --commodities-color: #db6d28;
+            --crypto-color: #bf3989;
+            --calendar-color: #ff9800; 
             --transition-speed: 0.3s;
+            --shadow-color-soft: rgba(0, 0, 0, 0.2);
+            --shadow-color-medium: rgba(0, 0, 0, 0.3);
+            --toggle-inactive-bg: #343a46; 
+            --toggle-slider-color: #f8f9fa; 
+            --up-trend: #3fb950; 
+            --down-trend: #f85149; 
+            --neutral-trend: #FFC107; 
         }
         
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+            margin: 0; padding: 0;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
             color: var(--text-color);
-            min-height: 100vh;
-            width: 100%;
+            min-height: 100vh; width: 100%;
             overflow-x: hidden;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-            line-height: 1.6;
+            line-height: 1.7;
             transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
+        body.body-modal-open { overflow: hidden; }
         
-        :focus {
-            outline: 2px solid var(--primary-color);
-            outline-offset: 2px;
-        }
+        :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
         
         .container {
-            flex: 1;
-            max-width: 1200px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 20px 15px;
-            box-sizing: border-box;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
+            flex: 1; max-width: 1200px; width: 100%;
+            margin: 0 auto; padding: 30px 20px;
+            box-sizing: border-box; text-align: center;
+            display: flex; flex-direction: column;
         }
         
-        .logo {
-            text-align: center;
-            margin-bottom: 20px;
-            position: relative;
-            padding: 0 10px;
+        .logo { text-align: center; margin-bottom: 30px; }
+        .page-title-header {
+            font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
+            color: var(--text-color); 
+            background: linear-gradient(120deg, var(--primary-light), var(--primary-color));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px; padding: 0 10px;
         }
-        
-        .logo-main {
-            font-size: 36px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -1px;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            background: linear-gradient(to right, #ffffff, var(--primary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: none;
-            transition: all var(--transition-speed) ease;
-        }
-        
-        .logo-sub {
-            display: block;
-            font-size: 14px;
-            font-weight: 400;
-            color: var(--text-secondary);
-            letter-spacing: 3px;
-            margin-top: 5px;
-            text-transform: uppercase;
-        }
-        
-        .logo-byline {
-            position: absolute;
-            right: 10px;
-            bottom: 0;
-            font-size: 11px;
-            font-style: italic;
-            color: var(--text-secondary);
-        }
-        
         .logo-divider {
-            width: 50px;
-            height: 3px;
-            background: linear-gradient(to right, var(--primary-color), transparent);
-            margin: 8px auto;
-            border-radius: 3px;
+            width: 80px; height: 4px; 
+            background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+            margin: 0 auto; border-radius: 3px;
         }
         
-        .subheader {
-            font-size: 14px;
-            margin-bottom: 20px;
-            color: var(--text-secondary);
-        }
+        .subheader { font-size: 16px; margin-bottom: 25px; color: var(--text-secondary); font-weight: 600;}
         
-        .filters-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
+        .filters-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .filter-btn {
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: var(--card-bg);
-            border: none;
-            color: var(--text-color);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition-speed) ease;
+            padding: 8px 18px; 
+            border-radius: 20px; background-color: var(--card-bg);
+            border: 1px solid transparent; color: var(--text-color); font-size: 13px; 
+            font-weight: 600; cursor: pointer;
+            transition: all var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
         }
-        
-        .filter-btn:hover {
-            background: var(--primary-color);
-            color: var(--dark-bg);
+        .filter-btn:hover { background: var(--primary-light); color: var(--dark-bg); transform: translateY(-2px); border-color: var(--primary-color); }
+        .filter-btn.active { background: var(--primary-color); color: var(--dark-bg); font-weight: 700; box-shadow: 0 2px 8px var(--shadow-color-soft); border-color: var(--primary-dark); }
+        .filter-btn[data-filter="calendar"].active { background-color: var(--calendar-color); border-color: var(--calendar-color); color: white; }
+
+
+        .heatmap-controls { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; gap: 12px; }
+        .toggle-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: color var(--transition-speed) ease; }
+        .toggle-label.active { color: var(--primary-color); font-weight: 700; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--toggle-inactive-bg); border: 1px solid var(--border-color);
+            transition: .3s; border-radius: 28px;
         }
-        
-        .filter-btn.active {
-            background: var(--primary-color);
-            color: var(--dark-bg);
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px;
+            left: 3px; bottom: 3px; background-color: var(--toggle-slider-color);
+            transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
-        
-        .analises-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-        
-        .analise-section {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 0;
-            text-align: left;
-            border-left: 4px solid var(--primary-color);
-            flex: 1 1 100%;
-            min-width: 0;
-            transition: all var(--transition-speed) ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .analise-section:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .analise-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        
-        .analise-category {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 700;
-            color: white;
-        }
-        
-        .category-stocks {
-            background-color: var(--stocks-color);
-        }
-        
-        .category-forex {
-            background-color: var(--forex-color);
-        }
-        
-        .category-commodities {
-            background-color: var(--commodities-color);
-        }
-        
-        .category-crypto {
-            background-color: var(--crypto-color);
-        }
-        
-        .analise-trend {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-        
-        .up-trend {
-            color: var(--up-trend);
-        }
-        
-        .down-trend {
-            color: var(--down-trend);
-        }
-        
-        .neutral-trend {
-            color: var(--neutral-trend);
-        }
-        
-        .analise-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .analise-summary {
-            font-size: 15px;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            border-left: 3px solid var(--primary-color);
-        }
-        
-        .analise-content {
-            font-size: 14px;
-            line-height: 1.7;
-            margin-bottom: 15px;
-        }
-        
-        .analise-drivers {
-            margin: 15px 0;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 8px;
-        }
-        
-        .drivers-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--primary-light);
-        }
-        
-        .driver-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 8px;
-        }
-        
-        .driver-icon {
-            margin-right: 8px;
-            color: var(--primary-color);
-        }
-        
-        .analise-technicals {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        
-        .technical-indicator {
-            padding: 6px 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .indicator-value {
-            font-weight: 700;
-            margin-left: 5px;
-        }
-        
-        .analise-chart {
+        input:checked + .slider { background-color: var(--primary-color); border-color: var(--primary-dark); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .main-widget-container {
             width: 100%;
-            height: 300px;
-            border-radius: 8px;
-            margin: 15px 0;
+            height: 75vh; 
+            min-height: 500px; 
+            margin-bottom: 30px;
+            border-radius: 16px;
+            background-color: var(--card-bg);
+            /* O padding foi removido daqui, pois o widget Tradays pode precisar de 100% do espaço.
+               Se necessário, pode ser adicionado ao #calendar-widget-container especificamente,
+               ou ao div interno #economicCalendarWidget. */
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px var(--shadow-color-soft);
             overflow: hidden;
-            position: relative;
+            display: none; 
         }
-        
-        .chart-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 10;
-            display: flex;
-            gap: 5px;
+        /* Ajuste para o Tradays, ele pode não precisar do padding no .main-widget-container */
+        #calendar-widget-container.main-widget-container {
+            padding: 0; /* Remove padding para o Tradays, já que ele tem width/height 100% */
         }
-        
-        .chart-period-btn {
-            background: rgba(0, 0, 0, 0.5);
-            border: none;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        #heatmap-widget-container.main-widget-container {
+            padding: 5px; /* Mantém padding para o heatmap, se necessário */
         }
-        
-        .chart-period-btn:hover {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-        }
-        
-        .chart-period-btn.active {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-        }
-        
-        .tradingview-widget-container {
+
+        .main-widget-container .tradingview-widget-container,
+        .main-widget-container > script, 
+        .main-widget-container > div[id="economicCalendarWidget"] {
             width: 100%;
             height: 100%;
-            background: transparent !important;
         }
-        
-        .tradingview-widget-container__widget {
-            background: transparent !important;
+
+
+        .analises-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; display: none;  }
+        .analise-section {
+            background: var(--card-bg); padding: 20px; border-radius: 16px;
+            text-align: left; border-left: 5px solid var(--primary-color);
+            flex: 1 1 100%; min-width: 0;
+            transition: all var(--transition-speed) ease-in-out;
+            position: relative; 
+            box-shadow: 0 4px 12px var(--shadow-color-soft);
+            border: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
         }
+        .analise-section:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 8px 20px var(--shadow-color-medium); }
         
-        .analise-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
+        .analise-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+        .analise-category { padding: 5px 14px; border-radius: 16px; font-size: 11px; font-weight: 600; color: white; }
+        .category-stocks { background-color: var(--stocks-color); }
+        .category-forex { background-color: var(--forex-color); }
+        .category-commodities { background-color: var(--commodities-color); }
+        .category-crypto { background-color: var(--crypto-color); }
+        
+        .expand-chart-btn {
+            background: rgba(255, 255, 255, 0.08); border: none; color: var(--text-color);
+            width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--transition-speed) ease; margin-left: auto;
             font-size: 12px;
-            color: var(--text-secondary);
+        }
+        .expand-chart-btn:hover { background: var(--primary-color); color: var(--dark-bg); transform: scale(1.1); }
+
+        .analise-title { 
+            font-size: 20px; font-weight: 700; margin-bottom: 15px; 
+            color: var(--text-color); display: flex; align-items: center; gap: 10px; 
+        }
+        .analise-title i { color: var(--primary-color); font-size: 18px; margin-right: 8px; }
+                
+        .analise-chart {
+            width: 100%; height: 400px; border-radius: 8px;
+            overflow: hidden; position: relative; flex-grow: 1; 
         }
         
-        .analise-timestamp {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .analise-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: var(--text-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all var(--transition-speed) ease;
-        }
-        
-        .action-btn:hover {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-            transform: scale(1.1);
-        }
-        
-        .footer {
-            font-size: 12px;
-            margin-top: 30px;
-            text-align: center;
-            color: var(--text-secondary);
-            padding: 15px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
         
         .floating-btn {
-            position: fixed;
-            bottom: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: fixed; width: 50px; height: 50px; border-radius: 12px;
+            background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);
+            cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
             -webkit-tap-highlight-color: transparent;
         }
-        
-        #home-btn {
-            right: 20px;
-        }
-        
-        #top-btn {
-            right: 80px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        
-        #top-btn.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .floating-btn:hover {
-            background-color: var(--primary-color);
-            transform: translateY(-3px);
-            color: var(--dark-bg);
-        }
-        
-        .floating-btn:active {
-            transform: translateY(0);
-        }
+        .floating-btn:hover { background-color: var(--primary-color); transform: translateY(-4px) scale(1.05); color: var(--dark-bg); box-shadow: 0 8px 20px var(--shadow-color-medium); }
+        .floating-btn:active { transform: translateY(0) scale(1); }
 
-        .theme-toggle {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+        #home-btn { right: 20px; bottom: 20px; }
+        #top-btn { right: 80px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        #top-btn.visible { opacity: 1; visibility: visible; }
+        .theme-toggle { left: 20px; bottom: 20px; }
+        .theme-toggle i { font-size: 22px; color: var(--text-color); }
+        .theme-toggle:hover i { color: var(--dark-bg); }
+
+        #clocks-panel-toggle-btn { left: 20px; bottom: 80px; }
+        
+        .chart-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(10, 10, 42, 0.85); 
+            display: none; align-items: center; justify-content: center;
+            z-index: 2000; padding: 20px; box-sizing: border-box;
             backdrop-filter: blur(5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        
-        .theme-toggle i {
-            font-size: 20px;
-            color: var(--text-color);
+        .chart-modal-content {
+            background-color: var(--darker-bg); padding: 15px; border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            width: 95%; height: 95%; max-width: 1600px;
+            position: relative; display: flex; flex-direction: column;
+            border: 1px solid var(--border-color);
         }
+        .chart-modal-close-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(255,255,255,0.1); border: none; color: var(--text-secondary);
+            font-size: 18px; cursor: pointer;
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            line-height: 1; z-index: 10; 
+        }
+        .chart-modal-close-btn:hover { background: var(--primary-color); color: var(--dark-bg); }
+        .modal-chart-container-inner { width: 100%; height: 100%; flex-grow: 1; margin-top: 10px; }
 
-        /* Light Mode Styles */
+        #stock-market-clocks-container {
+            position: fixed; bottom: 140px; left: 20px; width: 250px; 
+            background-color: rgba(var(--card-bg-rgb), 0.95);
+            backdrop-filter: blur(8px); border: 1px solid var(--border-color);
+            border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            padding: 10px 15px; z-index: 1040; font-size: 12px; 
+            color: var(--text-secondary); max-height: 300px; overflow-y: auto;
+            display: none; opacity: 0;
+            transform: translateY(10px) scale(0.95);
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+        }
+        #stock-market-clocks-container.visible { display: block; opacity: 1; transform: translateY(0) scale(1); }
+        .market-clock-title {
+            font-weight: 600; font-size: 13px; text-align: center; margin-bottom: 6px;
+            padding-bottom: 4px; border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary); 
+        }
+        .market-clock { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.15); }
+        .market-clock:last-child { border-bottom: none; }
+        .market-info { flex-grow: 1; }
+        .market-name { font-weight: 600; display: block; color: var(--text-color); }
+        .market-time { font-family: 'Courier New', Courier, monospace; font-size: 12px; margin-right: 8px; color: var(--text-secondary); }
+        .market-status { 
+            font-weight: 600; font-size: 10px; text-transform: uppercase;
+            padding: 0; min-width: auto; text-align: right;
+            background-color: transparent !important; 
+        }
+        .status-open { color: var(--up-trend) !important; }
+        .status-closed { color: var(--down-trend) !important; }
+        .status-lunch, .status-soon { color: var(--neutral-trend) !important; }
+
+
         body.light-mode {
-            --primary-color: #0066cc;
-            --primary-light: #4d94ff;
-            --primary-dark: #004d99;
-            --dark-bg: #f5f7fa;
-            --darker-bg: #e1e5eb;
-            --text-color: #333333;
-            --text-secondary: rgba(51, 51, 51, 0.7);
-            --card-bg: rgba(255, 255, 255, 0.95);
+            --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
+            --dark-bg: #ffffff; --darker-bg: #f0f2f5;
+            --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
+            --card-bg: rgba(255, 255, 255, 0.98); --border-color: rgba(200, 205, 210, 0.7);
+            --card-bg-rgb: var(--card-bg-rgb-light);
             --error-color: #dc3545;
-            --up-trend: #2e7d32;
-            --down-trend: #c62828;
-            --neutral-trend: #f9a825;
-            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+            --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
+            --toggle-inactive-bg: #ccc; --toggle-slider-color: #fff;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
         }
-
-        body.light-mode .logo-main {
-            background: linear-gradient(to right, #1a1a1a, var(--primary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        body.light-mode .analise-section {
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
+        body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
+        body.light-mode .filter-btn,
+        body.light-mode .expand-chart-btn { color: var(--text-color); background-color: var(--card-bg); border: 1px solid var(--border-color); }
+        body.light-mode .filter-btn:hover, body.light-mode .filter-btn.active,
+        body.light-mode .expand-chart-btn:hover { background: var(--primary-color); color: white; border-color: var(--primary-dark); }
+        body.light-mode .filter-btn[data-filter="calendar"].active { background-color: var(--calendar-color); border-color: var(--calendar-color); color:white; }
         
-        body.light-mode .analise-section:hover {
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-        
-        body.light-mode .analise-summary,
-        body.light-mode .analise-drivers {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
-        body.light-mode .technical-indicator {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
-        body.light-mode .action-btn {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
-        body.light-mode .action-btn:hover {
-            background: var(--primary-color);
-            color: white;
-        }
+        body.light-mode .toggle-label.active { color: var(--primary-color); }
+        body.light-mode .slider { background-color: var(--toggle-inactive-bg); border-color: #bbb; }
+        body.light-mode input:checked + .slider { background-color: var(--primary-color); border-color: var(--primary-dark); }
+        body.light-mode .slider:before { background-color: var(--toggle-slider-color); }
 
-        @media (min-width: 768px) {
-            .analise-section {
-                flex: 1 1 calc(50% - 20px);
-                min-width: 300px;
-            }
-            
-            .logo-main {
-                font-size: 42px;
-            }
+        body.light-mode .main-widget-container, 
+        body.light-mode #stock-market-clocks-container { 
+            background-color: rgba(var(--card-bg-rgb), 0.95); 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 4px 12px var(--shadow-color-soft); 
         }
+        body.light-mode #stock-market-clocks-container { color: var(--text-secondary); }
+        body.light-mode .market-clock-title { color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        body.light-mode .market-name { color: var(--text-color); }
+        body.light-mode .market-clock { border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
 
-        @media (min-width: 992px) {
-            .analise-section {
-                flex: 1 1 calc(33.333% - 20px);
-            }
-            
-            .container {
-                padding: 30px 20px;
-            }
-        }
+        body.light-mode .analise-section { border: 1px solid var(--border-color); box-shadow: 0 4px 12px var(--shadow-color-soft); }
+        body.light-mode .analise-section:hover { box-shadow: 0 8px 20px var(--shadow-color-medium); }
+        body.light-mode .floating-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+        body.light-mode .floating-btn:hover { background-color: var(--primary-color); color: white; }
+        body.light-mode .theme-toggle i { color: var(--text-color); } 
+        body.light-mode .theme-toggle:hover i { color: white; } 
+        body.light-mode #clocks-panel-toggle-btn i { color: var(--text-color); } 
+        body.light-mode #clocks-panel-toggle-btn:hover i { color: white; } 
 
+        body.light-mode .chart-modal-overlay { background-color: rgba(225, 229, 235, 0.9); }
+        body.light-mode .chart-modal-content { background-color: var(--dark-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        body.light-mode .chart-modal-close-btn { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
+        body.light-mode .chart-modal-close-btn:hover { background: var(--primary-color); color: white; }
+
+        @media (min-width: 768px) { .analise-section { flex: 1 1 calc(50% - 20px); min-width: 300px; } .page-title-header { font-size: 48px; } }
+        @media (min-width: 992px) { .analise-section { flex: 1 1 calc(33.333% - 20px); } }
         @media (max-width: 600px) {
-            .container {
-                padding: 15px 12px;
-            }
+            .container { padding: 15px 12px; } 
+            .page-title-header { font-size: 34px; }
+            .logo { margin-bottom: 20px;}
+            .analise-section { padding: 15px; } .analise-title { font-size: 18px; }
+            .floating-btn, .theme-toggle, #clocks-panel-toggle-btn { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
+            #home-btn { right: 15px; } 
+            #top-btn { right: 70px; } 
+            .theme-toggle { left: 15px; }
+            #clocks-panel-toggle-btn { left: 15px; bottom: 70px; } 
+
+            .main-widget-container { height: 60vh; min-height: 400px; }
+            .analise-chart { height: 350px; }
+            .chart-modal-content { width: 100%; height: 100%; padding: 10px; border-radius: 0;}
+            .chart-modal-close-btn { top: 5px; right: 5px;}
+            .modal-chart-container-inner { margin-top: 5px;}
+            .toggle-label {font-size: 12px;}
+            .toggle-switch {width: 44px; height: 24px;}
+            .slider:before {height: 16px; width: 16px; bottom: 3px; left: 4px;}
+            input:checked + .slider:before {transform: translateX(20px);}
             
-            .logo-main {
-                font-size: 32px;
+            #stock-market-clocks-container { 
+                width: 190px; font-size: 10px; padding: 6px 8px; 
+                bottom: 125px; left: 15px; max-height: 200px;
             }
-            
-            .logo-sub {
-                font-size: 12px;
-            }
-            
-            .logo-byline {
-                font-size: 10px;
-                right: 5px;
-            }
-            
-            .analise-section {
-                padding: 16px;
-            }
-            
-            .analise-title {
-                font-size: 18px;
-            }
-            
-            .floating-btn, .theme-toggle {
-                width: 45px;
-                height: 45px;
-                bottom: 15px;
-            }
-            
-            #home-btn {
-                right: 15px;
-            }
-            
-            #top-btn {
-                right: 70px;
-            }
+            .market-clock-title { font-size: 12px; margin-bottom: 5px; }
+            .market-time { font-size: 11px; }
+            .market-status { font-size: 9px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="logo">
-            <div class="logo-main">Análises</div>
+            <div class="page-title-header">Painel Financeiro</div>
             <div class="logo-divider"></div>
-            <div class="logo-main">Mercado</div>
-            <div class="logo-sub">Financeiro</div>
-            <div class="logo-byline">By Anderson Danilo</div>
         </div>
         
-        <div class="subheader" id="data-atual">Análises - 09/05/2025, 00:15</div>
+        <div class="subheader" id="data-atual">Acompanhamento de Ativos Financeiros</div>
 
         <div class="filters-container">
             <button class="filter-btn active" data-filter="all">Todos</button>
@@ -606,502 +364,470 @@
             <button class="filter-btn" data-filter="forex">Moedas</button>
             <button class="filter-btn" data-filter="commodities">Commodities</button>
             <button class="filter-btn" data-filter="crypto">Cripto</button>
+            <button class="filter-btn" data-filter="calendar">Calendário</button>
         </div>
+
+        <div class="heatmap-controls">
+            <span class="toggle-label" id="heatmap-label-br">IBOV</span>
+            <label class="toggle-switch" id="heatmap-source-toggle" aria-label="Alternar mercado do heatmap">
+                <input type="checkbox" id="heatmap-source-checkbox">
+                <span class="slider round"></span>
+            </label>
+            <span class="toggle-label" id="heatmap-label-us">EUA</span>
+        </div>
+        <div id="heatmap-widget-container" class="main-widget-container">
+        </div>
+
+        <div id="calendar-widget-container" class="main-widget-container">
+            </div>
 
         <div class="analises-container">
             <div class="analise-section" data-category="stocks">
                 <div class="analise-meta">
                     <span class="analise-category category-stocks">Ações</span>
-                    <span class="analise-trend up-trend"><i class="fas fa-arrow-up"></i> Tendência de Alta</span>
+                    <button class="expand-chart-btn" aria-label="Expandir gráfico Ibovespa"><i class="fas fa-expand-arrows-alt"></i></button>
                 </div>
-                <div class="analise-title">
-                    <i class="fas fa-chart-line"></i> Ibovespa: Resistência em 137.500
-                </div>
-                <div class="analise-summary">
-                    O Ibovespa mantém tendência de alta com volume crescente, buscando testar a resistência em 137.500 pontos.
-                </div>
-                <div class="analise-content">
-                    O índice brasileiro mostra força desde o início do mês, com suporte consolidado em 135.000 pontos. O volume tem acompanhado a movimentação, indicando solidez no movimento. Setores financeiro e de commodities lideram os ganhos.
-                </div>
-                
-                <div class="analise-drivers">
-                    <div class="drivers-title">Principais Drivers:</div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-dollar-sign"></i></span>
-                        <span>Queda do dólar beneficiando empresas com dívida em USD</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-percentage"></i></span>
-                        <span>Expectativa de manutenção dos juros pelo COPOM</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-globe-americas"></i></span>
-                        <span>Melhora no cenário internacional</span>
-                    </div>
-                </div>
-                
-                <div class="analise-technicals">
-                    <div class="technical-indicator">
-                        <span>RSI:</span>
-                        <span class="indicator-value">62</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Média 200d:</span>
-                        <span class="indicator-value">131.200</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Suporte:</span>
-                        <span class="indicator-value">135.000</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Resistência:</span>
-                        <span class="indicator-value">137.500</span>
-                    </div>
-                </div>
-                
-                <div class="analise-chart">
-                    <div class="chart-controls">
-                        <button class="chart-period-btn active" data-period="1D">1D</button>
-                        <button class="chart-period-btn" data-period="1W">1W</button>
-                        <button class="chart-period-btn" data-period="1M">1M</button>
-                    </div>
-                    <!-- TradingView Widget BEGIN -->
-                    <div class="tradingview-widget-container">
-                        <div class="tradingview-widget-container__widget"></div>
-                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                        {
-                        "symbols": [
-                            [
-                            "BMFBOVESPA:IBOV|1M"
-                            ]
-                        ],
-                        "chartOnly": false,
-                        "width": "100%",
-                        "height": "100%",
-                        "locale": "br",
-                        "colorTheme": "light",
-                        "autosize": true,
-                        "showVolume": true,
-                        "showMA": true,
-                        "hideDateRanges": false,
-                        "hideMarketStatus": false,
-                        "hideSymbolLogo": false,
-                        "scalePosition": "right",
-                        "scaleMode": "Normal",
-                        "fontFamily": "Montserrat, sans-serif",
-                        "fontSize": "12",
-                        "noTimeScale": false,
-                        "valuesTracking": "1",
-                        "changeMode": "price-and-percent",
-                        "chartType": "area",
-                        "maLineColor": "#2962FF",
-                        "maLineWidth": 1,
-                        "maLength": 9,
-                        "headerFontSize": "medium",
-                        "lineWidth": 2,
-                        "lineType": 0,
-                        "dateRanges": [
-                            "1d|1",
-                            "1m|30",
-                            "3m|60",
-                            "12m|1D",
-                            "60m|1W",
-                            "all|1M"
-                        ]
-                        }
-                        </script>
-                    </div>
-                    <!-- TradingView Widget END -->
-                </div>
-                
-                <div class="analise-footer">
-                    <div class="analise-timestamp">
-                        <i class="far fa-clock"></i>
-                        <span>Atualizado: 09/05/2025 09:45</span>
-                    </div>
-                    <div class="analise-actions">
-                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
-                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
-                    </div>
-                </div>
+                <div class="analise-title"><i class="fas fa-chart-line"></i> Ibovespa</div>
+                <div class="analise-chart" data-symbol="BMFBOVESPA:IBOV" data-chart-id="advanced-chart-ibov"></div>
             </div>
-
             <div class="analise-section" data-category="forex">
                 <div class="analise-meta">
                     <span class="analise-category category-forex">Moedas</span>
-                    <span class="analise-trend down-trend"><i class="fas fa-arrow-down"></i> Tendência de Baixa</span>
+                    <button class="expand-chart-btn" aria-label="Expandir gráfico Dólar"><i class="fas fa-expand-arrows-alt"></i></button>
                 </div>
-                <div class="analise-title">
-                    <i class="fas fa-dollar-sign"></i> Dólar: Pressão de Baixa
-                </div>
-                <div class="analise-summary">
-                    O dólar opera abaixo da média de 200 dias com próximo suporte em R$ 5,60. Cenário internacional favorável mantém pressão de baixa.
-                </div>
-                <div class="analise-content">
-                    O par USD/BRL continua sua trajetória de baixa, negociando abaixo da média móvel de 200 dias. O próximo suporte importante está em R$ 5,60, enquanto a resistência imediata é R$ 5,70. Fluxo positivo de capitais estrangeiros e melhora no cenário global contribuem para essa tendência.
-                </div>
-                
-                <div class="analise-drivers">
-                    <div class="drivers-title">Principais Drivers:</div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-chart-line"></i></span>
-                        <span>Commodities em alta favorecem moeda brasileira</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-money-bill-wave"></i></span>
-                        <span>Fluxo positivo de investimentos estrangeiros</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-globe-europe"></i></span>
-                        <span>Dólar fraco no mercado internacional</span>
-                    </div>
-                </div>
-                
-                <div class="analise-technicals">
-                    <div class="technical-indicator">
-                        <span>RSI:</span>
-                        <span class="indicator-value">38</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Média 200d:</span>
-                        <span class="indicator-value">5.72</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Suporte:</span>
-                        <span class="indicator-value">5.60</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Resistência:</span>
-                        <span class="indicator-value">5.70</span>
-                    </div>
-                </div>
-                
-                <div class="analise-chart">
-                    <div class="chart-controls">
-                        <button class="chart-period-btn active" data-period="1D">1D</button>
-                        <button class="chart-period-btn" data-period="1W">1W</button>
-                        <button class="chart-period-btn" data-period="1M">1M</button>
-                    </div>
-                    <!-- TradingView Widget BEGIN -->
-                    <div class="tradingview-widget-container">
-                        <div class="tradingview-widget-container__widget"></div>
-                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                        {
-                        "symbols": [
-                            [
-                            "FX_IDC:USDBRL|1M"
-                            ]
-                        ],
-                        "chartOnly": false,
-                        "width": "100%",
-                        "height": "100%",
-                        "locale": "br",
-                        "colorTheme": "light",
-                        "autosize": true,
-                        "showVolume": false,
-                        "showMA": true,
-                        "hideDateRanges": false,
-                        "hideMarketStatus": false,
-                        "hideSymbolLogo": false,
-                        "scalePosition": "right",
-                        "scaleMode": "Normal",
-                        "fontFamily": "Montserrat, sans-serif",
-                        "fontSize": "12",
-                        "noTimeScale": false,
-                        "valuesTracking": "1",
-                        "changeMode": "price-and-percent",
-                        "chartType": "area",
-                        "maLineColor": "#2962FF",
-                        "maLineWidth": 1,
-                        "maLength": 9,
-                        "headerFontSize": "medium",
-                        "lineWidth": 2,
-                        "lineType": 0,
-                        "dateRanges": [
-                            "1d|1",
-                            "1m|30",
-                            "3m|60",
-                            "12m|1D",
-                            "60m|1W",
-                            "all|1M"
-                        ]
-                        }
-                        </script>
-                    </div>
-                    <!-- TradingView Widget END -->
-                </div>
-                
-                <div class="analise-footer">
-                    <div class="analise-timestamp">
-                        <i class="far fa-clock"></i>
-                        <span>Atualizado: 09/05/2025 09:30</span>
-                    </div>
-                    <div class="analise-actions">
-                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
-                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
-                    </div>
-                </div>
+                <div class="analise-title"><i class="fas fa-dollar-sign"></i> Dólar (USD/BRL)</div>
+                <div class="analise-chart" data-symbol="FX_IDC:USDBRL" data-chart-id="advanced-chart-usdbRL"></div>
             </div>
-
             <div class="analise-section" data-category="commodities">
                 <div class="analise-meta">
                     <span class="analise-category category-commodities">Commodities</span>
-                    <span class="analise-trend up-trend"><i class="fas fa-arrow-up"></i> Recuperação</span>
+                    <button class="expand-chart-btn" aria-label="Expandir gráfico Petróleo"><i class="fas fa-expand-arrows-alt"></i></button>
                 </div>
-                <div class="analise-title">
-                    <i class="fas fa-gas-pump"></i> Petróleo: Formação de Fundo
+                <div class="analise-title"><i class="fas fa-gas-pump"></i> Petróleo (Brent)</div>
+                 <div class="analise-chart" data-symbol="TVC:UKOIL" data-chart-id="advanced-chart-brent"></div>
+            </div>
+            <div class="analise-section" data-category="crypto">
+                <div class="analise-meta">
+                    <span class="analise-category category-crypto">Cripto</span>
+                    <button class="expand-chart-btn" aria-label="Expandir gráfico Bitcoin"><i class="fas fa-expand-arrows-alt"></i></button>
                 </div>
-                <div class="analise-summary">
-                    O Brent mostra sinais de recuperação após testar suporte em US$ 60, com alvo inicial em US$ 65. Cortes da OPEC+ sustentam movimento.
-                </div>
-                <div class="analise-content">
-                    O petróleo Brent apresenta sinais de recuperação após testar o suporte em US$ 60. O movimento atual sugere possível formação de fundo, com alvo inicial em US$ 65. A demanda global em recuperação e os cortes de produção da OPEC+ sustentam o movimento. A média móvel de 50 dias atua agora como resistência dinâmica.
-                </div>
-                
-                <div class="analise-drivers">
-                    <div class="drivers-title">Principais Drivers:</div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-oil-can"></i></span>
-                        <span>Cortes de produção da OPEC+ sendo mantidos</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-plane-departure"></i></span>
-                        <span>Retomada da demanda por combustíveis de aviação</span>
-                    </div>
-                    <div class="driver-item">
-                        <span class="driver-icon"><i class="fas fa-industry"></i></span>
-                        <span>Reabertura de economias asiáticas</span>
-                    </div>
-                </div>
-                
-                <div class="analise-technicals">
-                    <div class="technical-indicator">
-                        <span>RSI:</span>
-                        <span class="indicator-value">55</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Média 50d:</span>
-                        <span class="indicator-value">63.20</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Suporte:</span>
-                        <span class="indicator-value">60.00</span>
-                    </div>
-                    <div class="technical-indicator">
-                        <span>Resistência:</span>
-                        <span class="indicator-value">65.00</span>
-                    </div>
-                </div>
-                
-                <div class="analise-chart">
-                    <div class="chart-controls">
-                        <button class="chart-period-btn active" data-period="1D">1D</button>
-                        <button class="chart-period-btn" data-period="1W">1W</button>
-                        <button class="chart-period-btn" data-period="1M">1M</button>
-                    </div>
-                    <!-- TradingView Widget BEGIN -->
-                    <div class="tradingview-widget-container">
-                        <div class="tradingview-widget-container__widget"></div>
-                        <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Monitore todos os mercados no TradingView</span></a></div>
-                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-                        {
-                        "symbols": [
-                            [
-                            "ACTIVTRADES:BRENT|1M"
-                            ]
-                        ],
-                        "chartOnly": false,
-                        "width": "100%",
-                        "height": "100%",
-                        "locale": "br",
-                        "colorTheme": "light",
-                        "autosize": true,
-                        "showVolume": true,
-                        "showMA": true,
-                        "hideDateRanges": false,
-                        "hideMarketStatus": false,
-                        "hideSymbolLogo": false,
-                        "scalePosition": "right",
-                        "scaleMode": "Normal",
-                        "fontFamily": "Montserrat, sans-serif",
-                        "fontSize": "12",
-                        "noTimeScale": false,
-                        "valuesTracking": "1",
-                        "changeMode": "price-and-percent",
-                        "chartType": "area",
-                        "maLineColor": "#2962FF",
-                        "maLineWidth": 1,
-                        "maLength": 9,
-                        "headerFontSize": "medium",
-                        "lineWidth": 2,
-                        "lineType": 0,
-                        "dateRanges": [
-                            "1d|1",
-                            "1m|30",
-                            "3m|60",
-                            "12m|1D",
-                            "60m|1W",
-                            "all|1M"
-                        ]
-                        }
-                        </script>
-                    </div>
-                    <!-- TradingView Widget END -->
-                </div>
-                
-                <div class="analise-footer">
-                    <div class="analise-timestamp">
-                        <i class="far fa-clock"></i>
-                        <span>Atualizado: 09/05/2025 09:15</span>
-                    </div>
-                    <div class="analise-actions">
-                        <button class="action-btn" aria-label="Compartilhar"><i class="fas fa-share-alt"></i></button>
-                        <button class="action-btn" aria-label="Salvar"><i class="far fa-bookmark"></i></button>
-                    </div>
-                </div>
+                <div class="analise-title"><i class="fab fa-bitcoin"></i> Bitcoin (BTC/USDT)</div>
+                <div class="analise-chart" data-symbol="BINANCE:BTCUSDT" data-chart-id="advanced-chart-btc"></div>
             </div>
         </div>
-
-        <div class="footer" id="footer">Atualizado em 09/05/2025 00:15 | © 2025 Mercado Macro</div>
+        <div class="footer" id="footer">© 2025 Mercado Macro</div>
     </div>
 
-    <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial">
-        <i class="fas fa-home"></i>
-    </button>
+    <div id="chart-modal" class="chart-modal-overlay">
+        <div class="chart-modal-content">
+            <button id="chart-modal-close-btn" class="chart-modal-close-btn" aria-label="Fechar modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="modal-chart-container" class="modal-chart-container-inner"></div>
+        </div>
+    </div>
     
-    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-    
-    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
-        <i class="fas fa-moon"></i>
+    <div id="stock-market-clocks-container">
+        <div class="market-clock-title">Status dos Mercados</div>
+    </div>
+
+    <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial"><i class="fas fa-home"></i></button>
+    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo"><i class="fas fa-arrow-up"></i></button>
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
+    <button id="clocks-panel-toggle-btn" class="floating-btn" aria-label="Mostrar/Ocultar Status dos Mercados">
+        <i class="fas fa-globe-americas"></i>
     </button>
 
     <script>
-        // Função para atualizar data e hora
+        let currentHeatmapDataSource = "AllBR"; 
+        let currentModalSymbol = null; 
+
+        const stockMarkets = [
+            { name: "XETRA (Frankfurt)", id: "xetra", timeZone: "Europe/Berlin", openDays: [1,2,3,4,5], sessions: [{ open:{hour:9,minute:0}, close:{hour:17,minute:30} }] },
+            { name: "TSE (Tóquio)", id: "tse", timeZone: "Asia/Tokyo", openDays: [1,2,3,4,5], sessions: [{open:{hour:9,minute:0},close:{hour:11,minute:30}}, {open:{hour:12,minute:30},close:{hour:15,minute:0}}] },
+            { name: "LSE (Londres)", id: "lse", timeZone: "Europe/London", openDays: [1,2,3,4,5], sessions: [{ open:{hour:8,minute:0}, close:{hour:16,minute:30} }] },
+            { name: "NYSE (Nova York)", id: "nyse", timeZone: "America/New_York", openDays: [1,2,3,4,5], sessions: [{ open:{hour:9,minute:30}, close:{hour:16,minute:0} }] },
+            { name: "B3 (São Paulo)", id: "b3", timeZone: "America/Sao_Paulo", openDays: [1,2,3,4,5], sessions: [{ open:{hour:10,minute:0}, close:{hour:17,minute:55} }] }
+        ];
+
         function updateDateTime() {
             const now = new Date();
-            const options = { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false
-            };
-            const formattedDate = now.toLocaleDateString('pt-BR', options);
-            
-            document.getElementById('data-atual').textContent = `Análises - ${formattedDate}`;
-            document.getElementById('footer').textContent = `Atualizado em ${formattedDate} | © ${now.getFullYear()} Mercado Macro`;
+            const footerElem = document.getElementById('footer');
+            if (footerElem) {
+                const currentYear = now.getFullYear();
+                const footerText = `© ${currentYear} Mercado Macro`;
+                if (footerElem.textContent !== footerText) footerElem.textContent = footerText;
+            }
         }
 
-        // Alternar tema claro/escuro
+        function updateThemeIcon(isLightMode) {
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (themeIcon) themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode);
+        }
+        
+        function updateHeatmapToggleLabels(dataSource) {
+            const labelBR = document.getElementById('heatmap-label-br');
+            const labelUS = document.getElementById('heatmap-label-us');
+            if (labelBR && labelUS) {
+                if (dataSource === "AllBR") { labelBR.classList.add('active'); labelUS.classList.remove('active'); } 
+                else { labelUS.classList.add('active'); labelBR.classList.remove('active'); }
+            }
+        }
+
+        function renderStockHeatmap(containerSelector, theme, dataSource) {
+            const heatmapContainer = document.querySelector(containerSelector);
+            if (!heatmapContainer) { console.error("Contêiner do Stock Heatmap não encontrado:", containerSelector); return; }
+            heatmapContainer.innerHTML = ''; 
+            const config = {
+                "dataSource": dataSource, "grouping": heatmapContainer.dataset.grouping || "sector",
+                "blockSize": heatmapContainer.dataset.blocksize || "market_cap_basic", "blockColor": heatmapContainer.dataset.blockcolor || "change",
+                "locale": heatmapContainer.dataset.locale || "br", "symbolUrl": heatmapContainer.dataset.symbolurl || "",
+                "colorTheme": theme, "hasTopBar": heatmapContainer.dataset.hastopbar === 'true',
+                "isDataSetEnabled": heatmapContainer.dataset.isdatasetenabled === 'true', "isZoomEnabled": heatmapContainer.dataset.iszoomenabled !== 'false',
+                "hasSymbolTooltip": heatmapContainer.dataset.hassymboltooltip !== 'false', "isMonoSize": heatmapContainer.dataset.ismonosize === 'true',
+                "width": "100%", "height": "100%"
+            };
+            const tvWidgetContainer = document.createElement('div');
+            tvWidgetContainer.className = 'tradingview-widget-container';
+            const script = document.createElement('script');
+            script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js';
+            script.async = true; script.innerHTML = JSON.stringify(config);
+            tvWidgetContainer.appendChild(script); heatmapContainer.appendChild(tvWidgetContainer);
+        }
+
+        function renderAdvancedChart(containerId, symbol, theme) {
+            const chartContainerDiv = document.getElementById(containerId);
+            if (!chartContainerDiv) {
+                const parentContext = document.querySelector(`.analise-chart[data-chart-id="${containerId}"], .modal-chart-container-inner[id="${containerId}"]`);
+                if(parentContext) parentContext.innerHTML = `<p style="color: var(--error-color); text-align: center; padding: 20px;">Erro: Contêiner do gráfico "${containerId}" não encontrado.</p>`;
+                return;
+            }
+            chartContainerDiv.innerHTML = ''; 
+            try {
+                new TradingView.widget({
+                    "container_id": containerId, "symbol": symbol, "interval": "D", 
+                    "theme": theme, "autosize": true, "locale": "pt_BR",
+                    "toolbar_bg": theme === "light" ? "#f1f3f6" : "#131722", 
+                    "enable_publishing": false, "allow_symbol_change": true, 
+                    "hide_side_toolbar": false, "studies": [], 
+                    "details": true, "hotlist": true, "calendar": true, "news": true, "style": "1", 
+                });
+            } catch (error) {
+                console.error(`Erro ao criar o widget TradingView para ${containerId} (${symbol}):`, error);
+                chartContainerDiv.innerHTML = `<p style="color: var(--error-color); text-align: center; padding: 20px;">Erro ao carregar o gráfico para ${symbol}.</p>`;
+            }
+        }
+        
+        function renderEconomicCalendar(containerSelector, theme) {
+            const mainCalendarContainer = document.querySelector(containerSelector);
+            if (!mainCalendarContainer) {
+                console.error("Contêiner principal do Calendário Econômico não encontrado:", containerSelector);
+                return;
+            }
+            mainCalendarContainer.innerHTML = ''; 
+
+            const tradaysTheme = theme === 'dark' ? 1 : 0;
+            const configJsonString = JSON.stringify({
+                "width": "100%", "height": "100%",
+                "mode": "1", "theme": tradaysTheme
+            });
+
+            const targetDiv = document.createElement('div');
+            // Este ID é o que o script do Tradays (widget.js) pode procurar para se renderizar.
+            // O exemplo original do utilizador tinha <div id="economicCalendarWidget"></div>
+            targetDiv.id = 'economicCalendarWidget'; 
+            targetDiv.style.width = '100%';
+            targetDiv.style.height = '100%';
+            mainCalendarContainer.appendChild(targetDiv);
+
+            const scriptTag = document.createElement('script');
+            scriptTag.async = true;
+            scriptTag.type = 'text/javascript';
+            scriptTag.setAttribute('data-type', 'calendar-widget');
+            scriptTag.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13';
+            scriptTag.textContent = configJsonString;
+            
+            // Adicionar o script APÓS o div alvo, dentro do mesmo container principal
+            mainCalendarContainer.appendChild(scriptTag);
+        }
+
+
+        function initializeAllPageWidgets(filterToShow = "all") { 
+            const currentTheme = document.body.classList.contains('light-mode') ? "light" : "dark";
+            
+            updateHeatmapToggleLabels(currentHeatmapDataSource); 
+            
+            if (filterToShow === "all" && document.getElementById('heatmap-widget-container')) {
+                 renderStockHeatmap("#heatmap-widget-container", currentTheme, currentHeatmapDataSource);
+            }
+            if (filterToShow === "calendar" && document.getElementById('calendar-widget-container')) {
+                 renderEconomicCalendar("#calendar-widget-container", currentTheme);
+            }
+
+            const chartContainers = document.querySelectorAll('.analise-chart[data-chart-id]');
+            if (typeof TradingView === 'undefined' || typeof TradingView.widget !== 'function') {
+                console.error("Biblioteca TradingView (tv.js) não carregada.");
+                chartContainers.forEach(container => {
+                    if (!container.querySelector('p')) container.innerHTML = `<p style="color: var(--error-color); text-align: center; padding: 20px;">Biblioteca de gráficos avançados não carregada.</p>`;
+                });
+            } else {
+                chartContainers.forEach(container => {
+                    const chartId = container.dataset.chartId; const symbol = container.dataset.symbol;
+                    if (chartId && symbol) {
+                        if (!document.getElementById(chartId)) {
+                            const actualChartDiv = document.createElement('div'); actualChartDiv.id = chartId;
+                            actualChartDiv.style.width = "100%"; actualChartDiv.style.height = "100%";
+                            container.innerHTML = ''; container.appendChild(actualChartDiv);
+                        }
+                        renderAdvancedChart(chartId, symbol, currentTheme);
+                    } else {
+                        console.warn("Contêiner de gráfico sem data-chart-id ou data-symbol:", container);
+                        container.innerHTML = `<p style="color: var(--error-color); text-align: center; padding: 20px;">Configuração do gráfico incompleta.</p>`;
+                    }
+                });
+            }
+        }
+        
+        const chartModal = document.getElementById('chart-modal');
+        const modalChartContainer = document.getElementById('modal-chart-container');
+        const closeModalBtn = document.getElementById('chart-modal-close-btn');
+        const clocksPanelToggleBtn = document.getElementById('clocks-panel-toggle-btn');
+        const stockMarketClocksContainer = document.getElementById('stock-market-clocks-container');
+
+        function openChartInModal(symbol, theme) {
+            if (!chartModal || !modalChartContainer) { console.error("Elementos do modal não encontrados."); return; }
+            currentModalSymbol = symbol; 
+            modalChartContainer.innerHTML = '';
+            renderAdvancedChart("modal-chart-container", symbol, theme);
+            chartModal.style.display = 'flex';
+            document.body.classList.add('body-modal-open');
+        }
+
+        function closeChartModal() {
+            if (!chartModal || !modalChartContainer) return;
+            chartModal.style.display = 'none';
+            modalChartContainer.innerHTML = ''; 
+            currentModalSymbol = null; 
+            document.body.classList.remove('body-modal-open');
+        }
+        if (closeModalBtn) closeModalBtn.addEventListener('click', closeChartModal);
+        if (chartModal) chartModal.addEventListener('click', (event) => { if (event.target === chartModal) closeChartModal(); });
+
+        function toggleClocksPanel() {
+            if (!stockMarketClocksContainer) return;
+            const isVisible = stockMarketClocksContainer.classList.toggle('visible');
+            if (isVisible) updateMarketClocks(); 
+        }
+        if (clocksPanelToggleBtn) clocksPanelToggleBtn.addEventListener('click', toggleClocksPanel);
+
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isLightMode = document.body.classList.contains('light-mode');
             localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            const newTheme = isLightMode ? "light" : "dark";
+            updateThemeIcon(isLightMode);
             
-            // Atualizar ícone do tema
-            const themeIcon = document.querySelector('#theme-toggle i');
-            themeIcon.classList.toggle('fa-moon', !isLightMode);
-            themeIcon.classList.toggle('fa-sun', isLightMode);
+            const activeFilterButton = document.querySelector('.filter-btn.active');
+            const currentActiveFilter = activeFilterButton ? activeFilterButton.dataset.filter : 'all';
             
-            // Recarregar widgets TradingView para aplicar o tema correto
-            if (typeof TradingView !== 'undefined') {
-                window.location.reload();
+            initializeAllPageWidgets(currentActiveFilter); 
+            
+            if (activeFilterButton) activeFilterButton.click(); // Re-aplica o filtro para renderizar o widget certo (heatmap ou calendário)
+            
+            if (chartModal && chartModal.style.display === 'flex' && currentModalSymbol) {
+                openChartInModal(currentModalSymbol, newTheme);
             }
         }
 
-        // Filtro de categorias
         function setupFilters() {
             const filterButtons = document.querySelectorAll('.filter-btn');
-            
+            const heatmapWidgetContainer = document.getElementById('heatmap-widget-container');
+            const analysesContainer = document.querySelector('.analises-container');
+            const calendarWidgetContainer = document.getElementById('calendar-widget-container');
+
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    // Remove active class from all buttons
                     filterButtons.forEach(btn => btn.classList.remove('active'));
-                    // Add active class to clicked button
                     this.classList.add('active');
-                    
                     const filter = this.dataset.filter;
-                    const analysisSections = document.querySelectorAll('.analise-section');
-                    
-                    analysisSections.forEach(section => {
-                        if (filter === 'all' || section.dataset.category === filter) {
-                            section.style.display = 'block';
-                        } else {
-                            section.style.display = 'none';
+                    const currentTheme = document.body.classList.contains('light-mode') ? "light" : "dark";
+
+                    if (heatmapWidgetContainer) heatmapWidgetContainer.style.display = 'none';
+                    if (analysesContainer) analysesContainer.style.display = 'none';
+                    if (calendarWidgetContainer) calendarWidgetContainer.style.display = 'none';
+
+                    if (filter === 'all') {
+                        if (heatmapWidgetContainer) {
+                            heatmapWidgetContainer.style.display = 'block';
+                            renderStockHeatmap("#heatmap-widget-container", currentTheme, currentHeatmapDataSource);
                         }
-                    });
+                        if (analysesContainer) analysesContainer.style.display = 'flex';
+                        document.querySelectorAll('.analise-section').forEach(section => section.style.display = 'flex');
+                    } else if (filter === 'calendar') {
+                        if (calendarWidgetContainer) {
+                            calendarWidgetContainer.style.display = 'block';
+                            renderEconomicCalendar("#calendar-widget-container", currentTheme);
+                        }
+                    } else { 
+                        if (analysesContainer) analysesContainer.style.display = 'flex';
+                        document.querySelectorAll('.analise-section').forEach(section => {
+                            section.style.display = (section.dataset.category === filter) ? 'flex' : 'none';
+                        });
+                    }
                 });
             });
+            const initialActiveFilter = document.querySelector('.filter-btn[data-filter="all"]');
+            if (initialActiveFilter) initialActiveFilter.click();
         }
 
-        // Controle de períodos do gráfico
-        function setupChartPeriods() {
-            document.querySelectorAll('.chart-period-btn').forEach(button => {
+        function setupHeatmapToggle() {
+            const checkbox = document.getElementById('heatmap-source-checkbox');
+            const labelBR = document.getElementById('heatmap-label-br');
+            const labelUS = document.getElementById('heatmap-label-us');
+            if (checkbox && labelBR && labelUS) {
+                checkbox.checked = (currentHeatmapDataSource === "SPX500");
+                updateHeatmapToggleLabels(currentHeatmapDataSource);
+                checkbox.addEventListener('change', function() {
+                    currentHeatmapDataSource = this.checked ? "SPX500" : "AllBR";
+                    updateHeatmapToggleLabels(currentHeatmapDataSource);
+                    const activeFilterButton = document.querySelector('.filter-btn.active');
+                    if (activeFilterButton && activeFilterButton.dataset.filter === 'all') {
+                        const currentTheme = document.body.classList.contains('light-mode') ? "light" : "dark";
+                        renderStockHeatmap("#heatmap-widget-container", currentTheme, currentHeatmapDataSource);
+                    }
+                });
+                labelBR.addEventListener('click', () => { if (checkbox.checked) { checkbox.checked = false; checkbox.dispatchEvent(new Event('change')); }});
+                labelUS.addEventListener('click', () => { if (!checkbox.checked) { checkbox.checked = true; checkbox.dispatchEvent(new Event('change')); }});
+            }
+        }
+
+        function setupExpandButtons() {
+            document.querySelectorAll('.expand-chart-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    const parentChart = this.closest('.analise-chart');
-                    const periodButtons = parentChart.querySelectorAll('.chart-period-btn');
-                    
-                    // Remove active class from all buttons in this chart
-                    periodButtons.forEach(btn => btn.classList.remove('active'));
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    // Aqui você implementaria a lógica para mudar o período do gráfico
-                    // Como estamos usando widgets do TradingView, isso requer recarregar o widget
-                    // Na prática, você precisaria de uma implementação mais sofisticada
+                    const analiseSection = this.closest('.analise-section');
+                    const chartDiv = analiseSection.querySelector('.analise-chart');
+                    if (chartDiv) {
+                        const symbol = chartDiv.dataset.symbol;
+                        const currentTheme = document.body.classList.contains('light-mode') ? "light" : "dark";
+                        if (symbol) openChartInModal(symbol, currentTheme);
+                        else console.error("Atributo data-symbol não encontrado no gráfico do card.");
+                    }
                 });
             });
         }
 
-        // Botão voltar ao topo
         function setupBackToTop() {
             const backToTopButton = document.getElementById('top-btn');
-            
-            window.addEventListener('scroll', function() {
-                if (window.pageYOffset > 300) {
-                    backToTopButton.classList.add('visible');
-                } else {
-                    backToTopButton.classList.remove('visible');
-                }
+            if (!backToTopButton) return;
+            window.addEventListener('scroll', () => {
+                backToTopButton.classList.toggle('visible', window.pageYOffset > 300);
             });
-            
-            backToTopButton.addEventListener('click', function() {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
+            backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
+        
+        function getMarketStatus(market) {
+            const now = new Date();
+            const options = { timeZone: market.timeZone, hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false };
+            const formatter = new Intl.DateTimeFormat('en-US', options);
+            const parts = formatter.formatToParts(now).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+            const dayMap = { "Sun": 0, "Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4, "Fri": 5, "Sat": 6 };
+            const currentDayOfWeek = dayMap[parts.weekday];
+            const currentHour = parseInt(parts.hour, 10);
+            const currentMinute = parseInt(parts.minute, 10);
+            const currentTimeInMinutes = currentHour * 60 + currentMinute;
+            let timeString = `${parts.hour}:${parts.minute}`;
+            let status = { text: "Fechada", class: "status-closed", timeString: timeString };
+
+            if (market.openDays.includes(currentDayOfWeek)) {
+                for (const session of market.sessions) {
+                    const openTimeInMinutes = session.open.hour * 60 + session.open.minute;
+                    const closeTimeInMinutes = session.close.hour * 60 + session.close.minute;
+                    if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
+                        status = { text: "Aberta", class: "status-open", timeString: timeString };
+                        break; 
+                    }
+                    if (market.sessions.length > 1 && market.id === 'tse') { 
+                         const morningClose = market.sessions[0].close.hour * 60 + market.sessions[0].close.minute;
+                         const afternoonOpen = market.sessions[1].open.hour * 60 + market.sessions[1].open.minute;
+                         if (currentTimeInMinutes >= morningClose && currentTimeInMinutes < afternoonOpen) {
+                             status = { text: "Intervalo", class: "status-lunch", timeString: timeString };
+                             break;
+                         }
+                    }
+                }
+            }
+            return status;
+        }
+        
+        function populateMarketClocksHTML() { 
+            const clocksContainer = document.getElementById('stock-market-clocks-container');
+            if (clocksContainer && !clocksContainer.querySelector('.market-clock')) { 
+                stockMarkets.forEach(market => {
+                    const clockDiv = document.createElement('div');
+                    clockDiv.className = 'market-clock';
+                    clockDiv.id = `market-${market.id}`;
+                    clockDiv.innerHTML = `
+                        <div class="market-info"><span class="market-name">${market.name}</span></div>
+                        <span class="market-time">--:--</span>
+                        <span class="market-status"></span>`;
+                    const titleElem = clocksContainer.querySelector('.market-clock-title');
+                    if (titleElem && titleElem.nextSibling) clocksContainer.insertBefore(clockDiv, titleElem.nextSibling);
+                    else clocksContainer.appendChild(clockDiv);
                 });
+            }
+        }
+
+        function updateMarketClocks() { 
+            stockMarkets.forEach(market => {
+                const marketDiv = document.getElementById(`market-${market.id}`);
+                if (marketDiv) {
+                    const statusInfo = getMarketStatus(market);
+                    marketDiv.querySelector('.market-time').textContent = statusInfo.timeString;
+                    const statusSpan = marketDiv.querySelector('.market-status');
+                    statusSpan.textContent = statusInfo.text;
+                    statusSpan.className = `market-status ${statusInfo.class}`;
+                }
             });
         }
 
-        // Event Listeners
-        document.getElementById('home-btn').addEventListener('click', function() {
-            window.location.href = 'index.html';
-        });
+        const homeBtn = document.getElementById('home-btn');
+        if (homeBtn) homeBtn.addEventListener('click', () => window.location.href = 'index.html'); 
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
 
-        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            // Verificar preferência de tema salva
-            if (localStorage.getItem('themePreference') === 'light') {
-                document.body.classList.add('light-mode');
-                const themeIcon = document.querySelector('#theme-toggle i');
-                themeIcon.classList.remove('fa-moon');
-                themeIcon.classList.add('fa-sun');
+            const savedTheme = localStorage.getItem('themePreference');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let isLightMode = false;
+            if (savedTheme === 'light') isLightMode = true;
+            else if (savedTheme === 'dark') isLightMode = false;
+            else isLightMode = !prefersDark; 
+            if (isLightMode) document.body.classList.add('light-mode');
+            else document.body.classList.remove('light-mode');
+            
+            updateThemeIcon(isLightMode); updateDateTime(); 
+            setupHeatmapToggle(); setupExpandButtons(); setupBackToTop();
+            
+            if (document.getElementById('stock-market-clocks-container')) {
+                populateMarketClocksHTML(); 
+                setInterval(updateMarketClocks, 10000); 
             }
-            
-            updateDateTime();
-            setupFilters();
-            setupChartPeriods();
-            setupBackToTop();
-            
-            // Atualizar data/hora a cada minuto
-            setInterval(updateDateTime, 60000);
+
+            let attempts = 0; const maxAttempts = 10; 
+            const intervalId = setInterval(() => {
+                attempts++;
+                const heatmapContainerExists = !!document.getElementById('heatmap-widget-container');
+                if (typeof TradingView !== 'undefined' && (typeof TradingView.widget === 'function' || heatmapContainerExists)) {
+                    clearInterval(intervalId); 
+                    initializeAllPageWidgets(); 
+                    setupFilters(); // Configura filtros e aplica o filtro inicial 'all'
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(intervalId); console.error("TradingView libraries não carregaram a tempo.");
+                     document.querySelectorAll('.analise-chart[data-chart-id], #heatmap-widget-container, #calendar-widget-container').forEach(container => {
+                        if (container && !container.innerHTML.includes('Erro')) container.innerHTML = `<p style="color: var(--error-color); text-align: center; padding: 20px;">Falha ao carregar widgets. Tente recarregar a página.</p>`;
+                    });
+                }
+            }, 500);
         });
     </script>
 </body>
