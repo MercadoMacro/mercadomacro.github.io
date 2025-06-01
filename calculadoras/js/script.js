@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggleButton = document.getElementById('theme-toggle');
     if(themeToggleButton) themeToggleButton.addEventListener('click', toggleTheme);
     const homeButton = document.getElementById('home-btn');
-    if(homeButton) homeButton.addEventListener('click', () => window.location.href = 'index.html'); // Mudado para index.html
+    if(homeButton) homeButton.addEventListener('click', () => window.location.href = '/index.html'); // Mudado para index.html
 
     setupHP12Modal(); setupBackToTop(); setupRefreshButton();
 
