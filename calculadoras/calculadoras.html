@@ -6,16 +6,12 @@
     <meta name="description" content="Calculadoras financeiras completas para investimentos">
     <meta name="keywords" content="calculadora financeira, CDB, LCI, LCA, amortização, preço médio">
     <meta name="author" content="Anderson">
-    <title>Calculadoras Financeiras - Mercado Macro</title> <link rel="preconnect" href="https://fonts.gstatic.com">
+    <title>Calculadoras Financeiras - Mercado Macro</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     
-    <link href="css/styles.css" rel="stylesheet">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <style>
+    <link href="css/styles.css" rel="stylesheet"> <style>
         :root {
             --primary-color: #00d180;
             --primary-light: #5bffb0;
@@ -24,7 +20,7 @@
             --darker-bg: #010409;
             --text-color: #c9d1d9;
             --text-secondary: rgba(139, 148, 158, 0.7);
-            --card-bg: rgba(22, 27, 34, 0.7); /* Usando um valor base para card-bg */
+            --card-bg: rgba(22, 27, 34, 0.7);
             --card-bg-rgb-dark: 22, 27, 34;
             --card-bg-rgb-light: 248, 249, 250;
             --card-bg-rgb: var(--card-bg-rgb-dark);
@@ -33,10 +29,7 @@
             --transition-speed: 0.3s;
             --shadow-color-soft: rgba(0, 0, 0, 0.2);
             --shadow-color-medium: rgba(0, 0, 0, 0.3);
-            /* Adicionar outras variáveis de analises.html se necessário para consistência total */
         }
-
-        /* Estilos base do body e container (da analises.html) */
         body {
             margin: 0; padding: 0;
             font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -49,18 +42,15 @@
             display: flex; flex-direction: column;
         }
         body.body-modal-open { overflow: hidden; }
-
         :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
         :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 
-        .container { /* Estilo do container principal da analises.html */
+        .container {
             flex: 1; max-width: 1200px; width: 100%;
-            margin: 0 auto; padding: 30px 20px; /* Padding de analises.html */
-            box-sizing: border-box; text-align: center; /* Alterado para center para o logo */
+            margin: 0 auto; padding: 30px 20px;
+            box-sizing: border-box; text-align: center;
             display: flex; flex-direction: column;
         }
-        
-        /* Estilos do Logo da analises.html */
         .logo { text-align: center; margin-bottom: 30px; }
         .page-title-header {
             font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
@@ -74,21 +64,14 @@
             background: linear-gradient(to right, var(--primary-color), var(--primary-light));
             margin: 0 auto; border-radius: 3px;
         }
-
-        /* Estilo do Subheader da analises.html */
         .subheader {
-            font-size: 16px;
-            margin-bottom: 25px;
-            color: var(--text-secondary);
-            font-weight: 600;
+            font-size: 16px; margin-bottom: 25px;
+            color: var(--text-secondary); font-weight: 600;
             text-align: center;
         }
-        
-        /* Estilos dos Botões Flutuantes da analises.html */
-        .floating-btn { /* Nova classe para todos os botões de ação */
+        .floating-btn {
             position: fixed; width: 50px; height: 50px; border-radius: 12px;
-            background-color: var(--card-bg); /* Usa a variável de analises.html */
-            color: var(--text-color); border: 1px solid var(--border-color);
+            background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);
             cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
             transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
             -webkit-tap-highlight-color: transparent;
@@ -97,76 +80,59 @@
         .floating-btn:active { transform: translateY(0) scale(1); }
         .floating-btn i { font-size: 20px; }
 
-        /* Posições dos botões - adaptado para calculadoras.html */
         #refresh-btn { right: 20px; bottom: 20px; }
         #home-btn { right: 80px; bottom: 20px; }
         #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
         #top-btn.visible { opacity: 1; visibility: visible; }
         .theme-toggle { left: 20px; bottom: 20px; }
         
-        /* Botão HP12C - Mantendo estilo original, mas verificando consistência */
-        .hp12c-btn { /* Estilo original do botão HP12C, pode ser ajustado para harmonizar */
-            position: fixed;
-            top: 20px; /* Ajustado para um padding similar ao container */
-            right: 20px; /* Ajustado */
-            width: 45px; /* Tamanho similar aos FABs */
-            height: 45px;
-            border-radius: 12px; /* Consistente com FABs */
-            background-color: #FF6B00; /* Cor original mantida */
-            color: white;
-            border: none; /* Original */
-            box-shadow: 0 5px 15px var(--shadow-color-soft); /* Sombra de analises.html */
-            cursor: pointer;
-            z-index: 1000; /* Acima do conteúdo, abaixo de modais se houver */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: all var(--transition-normal);
+        .hp12c-btn {
+            position: fixed; top: 20px; right: 20px; width: 45px; height: 45px;
+            border-radius: 12px; background-color: #FF6B00; color: white;
+            border: none; box-shadow: 0 5px 15px var(--shadow-color-soft);
+            cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; transition: all var(--transition-normal);
         }
         .hp12c-btn:hover { transform: scale(1.1); background-color: #E55E00;}
         .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain;}
 
-        /* Modal HP12C - Estilos originais, podem precisar de ajustes com novas variáveis */
         .hp12c-modal {
           display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-          background-color: rgba(10, 10, 42, 0.85); /* Fundo de modal de analises.html */
-          z-index: 2000; /* Mais alto que FABs */
-          justify-content: center; align-items: center; backdrop-filter: blur(5px); /* Efeito de analises.html */
+          background-color: rgba(10, 10, 42, 0.85); 
+          z-index: 2000; 
+          justify-content: center; align-items: center; backdrop-filter: blur(5px);
         }
         .hp12c-modal-content {
-          background-color: var(--darker-bg); /* Fundo de modal de analises.html */
-          border-radius: 12px; /* Raio de modal de analises.html */
+          background-color: var(--darker-bg); 
+          border-radius: 12px; 
           overflow: hidden; width: 90%; max-width: 620px; height: 90%; max-height: 620px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.6); /* Sombra de modal de analises.html */
-          animation: modalFadeIn var(--transition-normal); /* Usando variável */
-          border: 1px solid var(--border-color); /* Borda de modal de analises.html */
-          display: flex; flex-direction: column; /* Para melhor estrutura interna */
+          box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
+          animation: modalFadeIn var(--transition-normal);
+          border: 1px solid var(--border-color); 
+          display: flex; flex-direction: column;
         }
         .hp12c-modal-header {
           display: flex; justify-content: space-between; align-items: center;
-          padding: 15px; /* Padding de modal header de analises.html */
-          border-bottom: 1px solid var(--border-color); /* Borda de analises.html */
+          padding: 15px; 
+          border-bottom: 1px solid var(--border-color);
         }
-        .hp12c-modal-title { font-weight: bold; color: var(--primary-color); font-size: 16px; } /* Estilo de analises.html */
+        .hp12c-modal-title { font-weight: bold; color: var(--primary-color); font-size: 16px; }
         .hp12c-close-btn {
           border: none; background: rgba(255,255,255,0.1); font-size: 18px; cursor: pointer;
           color: var(--text-secondary); transition: color var(--transition-fast);
-          width: 32px; height: 32px; border-radius: 50%; /* Estilo de analises.html */
+          width: 32px; height: 32px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center; line-height: 1;
         }
         .hp12c-close-btn:hover { color: var(--primary-color); background: var(--primary-color); color: var(--dark-bg);}
-        .hp12c-iframe-container { width: 100%; flex-grow: 1; /* Para preencher espaço */ }
+        .hp12c-iframe-container { width: 100%; flex-grow: 1; }
         .hp12c-iframe-container iframe { width: 100%; height: 100%; border: none; }
         
-        /* Footer da analises.html */
         .footer {
             font-size: 13px; margin-top: 40px; text-align: center;
             color: var(--text-secondary); padding: 20px 0;
             border-top: 1px solid var(--border-color);
         }
 
-        /* Light Mode da analises.html */
         body.light-mode {
             --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
             --dark-bg: #ffffff; --darker-bg: #f0f2f5;
@@ -179,23 +145,16 @@
         }
         body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
-        
         body.light-mode .floating-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
         body.light-mode .floating-btn:hover { background-color: var(--primary-color); color: white; }
         body.light-mode .theme-toggle i { color: var(--text-color); } 
         body.light-mode .theme-toggle:hover i { color: white; } 
-
-        body.light-mode .hp12c-btn { /* Estilo light mode para o botão HP12C */
-            /* Pode manter a cor laranja ou adaptar */
-            /* Exemplo: background-color: #f0f0f0; color: #FF6B00; border: 1px solid #ddd; */
-        }
         body.light-mode .hp12c-modal-content { background-color: var(--dark-bg); border-color: var(--border-color); }
         body.light-mode .hp12c-modal-header { border-bottom-color: var(--border-color); }
         body.light-mode .hp12c-modal-title { color: var(--primary-color); }
         body.light-mode .hp12c-close-btn { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
         body.light-mode .hp12c-close-btn:hover { background: var(--primary-color); color: white; }
 
-        /* Ajustes responsivos de analises.html */
         @media (min-width: 768px) { .page-title-header { font-size: 48px; } }
         @media (max-width: 600px) {
             .container { padding: 15px 12px; } 
@@ -208,25 +167,31 @@
             .theme-toggle { left: 15px; }
             .hp12c-btn { width: 40px; height: 40px; top: 15px; right: 15px; border-radius: 10px; }
             .hp12c-btn i { font-size: 16px;}
+            .calculator .button-group, .calculator .export-buttons { flex-direction: column; }
         }
-
-        /* Animações */
-        @keyframes modalFadeIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        /* Outras animações do seu styles.css (fadeIn, highlight) podem ser adicionadas aqui se necessário */
-         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes highlight {
-            0% { background-color: rgba(0, 255, 136, 0.3); } /* Usando var(--primary-color) com alfa */
-            100% { background-color: transparent; }
-        }
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes highlight { 0% { background-color: rgba(0, 255, 136, 0.15); } 100% { background-color: transparent; } }
         .new-operation { animation: highlight 1.5s; }
 
+        .btn-clear {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-clear:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+        body.light-mode .btn-clear {
+            background-color: rgba(0, 0, 0, 0.03);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        body.light-mode .btn-clear:hover {
+            background-color: rgba(0, 0, 0, 0.06);
+            color: var(--text-color);
+        }
     </style>
 </head>
 <body>
@@ -283,6 +248,9 @@
                 <button class="btn btn-secondary" id="add-operation">
                     <i class="fas fa-plus"></i> Adicionar Operação
                 </button>
+                <button class="btn btn-clear" id="clear-average-calc">
+                    <i class="fas fa-eraser"></i> Limpar
+                </button>
             </div>
             <div class="input-group">
                 <label for="current-quantity">Quantidade Atual (Opcional)</label>
@@ -301,7 +269,7 @@
             <button class="calculate-btn" id="calculate-average">
                 <i class="fas fa-calculator"></i> Calcular Preço Médio
             </button>
-            <div class="result" id="average-results">
+            <div class="result" id="average-results" style="display: none;">
                 <h3><i class="fas fa-chart-pie"></i> Resultados</h3>
                 <p><span>Quantidade Total:</span> <span class="result-value" id="total-quantity">0</span></p>
                 <p><span>Investimento Total:</span> <span class="result-value" id="total-investment">R$ 0,00</span></p>
@@ -309,44 +277,38 @@
                 <button class="btn btn-secondary copy-btn" data-target="average-results">
                     <i class="fas fa-copy"></i> Copiar Resultados
                 </button>
-                <div class="export-buttons">
-                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="average-results">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="average-results">
-                        <i class="fas fa-file-csv"></i> CSV
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="image" data-target="average-results">
-                        <i class="fas fa-image"></i> Imagem
-                    </button>
                 </div>
-            </div>
         </div>
 
         <div class="calculator" id="amortizacao">
             <h2><i class="fas fa-home"></i> Calculadora de Amortização</h2>
             <div class="input-group">
-                <label>Valor do Financiamento (R$):</label>
+                <label for="loan-amount">Valor do Financiamento (R$):</label>
                 <input type="number" id="loan-amount" placeholder="Ex: 200000">
             </div>
             <div class="input-group">
-                <label>Taxa de Juros (% ao ano):</label>
+                <label for="loan-rate">Taxa de Juros (% ao ano):</label>
                 <input type="number" id="loan-rate" placeholder="Ex: 8.5" step="0.1">
             </div>
             <div class="input-group">
-                <label>Prazo (anos):</label>
+                <label for="loan-term">Prazo (anos):</label>
                 <input type="number" id="loan-term" placeholder="Ex: 30">
             </div>
             <div class="input-group">
-                <label>Sistema:</label>
+                <label for="loan-type">Sistema:</label>
                 <select id="loan-type">
                     <option value="price">PRICE (Parcelas Fixas)</option>
                     <option value="sac">SAC (Amortização Constante)</option>
                 </select>
             </div>
-            <button class="calculate-btn" onclick="calculateAmortization()">
-                <i class="fas fa-calculator"></i> Calcular
-            </button>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-amortization">
+                    <i class="fas fa-calculator"></i> Calcular
+                </button>
+                 <button class="btn btn-clear" id="clear-amortization-calc">
+                    <i class="fas fa-eraser"></i> Limpar
+                </button>
+            </div>
             <div class="result" id="amortization-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
                 <p><span>Valor da Parcela:</span> <span class="result-value" id="monthly-payment"></span></p>
@@ -355,45 +317,39 @@
                 <button class="btn btn-secondary copy-btn" data-target="amortization-result">
                     <i class="fas fa-copy"></i> Copiar Resultados
                 </button>
-                <div class="export-buttons">
-                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="amortization-result">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="amortization-result">
-                        <i class="fas fa-file-csv"></i> CSV
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="image" data-target="amortization-result">
-                        <i class="fas fa-image"></i> Imagem
-                    </button>
                 </div>
-            </div>
         </div>
 
         <div class="calculator" id="cdb">
             <h2><i class="fas fa-file-invoice-dollar"></i> Rendimento CDB/LCI/LCA</h2>
             <div class="input-group">
-                <label>Valor Investido (R$):</label>
+                <label for="cdb-amount">Valor Investido (R$):</label>
                 <input type="number" id="cdb-amount" placeholder="Ex: 10000">
             </div>
             <div class="input-group">
-                <label>Taxa do CDB (% ao ano):</label>
+                <label for="cdb-rate">Taxa do CDB (% ao ano):</label>
                 <input type="number" id="cdb-rate" placeholder="Ex: 12.5" step="0.1">
             </div>
             <div class="input-group">
-                <label>Prazo (dias):</label>
+                <label for="cdb-days">Prazo (dias):</label>
                 <input type="number" id="cdb-days" placeholder="Ex: 365">
             </div>
             <div class="input-group">
-                <label>Tipo de Investimento:</label>
+                <label for="cdb-type">Tipo de Investimento:</label>
                 <select id="cdb-type">
                     <option value="cdb">CDB (Tributado)</option>
                     <option value="lci">LCI (Isento IR)</option>
                     <option value="lca">LCA (Isento IR)</option>
                 </select>
             </div>
-            <button class="calculate-btn" onclick="calculateCDB()">
-                <i class="fas fa-calculator"></i> Calcular
-            </button>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-cdb">
+                    <i class="fas fa-calculator"></i> Calcular
+                </button>
+                <button class="btn btn-clear" id="clear-cdb-calc">
+                    <i class="fas fa-eraser"></i> Limpar
+                </button>
+            </div>
             <div class="result" id="cdb-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
                 <p><span>Rendimento Bruto:</span> <span class="result-value" id="cdb-gross"></span></p>
@@ -403,41 +359,35 @@
                 <button class="btn btn-secondary copy-btn" data-target="cdb-result">
                     <i class="fas fa-copy"></i> Copiar Resultados
                 </button>
-                <div class="export-buttons">
-                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="cdb-result">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="cdb-result">
-                        <i class="fas fa-file-csv"></i> CSV
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="image" data-target="cdb-result">
-                        <i class="fas fa-image"></i> Imagem
-                    </button>
                 </div>
-            </div>
         </div>
 
         <div class="calculator" id="juros-compostos">
             <h2><i class="fas fa-chart-line"></i> Juros Compostos</h2>
             <div class="input-group">
-                <label>Valor Inicial (R$):</label>
+                <label for="principal">Valor Inicial (R$):</label>
                 <input type="number" id="principal" placeholder="Ex: 1000">
             </div>
             <div class="input-group">
-                <label>Aporte Mensal (R$):</label>
+                <label for="monthly">Aporte Mensal (R$):</label>
                 <input type="number" id="monthly" placeholder="Ex: 200">
             </div>
             <div class="input-group">
-                <label>Taxa de Juros (% ao ano):</label>
+                <label for="rate">Taxa de Juros (% ao ano):</label>
                 <input type="number" id="rate" placeholder="Ex: 8.5" step="0.1">
             </div>
             <div class="input-group">
-                <label>Período (anos):</label>
+                <label for="time">Período (anos):</label>
                 <input type="number" id="time" placeholder="Ex: 10">
             </div>
-            <button class="calculate-btn" onclick="calculateCompoundInterest()">
-                <i class="fas fa-calculator"></i> Calcular
-            </button>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-compound">
+                    <i class="fas fa-calculator"></i> Calcular
+                </button>
+                 <button class="btn btn-clear" id="clear-compound-calc">
+                    <i class="fas fa-eraser"></i> Limpar
+                </button>
+            </div>
             <div class="result" id="compound-result" style="display: none;">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
                 <p><span>Valor Investido:</span> <span class="result-value" id="total-invested"></span></p>
@@ -446,21 +396,12 @@
                 <button class="btn btn-secondary copy-btn" data-target="compound-result">
                     <i class="fas fa-copy"></i> Copiar Resultados
                 </button>
-                <div class="export-buttons">
-                    <button class="btn btn-secondary export-btn" data-format="pdf" data-target="compound-result">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="csv" data-target="compound-result">
-                        <i class="fas fa-file-csv"></i> CSV
-                    </button>
-                    <button class="btn btn-secondary export-btn" data-format="image" data-target="compound-result">
-                        <i class="fas fa-image"></i> Imagem
-                    </button>
                 </div>
-            </div>
         </div>
         <div class="footer" id="footer">© 2025 Mercado Macro</div>
-    </div> <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados">
+    </div>
+
+    <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados">
         <i class="fas fa-redo"></i>
     </button>
     <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial">
