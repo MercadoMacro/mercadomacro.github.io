@@ -1,292 +1,399 @@
 // =============================================
-// CONFIGURAÇÕES ATUALIZADAS
+// CONFIGURAÇÕES GLOBAIS
 // =============================================
-const CACHE_KEY = 'newsCache_v5';
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
-const FAVORITES_KEY = 'favorites';
-const BOX_ORDER_KEY = 'boxOrder';
+const CACHE_KEY_NEWS = 'newsCache_v6';
+const CACHE_TTL_NEWS = 15 * 60 * 1000;
+const FAVORITES_KEY = 'favorites_v2';
+const BOX_ORDER_KEY = 'boxOrder_v2';
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
-const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo'; // Lembre-se de proteger sua API Key
-const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
+const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
+const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000;
+let commentaryLastUpdateTimestamp = null;
 
-// Variável para armazenar as frases do banner
 let BANNER_PHRASES = [];
 
-// Função para carregar as frases do banner
-async function loadBannerPhrases() {
-    try {
-        const response = await fetch('data/banner-phrases.json'); 
-        if (!response.ok) throw new Error(`Falha ao carregar frases: ${response.status}`);
-        const data = await response.json();
-        BANNER_PHRASES = data.phrases;
-        if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) {
-            console.warn('Nenhuma frase encontrada no arquivo de banner ou arquivo vazio.');
-            BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"]; // Fallback
+// =============================================
+// FUNÇÃO DEBOUNCE (MELHORIA DE PERFORMANCE)
+// =============================================
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+};
+
+// =============================================
+// FUNÇÃO PARA FORMATAR TEMPO RELATIVO (MELHORIA UX)
+// =============================================
+function formatTimeSince(timestamp) {
+    if (!timestamp) return '';
+    const now = new Date();
+    const secondsPast = (now.getTime() - timestamp) / 1000;
+
+    if (secondsPast < 60) {
+        return 'há menos de um minuto';
+    }
+    if (secondsPast < 3600) {
+        const minutes = Math.round(secondsPast / 60);
+        return `há ${minutes} min${minutes > 1 ? 's' : ''}`;
+    }
+    if (secondsPast <= 86400) { // 24 horas
+        const hours = Math.round(secondsPast / 3600);
+        return `há ${hours} hora${hours > 1 ? 's' : ''}`;
+    }
+    // Para mais de 24h, poderia mostrar data/hora completa
+    const date = new Date(timestamp);
+    return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
+}
+
+
+// =============================================
+// FUNÇÃO PARA ATUALIZAR DATA E HORA
+// =============================================
+function updateDateTime() {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false
+    });
+
+    const dataAtualElement = document.getElementById('data-atual');
+    if (dataAtualElement) {
+        const datetimeSpan = dataAtualElement.querySelector('.datetime');
+        if (datetimeSpan) {
+            datetimeSpan.textContent = formattedDate;
         }
-        updateBanner();
-    } catch (error) {
-        console.error('Erro ao carregar frases do banner:', error);
-        BANNER_PHRASES = ["Bem-vindo ao Notícias de Mercado Financeiro"]; // Fallback
-        updateBanner();
+    }
+
+    const footerElement = document.getElementById('footer');
+    if (footerElement) {
+        footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`;
     }
 }
 
-// Função para atualizar o banner
-function updateBanner() {
-    const banner = document.getElementById('random-banner');
-    if (banner && BANNER_PHRASES.length > 0) { 
-        if (!banner.querySelector('.banner-text')) {
-            const bannerText = document.createElement('div');
-            bannerText.className = 'banner-text';
-            banner.innerHTML = '';
-            banner.appendChild(bannerText);
-        }
 
-        const bannerText = banner.querySelector('.banner-text');
-        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
-        bannerText.textContent = randomPhrase;
-
-        bannerText.style.animation = 'none';
-        void bannerText.offsetWidth; 
-
-        if (window.innerWidth > 768) { 
-            bannerText.style.animation = 'none';
-            bannerText.style.position = 'static';
-            bannerText.style.left = 'auto';
-            bannerText.style.transform = 'none';
-            banner.style.justifyContent = 'center';
-        } else { 
-            bannerText.style.animation = 'scrollBanner 10s linear infinite'; 
-            bannerText.style.position = 'absolute';
-            bannerText.style.left = '100%';
-            banner.style.justifyContent = 'flex-start';
-        }
-    } else if (banner && BANNER_PHRASES.length === 0) {
-        banner.textContent = "Notícias e Análises Financeiras"; 
-    }
-}
-
-// Serviços de proxy prioritários
+// =============================================
+// CÓDIGO DAS NOTÍCIAS
+// =============================================
 const RSS_SOURCES = [
     {
         name: 'RSS2JSON',
-        url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance',
-        buildUrl: feedUrl => `${RSS_SOURCES[0].url}?rss_url=${encodeURIComponent(feedUrl)}`,
+        buildUrl: feedUrl => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`,
         processor: data => {
             if (!data.items) throw new Error('Formato RSS2JSON inválido');
             return data.items.map(item => ({
-                title: item.title,
-                description: item.description,
-                link: item.link,
-                pubDate: item.pubDate
+                title: item.title, description: item.description,
+                link: item.link, pubDate: item.pubDate
             }));
         }
     },
     {
         name: 'AllOrigins',
-        url: 'https://api.allorigins.win/raw?url=https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance',
-        buildUrl: feedUrl => `${RSS_SOURCES[1].url}?charset=ISO-8859-1&url=${encodeURIComponent(feedUrl)}`,
-        processor: data => {
-            if (!data.contents) throw new Error('Conteúdo AllOrigins vazio');
+        buildUrl: feedUrl => `https://api.allorigins.win/raw?charset=UTF-8&url=${encodeURIComponent(feedUrl)}`,
+        processor: dataText => {
+            if (!dataText) throw new Error('Conteúdo AllOrigins vazio');
             const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+            const xmlDoc = parser.parseFromString(dataText, "text/xml");
             return parseXmlNews(xmlDoc);
         }
     }
 ];
 
-// Fontes RSS prioritárias
 const RSS_FEEDS = [
     'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/',
     'https://www.valor.com.br/rss',
     'https://www.infomoney.com.br/feed/'
 ];
 
-// Fallback de notícias estáticas
 const FALLBACK_NEWS = [
-    {
-        title: "Mercado financeiro aguarda decisão do Fed sobre juros",
-        description: "Investidores em todo o mundo estão atentos à decisão do Federal Reserve sobre as taxas de juros dos EUA.",
-        link: "#",
-        pubDate: new Date().toISOString()
-    },
-    {
-        title: "Ibovespa abre em alta impulsionado por commodities",
-        description: "O índice brasileiro segue o movimento positivo das bolsas internacionais e das commodities.",
-        link: "#",
-        pubDate: new Date().toISOString()
-    },
-    {
-        title: "Dólar recua para R$ 5,66 com melhora no cenário externo",
-        description: "Moeda americana perde força diante do avanço nas negociações comerciais entre EUA e China.",
-        link: "#",
-        pubDate: new Date().toISOString()
-    }
+    { title: "Mercado aguarda decisão do Fed", description: "Decisão sobre juros nos EUA é o foco.", link: "#", pubDate: new Date().toISOString() },
+    { title: "Ibovespa em alta com commodities", description: "Índice brasileiro acompanha otimismo externo.", link: "#", pubDate: new Date().toISOString() },
+    { title: "Dólar opera em queda", description: "Moeda americana perde força no cenário global.", link: "#", pubDate: new Date().toISOString() }
 ];
 
+// =============================================
+// FUNÇÕES PARA RENDERIZAR WIDGETS DA INDEX.HTML COM TEMA
+// =============================================
+function renderTickerTapeWidget(theme) {
+    const container = document.getElementById('tradingview-ticker-tape-container');
+    if (!container) return;
+    const skeleton = container.querySelector('.tv-skeleton');
+    if (skeleton) skeleton.style.display = 'none'; // Esconde o skeleton
+    
+    // Limpa apenas o conteúdo do widget, não o skeleton se ele for externo ao container do script
+    const widgetContent = container.querySelector('.tradingview-widget-container');
+    if(widgetContent) widgetContent.remove();
+    else container.innerHTML = ''; // Fallback se o skeleton não estiver lá ou estrutura for diferente
+
+    const config = {
+        "symbols": [
+            {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500"}, {"description": "IBOVESPA", "proName": "BMFBOVESPA:IBOV"},
+            {"description": "NASDAQ 100","proName": "FOREXCOM:NSXUSD"}, {"description": "USD/BRL","proName": "FX_IDC:USDBRL"},
+            {"description": "EUR/USD","proName": "FX:EURUSD"}, {"description": "BITCOIN","proName": "BITSTAMP:BTCUSD"},
+            {"description": "PETRÓLEO BRENT","proName": "TVC:UKOIL"}, {"description": "OURO","proName": "OANDA:XAUUSD"}
+        ],
+        "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive",
+        "colorTheme": theme, "locale": "br"
+    };
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+    script.async = true;
+    script.text = JSON.stringify(config);
+    container.appendChild(script);
+}
+
+function renderMarketOverviewWidget(theme) {
+    const container = document.getElementById('market-overview-widget-wrapper');
+    if (!container) return;
+    const skeleton = container.querySelector('.tv-skeleton');
+    if (skeleton) skeleton.style.display = 'none'; // Esconde o skeleton
+
+    const widgetContent = container.querySelector('.tradingview-widget-container');
+    if(widgetContent) widgetContent.remove();
+    else container.innerHTML = '';
+
+    const tvContainer = document.createElement('div');
+    tvContainer.className = 'tradingview-widget-container';
+    tvContainer.style.width = '100%'; tvContainer.style.height = '100%';
+    const config = {
+        "colorTheme": theme, "dateRange": "12M", "showChart": true, "locale": "br",
+        "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true,
+        "showFloatingTooltip": false, "width": "100%", "height": "500",
+        "plotLineColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 1)" : "rgba(0, 209, 128, 1)",
+        "plotLineColorFalling": theme === 'light' ? "rgba(220, 53, 69, 1)" : "rgba(248, 81, 73, 1)",
+        "gridLineColor": "rgba(240, 243, 250, 0)",
+        "scaleFontColor": theme === 'light' ? "rgba(51, 51, 51, 0.7)" : "rgba(201, 209, 217, 0.7)",
+        "belowLineFillColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)",
+        "belowLineFillColorFalling": theme === 'light' ? "rgba(220, 53, 69, 0.12)" : "rgba(248, 81, 73, 0.12)",
+        "belowLineFillColorGrowingBottom": theme === 'light' ? "rgba(0, 123, 255, 0)" : "rgba(0, 209, 128, 0)",
+        "belowLineFillColorFallingBottom": theme === 'light' ? "rgba(220, 53, 69, 0)" : "rgba(248, 81, 73, 0)",
+        "symbolActiveColor": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)",
+        "tabs": [
+            { "title": "Indices", "symbols": [ {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "NASDAQ 100"}, {"s": "FOREXCOM:DJI", "d": "Dow Jones"}, {"s": "BMFBOVESPA:IBOV", "d":"IBOVESPA"}, {"s": "INDEX:DEU40", "d": "DAX"}, {"s": "FOREXCOM:UKXGBP", "d": "FTSE 100"} ], "originalTitle": "Indices" },
+            { "title": "Moedas", "symbols": [ {"s": "FX_IDC:USDBRL", "d":"USD/BRL"}, {"s": "FX:EURUSD", "d": "EUR/USD"}, {"s": "FX:GBPUSD", "d": "GBP/USD"}, {"s": "FX:USDJPY", "d": "USD/JPY"}, {"s": "FX:AUDUSD", "d": "AUD/USD"}, {"s": "FX:USDCAD", "d": "USD/CAD"} ], "originalTitle": "Forex" },
+            { "title": "Commodities", "symbols": [ {"s": "TVC:UKOIL", "d": "Petróleo Brent"}, {"s": "TVC:USOIL", "d": "Petróleo WTI"}, {"s": "OANDA:XAUUSD", "d": "Ouro"}, {"s": "TVC:SILVER", "d": "Prata"}, {"s": "COMEX:HG1!", "d": "Cobre"}], "originalTitle": "Commodities" },
+            { "title": "Cripto", "symbols": [ {"s": "BINANCE:BTCUSDT", "d": "Bitcoin"}, {"s": "BINANCE:ETHUSDT", "d": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "d": "Solana"} ], "originalTitle": "Crypto" }
+        ]
+    };
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js';
+    script.async = true;
+    script.text = JSON.stringify(config);
+    tvContainer.appendChild(script);
+    container.appendChild(tvContainer);
+}
+
+
+function loadEconomicCalendarWidget() {
+    const widgetContainer = document.getElementById('economicCalendarWidget');
+    if (!widgetContainer) { console.error('Contêiner do Calendário Econômico não encontrado.'); return; }
+    widgetContainer.innerHTML = '';
+    const currentThemeIsLight = document.body.classList.contains('light-mode');
+    const widgetTheme = currentThemeIsLight ? 0 : 1;
+    const configJsonString = JSON.stringify({
+        "width": "100%", "height": "100%", "mode": "1",
+        "theme": widgetTheme, "lang": "pt"
+    });
+    const scriptTag = document.createElement('script');
+    scriptTag.async = true; scriptTag.type = 'text/javascript';
+    scriptTag.setAttribute('data-type', 'calendar-widget');
+    scriptTag.text = configJsonString;
+    scriptTag.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13';
+    widgetContainer.appendChild(scriptTag);
+}
 
 // =============================================
-// FUNÇÕES DO GOOGLE DOCS
+// FUNÇÕES DO BANNER E CONTEÚDO
 // =============================================
+
+async function loadBannerPhrases() {
+    try {
+        const response = await fetch('data/banner-phrases.json');
+        if (!response.ok) throw new Error(`Falha ao carregar frases: ${response.status}`);
+        BANNER_PHRASES = (await response.json()).phrases;
+        if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) {
+            console.warn('Nenhuma frase encontrada no arquivo de banner.');
+            BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"];
+        }
+    } catch (error) {
+        console.error('Erro ao carregar frases do banner:', error);
+        BANNER_PHRASES = ["Bem-vindo ao Mercado Macro"];
+    }
+    updateBanner();
+}
+
+function updateBanner() {
+    const banner = document.getElementById('random-banner');
+    const bannerTextEl = banner ? banner.querySelector('.banner-text') : null;
+    if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) {
+        const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
+        bannerTextEl.textContent = randomPhrase;
+
+        bannerTextEl.style.animation = 'none';
+        void bannerTextEl.offsetWidth;
+
+        if (window.innerWidth <= 768) {
+            bannerTextEl.style.animation = 'scrollBanner 15s linear infinite';
+        } else {
+            bannerTextEl.style.animation = '';
+        }
+    } else if (bannerTextEl) {
+        bannerTextEl.textContent = "Notícias e Análises Financeiras";
+    }
+}
+
 async function fetchGoogleDocContent() {
     const url = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DOC_ID}/export?mimeType=text/plain&key=${GOOGLE_API_KEY}`;
     try {
-        const response = await fetch(url, { signal: AbortSignal.timeout(10000) }); 
+        const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
         if (!response.ok) {
-            const errorBody = await response.text(); 
+            const errorBody = await response.text();
             console.error(`Google Docs API Error ${response.status}: ${response.statusText}`, errorBody);
-            throw new Error(`Erro ${response.status} ao buscar Google Doc. Verifique a API Key e permissões do Doc.`);
+            throw new Error(`Erro ${response.status} ao buscar Google Doc.`);
         }
         return await response.text();
     } catch (error) {
         console.error('Falha na requisição ao Google Docs:', error);
         if (error.name !== 'AbortError') {
-            throw new Error('Não foi possível carregar a análise do Google Docs. Verifique a conexão ou a configuração da API.');
+            throw new Error('Não foi possível carregar a análise do Google Docs.');
         }
-        throw error; 
+        throw error;
     }
 }
 
 function updateCommentary(content) {
     const commentaryContentEl = document.getElementById('commentary-content');
     if (!commentaryContentEl) return;
-
-    let formattedContent = content
-        .replace(/\r\n/g, '\n')
-        .split('\n')
-        .map(line => {
-            line = line.trim();
-            if (/^\s*$/.test(line)) return null;
-
-            if (/^([📌☐✔☑️✅]\s*.+)/.test(line)) {
-                return `<div class="commentary-highlight">${line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</div>`;
-            }
-            line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            if (/^[•*-]\s*(.+)/.test(line)) {
-                return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;
-            }
-            return `<p class="commentary-paragraph">${line}</p>`;
-        })
-        .filter(line => line !== null)
-        .join('');
-
+    let formattedContent = content.replace(/\r\n/g, '\n').split('\n').map(line => {
+        line = line.trim();
+        if (/^\s*$/.test(line)) return null;
+        if (/^([📌☐✔☑️✅]\s*.+)/.test(line)) return `<div class="commentary-highlight">${line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</div>`;
+        line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        if (/^[•*-]\s*(.+)/.test(line)) return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;
+        return `<p class="commentary-paragraph">${line}</p>`;
+    }).filter(line => line !== null).join('');
     formattedContent = formattedContent.replace(/(<li>.*?<\/li>)+/sg, '<ul>$&</ul>');
-
-    commentaryContentEl.innerHTML = formattedContent || '<p>Nenhuma análise disponível no momento.</p>';
+    commentaryContentEl.innerHTML = formattedContent || '<p>Nenhuma análise disponível.</p>';
 }
-
 
 async function updateCommentaryContent() {
     const commentaryContentEl = document.getElementById('commentary-content');
+    const lastUpdatedEl = document.getElementById('commentary-last-updated');
     if (!commentaryContentEl) return;
 
-    commentaryContentEl.innerHTML = `
-        <div class="loading-commentary">
-            <span class="loading-small"></span> Carregando análise do mercado...
-        </div>`;
+    commentaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando análise...</div>`;
+    if (lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...';
 
     try {
         const content = await fetchGoogleDocContent();
         updateCommentary(content);
+        commentaryLastUpdateTimestamp = Date.now();
+        if (lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp);
         return true;
     } catch (error) {
-        console.error('Falha ao atualizar conteúdo do comentário:', error);
-        commentaryContentEl.innerHTML = `
-            <div class="error-commentary">
-                <i class="fas fa-exclamation-triangle"></i>
-                ${error.message || 'Falha ao carregar análise.'}
-            </div>`;
+        console.error('Falha ao atualizar comentário:', error);
+        commentaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`;
+        if (lastUpdatedEl && commentaryLastUpdateTimestamp) lastUpdatedEl.textContent = `Falha. Última: ${formatTimeSince(commentaryLastUpdateTimestamp)}`;
+        else if (lastUpdatedEl) lastUpdatedEl.textContent = 'Falha ao atualizar';
         return false;
     }
 }
 
-// =============================================
-// FUNÇÕES PRINCIPAIS DE NOTÍCIAS
-// =============================================
 async function fetchNews() {
     let lastError = null;
-    
     for (const feedUrl of RSS_FEEDS) {
         for (const source of RSS_SOURCES) {
             try {
                 const url = source.buildUrl(feedUrl);
-                console.log(`Tentando: ${source.name} com ${feedUrl}`);
-                
-                const response = await fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    signal: AbortSignal.timeout(8000)
-                });
+                const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(8000) });
+                if (!response.ok) throw new Error(`HTTP ${response.status} em ${source.name} para ${feedUrl}`);
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const data = await response.json();
-                const newsItems = source.processor(data);
-                
-                if (newsItems.length > 0) {
-                    console.log(`Sucesso com ${source.name} e ${feedUrl}`);
-                    return newsItems;
+                let dataToProcess;
+                if (source.name === 'AllOrigins') {
+                    dataToProcess = await response.text();
+                } else {
+                    dataToProcess = await response.json();
                 }
+
+                const newsItems = source.processor(dataToProcess);
+                if (newsItems && newsItems.length > 0) return newsItems;
+
             } catch (error) {
                 lastError = error;
-                console.warn(`Falha com ${source.name} e ${feedUrl}:`, error);
+                console.warn(`Falha com ${source.name} para ${feedUrl}:`, error);
                 continue;
             }
         }
     }
-
-    throw lastError || new Error('Todas as fontes falharam');
+    console.error("Todas as fontes de notícias falharam. Último erro:", lastError);
+    throw lastError || new Error('Todas as fontes de notícias falharam.');
 }
 
-
 async function loadNewsWidget(forceUpdate = false) {
-    const newsContentBox = document.querySelector('#news-widget .news-content'); 
+    const newsContentBox = document.querySelector('#news-widget .news-content');
+    const lastUpdatedEl = document.getElementById('news-last-updated');
     if (!newsContentBox) return;
 
     updateLoadingState(true);
+    if(lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...';
 
     if (!forceUpdate) {
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
+            if(lastUpdatedEl) lastUpdatedEl.textContent = `Cache: ${formatTimeSince(getCacheTimestamp())}`;
             updateLoadingState(false);
             return;
         }
     }
-
     if (!navigator.onLine) {
         showNotification('Sem conexão com a internet.', true);
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
+            if(lastUpdatedEl) lastUpdatedEl.textContent = `Offline. Cache: ${formatTimeSince(getCacheTimestamp())}`;
         } else {
-            newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache. Por favor, verifique sua internet.</div>';
+            newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache.</div>';
+            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Offline. Sem cache.';
         }
         updateLoadingState(false);
         return;
     }
-
     try {
         const newsItems = await fetchNews();
         if (newsItems.length > 0) {
             cacheNews(newsItems);
             renderNewsList(newsItems);
-            if (forceUpdate) showNotification('Notícias atualizadas com sucesso!');
+            if(lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(Date.now());
+            if (forceUpdate) showNotification('Notícias atualizadas!');
         } else {
             renderNewsList([], false, false);
-            if (forceUpdate) showNotification('Nenhuma notícia nova encontrada ou feeds vazios.', false);
+            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Nenhuma notícia nova.';
+            if (forceUpdate) showNotification('Nenhuma notícia nova.', false);
         }
         localStorage.setItem('retryCount', '0');
     } catch (fetchError) {
-        console.error('Falha ao buscar notícias online (loadNewsWidget):', fetchError);
-        if (forceUpdate) showNotification(`Problema com atualização: ${fetchError.message}.`, true);
-
+        console.error('Falha ao buscar notícias:', fetchError);
+        if (forceUpdate) showNotification(`Falha na atualização: ${fetchError.message}.`, true);
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
-            if (forceUpdate) showNotification('Mostrando notícias do cache devido à falha na atualização.', false);
+            if(lastUpdatedEl) lastUpdatedEl.textContent = `Falha. Cache: ${formatTimeSince(getCacheTimestamp())}`;
+            if (forceUpdate) showNotification('Mostrando notícias do cache.', false);
         } else {
             renderNewsList(FALLBACK_NEWS, false, true);
-            if (forceUpdate) showNotification('Não foi possível buscar notícias. Mostrando exemplos.', true);
+            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Falha. Mostrando exemplos.';
+            if (forceUpdate) showNotification('Mostrando exemplos.', true);
         }
         scheduleRetry();
     } finally {
@@ -295,618 +402,378 @@ async function loadNewsWidget(forceUpdate = false) {
     }
 }
 
-
-// =============================================
-// FUNÇÕES AUXILIARES DE NOTÍCIAS
-// =============================================
 function updateLoadingState(isLoading) {
     const refreshNewsBtn = document.getElementById('refresh-news-btn');
     const icon = refreshNewsBtn ? refreshNewsBtn.querySelector('i') : null;
-
     if (refreshNewsBtn && icon) {
-        if (isLoading) {
-            refreshNewsBtn.disabled = true;
-            icon.classList.add('fa-spin'); 
-        } else {
-            refreshNewsBtn.disabled = false;
-            icon.classList.remove('fa-spin'); 
-        }
+        refreshNewsBtn.disabled = isLoading;
+        icon.classList.toggle('fa-spin', isLoading);
     }
 }
 
-
 function parseXmlNews(xmlDoc) {
     const errorNode = xmlDoc.querySelector('parsererror');
-    if (errorNode) {
-        console.error("Erro de parsing XML:", errorNode.textContent);
-        throw new Error('Erro ao analisar XML do feed de notícias.');
-    }
-
+    if (errorNode) { console.error("Erro XML:", errorNode.textContent); throw new Error('Erro ao analisar XML.'); }
     const items = Array.from(xmlDoc.querySelectorAll("item"));
-    if (items.length === 0) {
-        const channelTitle = xmlDoc.querySelector("channel > title")?.textContent;
-        console.warn(`Nenhuma tag <item> encontrada no feed XML${channelTitle ? ` (Feed: ${channelTitle})` : ''}.`);
-        return [];
-    }
-
+    if (items.length === 0) { console.warn(`Nenhuma tag <item> encontrada.`); return []; }
     return items.map(item => {
         let description = item.querySelector("description")?.textContent?.trim() || '';
         description = description.replace("<![CDATA[", "").replace("]]>", "");
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = description;
+        description = tempDiv.textContent || tempDiv.innerText || "";
 
         return {
             title: item.querySelector("title")?.textContent?.trim() || 'Sem título',
-            description: description,
+            description: description.replace(/\s+/g, ' ').trim(),
             link: item.querySelector("link")?.textContent?.trim() || '#',
             pubDate: item.querySelector("pubDate")?.textContent?.trim() || new Date().toISOString()
         };
     });
 }
 
-
 function renderNewsList(items, fromCache = false, isFallback = false) {
-    const newsContentBox = document.querySelector('#news-widget .news-content'); 
+    const newsContentBox = document.querySelector('#news-widget .news-content');
     if (!newsContentBox) return;
-
-    const favorites = getFavorites();
-    let statusHtml = '';
-
-    if (isFallback && !fromCache) {
-        statusHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Serviço indisponível - mostrando notícias de exemplo.</div>`;
-    } else if (fromCache) {
-        const cacheTime = new Date(getCacheTimestamp() || Date.now());
-        statusHtml = `
-            <div class="news-status">
-                <span><i class="fas fa-info-circle"></i> Mostrando notícias do cache (${cacheTime.toLocaleTimeString('pt-BR')}).</span>
-                <button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-left:auto; padding: 4px 8px; font-size: 11px;">Atualizar Agora</button>
-            </div>`;
+    const favorites = getFavorites(); let statusHtml = '';
+    if (isFallback && !fromCache) statusHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Mostrando notícias de exemplo.</div>`;
+    else if (fromCache) {
+        // O timestamp já é exibido no header do box, não precisa repetir aqui,
+        // mas um botão para forçar atualização pode ser útil.
+        // statusHtml = `<div class="news-status"><span>Cache.</span><button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-left:auto; padding: 4px 8px; font-size: 11px;">Atualizar</button></div>`;
     }
-
-
-    newsContentBox.innerHTML = `
-        ${statusHtml}
-        ${items.length === 0 && !isFallback ? '<p style="padding:10px; text-align:center;">Nenhuma notícia encontrada no momento.</p>' : ''}
-        ${items.map(item => {
-            const isFavorited = favorites.some(fav => fav.link === item.link);
-
-            let cleanDescription = item.description || '';
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = cleanDescription;
-            cleanDescription = (tempDiv.textContent || tempDiv.innerText || "").replace(/\s+/g, ' ').trim();
-
-            return `
-                <div class="news-item">
-                    <button class="favorite-btn ${isFavorited ? 'favorited' : ''}"
-                            aria-label="${isFavorited ? 'Desfavoritar notícia' : 'Favoritar notícia'}"
-                            onclick="toggleFavorite(event, ${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                        <i class="fas fa-heart"></i>
-                    </button>
-                    <a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer">
-                        <div class="news-item-title">${item.title}</div>
-                        ${cleanDescription ? `<div class="news-item-description">${cleanDescription.substring(0,180)}${cleanDescription.length > 180 ? '...' : ''}</div>` : ''}
-                        <div class="news-item-date" style="font-size:0.75em; opacity:0.7; margin-top:5px;">${formatDate(item.pubDate)}</div>
-                    </a>
-                </div>
-            `;
-        }).join('')}
-        ${!isFallback && navigator.onLine ? `<button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;">
-            <i class="fas fa-sync-alt"></i> Tentar atualizar notícias
-        </button>` : ''}
-    `;
+    newsContentBox.innerHTML = `${statusHtml}${items.length === 0 && !isFallback ? '<p style="padding:10px; text-align:center;">Nenhuma notícia.</p>' : ''}${items.map(item => {
+        const isFavorited = favorites.some(fav => fav.link === item.link);
+        let cleanDescription = item.description || '';
+        return `<div class="news-item"><button class="favorite-btn ${isFavorited ? 'favorited' : ''}" aria-label="${isFavorited ? 'Desfavoritar' : 'Favoritar'}" onclick="toggleFavorite(event, ${JSON.stringify(item).replace(/"/g, '&quot;')})"><i class="fas fa-heart"></i></button><a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer"><div class="news-item-title">${item.title}</div>${cleanDescription ? `<div class="news-item-description">${cleanDescription.substring(0,180)}${cleanDescription.length > 180 ? '...' : ''}</div>` : ''}<div class="news-item-date">${formatDate(item.pubDate)}</div></a></div>`;
+    }).join('')}${!isFallback && navigator.onLine ? `<button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;"><i class="fas fa-sync-alt"></i> Tentar atualizar</button>` : ''}`;
 }
-
 
 function renderErrorState(error) {
-    const newsContentBox = document.querySelector('#news-widget .news-content'); 
-    if (newsContentBox) {
-        newsContentBox.innerHTML = `
-            <div class="error">
-                <p><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro desconhecido ao carregar notícias.'}</p>
-                <p>Verifique sua conexão e tente novamente.</p>
-                <button onclick="loadNewsWidget(true)" class="retry-btn">
-                    <i class="fas fa-sync-alt"></i> Tentar novamente
-                </button>
-            </div>
-        `;
-    }
+    const newsContentBox = document.querySelector('#news-widget .news-content');
+    if (newsContentBox) newsContentBox.innerHTML = `<div class="error"><p><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro.'}</p><p>Verifique sua conexão.</p><button onclick="loadNewsWidget(true)" class="retry-btn"><i class="fas fa-sync-alt"></i> Tentar novamente</button></div>`;
 }
-
-
 function scheduleRetry() {
     const retryCount = parseInt(localStorage.getItem('retryCount') || '0');
     const delay = Math.min(60000 * Math.pow(2, retryCount), 10 * 60 * 1000);
     localStorage.setItem('retryCount', (retryCount + 1).toString());
-
-    console.log(`Agendando nova tentativa de buscar notícias em ${delay/1000} segundos`);
-    setTimeout(() => loadNewsWidget(true), delay);
+    console.log(`Nova tentativa em ${delay/1000}s`); setTimeout(() => loadNewsWidget(true), delay);
 }
-
-
 function formatDate(dateString) {
-    if (!dateString) return '';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '';
-        return date.toLocaleDateString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    } catch (e) {
-        console.error("Erro ao formatar data:", dateString, e);
-        return '';
-    }
+    if (!dateString) return ''; try { const date = new Date(dateString); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch (e) { console.error("Erro data:", dateString, e); return ''; }
 }
-
-// =============================================
-// FUNÇÕES DE CACHE
-// =============================================
 function getCachedNews() {
-    try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (!cached) return null;
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL) return data;
-        localStorage.removeItem(CACHE_KEY);
-        return null;
-    } catch (e) {
-        localStorage.removeItem(CACHE_KEY);
-        return null;
-    }
+    try { const cached = localStorage.getItem(CACHE_KEY_NEWS); if (!cached) return null; const { data, timestamp } = JSON.parse(cached); if (Date.now() - timestamp < CACHE_TTL_NEWS) return data; localStorage.removeItem(CACHE_KEY_NEWS); return null; } catch (e) { localStorage.removeItem(CACHE_KEY_NEWS); return null; }
 }
-
 function getCacheTimestamp() {
-    try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        return cached ? JSON.parse(cached).timestamp : null;
-    } catch { return null; }
+    try { const cached = localStorage.getItem(CACHE_KEY_NEWS); return cached ? JSON.parse(cached).timestamp : null; } catch { return null; }
 }
-
 function cacheNews(data) {
-    if (!data || data.length === 0) return;
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-    } catch (e) {
-        console.error('Erro ao salvar cache:', e);
-    }
+    if (!data || data.length === 0) return; try { localStorage.setItem(CACHE_KEY_NEWS, JSON.stringify({ data, timestamp: Date.now() })); } catch (e) { console.error('Erro cache:', e); }
 }
-
-// =============================================
-// FUNÇÕES DE FAVORITOS
-// =============================================
 function getFavorites() {
-    try {
-        return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
-    } catch {
-        localStorage.removeItem(FAVORITES_KEY);
-        return [];
-    }
+    try { return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch { localStorage.removeItem(FAVORITES_KEY); return []; }
 }
-
 function saveFavorites(favorites) {
-    try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-    } catch (e) { console.error('Erro ao salvar favoritos:', e); }
+    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) { console.error('Erro favoritos:', e); }
 }
 
 function toggleFavorite(event, newsItem) {
-    event.stopPropagation();
-    event.preventDefault();
-
-    let favorites = getFavorites();
+    event.stopPropagation(); event.preventDefault(); let favorites = getFavorites();
     const index = favorites.findIndex(item => item.link === newsItem.link);
-
-    if (index === -1) {
-        favorites.push(newsItem);
-        showNotification('Notícia adicionada aos favoritos!');
-    } else {
-        favorites.splice(index, 1);
-        showNotification('Notícia removida dos favoritos.');
-    }
-    saveFavorites(favorites);
-
-    const heartButton = event.currentTarget;
+    if (index === -1) { favorites.push(newsItem); showNotification('Notícia favoritada!'); }
+    else { favorites.splice(index, 1); showNotification('Notícia desfavoritada.'); }
+    saveFavorites(favorites); const heartButton = event.currentTarget;
     heartButton.classList.toggle('favorited', index === -1);
-    heartButton.setAttribute('aria-label', index === -1 ? 'Desfavoritar notícia' : 'Favoritar notícia');
+    heartButton.setAttribute('aria-label', index === -1 ? 'Desfavoritar' : 'Favoritar');
 }
 
-
-// =============================================
-// FUNÇÕES DE INTERFACE
-// =============================================
 function showNotification(message, isError = false) {
     const existingNotification = document.querySelector('.page-notification');
     if (existingNotification) existingNotification.remove();
-
     const notification = document.createElement('div');
     const notificationTypeClass = isError ? 'error' : (message.toLowerCase().includes('copiado') ? 'success' : 'success');
     notification.className = `page-notification ${notificationTypeClass}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.opacity = '1';
-        notification.style.transform = 'translate(-50%, 0)';
-    }, 10);
-
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translate(-50%, -40px)';
-        setTimeout(() => notification.remove(), 300);
-    }, 4000);
-}
-function updateDateTime() {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: false
-    });
-    
-    const dataAtualElement = document.getElementById('data-atual');
-    if (dataAtualElement) {
-        dataAtualElement.querySelector('.datetime').textContent = formattedDate;
-    }
-    
-    const footerElement = document.getElementById('footer');
-    if (footerElement) footerElement.textContent = `Fonte: Dados em tempo real • Atualizado em ${formattedDate}`;
+    notification.textContent = message; document.body.appendChild(notification);
+    setTimeout(() => { notification.classList.add('show'); }, 10);
+    setTimeout(() => { notification.classList.remove('show'); setTimeout(() => notification.remove(), 300); }, 4000);
 }
 
 function toggleFullscreen() {
-    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-        const element = document.documentElement;
-        if (element.requestFullscreen) element.requestFullscreen().catch(handleFullscreenError);
-        else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen().catch(handleFullscreenError);
-        else if (element.mozRequestFullScreen) element.mozRequestFullScreen().catch(handleFullscreenError);
-        else if (element.msRequestFullscreen) element.msRequestFullscreen().catch(handleFullscreenError);
-    } else {
-        if (document.exitFullscreen) document.exitFullscreen().catch(handleFullscreenError);
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(handleFullscreenError);
-        else if (document.mozCancelFullScreen) document.mozCancelFullScreen().catch(handleFullscreenError);
-        else if (document.msExitFullscreen) document.msExitFullscreen().catch(handleFullscreenError);
+    if (!document.fullscreenElement) { const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(handleFullscreenError); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(handleFullscreenError); } else { if (document.exitFullscreen) document.exitFullscreen().catch(handleFullscreenError); }
+}
+function handleFullscreenError(err) {
+    console.error(`Erro tela cheia: ${err.message}`, err); showNotification('Erro ao alternar tela cheia.', true);
+}
+function handleFullscreenChange() {
+    const fsBtn = document.getElementById('fullscreen-btn'); const fsExitBtn = document.getElementById('fullscreen-exit-btn');
+    const isFullscreen = !!document.fullscreenElement;
+    if (fsBtn) fsBtn.style.display = isFullscreen ? 'none' : 'flex';
+    if (fsExitBtn) fsExitBtn.style.display = isFullscreen ? 'flex' : 'none';
+}
+
+function setupCommentaryActions() {
+    const commentaryBox = document.getElementById('box-commentary'); if (!commentaryBox) return;
+    const boxHeader = commentaryBox.querySelector('.box-header'); if (!boxHeader) return;
+    let actionsContainer = boxHeader.querySelector('.box-actions');
+    if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); }
+
+    if (!actionsContainer.querySelector('#expand-commentary-btn')) {
+        const expandBtn = document.createElement('button'); expandBtn.id = 'expand-commentary-btn'; expandBtn.className = 'expand-btn';
+        expandBtn.setAttribute('aria-label', 'Expandir'); expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i>';
+        actionsContainer.appendChild(expandBtn);
+        expandBtn.addEventListener('click', function() { commentaryBox.classList.toggle('expanded'); const icon = this.querySelector('i'); icon.classList.toggle('fa-expand-alt', !commentaryBox.classList.contains('expanded')); icon.classList.toggle('fa-compress-alt', commentaryBox.classList.contains('expanded')); expandBtn.setAttribute('aria-label', commentaryBox.classList.contains('expanded') ? 'Recolher' : 'Expandir'); });
+    }
+    if (!actionsContainer.querySelector('#share-commentary-btn')) {
+        const shareBtn = document.createElement('button'); shareBtn.id = 'share-commentary-btn'; shareBtn.className = 'expand-btn';
+        shareBtn.setAttribute('aria-label', 'Compartilhar'); shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        actionsContainer.appendChild(shareBtn);
+        shareBtn.addEventListener('click', async function() {
+            const commentaryContentEl = document.getElementById('commentary-content');
+            if (!commentaryContentEl) { showNotification('Conteúdo não encontrado.', true); return; }
+            let textToShare = "";
+            commentaryContentEl.querySelectorAll('p, .commentary-highlight, li').forEach(el => { textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n"); });
+            textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim();
+            if (!textToShare) { showNotification('Não há conteúdo para compartilhar.', true); return; }
+            const shareData = { title: 'Radar Financeiro - Análise', text: textToShare };
+            try {
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); showNotification('Conteúdo compartilhado!'); }
+                else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(textToShare); showNotification('Texto da análise copiado!'); }
+                else { throw new Error('Compartilhamento não suportado.'); }
+            } catch (err) { console.error('Erro ao compartilhar:', err); if (err.name !== 'AbortError') { showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true); } }
+         });
     }
 }
 
-function handleFullscreenError(err) {
-    console.error(`Erro ao alternar tela cheia: ${err.message} (${err.name})`);
-    showNotification('Não foi possível alternar o modo de tela cheia.', true);
+function saveBoxOrder() {
+    const container = document.getElementById('draggable-container'); if (!container) return;
+    const boxes = Array.from(container.children).filter(c => c.classList.contains('draggable-box')).map(b => b.id);
+    if (boxes.length > 0) localStorage.setItem(BOX_ORDER_KEY, JSON.stringify(boxes));
+}
+function loadBoxOrder() {
+    const container = document.getElementById('draggable-container'); if (!container) return;
+    try { const savedOrderJSON = localStorage.getItem(BOX_ORDER_KEY); if (!savedOrderJSON) return;
+        const savedOrder = JSON.parse(savedOrderJSON);
+        if (Array.isArray(savedOrder) && savedOrder.length > 0) {
+            const currentBoxes = new Map(Array.from(container.querySelectorAll('.draggable-box')).map(b => [b.id, b]));
+            savedOrder.forEach(id => { if (currentBoxes.has(id)) container.appendChild(currentBoxes.get(id)); });
+        }
+    } catch (e) { console.error("Erro ordem:", e); localStorage.removeItem(BOX_ORDER_KEY); }
+}
+function setupDragAndDrop() {
+    const container = document.getElementById('draggable-container'); if (!container) return; loadBoxOrder();
+    const boxes = container.querySelectorAll('.draggable-box');
+    boxes.forEach(box => { box.removeEventListener('dragstart', handleDragStart); box.removeEventListener('dragend', handleDragEnd); box.addEventListener('dragstart', handleDragStart); box.addEventListener('dragend', handleDragEnd); });
+    container.removeEventListener('dragover', handleDragOver); container.addEventListener('dragover', handleDragOver);
+}
+function handleDragStart(e) {
+    if (e.target.classList.contains('draggable-box')) { if (e.dataTransfer) { e.dataTransfer.setData('text/plain', e.target.id); e.dataTransfer.effectAllowed = 'move'; } setTimeout(() => e.target.classList.add('dragging'), 0); }
+}
+function handleDragEnd(e) {
+    if (e.target.classList.contains('draggable-box')) { e.target.classList.remove('dragging'); saveBoxOrder(); showNotification('Layout dos boxes salvo!'); }
+}
+function handleDragOver(e) {
+    e.preventDefault(); const container = e.currentTarget; const draggingBox = container.querySelector('.draggable-box.dragging'); if (!draggingBox) return;
+    const afterElement = getDragAfterElement(container, e.clientY);
+    if (afterElement == null) container.appendChild(draggingBox); else container.insertBefore(draggingBox, afterElement);
+}
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.draggable-box:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) return { offset: offset, element: child }; else return closest; }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-function handleFullscreenChange() {
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-    const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-    if (fullscreenBtn) fullscreenBtn.style.display = isFullscreen ? 'none' : 'flex';
-    if (fullscreenExitBtn) fullscreenExitBtn.style.display = isFullscreen ? 'flex' : 'none';
+function setupScrollAnimations() {
+    const boxes = document.querySelectorAll('.content-box');
+    const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
+    const observerCallback = (entries, observer) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }}); };
+    const scrollObserver = new IntersectionObserver(observerCallback, observerOptions);
+    boxes.forEach(box => scrollObserver.observe(box));
 }
+const debouncedUpdateScrollProgressBar = debounce(function() {
+    const progressBar = document.getElementById('scroll-progress-bar'); if (!progressBar) return;
+    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+    const scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight) - document.documentElement.clientHeight;
+    if (scrollHeight > 0) progressBar.style.width = `${(scrollTop / scrollHeight) * 100}%`; else progressBar.style.width = '0%';
+}, 10); // Debounce com 10ms de espera
+
+const debouncedUpdateBannerOnResize = debounce(updateBanner, 250); // Debounce com 250ms
 
 function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLightMode = document.body.classList.contains('light-mode');
     localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+    const newTheme = isLightMode ? 'light' : 'dark';
+
     const themeIcon = document.querySelector('#theme-toggle i');
     if (themeIcon) {
         themeIcon.classList.toggle('fa-moon', !isLightMode);
         themeIcon.classList.toggle('fa-sun', isLightMode);
     }
-    showNotification("Tema alterado. Recarregue para aplicar aos gráficos, se necessário.");
+
+    const tickerTapeSkeleton = document.querySelector('#tradingview-ticker-tape-container .tv-skeleton');
+    if (tickerTapeSkeleton) tickerTapeSkeleton.style.display = 'flex';
+    const marketOverviewSkeleton = document.querySelector('#market-overview-widget-wrapper .tv-skeleton');
+    if (marketOverviewSkeleton) marketOverviewSkeleton.style.display = 'flex';
+
+    if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(newTheme);
+    if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(newTheme);
+
+    const calendarOverlay = document.getElementById('economic-calendar-overlay');
+    if (calendarOverlay && calendarOverlay.classList.contains('is-active')) {
+        if (typeof loadEconomicCalendarWidget === 'function') {
+            loadEconomicCalendarWidget();
+        }
+    }
 }
 
 // =============================================
-// AÇÕES DO BOX DE COMENTÁRIO (EXPANDIR/COMPARTILHAR)
+// PULL TO REFRESH (BÁSICO)
 // =============================================
-function setupCommentaryActions() {
-    const commentaryBox = document.getElementById('box-commentary'); 
-    if (!commentaryBox) return;
-    const boxHeader = commentaryBox.querySelector('.box-header');
-    if (!boxHeader) return;
+function setupPullToRefresh() {
+    const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
+    if (!ptrIndicator) return;
 
-    let expandBtn = boxHeader.querySelector('#expand-commentary-btn');
-    if (!expandBtn) {
-        expandBtn = document.createElement('button');
-        expandBtn.id = 'expand-commentary-btn';
-        expandBtn.className = 'expand-btn';
-        expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
-        expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i>';
-        
-        const actionsContainer = boxHeader.querySelector('.box-actions');
-        if (actionsContainer) {
-            actionsContainer.appendChild(expandBtn);
-        } else {
-            boxHeader.appendChild(expandBtn);
+    let startY = 0;
+    let isDragging = false;
+    const PULL_THRESHOLD = 70; // Pixels to pull down to trigger
+    const MAX_PULL_DISTANCE = 100; // Max visual pull distance
+
+    document.body.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0) { // Only activate if scrolled to the top
+            startY = e.touches[0].pageY;
+            isDragging = true;
+            ptrIndicator.classList.add('visible'); // Make it visible for transform
         }
-        
-        expandBtn.addEventListener('click', function() {
-            commentaryBox.classList.toggle('expanded');
-            const icon = this.querySelector('i');
-            const commentaryContent = commentaryBox.querySelector('.box-content'); 
+    }, { passive: true });
 
-            if (commentaryBox.classList.contains('expanded')) {
-                icon.classList.replace('fa-expand-alt', 'fa-compress-alt');
-                expandBtn.setAttribute('aria-label', 'Recolher conteúdo');
-                if (commentaryContent) commentaryContent.style.overflowY = 'auto';
+    document.body.addEventListener('touchmove', (e) => {
+        if (!isDragging || window.scrollY !== 0) { // Ensure still at top
+            isDragging = false; // disable if user scrolls down conventionally
+            ptrIndicator.style.transform = `translateY(-50px)`; // reset position
+            ptrIndicator.classList.remove('active');
+            return;
+        }
+
+        const currentY = e.touches[0].pageY;
+        let diffY = currentY - startY;
+
+        if (diffY > 0) { // Pulling down
+            e.preventDefault(); // Prevent browser's default pull-to-refresh if any, and scroll
+            const pullDistance = Math.min(diffY, MAX_PULL_DISTANCE);
+            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`; // Move indicator visually
+
+            if (diffY > PULL_THRESHOLD) {
+                ptrIndicator.classList.add('active');
+                ptrIndicator.innerHTML = '<i class="fas fa-arrow-up"></i> Solte para atualizar';
             } else {
-                icon.classList.replace('fa-compress-alt', 'fa-expand-alt');
-                expandBtn.setAttribute('aria-label', 'Expandir conteúdo');
-                if (commentaryContent) commentaryContent.style.overflowY = 'auto'; 
+                ptrIndicator.classList.remove('active');
+                ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
             }
-        });
-    }
-
-    let shareBtn = boxHeader.querySelector('#share-commentary-btn');
-    if (!shareBtn) {
-        shareBtn = document.createElement('button');
-        shareBtn.id = 'share-commentary-btn';
-        shareBtn.className = 'expand-btn';
-        shareBtn.setAttribute('aria-label', 'Compartilhar análise');
-        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
-
-        const actionsContainer = boxHeader.querySelector('.box-actions');
-        if (actionsContainer) {
-            actionsContainer.appendChild(shareBtn);
-        } else {
-            boxHeader.appendChild(shareBtn);
+        } else { // Pulling up or no significant pull
+            ptrIndicator.style.transform = `translateY(-50px)`;
         }
+    }, { passive: false }); // passive: false because we call preventDefault
 
-        shareBtn.addEventListener('click', async function() {
-            const commentaryContentEl = document.getElementById('commentary-content');
-            if (!commentaryContentEl) {
-                showNotification('Conteúdo da análise não encontrado.', true); return;
-            }
-            let textToShare = "";
-            commentaryContentEl.querySelectorAll('.commentary-paragraph, .commentary-highlight, li').forEach(el => {
-                textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n");
+    document.body.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        ptrIndicator.style.transform = `translateY(-50px)`; // Reset position smoothly
+        ptrIndicator.classList.remove('visible');
+
+
+        const currentY = e.changedTouches[0].pageY; // Use changedTouches for touchend
+        const diffY = currentY - startY;
+
+        if (diffY > PULL_THRESHOLD && window.scrollY === 0) {
+            ptrIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+            ptrIndicator.classList.add('active'); // Keep it visible while refreshing
+
+            showNotification('Atualizando dados...');
+            Promise.all([
+                loadNewsWidget(true),
+                updateCommentaryContent()
+            ]).then(() => {
+                showNotification('Dados atualizados!');
+            }).catch(err => {
+                showNotification('Erro ao atualizar os dados.', true);
+                console.error("Erro no pull-to-refresh:", err);
+            }).finally(() => {
+                 setTimeout(() => { // Delay hiding indicator
+                    ptrIndicator.classList.remove('active');
+                    ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
+                 }, 500);
             });
-            textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim();
-            if (!textToShare) {
-                showNotification('Não há conteúdo para compartilhar.', true); return;
-            }
-            const shareData = { title: 'Radar Financeiro - Análise', text: textToShare };
-            try {
-                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
-                    showNotification('Conteúdo compartilhado!');
-                } else if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(textToShare);
-                    showNotification('Texto da análise copiado!');
-                } else {
-                    throw new Error('Compartilhamento não suportado.');
-                }
-            } catch (err) {
-                console.error('Erro ao compartilhar/copiar:', err);
-                if (err.name !== 'AbortError') {
-                    showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar ou copiar.', true);
-                }
-            }
-        });
-    }
-}
-
-
-// =============================================
-// DRAG AND DROP FUNCTIONS
-// =============================================
-function saveBoxOrder() {
-    const container = document.getElementById('draggable-container');
-    if (!container) return;
-    const boxes = Array.from(container.children)
-                       .filter(child => child.classList.contains('draggable-box'))
-                       .map(box => box.id);
-    if (boxes.length > 0) {
-        localStorage.setItem(BOX_ORDER_KEY, JSON.stringify(boxes));
-    }
-}
-
-function loadBoxOrder() {
-    const container = document.getElementById('draggable-container');
-    if (!container) return;
-    try {
-        const savedOrderJSON = localStorage.getItem(BOX_ORDER_KEY);
-        if (!savedOrderJSON) return;
-        const savedOrder = JSON.parse(savedOrderJSON);
-        if (Array.isArray(savedOrder) && savedOrder.length > 0) {
-            const currentDraggableBoxesInDOM = new Map(Array.from(container.querySelectorAll('.draggable-box')).map(box => [box.id, box]));
-            savedOrder.forEach(id => {
-                const boxElement = currentDraggableBoxesInDOM.get(id);
-                if (boxElement) {
-                    container.appendChild(boxElement);
-                }
-            });
-        }
-    } catch (e) {
-        console.error("Erro ao carregar ordem dos boxes:", e);
-        localStorage.removeItem(BOX_ORDER_KEY);
-    }
-}
-
-
-function setupDragAndDrop() {
-    const container = document.getElementById('draggable-container');
-    if (!container) return;
-
-    loadBoxOrder();
-
-    const boxes = container.querySelectorAll('.draggable-box');
-    boxes.forEach(box => {
-        box.removeEventListener('dragstart', handleDragStart);
-        box.removeEventListener('dragend', handleDragEnd);
-        box.addEventListener('dragstart', handleDragStart);
-        box.addEventListener('dragend', handleDragEnd);
-    });
-
-    container.removeEventListener('dragover', handleDragOver);
-    container.addEventListener('dragover', handleDragOver);
-}
-
-function handleDragStart(e) {
-    if (e.target.classList.contains('draggable-box')) {
-        if (e.dataTransfer) {
-            e.dataTransfer.setData('text/plain', e.target.id);
-            e.dataTransfer.effectAllowed = 'move';
-        }
-        setTimeout(() => e.target.classList.add('dragging'), 0);
-    }
-}
-
-function handleDragEnd(e) {
-    if (e.target.classList.contains('draggable-box')) {
-        e.target.classList.remove('dragging');
-        saveBoxOrder();
-        showNotification('Layout salvo!');
-    }
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    const container = e.currentTarget;
-    const draggingBox = container.querySelector('.draggable-box.dragging');
-    if (!draggingBox) return;
-
-    const afterElement = getDragAfterElement(container, e.clientY);
-    if (afterElement == null) {
-        container.appendChild(draggingBox);
-    } else {
-        container.insertBefore(draggingBox, afterElement);
-    }
-}
-
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.draggable-box:not(.dragging)')];
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
         } else {
-            return closest;
+            ptrIndicator.classList.remove('active');
+            ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
         }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-
-// =============================================
-// ADICIONADO: FUNÇÕES PARA NOVAS MODERNIZAÇÕES
-// =============================================
-
-// Função para configurar animações de entrada (Scroll Reveal)
-function setupScrollAnimations() {
-    const boxes = document.querySelectorAll('.content-box'); 
-
-    const observerOptions = {
-        root: null, 
-        rootMargin: '0px',
-        threshold: 0.1 
-    };
-
-    const observerCallback = (entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-                observer.unobserve(entry.target); 
-            }
-        });
-    };
-
-    const scrollObserver = new IntersectionObserver(observerCallback, observerOptions);
-    boxes.forEach(box => scrollObserver.observe(box));
-}
-
-// Função para atualizar a barra de progresso de scroll
-function updateScrollProgressBar() {
-    const progressBar = document.getElementById('scroll-progress-bar');
-    if (!progressBar) return;
-
-    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-    const scrollHeight = Math.max(
-        document.body.scrollHeight, document.documentElement.scrollHeight,
-        document.body.offsetHeight, document.documentElement.offsetHeight,
-        document.body.clientHeight, document.documentElement.clientHeight
-    ) - document.documentElement.clientHeight;
-    
-    if (scrollHeight > 0) {
-        const scrolledPercentage = (scrollTop / scrollHeight) * 100;
-        progressBar.style.width = scrolledPercentage + '%';
-    } else {
-        progressBar.style.width = '0%'; 
-    }
-}
-
-// =============================================
-// FUNÇÃO PARA CARREGAR WIDGET DE CALENDÁRIO ECONÔMICO
-// =============================================
-function loadEconomicCalendarWidget() {
-    const widgetContainer = document.getElementById('economicCalendarWidget');
-    if (!widgetContainer) {
-        console.error('Economic calendar widget container not found.');
-        return;
-    }
-
-    widgetContainer.innerHTML = ''; // Clear previous widget instance to allow reloading with new theme
-
-    const script = document.createElement('script');
-    script.async = true;
-    script.type = 'text/javascript';
-    script.dataset.type = 'calendar-widget'; // Important for the Tradays script
-    script.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13';
-
-    // Determine the theme for the widget based on the body class
-    const currentThemeIsLight = document.body.classList.contains('light-mode');
-    const widgetTheme = currentThemeIsLight ? 0 : 1; // 0 for light, 1 for dark (Tradays specific)
-
-    // The configuration is provided as the text content of the script tag
-    script.text = JSON.stringify({
-        "width": "100%",
-        "height": "100%",
-        "mode": "1", // Mode 2 is "Widget". Mode 1 is "List".
-        "lang": "pt",
-        "theme": widgetTheme
+        startY = 0; // Reset startY
     });
-
-    widgetContainer.appendChild(script);
 }
 
 
 // =============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO DOMContentLoaded
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    if (localStorage.getItem('themePreference') === 'light') {
+    let currentTheme = 'dark';
+    const savedTheme = localStorage.getItem('themePreference');
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+
+    if (savedTheme === 'light' || (!savedTheme && prefersLight)) {
+        currentTheme = 'light';
         document.body.classList.add('light-mode');
-        const themeIcon = document.querySelector('#theme-toggle i');
-        if (themeIcon) {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-        }
+    } else {
+        document.body.classList.remove('light-mode');
     }
 
-    setupCommentaryActions();
-    await loadBannerPhrases();
+    const themeIcon = document.querySelector('#theme-toggle i');
+    if (themeIcon) {
+        themeIcon.classList.toggle('fa-moon', currentTheme === 'dark');
+        themeIcon.classList.toggle('fa-sun', currentTheme === 'light');
+    }
+
+    if (typeof setupCommentaryActions === 'function') setupCommentaryActions();
+    if (typeof loadBannerPhrases === 'function') await loadBannerPhrases();
 
     const refreshBtn = document.getElementById('refresh-btn');
-    if (refreshBtn) refreshBtn.addEventListener('click', () => {
-        showNotification('Atualizando todos os dados...');
-        Promise.all([
-            updateDateTime(),
-            loadNewsWidget(true),
-            updateCommentaryContent()
-        ]).then(() => {
-            showNotification('Todos os dados foram atualizados!');
-        }).catch(err => {
-            showNotification('Erro durante a atualização geral.', true);
-            console.error("Erro na atualização geral:", err);
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            showNotification('Atualizando todos os dados...');
+            Promise.all([
+                updateDateTime(),
+                loadNewsWidget(true),
+                updateCommentaryContent()
+            ]).then(() => {
+                showNotification('Todos os dados foram atualizados!');
+            }).catch(err => {
+                showNotification('Erro durante a atualização geral.', true);
+                console.error("Erro na atualização geral:", err);
+            });
         });
-    });
+    }
 
     const refreshNewsBtn = document.getElementById('refresh-news-btn');
-    if (refreshNewsBtn) refreshNewsBtn.addEventListener('click', () => loadNewsWidget(true));
+    if (refreshNewsBtn && typeof loadNewsWidget === 'function') {
+        refreshNewsBtn.addEventListener('click', () => loadNewsWidget(true));
+    }
 
     const themeToggleBtn = document.getElementById('theme-toggle');
-    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+    if (themeToggleBtn && typeof toggleTheme === 'function') {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
 
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
+    if (fullscreenBtn && typeof toggleFullscreen === 'function') {
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+    }
     const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-    if (fullscreenExitBtn) fullscreenExitBtn.addEventListener('click', toggleFullscreen);
+    if (fullscreenExitBtn && typeof toggleFullscreen === 'function') {
+        fullscreenExitBtn.addEventListener('click', toggleFullscreen);
+    }
 
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event =>
-        document.addEventListener(event, handleFullscreenChange)
+        document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {})
     );
 
     document.getElementById('analises-btn')?.addEventListener('click', () => window.location.href = 'analises.html');
@@ -914,7 +781,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('calculadoras-btn')?.addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
     document.getElementById('terminal-btn')?.addEventListener('click', () => window.location.href = 'terminal-news.html');
 
-    // EVENT LISTENERS FOR ECONOMIC CALENDAR
     const calendarToggleBtn = document.getElementById('economic-calendar-toggle-btn');
     const calendarOverlay = document.getElementById('economic-calendar-overlay');
     const calendarContentPanel = document.getElementById('economic-calendar-content-panel');
@@ -924,48 +790,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         calendarToggleBtn.addEventListener('click', () => {
             calendarOverlay.classList.add('is-active');
             calendarContentPanel.classList.add('is-visible');
-            loadEconomicCalendarWidget(); // Load/reload widget with current theme
+            if (typeof loadEconomicCalendarWidget === 'function') loadEconomicCalendarWidget();
         });
-
         const closeCalendarOverlay = () => {
             calendarContentPanel.classList.remove('is-visible');
             calendarOverlay.classList.remove('is-active');
-            // Optional: You might want to clear the widget content if it causes issues when hidden
-            // const widgetContainer = document.getElementById('economicCalendarWidget');
-            // if (widgetContainer) widgetContainer.innerHTML = '';
         };
-
         closeCalendarBtn.addEventListener('click', closeCalendarOverlay);
-
-        calendarOverlay.addEventListener('click', (event) => {
-            // Close if clicked on the backdrop (overlay-panel) itself,
-            // not on the content panel or its children.
-            if (event.target === calendarOverlay) {
-                closeCalendarOverlay();
-            }
-        });
+        calendarOverlay.addEventListener('click', (event) => { if (event.target === calendarOverlay) closeCalendarOverlay(); });
     }
 
-    window.addEventListener('resize', updateBanner);
-    window.addEventListener('scroll', updateScrollProgressBar); 
+    window.addEventListener('resize', debouncedUpdateBannerOnResize);
+    window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
+    debouncedUpdateScrollProgressBar(); // Initial call
 
-    updateDateTime();
-    loadNewsWidget();
-    updateCommentaryContent();
-    updateScrollProgressBar(); 
-    setupScrollAnimations(); 
+    if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000);  }
+    if (typeof loadNewsWidget === 'function') loadNewsWidget();
+    if (typeof updateCommentaryContent === 'function') { updateCommentaryContent(); setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL); }
 
-    setInterval(updateDateTime, 60000);
-    setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL);
-    setInterval(updateBanner, 5 * 60 * 1000);
 
-    setupDragAndDrop();
+    if (typeof updateBanner === 'function') {
+        setInterval(updateBanner, 30 * 1000);
+    }
+
+    if (typeof setupDragAndDrop === 'function') setupDragAndDrop();
+    if (typeof setupScrollAnimations === 'function') setupScrollAnimations();
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh();
+
+
+    if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
+    if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(currentTheme);
+
+    const newsLastUpdatedEl = document.getElementById('news-last-updated');
+    if(newsLastUpdatedEl && getCacheTimestamp()) newsLastUpdatedEl.textContent = formatTimeSince(getCacheTimestamp());
+    const commentaryLastUpdatedEl = document.getElementById('commentary-last-updated');
+    if(commentaryLastUpdatedEl && commentaryLastUpdateTimestamp) commentaryLastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp);
+
 
     setTimeout(() => {
-        if (!document.querySelector('.page-notification')) {
+        if (!document.querySelector('.page-notification') && typeof showNotification === "function") {
              showNotification('Bem-vindo ao Mercado Macro!');
         }
     }, 1500);
 });
 
-window.toggleFavorite = toggleFavorite;
+if (typeof toggleFavorite === "function") {
+    window.toggleFavorite = toggleFavorite;
+}
+if (typeof loadNewsWidget === "function") {
+    window.loadNewsWidget = loadNewsWidget;
+}
