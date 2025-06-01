@@ -185,16 +185,34 @@ body {
 }
 .box-header i:first-child { font-size: 18px; color: var(--primary-color); }
 .box-actions { margin-left: auto; display: flex; gap: 8px; }
-.box-content { flex: 1; overflow-y: auto; min-height: 0; padding-right: 8px; }
 
-#market-overview-widget-wrapper {
-    height: 100%;
-    min-height: 450px;
+.box-content { /* Estilo geral para o conteúdo dos boxes */
+    flex: 1;
+    overflow-y: auto; /* Scroll padrão para conteúdo que excede a altura */
+    min-height: 0;
+    padding-right: 8px; /* Espaço para a barra de rolagem */
 }
-#market-overview-widget-wrapper .tradingview-widget-container { height: 500px !important; }
+
+/* Sobrescreve o overflow e padding para o box específico do Monitor de Mercado */
+#market-overview-widget-wrapper { /* Esta div tem a classe .box-content */
+    overflow-y: hidden;   /* Remove o scroll vertical do contêiner */
+    padding-right: 0;     /* Remove o padding, já que não haverá scrollbar do contêiner */
+    /* height: 100%;  /* Mantém as regras de altura já definidas */
+    /* min-height: 450px; */
+}
+
+#market-overview-widget-wrapper .tradingview-widget-container {
+    height: 500px !important; /* Altura do widget TradingView */
+}
+
 
 .content-box.expanded { max-height: 75vh; }
-.content-box.expanded .box-content { overflow-y: auto; }
+.content-box.expanded .box-content { overflow-y: auto; } /* Permite scroll quando expandido, exceto para o market-overview se ainda quisermos */
+/* Se quiser que o market-overview também tenha scroll quando expandido, precisaria de uma regra mais específica ou remover o !important e ajustar alturas */
+#box-market.expanded #market-overview-widget-wrapper {
+     overflow-y: hidden; /* Mantém escondido mesmo expandido, pois o widget tem seu scroll */
+}
+
 
 .draggable-box { cursor: grab; user-select: none; position: relative; }
 .draggable-box:active { cursor: grabbing; }
@@ -495,12 +513,12 @@ body.light-mode ::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
 }
 
 @media (max-width: 600px) {
-    body { /* Adicionado conforme solicitado na interação anterior */
+    body {
         zoom: 0.8;
         touch-action: manipulation;
     }
     .page-title-header { font-size: 22px; }
-    .banner { /* Modificado conforme solicitado na interação anterior */
+    .banner {
         font-size: 14px;
         padding: 6px 10px;
         min-height: 32px;
