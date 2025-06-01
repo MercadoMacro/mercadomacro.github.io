@@ -8,12 +8,12 @@ const BOX_ORDER_KEY = 'boxOrder_v2';
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000;
-let commentaryLastUpdateTimestamp = null;
+let commentaryLastUpdateTimestamp = null; // Mantido para lógica interna, se necessário
 
 let BANNER_PHRASES = [];
 
 // =============================================
-// FUNÇÃO DEBOUNCE (MELHORIA DE PERFORMANCE)
+// FUNÇÃO DEBOUNCE
 // =============================================
 function debounce(func, wait, immediate) {
     let timeout;
@@ -31,7 +31,7 @@ function debounce(func, wait, immediate) {
 };
 
 // =============================================
-// FUNÇÃO PARA FORMATAR TEMPO RELATIVO (MELHORIA UX)
+// FUNÇÃO PARA FORMATAR TEMPO RELATIVO
 // =============================================
 function formatTimeSince(timestamp) {
     if (!timestamp) return '';
@@ -45,11 +45,10 @@ function formatTimeSince(timestamp) {
         const minutes = Math.round(secondsPast / 60);
         return `há ${minutes} min${minutes > 1 ? 's' : ''}`;
     }
-    if (secondsPast <= 86400) { // 24 horas
+    if (secondsPast <= 86400) {
         const hours = Math.round(secondsPast / 3600);
         return `há ${hours} hora${hours > 1 ? 's' : ''}`;
     }
-    // Para mais de 24h, poderia mostrar data/hora completa
     const date = new Date(timestamp);
     return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
 }
@@ -120,18 +119,24 @@ const FALLBACK_NEWS = [
 ];
 
 // =============================================
-// FUNÇÕES PARA RENDERIZAR WIDGETS DA INDEX.HTML COM TEMA
+// FUNÇÕES PARA RENDERIZAR WIDGETS
 // =============================================
 function renderTickerTapeWidget(theme) {
     const container = document.getElementById('tradingview-ticker-tape-container');
     if (!container) return;
     const skeleton = container.querySelector('.tv-skeleton');
-    if (skeleton) skeleton.style.display = 'none'; // Esconde o skeleton
-    
-    // Limpa apenas o conteúdo do widget, não o skeleton se ele for externo ao container do script
+    if (skeleton) skeleton.style.display = 'none';
+
     const widgetContent = container.querySelector('.tradingview-widget-container');
     if(widgetContent) widgetContent.remove();
-    else container.innerHTML = ''; // Fallback se o skeleton não estiver lá ou estrutura for diferente
+    else { // Se não houver widget anterior, limpa o container (exceto o skeleton se ele for filho direto)
+        Array.from(container.childNodes).forEach(node => {
+            if (!node.classList || !node.classList.contains('tv-skeleton')) {
+                container.removeChild(node);
+            }
+        });
+    }
+
 
     const config = {
         "symbols": [
@@ -155,11 +160,17 @@ function renderMarketOverviewWidget(theme) {
     const container = document.getElementById('market-overview-widget-wrapper');
     if (!container) return;
     const skeleton = container.querySelector('.tv-skeleton');
-    if (skeleton) skeleton.style.display = 'none'; // Esconde o skeleton
+    if (skeleton) skeleton.style.display = 'none';
 
     const widgetContent = container.querySelector('.tradingview-widget-container');
     if(widgetContent) widgetContent.remove();
-    else container.innerHTML = '';
+    else {
+        Array.from(container.childNodes).forEach(node => {
+            if (!node.classList || !node.classList.contains('tv-skeleton')) {
+                container.removeChild(node);
+            }
+        });
+    }
 
     const tvContainer = document.createElement('div');
     tvContainer.className = 'tradingview-widget-container';
@@ -288,23 +299,23 @@ function updateCommentary(content) {
 
 async function updateCommentaryContent() {
     const commentaryContentEl = document.getElementById('commentary-content');
-    const lastUpdatedEl = document.getElementById('commentary-last-updated');
+    // const lastUpdatedEl = document.getElementById('commentary-last-updated'); // REMOVIDO
     if (!commentaryContentEl) return;
 
     commentaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando análise...</div>`;
-    if (lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...';
+    // if (lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...'; // REMOVIDO
 
     try {
         const content = await fetchGoogleDocContent();
         updateCommentary(content);
         commentaryLastUpdateTimestamp = Date.now();
-        if (lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp);
+        // if (lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp); // REMOVIDO
         return true;
     } catch (error) {
         console.error('Falha ao atualizar comentário:', error);
         commentaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`;
-        if (lastUpdatedEl && commentaryLastUpdateTimestamp) lastUpdatedEl.textContent = `Falha. Última: ${formatTimeSince(commentaryLastUpdateTimestamp)}`;
-        else if (lastUpdatedEl) lastUpdatedEl.textContent = 'Falha ao atualizar';
+        // if (lastUpdatedEl && commentaryLastUpdateTimestamp) lastUpdatedEl.textContent = `Falha. Última: ${formatTimeSince(commentaryLastUpdateTimestamp)}`; // REMOVIDO
+        // else if (lastUpdatedEl) lastUpdatedEl.textContent = 'Falha ao atualizar'; // REMOVIDO
         return false;
     }
 }
@@ -341,17 +352,17 @@ async function fetchNews() {
 
 async function loadNewsWidget(forceUpdate = false) {
     const newsContentBox = document.querySelector('#news-widget .news-content');
-    const lastUpdatedEl = document.getElementById('news-last-updated');
+    // const lastUpdatedEl = document.getElementById('news-last-updated'); // REMOVIDO
     if (!newsContentBox) return;
 
     updateLoadingState(true);
-    if(lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...';
+    // if(lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...'; // REMOVIDO
 
     if (!forceUpdate) {
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = `Cache: ${formatTimeSince(getCacheTimestamp())}`;
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
             updateLoadingState(false);
             return;
         }
@@ -361,10 +372,10 @@ async function loadNewsWidget(forceUpdate = false) {
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = `Offline. Cache: ${formatTimeSince(getCacheTimestamp())}`;
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Offline. Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
         } else {
             newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache.</div>';
-            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Offline. Sem cache.';
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Offline. Sem cache.'; // REMOVIDO
         }
         updateLoadingState(false);
         return;
@@ -374,11 +385,11 @@ async function loadNewsWidget(forceUpdate = false) {
         if (newsItems.length > 0) {
             cacheNews(newsItems);
             renderNewsList(newsItems);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(Date.now());
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(Date.now()); // REMOVIDO
             if (forceUpdate) showNotification('Notícias atualizadas!');
         } else {
             renderNewsList([], false, false);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Nenhuma notícia nova.';
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Nenhuma notícia nova.'; // REMOVIDO
             if (forceUpdate) showNotification('Nenhuma notícia nova.', false);
         }
         localStorage.setItem('retryCount', '0');
@@ -388,11 +399,11 @@ async function loadNewsWidget(forceUpdate = false) {
         const cachedData = getCachedNews();
         if (cachedData) {
             renderNewsList(cachedData, true);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = `Falha. Cache: ${formatTimeSince(getCacheTimestamp())}`;
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Falha. Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
             if (forceUpdate) showNotification('Mostrando notícias do cache.', false);
         } else {
             renderNewsList(FALLBACK_NEWS, false, true);
-            if(lastUpdatedEl) lastUpdatedEl.textContent = 'Falha. Mostrando exemplos.';
+            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Falha. Mostrando exemplos.'; // REMOVIDO
             if (forceUpdate) showNotification('Mostrando exemplos.', true);
         }
         scheduleRetry();
@@ -437,11 +448,9 @@ function renderNewsList(items, fromCache = false, isFallback = false) {
     if (!newsContentBox) return;
     const favorites = getFavorites(); let statusHtml = '';
     if (isFallback && !fromCache) statusHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Mostrando notícias de exemplo.</div>`;
-    else if (fromCache) {
-        // O timestamp já é exibido no header do box, não precisa repetir aqui,
-        // mas um botão para forçar atualização pode ser útil.
+    // else if (fromCache) { // Removido status de cache daqui pois foi removido dos boxes
         // statusHtml = `<div class="news-status"><span>Cache.</span><button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-left:auto; padding: 4px 8px; font-size: 11px;">Atualizar</button></div>`;
-    }
+    // }
     newsContentBox.innerHTML = `${statusHtml}${items.length === 0 && !isFallback ? '<p style="padding:10px; text-align:center;">Nenhuma notícia.</p>' : ''}${items.map(item => {
         const isFavorited = favorites.some(fav => fav.link === item.link);
         let cleanDescription = item.description || '';
@@ -594,9 +603,9 @@ const debouncedUpdateScrollProgressBar = debounce(function() {
     const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
     const scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight) - document.documentElement.clientHeight;
     if (scrollHeight > 0) progressBar.style.width = `${(scrollTop / scrollHeight) * 100}%`; else progressBar.style.width = '0%';
-}, 10); // Debounce com 10ms de espera
+}, 10);
 
-const debouncedUpdateBannerOnResize = debounce(updateBanner, 250); // Debounce com 250ms
+const debouncedUpdateBannerOnResize = debounce(updateBanner, 250);
 
 function toggleTheme() {
     document.body.classList.toggle('light-mode');
@@ -626,41 +635,41 @@ function toggleTheme() {
     }
 }
 
-// =============================================
-// PULL TO REFRESH (BÁSICO)
-// =============================================
 function setupPullToRefresh() {
     const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
     if (!ptrIndicator) return;
 
     let startY = 0;
     let isDragging = false;
-    const PULL_THRESHOLD = 70; // Pixels to pull down to trigger
-    const MAX_PULL_DISTANCE = 100; // Max visual pull distance
+    const PULL_THRESHOLD = 70;
+    const MAX_PULL_DISTANCE = 100;
 
     document.body.addEventListener('touchstart', (e) => {
-        if (window.scrollY === 0) { // Only activate if scrolled to the top
+        if (window.scrollY === 0) {
             startY = e.touches[0].pageY;
             isDragging = true;
-            ptrIndicator.classList.add('visible'); // Make it visible for transform
+            ptrIndicator.classList.add('visible');
         }
     }, { passive: true });
 
     document.body.addEventListener('touchmove', (e) => {
-        if (!isDragging || window.scrollY !== 0) { // Ensure still at top
-            isDragging = false; // disable if user scrolls down conventionally
-            ptrIndicator.style.transform = `translateY(-50px)`; // reset position
-            ptrIndicator.classList.remove('active');
+        if (!isDragging || window.scrollY !== 0) {
+            if(isDragging) { // Only reset if it was dragging and then user scrolled
+                 isDragging = false;
+                 ptrIndicator.style.transform = `translateY(-50px)`;
+                 ptrIndicator.classList.remove('active');
+                 ptrIndicator.classList.remove('visible');
+            }
             return;
         }
 
         const currentY = e.touches[0].pageY;
         let diffY = currentY - startY;
 
-        if (diffY > 0) { // Pulling down
-            e.preventDefault(); // Prevent browser's default pull-to-refresh if any, and scroll
+        if (diffY > 0) {
+            if (e.cancelable) e.preventDefault(); // Prevent scroll only if pulling down
             const pullDistance = Math.min(diffY, MAX_PULL_DISTANCE);
-            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`; // Move indicator visually
+            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`;
 
             if (diffY > PULL_THRESHOLD) {
                 ptrIndicator.classList.add('active');
@@ -669,24 +678,24 @@ function setupPullToRefresh() {
                 ptrIndicator.classList.remove('active');
                 ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
             }
-        } else { // Pulling up or no significant pull
+        } else {
             ptrIndicator.style.transform = `translateY(-50px)`;
         }
-    }, { passive: false }); // passive: false because we call preventDefault
+    }, { passive: false });
 
     document.body.addEventListener('touchend', (e) => {
         if (!isDragging) return;
-        isDragging = false;
-        ptrIndicator.style.transform = `translateY(-50px)`; // Reset position smoothly
-        ptrIndicator.classList.remove('visible');
-
-
-        const currentY = e.changedTouches[0].pageY; // Use changedTouches for touchend
+        isDragging = false; // Moved this to happen regardless of refresh trigger
+        
+        const currentY = e.changedTouches[0].pageY;
         const diffY = currentY - startY;
-
+        
+        // Check if threshold met for refresh
         if (diffY > PULL_THRESHOLD && window.scrollY === 0) {
             ptrIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
-            ptrIndicator.classList.add('active'); // Keep it visible while refreshing
+            ptrIndicator.classList.add('active'); 
+            // Keep visible, but ensure it will reset after refresh.
+            // The transform to hide it should be delayed until after operations.
 
             showNotification('Atualizando dados...');
             Promise.all([
@@ -698,16 +707,20 @@ function setupPullToRefresh() {
                 showNotification('Erro ao atualizar os dados.', true);
                 console.error("Erro no pull-to-refresh:", err);
             }).finally(() => {
-                 setTimeout(() => { // Delay hiding indicator
+                 setTimeout(() => {
+                    ptrIndicator.style.transform = `translateY(-50px)`;
                     ptrIndicator.classList.remove('active');
+                    ptrIndicator.classList.remove('visible');
                     ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
-                 }, 500);
+                 }, 300); // Short delay before hiding
             });
-        } else {
+        } else { // If not enough pull, or other conditions not met, hide immediately
+            ptrIndicator.style.transform = `translateY(-50px)`;
             ptrIndicator.classList.remove('active');
+            ptrIndicator.classList.remove('visible');
             ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
         }
-        startY = 0; // Reset startY
+        startY = 0;
     });
 }
 
@@ -802,7 +815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('resize', debouncedUpdateBannerOnResize);
     window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
-    debouncedUpdateScrollProgressBar(); // Initial call
+    debouncedUpdateScrollProgressBar();
 
     if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000);  }
     if (typeof loadNewsWidget === 'function') loadNewsWidget();
@@ -821,10 +834,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
     if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(currentTheme);
 
-    const newsLastUpdatedEl = document.getElementById('news-last-updated');
-    if(newsLastUpdatedEl && getCacheTimestamp()) newsLastUpdatedEl.textContent = formatTimeSince(getCacheTimestamp());
-    const commentaryLastUpdatedEl = document.getElementById('commentary-last-updated');
-    if(commentaryLastUpdatedEl && commentaryLastUpdateTimestamp) commentaryLastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp);
+    // const newsLastUpdatedEl = document.getElementById('news-last-updated'); // REMOVIDO
+    // if(newsLastUpdatedEl && getCacheTimestamp()) newsLastUpdatedEl.textContent = formatTimeSince(getCacheTimestamp()); // REMOVIDO
+    // const commentaryLastUpdatedEl = document.getElementById('commentary-last-updated'); // REMOVIDO
+    // if(commentaryLastUpdatedEl && commentaryLastUpdateTimestamp) commentaryLastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp); // REMOVIDO
 
 
     setTimeout(() => {
