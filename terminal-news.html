@@ -29,7 +29,8 @@
         --link-color: #58a6ff; 
         --link-hover-color: #2f81f7;
         --crypto-accent-border: var(--primary-light); 
-        --finance-accent-border: var(--primary-color); 
+        --finance-accent-border: var(--primary-color);
+        /* Variáveis para Scrollbar */
         --scrollbar-size: 6px;
         --scrollbar-thumb-color: rgba(139, 148, 158, 0.3);
         --scrollbar-thumb-hover-color: rgba(139, 148, 158, 0.5);
@@ -49,14 +50,32 @@
         transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
         display: flex; flex-direction: column;
         position: relative;
+        /* Estilos de scrollbar para Firefox */
         scrollbar-width: thin;
         scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
     }
-    body:hover { scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color); }
-    ::-webkit-scrollbar { width: var(--scrollbar-size); height: var(--scrollbar-size); }
-    ::-webkit-scrollbar-track { background: var(--scrollbar-track-color); border-radius: calc(var(--scrollbar-size) / 2); }
-    ::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb-color); border-radius: calc(var(--scrollbar-size) / 2); border: 1px solid var(--scrollbar-track-color); }
-    ::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover-color); }
+    body:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover do body, se desejado */
+        scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
+    }
+
+    /* Estilos de scrollbar para WebKit (Chrome, Safari, Edge, etc.) */
+    ::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: calc(var(--scrollbar-size) / 2);
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb-color);
+        border-radius: calc(var(--scrollbar-size) / 2);
+        border: 1px solid var(--scrollbar-track-color); /* Para dar um pequeno espaçamento se o track não for transparente */
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-thumb-hover-color);
+    }
+
 
     :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
     :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -70,21 +89,22 @@
     
     .logo { text-align: center; margin-bottom: 30px; }
     .page-title-header {
-        font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px; color: var(--text-color);
+        font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
+        color: var(--text-color);
         background: linear-gradient(120deg, var(--primary-light), var(--primary-color));
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         margin-bottom: 8px; padding: 0 10px;
     }
     .logo-divider {
-        width: 80px; height: 4px; background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+        width: 80px; height: 4px;
+        background: linear-gradient(to right, var(--primary-color), var(--primary-light));
         margin: 0 auto; border-radius: 3px;
     }
     .subheader {
-        font-size: 16px; margin-bottom: 25px; /* Mantido margin-bottom original */
-        color: var(--text-secondary); font-weight: 600; text-align: center;
+        font-size: 16px; margin-bottom: 25px;
+        color: var(--text-secondary); font-weight: 600;
+        text-align: center;
     }
-
-    /* Removido .category-filters e .category-title-header */
 
     .news-grid-wrapper {
         display: grid;
@@ -95,13 +115,17 @@
     }
 
     .news-widget {
-      background-color: var(--card-bg); border: 1px solid var(--border-color);
-      border-radius: 8px; padding: 1rem; color: var(--text-color);
-      position: relative; box-shadow: var(--shadow-color-soft);
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      color: var(--text-color);
+      position: relative;
+      box-shadow: var(--shadow-color-soft);
       font-family: 'Courier New', Courier, monospace;
-      display: flex; flex-direction: column; 
+      display: flex; 
+      flex-direction: column; 
     }
-    /* Removido .news-widget.hidden */
 
     .crypto-widget { border-top: 3px solid var(--crypto-accent-border); }
     .finance-widget { border-top: 3px solid var(--finance-accent-border); }
@@ -118,6 +142,7 @@
     body.light-mode .refresh-widget:hover { background-color: rgba(var(--card-bg-rgb-light), 0.5); }
     :root { --primary-color-rgb: 0,209,128; }
 
+
     .news-widget h3 {
       font-size: 1.1rem; color: var(--primary-color);
       margin-top: 0; margin-bottom: 0.75rem;
@@ -130,11 +155,17 @@
 
     .news-list { 
       list-style: none; padding: 0; margin: 0;
-      flex-grow: 1; overflow-y: auto; max-height: 300px;
+      flex-grow: 1; 
+      overflow-y: auto; 
+      max-height: 300px; /* Altura máxima para a lista antes de scrollar */
+      /* Estilos de scrollbar para Firefox (herda do body ou pode ser específico) */
       scrollbar-width: thin;
       scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
     }
-    .news-list:hover { scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color); }
+    .news-list:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover da lista */
+        scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
+    }
+
     .news-list li {
       margin: 0.6rem 0; border-left: 3px solid var(--primary-light);
       padding-left: 0.75rem; font-size: 0.9rem;
@@ -189,7 +220,8 @@
         --link-color: #0056b3; --link-hover-color: #004085;
         --crypto-accent-border: var(--primary-light); 
         --finance-accent-border: var(--primary-color); 
-        --primary-color-rgb: 0,122,255;
+        --primary-color-rgb: 0,122,255; /* RGB para o primary color do light mode */
+        /* Variáveis de Scrollbar para Light Mode */
         --scrollbar-thumb-color: rgba(51, 51, 51, 0.4);
         --scrollbar-thumb-hover-color: rgba(51, 51, 51, 0.6);
         background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
@@ -210,7 +242,7 @@
     body.light-mode .timestamp { color: var(--text-secondary); }
     body.light-mode .news-list li i.fa-spinner { color: var(--primary-color); }
     body.light-mode .news-list li i.fa-exclamation-triangle { color: var(--error-color); }
-    /* Removido body.light-mode .category-title-header */
+
 
     @media (max-width: 768px) {
         .container { padding: 20px 15px; }
@@ -238,7 +270,7 @@
     <div class="subheader">Fontes de Notícias sobre Criptomoedas e Finanças Globais</div>
 
     <div class="news-grid-wrapper">
-        <div class="news-widget crypto-widget" data-feedkey="guiadobitcoin">
+        <div class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="guiadobitcoin" aria-label="Atualizar Zero Hedge">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -249,7 +281,7 @@
           <div class="timestamp" id="zerohedge-timestamp"></div>
         </div>
 
-        <div class="news-widget crypto-widget" data-feedkey="noticiabrasil">
+        <div class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="noticiabrasil" aria-label="Atualizar Notícia Brasil">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -260,7 +292,7 @@
           <div class="timestamp" id="noticiabrasil-timestamp"></div>
         </div>
 
-        <div class="news-widget crypto-widget" data-feedkey="cointelegraph">
+        <div class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="cointelegraph" aria-label="Atualizar Cointelegraph">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -271,7 +303,7 @@
           <div class="timestamp" id="cointelegraph-timestamp"></div>
         </div>
         
-        <div class="news-widget finance-widget" data-feedkey="advfn">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="advfn" aria-label="Atualizar ADVFN">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -282,7 +314,7 @@
           <div class="timestamp" id="advfn-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="investing">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="investing" aria-label="Atualizar Investing">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -293,7 +325,7 @@
           <div class="timestamp" id="investing-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="infomoney">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="infomoney" aria-label="Atualizar InfoMoney">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -304,7 +336,7 @@
           <div class="timestamp" id="infomoney-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="valor">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="valor" aria-label="Atualizar Valor Econômico">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -315,7 +347,7 @@
           <div class="timestamp" id="valor-timestamp"></div>
         </div>
         
-        <div class="news-widget finance-widget" data-feedkey="dukascopy">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="dukascopy" aria-label="Atualizar Dukascopy">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -326,7 +358,7 @@
           <div class="timestamp" id="dukascopy-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="forexlive">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="forexlive" aria-label="Atualizar ForexLive">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -337,7 +369,7 @@
           <div class="timestamp" id="forexlive-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="fxmarkets">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="fxmarkets" aria-label="Atualizar FX Markets">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -348,7 +380,7 @@
           <div class="timestamp" id="fxmarkets-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="fxstreet">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="fxstreet" aria-label="Atualizar FXStreet">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -359,7 +391,7 @@
           <div class="timestamp" id="fxstreet-timestamp"></div>
         </div>
 
-        <div class="news-widget finance-widget" data-feedkey="ing">
+        <div class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="ing" aria-label="Atualizar ING Think">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -370,7 +402,7 @@
           <div class="timestamp" id="ing-timestamp"></div>
         </div>
     </div>
-    <div class="footer">© <span id="current-year"></span> Mercado Macro</div>
+    <div class="footer">© <span id="current-year">2025</span> Mercado Macro</div>
 </div>
 
 
@@ -388,33 +420,37 @@
 </button>
 
 <script>
+  // JavaScript da interação anterior (sem alterações, pois o CSS é que controla a scrollbar)
   const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
   const CACHE_TTL = 15 * 60 * 1000; 
+
   const PROXY_SERVICES = [
     { name: 'allorigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
     { name: 'codetabs', url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}` }
   ];
   let lastUsedProxy = 0;
 
-  const rssFeeds = { // A propriedade 'category' pode ser removida se não for mais usada
-    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', displayName: 'Zero Hedge'},
-    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', displayName: 'Notícia Brasil'},
-    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', displayName: 'Cointelegraph'},
-    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', displayName: 'ADVFN'},
-    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', displayName: 'Investing.com'},
-    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', displayName: 'InfoMoney'},
-    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', displayName: 'Valor Econômico'},
-    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', displayName: 'Dukascopy'},
-    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', displayName: 'ForexLive'},
-    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', displayName: 'FX Markets'},
-    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', displayName: 'FXStreet'},
-    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', displayName: 'ING Think'}
+  const rssFeeds = {
+    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge'},
+    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil'},
+    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph'},
+    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN'},
+    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com'},
+    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney'},
+    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico'},
+    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy'},
+    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive'},
+    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets'},
+    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet'},
+    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think'}
   };
   
   function formatTimeSince(timestamp) {
     if (!timestamp) return 'desconhecido';
-    const now = new Date(); const secondsPast = (now.getTime() - new Date(timestamp).getTime()) / 1000;
-    if (secondsPast < 5) return 'agora mesmo'; if (secondsPast < 60) return `há ${Math.round(secondsPast)} seg`;
+    const now = new Date();
+    const secondsPast = (now.getTime() - new Date(timestamp).getTime()) / 1000;
+    if (secondsPast < 5) return 'agora mesmo';
+    if (secondsPast < 60) return `há ${Math.round(secondsPast)} seg`;
     if (secondsPast < 3600) { const m = Math.round(secondsPast / 60); return `há ${m} min${m > 1 ? 's' : ''}`; }
     if (secondsPast <= 43200) { const h = Math.round(secondsPast / 3600); return `há ${h} hora${h > 1 ? 's' : ''}`; }
     const date = new Date(timestamp);
@@ -422,13 +458,18 @@
   }
 
   function renderNews(listElement, timestampId, items, feedName, updateTime) {
-    listElement.innerHTML = ''; const itemsToShow = items.slice(0, 6);
-    if (itemsToShow.length === 0) listElement.innerHTML = `<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia em ${feedName || 'esta fonte'}.</li>`;
-    else itemsToShow.forEach(item => {
-        const li = document.createElement('li'); let cleanTitle = item.title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
+    listElement.innerHTML = '';
+    const itemsToShow = items.slice(0, 6);
+    if (itemsToShow.length === 0) {
+      listElement.innerHTML = `<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.</li>`;
+    } else {
+      itemsToShow.forEach(item => {
+        const li = document.createElement('li');
+        let cleanTitle = item.title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
         li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer" title="${cleanTitle}">${cleanTitle}</a>`;
         listElement.appendChild(li);
-    });
+      });
+    }
     const timestampEl = document.getElementById(timestampId);
     if (timestampEl) timestampEl.textContent = `Atualizado ${formatTimeSince(updateTime)}`;
   }
@@ -452,22 +493,30 @@
         } catch (e) { console.warn("Cache inválido para " + feedKey, e); localStorage.removeItem(cacheKey); }
       }
     } else { localStorage.removeItem(cacheKey); }
-    let success = false; const currentProxy = PROXY_SERVICES[lastUsedProxy];
+    let success = false;
+    const currentProxy = PROXY_SERVICES[lastUsedProxy];
     try {
         const proxyUrl = currentProxy.url(feedConfig.url);
+        console.log(`Feed ${feedConfig.displayName}: Tentando com proxy ${currentProxy.name}`);
         const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
         if (!response.ok) throw new Error(`Proxy ${currentProxy.name} status ${response.status}`);
-        const xmlText = await response.text(); const parser = new DOMParser();
+        const xmlText = await response.text();
+        const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, "text/xml");
         const parserErrors = xmlDoc.getElementsByTagName("parsererror");
-        if (parserErrors.length > 0) throw new Error(`Erro de parsing XML para ${feedConfig.displayName}`);
+        if (parserErrors.length > 0) {
+            console.error(`Erro de parsing XML para ${feedConfig.displayName}:`, parserErrors[0].textContent);
+            throw new Error(`Erro de parsing XML`);
+        }
         const itemsXml = xmlDoc.getElementsByTagName("item");
         const fetchedItems = Array.from(itemsXml).map(item => {
             let title = item.querySelector("title")?.textContent || "Sem título";
             title = title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
             return { title: title, link: item.querySelector("link")?.textContent.trim() || "#" };
         });
-        if (fetchedItems.length === 0 && xmlDoc.documentElement.textContent.length < 150) throw new Error(`Proxy ${currentProxy.name} retornou resposta vazia/inválida`);
+        if (fetchedItems.length === 0 && xmlDoc.documentElement.textContent.length < 150) {
+             throw new Error(`Resposta vazia/inválida do proxy ${currentProxy.name}`);
+        }
         const updateTime = Date.now();
         localStorage.setItem(cacheKey, JSON.stringify({ items: fetchedItems, timestamp: updateTime }));
         if (list && timestampEl) renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
@@ -480,7 +529,7 @@
     }
   }
 
-  async function refreshAllFeeds(force = true) {
+  function refreshAllFeeds(force = true) {
     const refreshBtnGlobal = document.getElementById('refresh-btn');
     const originalIconHTML = '<i class="fas fa-sync-alt"></i>';
     if(refreshBtnGlobal && force) {
@@ -493,15 +542,12 @@
         });
         console.log("Cache de notícias do terminal limpo para refresh forçado.");
     }
-    const feedKeys = Object.keys(rssFeeds);
-    for (const feedKey of feedKeys) {
-        // Agora atualiza todos, pois não há mais filtros ativos que escondam widgets
-        await loadNews(feedKey, force);
-        await new Promise(resolve => setTimeout(resolve, 200)); // Mantém o escalonamento
-    }
-    if(refreshBtnGlobal && force) {
-      setTimeout(() => { refreshBtnGlobal.innerHTML = originalIconHTML; refreshBtnGlobal.disabled = false; }, 500);
-    }
+    const promises = Object.keys(rssFeeds).map(feedKey => loadNews(feedKey, force));
+    Promise.allSettled(promises).finally(() => {
+      if(refreshBtnGlobal && force) {
+        setTimeout(() => { refreshBtnGlobal.innerHTML = originalIconHTML; refreshBtnGlobal.disabled = false; }, 1000);
+      }
+    });
   }
 
   function toggleTheme() {
@@ -527,8 +573,6 @@
       if (yearSpan) yearSpan.textContent = new Date().getFullYear();
   }
 
-  // Removida a função setupCategoryFilters()
-
   document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('themePreference');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -538,7 +582,6 @@
     const themeIcon = document.querySelector('#theme-toggle i');
     if(themeIcon){ themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
 
-    // Removida chamada para setupCategoryFilters()
     refreshAllFeeds(false); 
     
     const refreshBtnGlobal = document.getElementById('refresh-btn');
