@@ -2,698 +2,607 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Terminal News - Cripto & Finanças</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Terminal de Notícias - Mercado Macro</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+New&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
     :root {
-      --terminal-bg: #1b1c1d;
-      --terminal-border: #333;
-      --terminal-text: #eee;
-      --terminal-accent: #f1c40f;
-      --crypto-accent: #f1c40f;
-      --finance-accent: #f1c40f;
-      --terminal-link: #00ffcc;
-      --terminal-hover: #f39c12;
-      --terminal-success: #2ecc71;
-      --button-bg: #333;
-      --button-hover: #444;
+        --primary-color: #00d180;
+        --primary-light: #5bffb0;
+        --primary-dark: #009e53;
+        --dark-bg: #0d1117;
+        --darker-bg: #010409;
+        --text-color: #c9d1d9;
+        --text-secondary: rgba(139, 148, 158, 0.7);
+        --card-bg: rgba(22, 27, 34, 0.85);
+        --card-bg-rgb-dark: 22, 27, 34;
+        --card-bg-rgb-light: 248, 249, 250;
+        --card-bg-rgb: var(--card-bg-rgb-dark);
+        --border-color: rgba(48, 54, 61, 0.8);
+        --error-color: #ff7b72;
+        --transition-speed: 0.3s;
+        --shadow-color-soft: rgba(0, 0, 0, 0.2);
+        --shadow-color-medium: rgba(0, 0, 0, 0.3);
+        --link-color: #58a6ff; 
+        --link-hover-color: #2f81f7;
+        --crypto-accent-border: var(--primary-light); 
+        --finance-accent-border: var(--primary-color);
+        /* Variáveis para Scrollbar */
+        --scrollbar-size: 6px;
+        --scrollbar-thumb-color: rgba(139, 148, 158, 0.3);
+        --scrollbar-thumb-hover-color: rgba(139, 148, 158, 0.5);
+        --scrollbar-track-color: transparent;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        margin: 0; padding: 0;
+        font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+        color: var(--text-color);
+        min-height: 100vh; width: 100%;
+        overflow-x: hidden;
+        line-height: 1.7;
+        transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+        display: flex; flex-direction: column;
+        position: relative;
+        /* Estilos de scrollbar para Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+    }
+    body:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover do body, se desejado */
+        scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
+    }
+
+    /* Estilos de scrollbar para WebKit (Chrome, Safari, Edge, etc.) */
+    ::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-color);
+        border-radius: calc(var(--scrollbar-size) / 2);
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb-color);
+        border-radius: calc(var(--scrollbar-size) / 2);
+        border: 1px solid var(--scrollbar-track-color); /* Para dar um pequeno espaçamento se o track não for transparente */
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-thumb-hover-color);
+    }
+
+
+    :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+    :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+    .container {
+        flex: 1; max-width: 1200px; width: 100%;
+        margin: 0 auto; padding: 30px 20px;
+        box-sizing: border-box; text-align: center;
+        display: flex; flex-direction: column;
     }
     
-    body {
-      background: var(--terminal-bg);
-      font-family: 'Courier New', Courier, monospace;
-      margin: 0;
-      padding: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-      position: relative;
+    .logo { text-align: center; margin-bottom: 30px; }
+    .page-title-header {
+        font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
+        color: var(--text-color);
+        background: linear-gradient(120deg, var(--primary-light), var(--primary-color));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 8px; padding: 0 10px;
+    }
+    .logo-divider {
+        width: 80px; height: 4px;
+        background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+        margin: 0 auto; border-radius: 3px;
+    }
+    .subheader {
+        font-size: 16px; margin-bottom: 25px;
+        color: var(--text-secondary); font-weight: 600;
+        text-align: center;
+    }
+
+    .news-grid-wrapper {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-auto-rows: auto; 
+        gap: 20px;
+        width: 100%;
     }
 
     .news-widget {
-      background-color: #000;
-      border: 2px solid var(--terminal-border);
-      border-radius: 6px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       padding: 1rem;
-      color: var(--terminal-text);
-      height: fit-content;
+      color: var(--text-color);
       position: relative;
+      box-shadow: var(--shadow-color-soft);
+      font-family: 'Courier New', Courier, monospace;
+      display: flex; 
+      flex-direction: column; 
     }
 
-    .crypto-widget {
-      border-top: 3px solid var(--crypto-accent);
-    }
-
-    .finance-widget {
-      border-top: 3px solid var(--finance-accent);
-    }
+    .crypto-widget { border-top: 3px solid var(--crypto-accent-border); }
+    .finance-widget { border-top: 3px solid var(--finance-accent-border); }
 
     .refresh-widget {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: transparent;
-      color: var(--terminal-text);
-      border: none;
-      cursor: pointer;
-      font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      position: absolute; top: 10px; right: 10px;
+      background: transparent; color: var(--text-secondary);
+      border: none; cursor: pointer; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px; border-radius: 4px;
+      transition: color 0.2s ease, background-color 0.2s ease;
     }
+    .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-rgb-dark), 0.5); }
+    body.light-mode .refresh-widget:hover { background-color: rgba(var(--card-bg-rgb-light), 0.5); }
+    :root { --primary-color-rgb: 0,209,128; }
 
-    .refresh-widget:hover {
-      color: var(--terminal-accent);
-    }
 
     .news-widget h3 {
-      font-size: 1.1rem;
-      color: var(--terminal-accent);
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid var(--terminal-border);
-      padding-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      padding-right: 30px;
+      font-size: 1.1rem; color: var(--primary-color);
+      margin-top: 0; margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem; display: flex; align-items: center;
+      padding-right: 30px; font-family: 'Montserrat', sans-serif; font-weight: 600;
+      flex-shrink: 0; 
     }
+    .news-widget h3 i { margin-right: 8px; }
 
-    .news-widget h3 i {
-      margin-right: 8px;
+    .news-list { 
+      list-style: none; padding: 0; margin: 0;
+      flex-grow: 1; 
+      overflow-y: auto; 
+      max-height: 300px; /* Altura máxima para a lista antes de scrollar */
+      /* Estilos de scrollbar para Firefox (herda do body ou pode ser específico) */
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
     }
-
-    .news-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
+    .news-list:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover da lista */
+        scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
     }
 
     .news-list li {
-      margin: 0.6rem 0;
-      border-left: 3px solid var(--terminal-success);
-      padding-left: 0.5rem;
+      margin: 0.6rem 0; border-left: 3px solid var(--primary-light);
+      padding-left: 0.75rem; font-size: 0.9rem;
     }
+    .news-list li i.fa-spinner { margin-right: 5px; color: var(--primary-color); animation: spin 1.5s linear infinite; }
+     @keyframes spin { to { transform: rotate(360deg); } }
+    .news-list li i.fa-exclamation-triangle, .news-list li i.fa-exclamation-circle { margin-right: 5px; color: var(--error-color); }
 
     .news-list a {
-      text-decoration: none;
-      color: var(--terminal-link);
-      font-size: 0.9rem;
-      display: inline-block;
-      transition: color 0.2s;
+      text-decoration: none; color: var(--link-color);
+      display: inline-block; transition: color 0.2s;
     }
-
-    .news-list a:hover {
-      color: var(--terminal-hover);
-    }
+    .news-list a:hover { color: var(--link-hover-color); }
 
     .timestamp {
-      font-size: 0.7rem;
-      color: #777;
-      margin-top: 10px;
-      text-align: right;
+      font-size: 0.75rem; color: var(--text-secondary);
+      margin-top: 10px; text-align: right; font-style: italic;
+      flex-shrink: 0; 
     }
 
-    .action-btn {
-      position: fixed;
-      bottom: 20px;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background-color: #000;
-      color: var(--terminal-text);
-      border: 1px solid var(--terminal-accent);
-      cursor: pointer;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    .floating-btn {
+        position: fixed; width: 50px; height: 50px; border-radius: 12px;
+        background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);
+        cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
+        -webkit-tap-highlight-color: transparent; will-change: transform, background-color;
     }
+    .floating-btn:hover { background-color: var(--primary-color); transform: translateY(-4px) scale(1.05); color: var(--dark-bg); box-shadow: 0 8px 20px var(--shadow-color-medium); }
+    .floating-btn:active { transform: translateY(0) scale(1); }
+    .floating-btn i { font-size: 20px; }
 
-    .action-btn:hover {
-      background-color: var(--terminal-accent);
-      color: #000;
-      transform: translateY(-3px);
-    }
-
-    .action-btn:active {
-      transform: translateY(0);
-    }
-
-    .theme-toggle {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: var(--button-bg);
-      border: 1px solid var(--terminal-accent);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-
-    .theme-toggle i {
-      font-size: 20px;
-      color: var(--terminal-text);
-    }
-
-    .theme-toggle:hover {
-      background-color: var(--terminal-accent);
-      color: #000;
-    }
-
-    #top-btn {
-      right: 160px;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-
-    #top-btn.visible {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    #refresh-btn {
-      right: 20px;
-    }
-
-    #home-btn {
-      right: 90px;
+    #refresh-btn { right: 20px; bottom: 20px; }
+    #home-btn { right: 80px; bottom: 20px; }
+    #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+    #top-btn.visible { opacity: 1; visibility: visible; }
+    .theme-toggle { left: 20px; bottom: 20px; } 
+    
+    .footer {
+        font-size: 13px; margin-top: 40px; text-align: center;
+        color: var(--text-secondary); padding: 20px 0;
+        border-top: 1px solid var(--border-color);
     }
 
     body.light-mode {
-      --terminal-bg: #f5f7fa;
-      --terminal-border: #e1e5eb;
-      --terminal-text: #333333;
-      --terminal-accent: #0066cc;
-      --terminal-link: #0066cc;
-      --terminal-hover: #004d99;
-      --button-bg: #e1e5eb;
+        --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
+        --dark-bg: #ffffff; --darker-bg: #f0f2f5;
+        --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
+        --card-bg: rgba(255, 255, 255, 0.98); --border-color: rgba(200, 205, 210, 0.7);
+        --card-bg-rgb: var(--card-bg-rgb-light);
+        --error-color: #dc3545;
+        --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
+        --link-color: #0056b3; --link-hover-color: #004085;
+        --crypto-accent-border: var(--primary-light); 
+        --finance-accent-border: var(--primary-color); 
+        --primary-color-rgb: 0,122,255; /* RGB para o primary color do light mode */
+        /* Variáveis de Scrollbar para Light Mode */
+        --scrollbar-thumb-color: rgba(51, 51, 51, 0.4);
+        --scrollbar-thumb-hover-color: rgba(51, 51, 51, 0.6);
+        background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
     }
+    body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
+    body.light-mode .floating-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+    body.light-mode .floating-btn:hover { background-color: var(--primary-color); color: white; }
+    body.light-mode .theme-toggle i { color: var(--text-color); } 
+    body.light-mode .theme-toggle:hover i { color: white; }
+    body.light-mode .news-widget { background-color: #fff; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    body.light-mode .news-widget h3 { color: var(--primary-color); border-bottom-color: var(--border-color); }
+    body.light-mode .refresh-widget { color: var(--text-secondary); }
+    body.light-mode .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-rgb-light), 0.5); }
+    body.light-mode .news-list li { border-left-color: var(--primary-light); }
+    body.light-mode .news-list a { color: var(--link-color); }
+    body.light-mode .news-list a:hover { color: var(--link-hover-color); }
+    body.light-mode .timestamp { color: var(--text-secondary); }
+    body.light-mode .news-list li i.fa-spinner { color: var(--primary-color); }
+    body.light-mode .news-list li i.fa-exclamation-triangle { color: var(--error-color); }
 
-    body.light-mode .news-widget {
-      background-color: #fff;
-      border: 1px solid var(--terminal-border);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-
-    body.light-mode .news-list li {
-      border-left: 3px solid var(--terminal-accent);
-    }
 
     @media (max-width: 768px) {
-      body {
-        grid-template-columns: 1fr;
-        padding-bottom: 80px;
-      }
-    
-      .action-btn, .theme-toggle {
-        width: 40px;
-        height: 40px;
-        bottom: 20px;
-      }
-
-      .theme-toggle {
-        left: 15px;
-      }
-
-      #refresh-btn {
-        right: 20px;
-      }
-
-      #home-btn {
-        right: 70px;
-      }
-
-      #top-btn {
-        right: 120px;
-      }
+        .container { padding: 20px 15px; }
+        .page-title-header { font-size: 36px; }
+        .news-grid-wrapper { grid-template-columns: 1fr; padding-bottom: 80px; }
+        .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
+        #refresh-btn { right: 15px; } #home-btn { right: 70px; } #top-btn { right: 125px; }
+        .theme-toggle { left: 15px; }
     }
-
     @media (max-width: 480px) {
-      .action-btn, .theme-toggle {
-        width: 35px;
-        height: 35px;
-      }
-
-      .theme-toggle {
-        left: 10px;
-      }
-
-      #refresh-btn {
-        right: 15px;
-      }
-
-      #home-btn {
-        right: 60px;
-      }
-
-      #top-btn {
-        right: 105px;
-      }
+        .page-title-header { font-size: 30px; }
+        .floating-btn, .theme-toggle { width: 40px; height: 40px; }
+        #refresh-btn { right: 10px; } #home-btn { right: 60px; } #top-btn { right: 110px; }
+        .theme-toggle { left: 10px; }
     }
   </style>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
 <body>
 
-<!-- Seção Criptomoedas -->
-<div class="news-widget crypto-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.guiadobitcoin)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-coins"></i> Zero Hedge</h3>
-  <ul class="news-list" id="zerohedge-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="zerohedge-timestamp"></div>
+<div class="container">
+    <div class="logo">
+        <div class="page-title-header">Terminal de Notícias</div>
+        <div class="logo-divider"></div>
+    </div>
+    <div class="subheader">Fontes de Notícias sobre Criptomoedas e Finanças Globais</div>
+
+    <div class="news-grid-wrapper">
+        <div class="news-widget crypto-widget">
+          <button class="refresh-widget" data-feedkey="guiadobitcoin" aria-label="Atualizar Zero Hedge">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-newspaper"></i> Zero Hedge</h3>
+          <ul class="news-list" id="zerohedge-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="zerohedge-timestamp"></div>
+        </div>
+
+        <div class="news-widget crypto-widget">
+          <button class="refresh-widget" data-feedkey="noticiabrasil" aria-label="Atualizar Notícia Brasil">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-globe-americas"></i> Notícia Brasil</h3>
+          <ul class="news-list" id="noticiabrasil-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="noticiabrasil-timestamp"></div>
+        </div>
+
+        <div class="news-widget crypto-widget">
+          <button class="refresh-widget" data-feedkey="cointelegraph" aria-label="Atualizar Cointelegraph">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fab fa-bitcoin"></i> Cointelegraph</h3>
+          <ul class="news-list" id="cointelegraph-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="cointelegraph-timestamp"></div>
+        </div>
+        
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="advfn" aria-label="Atualizar ADVFN">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
+          <ul class="news-list" id="advfn-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="advfn-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="investing" aria-label="Atualizar Investing">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
+          <ul class="news-list" id="investing-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="investing-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="infomoney" aria-label="Atualizar InfoMoney">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
+          <ul class="news-list" id="infomoney-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="infomoney-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="valor" aria-label="Atualizar Valor Econômico">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-landmark"></i> Valor Econômico</h3>
+          <ul class="news-list" id="valor-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="valor-timestamp"></div>
+        </div>
+        
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="dukascopy" aria-label="Atualizar Dukascopy">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-globe-europe"></i> Dukascopy</h3>
+          <ul class="news-list" id="dukascopy-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="dukascopy-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="forexlive" aria-label="Atualizar ForexLive">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-dollar-sign"></i> ForexLive</h3>
+          <ul class="news-list" id="forexlive-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="forexlive-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="fxmarkets" aria-label="Atualizar FX Markets">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-exchange-alt"></i> FX Markets</h3>
+          <ul class="news-list" id="fxmarkets-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="fxmarkets-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="fxstreet" aria-label="Atualizar FXStreet">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-road"></i> FXStreet</h3>
+          <ul class="news-list" id="fxstreet-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="fxstreet-timestamp"></div>
+        </div>
+
+        <div class="news-widget finance-widget">
+          <button class="refresh-widget" data-feedkey="ing" aria-label="Atualizar ING Think">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <h3><i class="fas fa-lightbulb"></i> ING Think</h3>
+          <ul class="news-list" id="ing-news">
+            <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
+          </ul>
+          <div class="timestamp" id="ing-timestamp"></div>
+        </div>
+    </div>
+    <div class="footer">© <span id="current-year">2025</span> Mercado Macro</div>
 </div>
 
-<div class="news-widget crypto-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.noticiabrasil)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-newspaper"></i> Notícia Brasil</h3>
-  <ul class="news-list" id="noticiabrasil-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="noticiabrasil-timestamp"></div>
-</div>
 
-<div class="news-widget crypto-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.cointelegraph)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fab fa-bitcoin"></i> Cointelegraph</h3>
-  <ul class="news-list" id="cointelegraph-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="cointelegraph-timestamp"></div>
-</div>
-
-<!-- Seção Mercado Financeiro Original -->
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.advfn)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
-  <ul class="news-list" id="advfn-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="advfn-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.investing)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
-  <ul class="news-list" id="investing-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="investing-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.infomoney)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
-  <ul class="news-list" id="infomoney-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="infomoney-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.valor)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-coins"></i> Valor Econômico</h3>
-  <ul class="news-list" id="valor-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="valor-timestamp"></div>
-</div>
-
-<!-- Seção Mercado Financeiro Internacional -->
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.dukascopy)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-chart-line"></i> Dukascopy</h3>
-  <ul class="news-list" id="dukascopy-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="dukascopy-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.forexlive)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-dollar-sign"></i> ForexLive</h3>
-  <ul class="news-list" id="forexlive-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="forexlive-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.fxmarkets)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-exchange-alt"></i> FX Markets</h3>
-  <ul class="news-list" id="fxmarkets-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="fxmarkets-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.fxstreet)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-chart-bar"></i> FXStreet</h3>
-  <ul class="news-list" id="fxstreet-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="fxstreet-timestamp"></div>
-</div>
-
-<div class="news-widget finance-widget">
-  <button class="refresh-widget" onclick="loadNews(rssFeeds.ing)">
-    <i class="fas fa-sync-alt"></i>
-  </button>
-  <h3><i class="fas fa-university"></i> ING Think</h3>
-  <ul class="news-list" id="ing-news">
-    <li>Carregando notícias...</li>
-  </ul>
-  <div class="timestamp" id="ing-timestamp"></div>
-</div>
-
-<!-- Botões flutuantes -->
-<button id="refresh-btn" class="action-btn" aria-label="Atualizar tudo">
+<button id="refresh-btn" class="floating-btn" aria-label="Atualizar tudo">
   <i class="fas fa-sync-alt"></i>
 </button>
-
-<button id="home-btn" class="action-btn" aria-label="Página inicial">
+<button id="home-btn" class="floating-btn" aria-label="Página inicial">
   <i class="fas fa-home"></i>
 </button>
-
-<button id="top-btn" class="action-btn" aria-label="Voltar ao topo">
+<button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
   <i class="fas fa-arrow-up"></i>
 </button>
-
-<button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+<button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
   <i class="fas fa-moon"></i>
 </button>
 
 <script>
-  // Configurações de cache
-  const CACHE_KEY = 'terminalNewsCache_v3';
-  const CACHE_TTL = 15 * 60 * 1000; // 15 minutos
+  // JavaScript da interação anterior (sem alterações, pois o CSS é que controla a scrollbar)
+  const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
+  const CACHE_TTL = 15 * 60 * 1000; 
 
-  // Serviços de proxy alternativos (sem necessidade de ativação)
   const PROXY_SERVICES = [
-    {
-      name: 'allorigins',
-      url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-    },
-    {
-      name: 'codetabs',
-      url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
-    }
+    { name: 'allorigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
+    { name: 'codetabs', url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}` }
   ];
+  let lastUsedProxy = 0;
 
-  let currentProxyIndex = 0;
-
-  // Configuração dos feeds RSS
   const rssFeeds = {
-    // Criptomoedas
-    guiadobitcoin: {
-      url: 'https://cms.zerohedge.com/fullrss2.xml',
-      elementId: 'zerohedge-news',
-      timestampId: 'zerohedge-timestamp',
-      category: 'crypto'
-    },
-    noticiabrasil: {
-      url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml',
-      elementId: 'noticiabrasil-news',
-      timestampId: 'noticiabrasil-timestamp',
-      category: 'crypto'
-    },
-    cointelegraph: {
-      url: 'https://br.cointelegraph.com/rss/tag/bitcoin',
-      elementId: 'cointelegraph-news',
-      timestampId: 'cointelegraph-timestamp',
-      category: 'crypto'
-    },
-    
-    // Mercado Financeiro Original
-    advfn: {
-      url: 'https://br.advfn.com/common/news/feeds/paperbr/rss',
-      elementId: 'advfn-news',
-      timestampId: 'advfn-timestamp',
-      category: 'finance'
-    },
-    investing: {
-      url: 'https://br.investing.com/rss/news.rss',
-      elementId: 'investing-news',
-      timestampId: 'investing-timestamp',
-      category: 'finance'
-    },
-    infomoney: {
-      url: 'https://www.infomoney.com.br/feed/',
-      elementId: 'infomoney-news',
-      timestampId: 'infomoney-timestamp',
-      category: 'finance'
-    },
-    valor: {
-      url: 'https://www.valor.com.br/rss',
-      elementId: 'valor-news',
-      timestampId: 'valor-timestamp',
-      category: 'finance'
-    },
-    
-    // Mercado Financeiro Internacional
-    dukascopy: {
-      url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/',
-      elementId: 'dukascopy-news',
-      timestampId: 'dukascopy-timestamp',
-      category: 'finance'
-    },
-    forexlive: {
-      url: 'https://www.forexlive.com/feed',
-      elementId: 'forexlive-news',
-      timestampId: 'forexlive-timestamp',
-      category: 'finance'
-    },
-    fxmarkets: {
-      url: 'https://www.fx-markets.com/feeds/rss',
-      elementId: 'fxmarkets-news',
-      timestampId: 'fxmarkets-timestamp',
-      category: 'finance'
-    },
-    fxstreet: {
-      url: 'https://www.fxstreet.com/rss/news',
-      elementId: 'fxstreet-news',
-      timestampId: 'fxstreet-timestamp',
-      category: 'finance'
-    },
-    ing: {
-      url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml',
-      elementId: 'ing-news',
-      timestampId: 'ing-timestamp',
-      category: 'finance'
-    }
+    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge'},
+    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil'},
+    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph'},
+    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN'},
+    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com'},
+    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney'},
+    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico'},
+    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy'},
+    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive'},
+    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets'},
+    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet'},
+    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think'}
   };
+  
+  function formatTimeSince(timestamp) {
+    if (!timestamp) return 'desconhecido';
+    const now = new Date();
+    const secondsPast = (now.getTime() - new Date(timestamp).getTime()) / 1000;
+    if (secondsPast < 5) return 'agora mesmo';
+    if (secondsPast < 60) return `há ${Math.round(secondsPast)} seg`;
+    if (secondsPast < 3600) { const m = Math.round(secondsPast / 60); return `há ${m} min${m > 1 ? 's' : ''}`; }
+    if (secondsPast <= 43200) { const h = Math.round(secondsPast / 3600); return `há ${h} hora${h > 1 ? 's' : ''}`; }
+    const date = new Date(timestamp);
+    return `em ${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
+  }
 
-  // Função para renderizar notícias
-  function renderNews(listElement, timestampId, items) {
+  function renderNews(listElement, timestampId, items, feedName, updateTime) {
     listElement.innerHTML = '';
     const itemsToShow = items.slice(0, 6);
-    
     if (itemsToShow.length === 0) {
-      listElement.innerHTML = '<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada.</li>';
+      listElement.innerHTML = `<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.</li>`;
     } else {
       itemsToShow.forEach(item => {
         const li = document.createElement('li');
-        li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>`;
+        let cleanTitle = item.title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
+        li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer" title="${cleanTitle}">${cleanTitle}</a>`;
         listElement.appendChild(li);
       });
     }
-    
-    const now = new Date();
-    document.getElementById(timestampId).textContent = 
-      `Atualizado: ${now.toLocaleTimeString('pt-BR')}`;
+    const timestampEl = document.getElementById(timestampId);
+    if (timestampEl) timestampEl.textContent = `Atualizado ${formatTimeSince(updateTime)}`;
   }
 
-  // Função para carregar notícias com fallback entre dois proxies
-  async function loadNews(feedConfig) {
-    try {
-      const list = document.getElementById(feedConfig.elementId);
-      list.innerHTML = '<li><i class="fas fa-spinner fa-spin"></i> Atualizando...</li>';
-      
-      // Verificar cache
-      const cacheKey = `${CACHE_KEY}_${feedConfig.elementId}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-      
-      if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
-        const data = JSON.parse(cachedData);
-        renderNews(list, feedConfig.timestampId, data.items);
-        return;
-      }
-      
-      // Tentar com os dois proxies alternadamente
-      let lastError = null;
-      
-      for (let i = 0; i < PROXY_SERVICES.length; i++) {
-        const proxy = PROXY_SERVICES[i];
-        
+  async function loadNews(feedKey, forceRefresh = false) {
+    const feedConfig = rssFeeds[feedKey];
+    if (!feedConfig) { console.error(`Config do feed '${feedKey}' não encontrada.`); return; }
+    const list = document.getElementById(feedConfig.elementId);
+    const timestampEl = document.getElementById(feedConfig.timestampId);
+    if (list) list.innerHTML = `<li><i class="fas fa-spinner fa-spin"></i> Carregando ${feedConfig.displayName}...</li>`;
+    const cacheKey = `${CACHE_KEY_PREFIX}${feedConfig.elementId}`;
+    if (!forceRefresh) {
+      const cachedEntry = localStorage.getItem(cacheKey);
+      if (cachedEntry) {
         try {
-          const proxyUrl = proxy.url(feedConfig.url);
-          console.log(`Tentando com proxy: ${proxy.name}`);
-          
-          const response = await fetch(proxyUrl);
-          
-          if (!response.ok) throw new Error(`Proxy ${proxy.name} retornou status ${response.status}`);
-          
-          const xmlText = await response.text();
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-          const items = xmlDoc.getElementsByTagName("item");
-          
-          const data = { 
-            items: Array.from(items).map(item => ({
-              title: item.getElementsByTagName("title")[0].textContent,
-              link: item.getElementsByTagName("link")[0].textContent
-            })) 
-          };
-          
-          if (!data || !data.items || data.items.length === 0) {
-            throw new Error('Dados do feed inválidos ou vazios');
+          const { items, timestamp } = JSON.parse(cachedEntry);
+          if ((Date.now() - timestamp) < CACHE_TTL) {
+            if (list && timestampEl) renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
+            return;
           }
-          
-          // Salvar no cache e renderizar
-          localStorage.setItem(cacheKey, JSON.stringify(data));
-          localStorage.setItem(`${cacheKey}_time`, Date.now());
-          renderNews(list, feedConfig.timestampId, data.items);
-          return;
-          
-        } catch (error) {
-          lastError = error;
-          console.warn(`Falha com proxy ${proxy.name}:`, error);
-          // Continuar para o próximo proxy
-        }
+        } catch (e) { console.warn("Cache inválido para " + feedKey, e); localStorage.removeItem(cacheKey); }
       }
-      
-      // Se todos os proxies falharam
-      throw lastError || new Error('Todos os proxies falharam');
-      
+    } else { localStorage.removeItem(cacheKey); }
+    let success = false;
+    const currentProxy = PROXY_SERVICES[lastUsedProxy];
+    try {
+        const proxyUrl = currentProxy.url(feedConfig.url);
+        console.log(`Feed ${feedConfig.displayName}: Tentando com proxy ${currentProxy.name}`);
+        const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
+        if (!response.ok) throw new Error(`Proxy ${currentProxy.name} status ${response.status}`);
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const parserErrors = xmlDoc.getElementsByTagName("parsererror");
+        if (parserErrors.length > 0) {
+            console.error(`Erro de parsing XML para ${feedConfig.displayName}:`, parserErrors[0].textContent);
+            throw new Error(`Erro de parsing XML`);
+        }
+        const itemsXml = xmlDoc.getElementsByTagName("item");
+        const fetchedItems = Array.from(itemsXml).map(item => {
+            let title = item.querySelector("title")?.textContent || "Sem título";
+            title = title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
+            return { title: title, link: item.querySelector("link")?.textContent.trim() || "#" };
+        });
+        if (fetchedItems.length === 0 && xmlDoc.documentElement.textContent.length < 150) {
+             throw new Error(`Resposta vazia/inválida do proxy ${currentProxy.name}`);
+        }
+        const updateTime = Date.now();
+        localStorage.setItem(cacheKey, JSON.stringify({ items: fetchedItems, timestamp: updateTime }));
+        if (list && timestampEl) renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
+        success = true;
     } catch (error) {
-      document.getElementById(feedConfig.elementId).innerHTML = 
-        '<li><i class="fas fa-exclamation-triangle"></i> Erro ao carregar notícias.</li>';
-      console.error(`Erro no feed ${feedConfig.elementId}:`, error);
+        console.warn(`Falha com proxy ${currentProxy.name} para ${feedConfig.displayName}:`, error);
+        lastUsedProxy = (lastUsedProxy + 1) % PROXY_SERVICES.length;
+        if (list) list.innerHTML = `<li><i class="fas fa-exclamation-triangle"></i> Erro: ${feedConfig.displayName}.</li>`;
+        if (timestampEl) timestampEl.textContent = "Falha";
     }
   }
 
-  // Função para atualizar todos os feeds
-  function refreshAllFeeds() {
-    const refreshBtn = document.getElementById('refresh-btn');
-    
-    // Animação de carregamento
-    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    refreshBtn.disabled = true;
-    
-    // Limpar cache antes de atualizar
-    Object.keys(rssFeeds).forEach(feedKey => {
-      const cacheKey = `${CACHE_KEY}_${rssFeeds[feedKey].elementId}`;
-      localStorage.removeItem(cacheKey);
-      localStorage.removeItem(`${cacheKey}_time`);
-    });
-    
-    // Atualiza todos os feeds
-    const promises = Object.values(rssFeeds).map(feed => loadNews(feed));
-    
-    // Restaura o botão quando terminar
-    Promise.all(promises).finally(() => {
-      setTimeout(() => {
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        refreshBtn.disabled = false;
-      }, 1000);
+  function refreshAllFeeds(force = true) {
+    const refreshBtnGlobal = document.getElementById('refresh-btn');
+    const originalIconHTML = '<i class="fas fa-sync-alt"></i>';
+    if(refreshBtnGlobal && force) {
+      refreshBtnGlobal.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      refreshBtnGlobal.disabled = true;
+    }
+    if (force) {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith(CACHE_KEY_PREFIX)) localStorage.removeItem(key);
+        });
+        console.log("Cache de notícias do terminal limpo para refresh forçado.");
+    }
+    const promises = Object.keys(rssFeeds).map(feedKey => loadNews(feedKey, force));
+    Promise.allSettled(promises).finally(() => {
+      if(refreshBtnGlobal && force) {
+        setTimeout(() => { refreshBtnGlobal.innerHTML = originalIconHTML; refreshBtnGlobal.disabled = false; }, 1000);
+      }
     });
   }
 
-  // Função para alternar tema claro/escuro
   function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLightMode = document.body.classList.contains('light-mode');
     localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
-    
-    // Atualizar ícone do tema
     const themeIcon = document.querySelector('#theme-toggle i');
-    themeIcon.classList.toggle('fa-moon', !isLightMode);
-    themeIcon.classList.toggle('fa-sun', isLightMode);
+    if(themeIcon){
+        themeIcon.classList.toggle('fa-moon', !isLightMode);
+        themeIcon.classList.toggle('fa-sun', isLightMode);
+    }
   }
 
-  // Botão voltar ao topo
   function setupBackToTop() {
     const backToTopButton = document.getElementById('top-btn');
-    
-    window.addEventListener('scroll', function() {
-      if (window.pageYOffset > 300) {
-        backToTopButton.classList.add('visible');
-      } else {
-        backToTopButton.classList.remove('visible');
-      }
-    });
-    
-    backToTopButton.addEventListener('click', function() {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    });
+    if (!backToTopButton) return;
+    window.addEventListener('scroll', () => backToTopButton.classList.toggle('visible', window.pageYOffset > 300));
+    backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+  
+  function updateFooterYear() {
+      const yearSpan = document.getElementById('current-year');
+      if (yearSpan) yearSpan.textContent = new Date().getFullYear();
   }
 
-  // Carrega todos os feeds quando a página é aberta
   document.addEventListener('DOMContentLoaded', () => {
-    // Verificar preferência de tema salva
-    if (localStorage.getItem('themePreference') === 'light') {
-      document.body.classList.add('light-mode');
-      const themeIcon = document.querySelector('#theme-toggle i');
-      themeIcon.classList.remove('fa-moon');
-      themeIcon.classList.add('fa-sun');
-    }
+    const savedTheme = localStorage.getItem('themePreference');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let isLightMode = (savedTheme === 'light') || (!savedTheme && !prefersDark); 
+    if (isLightMode) document.body.classList.add('light-mode');
+    else document.body.classList.remove('light-mode');
+    const themeIcon = document.querySelector('#theme-toggle i');
+    if(themeIcon){ themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
+
+    refreshAllFeeds(false); 
     
-    refreshAllFeeds();
+    const refreshBtnGlobal = document.getElementById('refresh-btn');
+    if(refreshBtnGlobal) refreshBtnGlobal.addEventListener('click', () => refreshAllFeeds(true));
+    const homeBtn = document.getElementById('home-btn');
+    if(homeBtn) homeBtn.addEventListener('click', () => window.location.href = 'index.html');
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if(themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
     
-    // Configura os botões flutuantes
-    document.getElementById('refresh-btn').addEventListener('click', refreshAllFeeds);
-    
-    // Configurar botão home
-    document.getElementById('home-btn').addEventListener('click', () => {
-      window.location.href = 'index.html';
-    });
-    
-    // Configurar alternador de tema
-    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-    
-    // Configurar botão de voltar ao topo
     setupBackToTop();
+    updateFooterYear();
+
+    document.querySelectorAll('.refresh-widget').forEach(button => {
+        button.addEventListener('click', function() {
+            const feedKey = this.dataset.feedkey;
+            if (feedKey) loadNews(feedKey, true);
+        });
+    });
   });
 
-  // Atualiza os feeds a cada 5 minutos
-  setInterval(refreshAllFeeds, 300000);
+  setInterval(() => refreshAllFeeds(false), 5 * 60 * 1000);
 </script>
 
 </body>
