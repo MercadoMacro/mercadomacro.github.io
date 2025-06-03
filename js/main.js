@@ -2,15 +2,36 @@
 // CONFIGURAÇÕES GLOBAIS
 // =============================================
 const CACHE_KEY_NEWS = 'newsCache_v6';
-const CACHE_TTL_NEWS = 15 * 60 * 1000;
+const CACHE_TTL_NEWS = 15 * 60 * 1000; // 15 minutos
 const FAVORITES_KEY = 'favorites_v2';
-const BOX_ORDER_KEY = 'boxOrder_v2';
+const BOX_SLOT_ASSIGNMENT_KEY = 'boxSlotAssignment_v1'; // NOVO para slots
+const DEFAULT_SLOT_ASSIGNMENTS = { // NOVO para slots
+    slotA: 'box-commentary',
+    slotB: 'box-market',
+    slotC: 'news-widget'
+};
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
-const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
-const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000;
-let commentaryLastUpdateTimestamp = null; // Mantido para lógica interna, se necessário
+const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo'; // ATENÇÃO: Expor chaves de API no lado do cliente é um risco de segurança.
+const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutos
+let commentaryLastUpdateTimestamp = null;
 
 let BANNER_PHRASES = [];
+
+// Variáveis do Modal de Conteúdo
+let contentModalOverlay, modalContentArea, contentModalCloseBtn;
+
+// Variáveis e Constantes para Visibilidade dos Boxes
+const VISIBILITY_PREFS_KEY = 'dashboardBoxVisibility_v1';
+const DEFAULT_BOX_VISIBILITY = {
+    'box-commentary': true,
+    'box-market': true,
+    'news-widget': true
+};
+let settingsToggleBtn, visibilitySettingsPanel;
+let visibilityCheckboxes = [];
+
+// Variáveis para Drag and Drop de Slots
+let draggingElementId = null;
 
 // =============================================
 // FUNÇÃO DEBOUNCE
@@ -31,53 +52,173 @@ function debounce(func, wait, immediate) {
 };
 
 // =============================================
+// FUNÇÕES DO MODAL DE CONTEÚDO
+// =============================================
+function initializeModalElements() {
+    contentModalOverlay = document.getElementById('content-modal-overlay');
+    modalContentArea = document.getElementById('modal-content-area');
+    contentModalCloseBtn = document.getElementById('content-modal-close-btn');
+
+    if (contentModalCloseBtn) {
+        contentModalCloseBtn.addEventListener('click', closeContentModal);
+    }
+    if (contentModalOverlay) {
+        contentModalOverlay.addEventListener('click', (event) => {
+            if (event.target === contentModalOverlay) { // Fecha se clicar fora do conteúdo do modal
+                closeContentModal();
+            }
+        });
+    }
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && contentModalOverlay && contentModalOverlay.classList.contains('visible')) {
+            closeContentModal();
+        }
+    });
+}
+
+function openContentModal(boxId) {
+    if (!contentModalOverlay || !modalContentArea) {
+        console.error('Elementos do modal não foram inicializados.');
+        return;
+    }
+
+    const originalBox = document.getElementById(boxId);
+    const originalBoxContent = originalBox ? originalBox.querySelector('.box-content') : null;
+
+    modalContentArea.innerHTML = '';
+
+    if (!originalBoxContent) {
+        console.error(`Conteúdo do box com ID "${boxId}" não encontrado.`);
+        modalContentArea.innerHTML = '<p class="error-commentary"><i class="fas fa-exclamation-triangle"></i> Conteúdo não encontrado.</p>';
+    } else {
+        if (boxId === 'box-market') {
+            const marketWidgetModalContainer = document.createElement('div');
+            marketWidgetModalContainer.id = 'modal-market-overview-container';
+            marketWidgetModalContainer.style.width = '100%';
+            marketWidgetModalContainer.style.height = '100%';
+            modalContentArea.appendChild(marketWidgetModalContainer);
+
+            const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+            if (typeof renderMarketOverviewWidget === 'function') {
+                renderMarketOverviewWidget(currentTheme, marketWidgetModalContainer.id);
+            } else {
+                marketWidgetModalContainer.innerHTML = '<p class="error-commentary"><i class="fas fa-exclamation-triangle"></i> Erro: Função renderMarketOverviewWidget não encontrada.</p>';
+            }
+        } else {
+            const clonedContent = originalBoxContent.cloneNode(true);
+            modalContentArea.appendChild(clonedContent);
+        }
+    }
+
+    contentModalOverlay.style.display = 'flex';
+    setTimeout(() => {
+        contentModalOverlay.classList.add('visible');
+    }, 10);
+    document.body.classList.add('body-modal-open');
+}
+
+function closeContentModal() {
+    if (contentModalOverlay) {
+        contentModalOverlay.classList.remove('visible');
+        setTimeout(() => {
+            if (!contentModalOverlay.classList.contains('visible')) {
+                 contentModalOverlay.style.display = 'none';
+            }
+        }, 300);
+    }
+    if (modalContentArea) {
+        modalContentArea.innerHTML = '';
+    }
+    document.body.classList.remove('body-modal-open');
+}
+
+// =============================================
+// FUNÇÕES DE VISIBILIDADE DOS BOXES
+// =============================================
+function setupBoxVisibility() {
+    settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    visibilitySettingsPanel = document.getElementById('visibility-settings-panel');
+
+    if (!settingsToggleBtn || !visibilitySettingsPanel) {
+        console.warn('Elementos do painel de configurações de visibilidade não encontrados.');
+        return;
+    }
+
+    const savedPrefs = JSON.parse(localStorage.getItem(VISIBILITY_PREFS_KEY)) || { ...DEFAULT_BOX_VISIBILITY };
+
+    document.querySelectorAll('.visibility-toggle-checkbox').forEach(checkbox => {
+        const boxId = checkbox.dataset.boxid;
+        if (boxId) {
+            const boxElement = document.getElementById(boxId);
+            const isVisible = savedPrefs[boxId] !== undefined ? savedPrefs[boxId] : (DEFAULT_BOX_VISIBILITY[boxId] !== undefined ? DEFAULT_BOX_VISIBILITY[boxId] : true);
+
+            checkbox.checked = isVisible;
+            if (boxElement) {
+                boxElement.style.display = isVisible ? '' : 'none';
+            }
+
+            checkbox.addEventListener('change', (event) => {
+                const currentBoxId = event.target.dataset.boxid;
+                const currentBoxElement = document.getElementById(currentBoxId);
+                const nowVisible = event.target.checked;
+                if (currentBoxElement) {
+                    currentBoxElement.style.display = nowVisible ? '' : 'none';
+                }
+                const currentPrefs = JSON.parse(localStorage.getItem(VISIBILITY_PREFS_KEY)) || { ...DEFAULT_BOX_VISIBILITY };
+                currentPrefs[currentBoxId] = nowVisible;
+                localStorage.setItem(VISIBILITY_PREFS_KEY, JSON.stringify(currentPrefs));
+
+                if (window.innerWidth <= 768) { // Esconde o painel após uma mudança em mobile
+                    visibilitySettingsPanel.classList.remove('visible');
+                    visibilitySettingsPanel.style.display = 'none';
+                }
+            });
+            visibilityCheckboxes.push(checkbox);
+        }
+    });
+
+    settingsToggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isCurrentlyVisible = visibilitySettingsPanel.classList.toggle('visible');
+        visibilitySettingsPanel.style.display = isCurrentlyVisible ? 'block' : 'none';
+        if (isCurrentlyVisible) {
+             visibilityCheckboxes.forEach(cb => {
+                const boxEl = document.getElementById(cb.dataset.boxid);
+                if (boxEl) cb.checked = (window.getComputedStyle(boxEl).display !== 'none');
+             });
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (visibilitySettingsPanel && visibilitySettingsPanel.classList.contains('visible')) {
+            if (!visibilitySettingsPanel.contains(event.target) && event.target !== settingsToggleBtn && !settingsToggleBtn.contains(event.target)) {
+                visibilitySettingsPanel.classList.remove('visible');
+                visibilitySettingsPanel.style.display = 'none';
+            }
+        }
+    });
+}
+
+// =============================================
 // FUNÇÃO PARA FORMATAR TEMPO RELATIVO
 // =============================================
 function formatTimeSince(timestamp) {
-    if (!timestamp) return '';
-    const now = new Date();
-    const secondsPast = (now.getTime() - timestamp) / 1000;
-
-    if (secondsPast < 60) {
-        return 'há menos de um minuto';
-    }
-    if (secondsPast < 3600) {
-        const minutes = Math.round(secondsPast / 60);
-        return `há ${minutes} min${minutes > 1 ? 's' : ''}`;
-    }
-    if (secondsPast <= 86400) {
-        const hours = Math.round(secondsPast / 3600);
-        return `há ${hours} hora${hours > 1 ? 's' : ''}`;
-    }
-    const date = new Date(timestamp);
-    return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
+    if (!timestamp) return ''; const now = new Date(); const secondsPast = (now.getTime() - timestamp) / 1000;
+    if (secondsPast < 60) return 'há menos de um minuto';
+    if (secondsPast < 3600) { const minutes = Math.round(secondsPast / 60); return `há ${minutes} min${minutes > 1 ? 's' : ''}`; }
+    if (secondsPast <= 86400) { const hours = Math.round(secondsPast / 3600); return `há ${hours} hora${hours > 1 ? 's' : ''}`; }
+    const date = new Date(timestamp); return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`;
 }
-
 
 // =============================================
 // FUNÇÃO PARA ATUALIZAR DATA E HORA
 // =============================================
 function updateDateTime() {
     const now = new Date();
-    const formattedDate = now.toLocaleDateString('pt-BR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: false
-    });
-
-    const dataAtualElement = document.getElementById('data-atual');
-    if (dataAtualElement) {
-        const datetimeSpan = dataAtualElement.querySelector('.datetime');
-        if (datetimeSpan) {
-            datetimeSpan.textContent = formattedDate;
-        }
-    }
-
-    const footerElement = document.getElementById('footer');
-    if (footerElement) {
-        footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`;
-    }
+    const formattedDate = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    const dataAtualElement = document.getElementById('data-atual'); if (dataAtualElement) { const datetimeSpan = dataAtualElement.querySelector('.datetime'); if (datetimeSpan) datetimeSpan.textContent = formattedDate; }
+    const footerElement = document.getElementById('footer'); if (footerElement) footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`;
 }
-
 
 // =============================================
 // CÓDIGO DAS NOTÍCIAS
@@ -118,6 +259,129 @@ const FALLBACK_NEWS = [
     { title: "Dólar opera em queda", description: "Moeda americana perde força no cenário global.", link: "#", pubDate: new Date().toISOString() }
 ];
 
+async function fetchNews() {
+    let lastError = null;
+    for (const feedUrl of RSS_FEEDS) {
+        for (const source of RSS_SOURCES) {
+            try {
+                const url = source.buildUrl(feedUrl);
+                const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(8000) });
+                if (!response.ok) throw new Error(`HTTP ${response.status} em ${source.name} para ${feedUrl}`);
+                let dataToProcess = source.name === 'AllOrigins' ? await response.text() : await response.json();
+                const newsItems = source.processor(dataToProcess);
+                if (newsItems && newsItems.length > 0) return newsItems;
+            } catch (error) { lastError = error; console.warn(`Falha com ${source.name} para ${feedUrl}:`, error); }
+        }
+    }
+    console.error("Todas as fontes de notícias falharam. Último erro:", lastError);
+    throw lastError || new Error('Todas as fontes de notícias falharam.');
+}
+
+async function loadNewsWidget(forceUpdate = false) {
+    const newsContentBox = document.querySelector('#news-widget .news-content');
+    if (!newsContentBox) return;
+    updateLoadingState(true);
+    if (!forceUpdate) {
+        const cachedData = getCachedNews();
+        if (cachedData) { renderNewsList(cachedData, true); updateLoadingState(false); return; }
+    }
+    if (!navigator.onLine) {
+        showNotification('Sem conexão com a internet.', true);
+        const cachedData = getCachedNews();
+        if (cachedData) renderNewsList(cachedData, true);
+        else newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache.</div>';
+        updateLoadingState(false); return;
+    }
+    try {
+        const newsItems = await fetchNews();
+        if (newsItems.length > 0) { cacheNews(newsItems); renderNewsList(newsItems); if (forceUpdate) showNotification('Notícias atualizadas!'); }
+        else { renderNewsList([], false, false); if (forceUpdate) showNotification('Nenhuma notícia nova.', false); }
+        localStorage.setItem('retryCount', '0');
+    } catch (fetchError) {
+        console.error('Falha ao buscar notícias:', fetchError);
+        if (forceUpdate) showNotification(`Falha na atualização: ${fetchError.message}.`, true);
+        const cachedData = getCachedNews();
+        if (cachedData) { renderNewsList(cachedData, true); if (forceUpdate) showNotification('Mostrando notícias do cache.', false); }
+        else { renderNewsList(FALLBACK_NEWS, false, true); if (forceUpdate) showNotification('Mostrando exemplos.', true); }
+        scheduleRetry();
+    } finally { updateLoadingState(false); localStorage.setItem('lastTry', Date.now().toString()); }
+}
+
+function updateLoadingState(isLoading) {
+    const refreshNewsBtn = document.getElementById('refresh-news-btn');
+    const icon = refreshNewsBtn ? refreshNewsBtn.querySelector('i') : null;
+    if (refreshNewsBtn && icon) { refreshNewsBtn.disabled = isLoading; icon.classList.toggle('fa-spin', isLoading); }
+}
+
+function parseXmlNews(xmlDoc) {
+    const errorNode = xmlDoc.querySelector('parsererror');
+    if (errorNode) { console.error("Erro XML:", errorNode.textContent); throw new Error('Erro ao analisar XML.'); }
+    const items = Array.from(xmlDoc.querySelectorAll("item"));
+    if (items.length === 0) { console.warn(`Nenhuma tag <item> encontrada no XML.`); return []; }
+    return items.map(item => {
+        let description = item.querySelector("description")?.textContent?.trim() || '';
+        description = description.replace("<![CDATA[", "").replace("]]>", "");
+        const tempDiv = document.createElement('div'); tempDiv.innerHTML = description;
+        description = tempDiv.textContent || tempDiv.innerText || "";
+        return {
+            title: item.querySelector("title")?.textContent?.trim() || 'Sem título',
+            description: description.replace(/\s+/g, ' ').trim(),
+            link: item.querySelector("link")?.textContent?.trim() || '#',
+            pubDate: item.querySelector("pubDate")?.textContent?.trim() || new Date().toISOString()
+        };
+    });
+}
+
+function renderNewsList(items, fromCache = false, isFallback = false) {
+    const newsContentBox = document.querySelector('#news-widget .news-content');
+    if (!newsContentBox) return;
+    const favorites = getFavorites(); let statusHtml = '';
+    if (isFallback && !fromCache) statusHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Mostrando notícias de exemplo.</div>`;
+    newsContentBox.innerHTML = `${statusHtml}${items.length === 0 && !isFallback ? '<p style="padding:10px; text-align:center;">Nenhuma notícia.</p>' : ''}${items.map(item => {
+        const isFavorited = favorites.some(fav => fav.link === item.link);
+        let cleanDescription = item.description || '';
+        return `<div class="news-item"><button class="favorite-btn ${isFavorited ? 'favorited' : ''}" aria-label="${isFavorited ? 'Desfavoritar' : 'Favoritar'}" onclick="toggleFavorite(event, ${JSON.stringify(item).replace(/"/g, '&quot;')})"><i class="fas fa-heart"></i></button><a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer"><div class="news-item-title">${item.title}</div>${cleanDescription ? `<div class="news-item-description">${cleanDescription}</div>` : ''}<div class="news-item-date">${formatDate(item.pubDate)}</div></a></div>`;
+    }).join('')}${!isFallback && navigator.onLine ? `<button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;"><i class="fas fa-sync-alt"></i> Tentar atualizar</button>` : ''}`;
+}
+
+function renderErrorState(error) {
+    const newsContentBox = document.querySelector('#news-widget .news-content');
+    if (newsContentBox) newsContentBox.innerHTML = `<div class="error"><p><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro.'}</p><p>Verifique sua conexão.</p><button onclick="loadNewsWidget(true)" class="retry-btn"><i class="fas fa-sync-alt"></i> Tentar novamente</button></div>`;
+}
+function scheduleRetry() {
+    const retryCount = parseInt(localStorage.getItem('retryCount') || '0');
+    const delay = Math.min(60000 * Math.pow(2, retryCount), 10 * 60 * 1000);
+    localStorage.setItem('retryCount', (retryCount + 1).toString());
+    console.log(`Próxima tentativa de buscar notícias em ${delay/1000}s`);
+    setTimeout(() => loadNewsWidget(true), delay);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' };
+        return date.toLocaleDateString('pt-BR', options);
+    } catch (e) { console.error("Erro ao formatar data:", dateString, e); return ''; }
+}
+
+function getCachedNews() { try { const cached = localStorage.getItem(CACHE_KEY_NEWS); if (!cached) return null; const { data, timestamp } = JSON.parse(cached); if (Date.now() - timestamp < CACHE_TTL_NEWS) return data; localStorage.removeItem(CACHE_KEY_NEWS); return null; } catch (e) { localStorage.removeItem(CACHE_KEY_NEWS); return null; } }
+function getCacheTimestamp() { try { const cached = localStorage.getItem(CACHE_KEY_NEWS); return cached ? JSON.parse(cached).timestamp : null; } catch { return null; } }
+function cacheNews(data) { if (!data || data.length === 0) return; try { localStorage.setItem(CACHE_KEY_NEWS, JSON.stringify({ data, timestamp: Date.now() })); } catch (e) { console.error('Erro ao salvar notícias no cache:', e); } }
+function getFavorites() { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch { localStorage.removeItem(FAVORITES_KEY); return []; } }
+function saveFavorites(favorites) { try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) { console.error('Erro ao salvar favoritos:', e); } }
+
+function toggleFavorite(event, newsItem) {
+    event.stopPropagation(); event.preventDefault(); let favorites = getFavorites();
+    const index = favorites.findIndex(item => item.link === newsItem.link);
+    if (index === -1) { favorites.push(newsItem); showNotification('Notícia favoritada!'); }
+    else { favorites.splice(index, 1); showNotification('Notícia desfavoritada.'); }
+    saveFavorites(favorites); const heartButton = event.currentTarget;
+    heartButton.classList.toggle('favorited', index === -1);
+    heartButton.setAttribute('aria-label', index === -1 ? 'Desfavoritar' : 'Favoritar');
+}
+
 // =============================================
 // FUNÇÕES PARA RENDERIZAR WIDGETS
 // =============================================
@@ -126,59 +390,50 @@ function renderTickerTapeWidget(theme) {
     if (!container) return;
     const skeleton = container.querySelector('.tv-skeleton');
     if (skeleton) skeleton.style.display = 'none';
-
     const widgetContent = container.querySelector('.tradingview-widget-container');
     if(widgetContent) widgetContent.remove();
-    else { // Se não houver widget anterior, limpa o container (exceto o skeleton se ele for filho direto)
-        Array.from(container.childNodes).forEach(node => {
-            if (!node.classList || !node.classList.contains('tv-skeleton')) {
-                container.removeChild(node);
-            }
-        });
-    }
-
-
+    else { Array.from(container.childNodes).forEach(node => { if (!node.classList || !node.classList.contains('tv-skeleton')) container.removeChild(node); }); }
     const config = {
         "symbols": [
             {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500"}, {"description": "IBOVESPA", "proName": "BMFBOVESPA:IBOV"},
             {"description": "NASDAQ 100","proName": "FOREXCOM:NSXUSD"}, {"description": "USD/BRL","proName": "FX_IDC:USDBRL"},
             {"description": "EUR/USD","proName": "FX:EURUSD"}, {"description": "BITCOIN","proName": "BITSTAMP:BTCUSD"},
-            {"description": "PETRÓLEO BRENT","proName": "TVC:UKOIL"}, {"description": "OURO","proName": "OANDA:XAUUSD"}
-        ],
-        "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive",
-        "colorTheme": theme, "locale": "br"
+            {"description": "PETRÓLEO BRENT","proName": "TVC:UKOIL"}, {"description": "OURO","proName": "OANDA:XAUUSD"} ],
+        "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive", "colorTheme": theme, "locale": "br"
     };
     const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
-    script.async = true;
-    script.text = JSON.stringify(config);
-    container.appendChild(script);
+    script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+    script.async = true; script.text = JSON.stringify(config); container.appendChild(script);
 }
 
-function renderMarketOverviewWidget(theme) {
-    const container = document.getElementById('market-overview-widget-wrapper');
-    if (!container) return;
+function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-widget-wrapper') {
+    const container = document.getElementById(targetContainerId);
+    if (!container) {
+        console.error(`Market Overview widget container com ID "${targetContainerId}" não encontrado.`);
+        if (targetContainerId === 'modal-market-overview-container' && modalContentArea) {
+             modalContentArea.innerHTML = `<p class="error-commentary" style="padding:20px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> Container do widget de mercado não encontrado no modal.</p>`;
+        }
+        return;
+    }
+
     const skeleton = container.querySelector('.tv-skeleton');
     if (skeleton) skeleton.style.display = 'none';
 
-    const widgetContent = container.querySelector('.tradingview-widget-container');
-    if(widgetContent) widgetContent.remove();
-    else {
-        Array.from(container.childNodes).forEach(node => {
-            if (!node.classList || !node.classList.contains('tv-skeleton')) {
-                container.removeChild(node);
-            }
-        });
+    let oldTvWidgetDiv = container.querySelector('.tradingview-widget-container');
+    while(oldTvWidgetDiv){
+        oldTvWidgetDiv.remove();
+        oldTvWidgetDiv = container.querySelector('.tradingview-widget-container');
     }
 
-    const tvContainer = document.createElement('div');
-    tvContainer.className = 'tradingview-widget-container';
-    tvContainer.style.width = '100%'; tvContainer.style.height = '100%';
+    const tvWidgetDiv = document.createElement('div');
+    tvWidgetDiv.className = 'tradingview-widget-container';
+    tvWidgetDiv.style.width = '100%';
+    tvWidgetDiv.style.height = '100%';
+
     const config = {
         "colorTheme": theme, "dateRange": "12M", "showChart": true, "locale": "br",
         "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true,
-        "showFloatingTooltip": false, "width": "100%", "height": "500",
+        "showFloatingTooltip": false, "width": "100%", "height": "100%",
         "plotLineColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 1)" : "rgba(0, 209, 128, 1)",
         "plotLineColorFalling": theme === 'light' ? "rgba(220, 53, 69, 1)" : "rgba(248, 81, 73, 1)",
         "gridLineColor": "rgba(240, 243, 250, 0)",
@@ -196,14 +451,11 @@ function renderMarketOverviewWidget(theme) {
         ]
     };
     const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js';
-    script.async = true;
-    script.text = JSON.stringify(config);
-    tvContainer.appendChild(script);
-    container.appendChild(tvContainer);
+    script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js';
+    script.async = true; script.text = JSON.stringify(config);
+    tvWidgetDiv.appendChild(script);
+    container.appendChild(tvWidgetDiv);
 }
-
 
 function loadEconomicCalendarWidget() {
     const widgetContainer = document.getElementById('economicCalendarWidget');
@@ -226,7 +478,6 @@ function loadEconomicCalendarWidget() {
 // =============================================
 // FUNÇÕES DO BANNER E CONTEÚDO
 // =============================================
-
 async function loadBannerPhrases() {
     try {
         const response = await fetch('data/banner-phrases.json');
@@ -249,10 +500,8 @@ function updateBanner() {
     if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) {
         const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
         bannerTextEl.textContent = randomPhrase;
-
         bannerTextEl.style.animation = 'none';
         void bannerTextEl.offsetWidth;
-
         if (window.innerWidth <= 768) {
             bannerTextEl.style.animation = 'scrollBanner 15s linear infinite';
         } else {
@@ -299,243 +548,80 @@ function updateCommentary(content) {
 
 async function updateCommentaryContent() {
     const commentaryContentEl = document.getElementById('commentary-content');
-    // const lastUpdatedEl = document.getElementById('commentary-last-updated'); // REMOVIDO
     if (!commentaryContentEl) return;
-
     commentaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando análise...</div>`;
-    // if (lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...'; // REMOVIDO
-
     try {
         const content = await fetchGoogleDocContent();
         updateCommentary(content);
         commentaryLastUpdateTimestamp = Date.now();
-        // if (lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp); // REMOVIDO
         return true;
     } catch (error) {
         console.error('Falha ao atualizar comentário:', error);
         commentaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`;
-        // if (lastUpdatedEl && commentaryLastUpdateTimestamp) lastUpdatedEl.textContent = `Falha. Última: ${formatTimeSince(commentaryLastUpdateTimestamp)}`; // REMOVIDO
-        // else if (lastUpdatedEl) lastUpdatedEl.textContent = 'Falha ao atualizar'; // REMOVIDO
         return false;
     }
 }
 
-async function fetchNews() {
-    let lastError = null;
-    for (const feedUrl of RSS_FEEDS) {
-        for (const source of RSS_SOURCES) {
-            try {
-                const url = source.buildUrl(feedUrl);
-                const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(8000) });
-                if (!response.ok) throw new Error(`HTTP ${response.status} em ${source.name} para ${feedUrl}`);
-
-                let dataToProcess;
-                if (source.name === 'AllOrigins') {
-                    dataToProcess = await response.text();
-                } else {
-                    dataToProcess = await response.json();
-                }
-
-                const newsItems = source.processor(dataToProcess);
-                if (newsItems && newsItems.length > 0) return newsItems;
-
-            } catch (error) {
-                lastError = error;
-                console.warn(`Falha com ${source.name} para ${feedUrl}:`, error);
-                continue;
-            }
-        }
-    }
-    console.error("Todas as fontes de notícias falharam. Último erro:", lastError);
-    throw lastError || new Error('Todas as fontes de notícias falharam.');
-}
-
-async function loadNewsWidget(forceUpdate = false) {
-    const newsContentBox = document.querySelector('#news-widget .news-content');
-    // const lastUpdatedEl = document.getElementById('news-last-updated'); // REMOVIDO
-    if (!newsContentBox) return;
-
-    updateLoadingState(true);
-    // if(lastUpdatedEl) lastUpdatedEl.textContent = 'atualizando...'; // REMOVIDO
-
-    if (!forceUpdate) {
-        const cachedData = getCachedNews();
-        if (cachedData) {
-            renderNewsList(cachedData, true);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
-            updateLoadingState(false);
-            return;
-        }
-    }
-    if (!navigator.onLine) {
-        showNotification('Sem conexão com a internet.', true);
-        const cachedData = getCachedNews();
-        if (cachedData) {
-            renderNewsList(cachedData, true);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Offline. Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
-        } else {
-            newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache.</div>';
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Offline. Sem cache.'; // REMOVIDO
-        }
-        updateLoadingState(false);
+// =============================================
+// FUNÇÕES DE MANIPULAÇÃO DE BOX (Modal)
+// =============================================
+function addOrUpdateModalButton(boxElement, actionsContainer, buttonId, modalIconClass = 'fa-expand-arrows-alt') {
+    if (!boxElement || !actionsContainer) {
+        console.warn(`Elemento do Box ou actions container não encontrado para ID do botão: ${buttonId}`);
         return;
     }
-    try {
-        const newsItems = await fetchNews();
-        if (newsItems.length > 0) {
-            cacheNews(newsItems);
-            renderNewsList(newsItems);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = formatTimeSince(Date.now()); // REMOVIDO
-            if (forceUpdate) showNotification('Notícias atualizadas!');
-        } else {
-            renderNewsList([], false, false);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Nenhuma notícia nova.'; // REMOVIDO
-            if (forceUpdate) showNotification('Nenhuma notícia nova.', false);
-        }
-        localStorage.setItem('retryCount', '0');
-    } catch (fetchError) {
-        console.error('Falha ao buscar notícias:', fetchError);
-        if (forceUpdate) showNotification(`Falha na atualização: ${fetchError.message}.`, true);
-        const cachedData = getCachedNews();
-        if (cachedData) {
-            renderNewsList(cachedData, true);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = `Falha. Cache: ${formatTimeSince(getCacheTimestamp())}`; // REMOVIDO
-            if (forceUpdate) showNotification('Mostrando notícias do cache.', false);
-        } else {
-            renderNewsList(FALLBACK_NEWS, false, true);
-            // if(lastUpdatedEl) lastUpdatedEl.textContent = 'Falha. Mostrando exemplos.'; // REMOVIDO
-            if (forceUpdate) showNotification('Mostrando exemplos.', true);
-        }
-        scheduleRetry();
-    } finally {
-        updateLoadingState(false);
-        localStorage.setItem('lastTry', Date.now().toString());
+    let modalBtn = actionsContainer.querySelector(`#${buttonId}`);
+    let isNewButton = false;
+    if (!modalBtn) {
+        modalBtn = document.createElement('button');
+        modalBtn.id = buttonId;
+        modalBtn.className = 'expand-btn';
+        isNewButton = true;
     }
-}
-
-function updateLoadingState(isLoading) {
-    const refreshNewsBtn = document.getElementById('refresh-news-btn');
-    const icon = refreshNewsBtn ? refreshNewsBtn.querySelector('i') : null;
-    if (refreshNewsBtn && icon) {
-        refreshNewsBtn.disabled = isLoading;
-        icon.classList.toggle('fa-spin', isLoading);
+    modalBtn.setAttribute('aria-label', 'Abrir em tela cheia');
+    const currentIconEl = modalBtn.querySelector('i');
+    if (currentIconEl) {
+        currentIconEl.className = `fas ${modalIconClass}`;
+    } else {
+        modalBtn.innerHTML = `<i class="fas ${modalIconClass}"></i>`;
     }
-}
-
-function parseXmlNews(xmlDoc) {
-    const errorNode = xmlDoc.querySelector('parsererror');
-    if (errorNode) { console.error("Erro XML:", errorNode.textContent); throw new Error('Erro ao analisar XML.'); }
-    const items = Array.from(xmlDoc.querySelectorAll("item"));
-    if (items.length === 0) { console.warn(`Nenhuma tag <item> encontrada.`); return []; }
-    return items.map(item => {
-        let description = item.querySelector("description")?.textContent?.trim() || '';
-        description = description.replace("<![CDATA[", "").replace("]]>", "");
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = description;
-        description = tempDiv.textContent || tempDiv.innerText || "";
-
-        return {
-            title: item.querySelector("title")?.textContent?.trim() || 'Sem título',
-            description: description.replace(/\s+/g, ' ').trim(),
-            link: item.querySelector("link")?.textContent?.trim() || '#',
-            pubDate: item.querySelector("pubDate")?.textContent?.trim() || new Date().toISOString()
-        };
+    const newBtnInstance = modalBtn.cloneNode(true); // Para religar event listeners se necessário
+    if (!isNewButton && modalBtn.parentNode) {
+        modalBtn.parentNode.replaceChild(newBtnInstance, modalBtn);
+    }
+    modalBtn = newBtnInstance;
+    modalBtn.addEventListener('click', function(event) {
+        event.stopPropagation();
+        openContentModal(boxElement.id);
     });
-}
-
-function renderNewsList(items, fromCache = false, isFallback = false) {
-    const newsContentBox = document.querySelector('#news-widget .news-content');
-    if (!newsContentBox) return;
-    const favorites = getFavorites(); let statusHtml = '';
-    if (isFallback && !fromCache) statusHtml = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Mostrando notícias de exemplo.</div>`;
-    // else if (fromCache) { // Removido status de cache daqui pois foi removido dos boxes
-        // statusHtml = `<div class="news-status"><span>Cache.</span><button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-left:auto; padding: 4px 8px; font-size: 11px;">Atualizar</button></div>`;
-    // }
-    newsContentBox.innerHTML = `${statusHtml}${items.length === 0 && !isFallback ? '<p style="padding:10px; text-align:center;">Nenhuma notícia.</p>' : ''}${items.map(item => {
-        const isFavorited = favorites.some(fav => fav.link === item.link);
-        let cleanDescription = item.description || '';
-        return `<div class="news-item"><button class="favorite-btn ${isFavorited ? 'favorited' : ''}" aria-label="${isFavorited ? 'Desfavoritar' : 'Favoritar'}" onclick="toggleFavorite(event, ${JSON.stringify(item).replace(/"/g, '&quot;')})"><i class="fas fa-heart"></i></button><a href="${item.link}" class="news-link" target="_blank" rel="noopener noreferrer"><div class="news-item-title">${item.title}</div>${cleanDescription ? `<div class="news-item-description">${cleanDescription.substring(0,180)}${cleanDescription.length > 180 ? '...' : ''}</div>` : ''}<div class="news-item-date">${formatDate(item.pubDate)}</div></a></div>`;
-    }).join('')}${!isFallback && navigator.onLine ? `<button onclick="loadNewsWidget(true)" class="retry-btn" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;"><i class="fas fa-sync-alt"></i> Tentar atualizar</button>` : ''}`;
-}
-
-function renderErrorState(error) {
-    const newsContentBox = document.querySelector('#news-widget .news-content');
-    if (newsContentBox) newsContentBox.innerHTML = `<div class="error"><p><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro.'}</p><p>Verifique sua conexão.</p><button onclick="loadNewsWidget(true)" class="retry-btn"><i class="fas fa-sync-alt"></i> Tentar novamente</button></div>`;
-}
-function scheduleRetry() {
-    const retryCount = parseInt(localStorage.getItem('retryCount') || '0');
-    const delay = Math.min(60000 * Math.pow(2, retryCount), 10 * 60 * 1000);
-    localStorage.setItem('retryCount', (retryCount + 1).toString());
-    console.log(`Nova tentativa em ${delay/1000}s`); setTimeout(() => loadNewsWidget(true), delay);
-}
-function formatDate(dateString) {
-    if (!dateString) return ''; try { const date = new Date(dateString); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch (e) { console.error("Erro data:", dateString, e); return ''; }
-}
-function getCachedNews() {
-    try { const cached = localStorage.getItem(CACHE_KEY_NEWS); if (!cached) return null; const { data, timestamp } = JSON.parse(cached); if (Date.now() - timestamp < CACHE_TTL_NEWS) return data; localStorage.removeItem(CACHE_KEY_NEWS); return null; } catch (e) { localStorage.removeItem(CACHE_KEY_NEWS); return null; }
-}
-function getCacheTimestamp() {
-    try { const cached = localStorage.getItem(CACHE_KEY_NEWS); return cached ? JSON.parse(cached).timestamp : null; } catch { return null; }
-}
-function cacheNews(data) {
-    if (!data || data.length === 0) return; try { localStorage.setItem(CACHE_KEY_NEWS, JSON.stringify({ data, timestamp: Date.now() })); } catch (e) { console.error('Erro cache:', e); }
-}
-function getFavorites() {
-    try { return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch { localStorage.removeItem(FAVORITES_KEY); return []; }
-}
-function saveFavorites(favorites) {
-    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) { console.error('Erro favoritos:', e); }
-}
-
-function toggleFavorite(event, newsItem) {
-    event.stopPropagation(); event.preventDefault(); let favorites = getFavorites();
-    const index = favorites.findIndex(item => item.link === newsItem.link);
-    if (index === -1) { favorites.push(newsItem); showNotification('Notícia favoritada!'); }
-    else { favorites.splice(index, 1); showNotification('Notícia desfavoritada.'); }
-    saveFavorites(favorites); const heartButton = event.currentTarget;
-    heartButton.classList.toggle('favorited', index === -1);
-    heartButton.setAttribute('aria-label', index === -1 ? 'Desfavoritar' : 'Favoritar');
-}
-
-function showNotification(message, isError = false) {
-    const existingNotification = document.querySelector('.page-notification');
-    if (existingNotification) existingNotification.remove();
-    const notification = document.createElement('div');
-    const notificationTypeClass = isError ? 'error' : (message.toLowerCase().includes('copiado') ? 'success' : 'success');
-    notification.className = `page-notification ${notificationTypeClass}`;
-    notification.textContent = message; document.body.appendChild(notification);
-    setTimeout(() => { notification.classList.add('show'); }, 10);
-    setTimeout(() => { notification.classList.remove('show'); setTimeout(() => notification.remove(), 300); }, 4000);
-}
-
-function toggleFullscreen() {
-    if (!document.fullscreenElement) { const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(handleFullscreenError); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(handleFullscreenError); } else { if (document.exitFullscreen) document.exitFullscreen().catch(handleFullscreenError); }
-}
-function handleFullscreenError(err) {
-    console.error(`Erro tela cheia: ${err.message}`, err); showNotification('Erro ao alternar tela cheia.', true);
-}
-function handleFullscreenChange() {
-    const fsBtn = document.getElementById('fullscreen-btn'); const fsExitBtn = document.getElementById('fullscreen-exit-btn');
-    const isFullscreen = !!document.fullscreenElement;
-    if (fsBtn) fsBtn.style.display = isFullscreen ? 'none' : 'flex';
-    if (fsExitBtn) fsExitBtn.style.display = isFullscreen ? 'flex' : 'none';
+    if (isNewButton) {
+        if (actionsContainer.firstChild) {
+            actionsContainer.insertBefore(modalBtn, actionsContainer.firstChild);
+        } else {
+            actionsContainer.appendChild(modalBtn);
+        }
+    }
 }
 
 function setupCommentaryActions() {
-    const commentaryBox = document.getElementById('box-commentary'); if (!commentaryBox) return;
-    const boxHeader = commentaryBox.querySelector('.box-header'); if (!boxHeader) return;
+    const commentaryBox = document.getElementById('box-commentary');
+    if (!commentaryBox) return;
+    const boxHeader = commentaryBox.querySelector('.box-header');
+    if (!boxHeader) return;
     let actionsContainer = boxHeader.querySelector('.box-actions');
-    if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); }
-
-    if (!actionsContainer.querySelector('#expand-commentary-btn')) {
-        const expandBtn = document.createElement('button'); expandBtn.id = 'expand-commentary-btn'; expandBtn.className = 'expand-btn';
-        expandBtn.setAttribute('aria-label', 'Expandir'); expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i>';
-        actionsContainer.appendChild(expandBtn);
-        expandBtn.addEventListener('click', function() { commentaryBox.classList.toggle('expanded'); const icon = this.querySelector('i'); icon.classList.toggle('fa-expand-alt', !commentaryBox.classList.contains('expanded')); icon.classList.toggle('fa-compress-alt', commentaryBox.classList.contains('expanded')); expandBtn.setAttribute('aria-label', commentaryBox.classList.contains('expanded') ? 'Recolher' : 'Expandir'); });
+    if (!actionsContainer) {
+        actionsContainer = document.createElement('div');
+        actionsContainer.className = 'box-actions';
+        boxHeader.appendChild(actionsContainer);
     }
+    addOrUpdateModalButton(commentaryBox, actionsContainer, 'expand-commentary-btn', 'fa-expand-arrows-alt');
+
     if (!actionsContainer.querySelector('#share-commentary-btn')) {
-        const shareBtn = document.createElement('button'); shareBtn.id = 'share-commentary-btn'; shareBtn.className = 'expand-btn';
-        shareBtn.setAttribute('aria-label', 'Compartilhar'); shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        const shareBtn = document.createElement('button');
+        shareBtn.id = 'share-commentary-btn';
+        shareBtn.className = 'expand-btn'; // Reutiliza a classe para consistência
+        shareBtn.setAttribute('aria-label', 'Compartilhar');
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
         actionsContainer.appendChild(shareBtn);
         shareBtn.addEventListener('click', async function() {
             const commentaryContentEl = document.getElementById('commentary-content');
@@ -550,47 +636,241 @@ function setupCommentaryActions() {
                 else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(textToShare); showNotification('Texto da análise copiado!'); }
                 else { throw new Error('Compartilhamento não suportado.'); }
             } catch (err) { console.error('Erro ao compartilhar:', err); if (err.name !== 'AbortError') { showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true); } }
-         });
+        });
     }
 }
 
-function saveBoxOrder() {
-    const container = document.getElementById('draggable-container'); if (!container) return;
-    const boxes = Array.from(container.children).filter(c => c.classList.contains('draggable-box')).map(b => b.id);
-    if (boxes.length > 0) localStorage.setItem(BOX_ORDER_KEY, JSON.stringify(boxes));
-}
-function loadBoxOrder() {
-    const container = document.getElementById('draggable-container'); if (!container) return;
-    try { const savedOrderJSON = localStorage.getItem(BOX_ORDER_KEY); if (!savedOrderJSON) return;
-        const savedOrder = JSON.parse(savedOrderJSON);
-        if (Array.isArray(savedOrder) && savedOrder.length > 0) {
-            const currentBoxes = new Map(Array.from(container.querySelectorAll('.draggable-box')).map(b => [b.id, b]));
-            savedOrder.forEach(id => { if (currentBoxes.has(id)) container.appendChild(currentBoxes.get(id)); });
-        }
-    } catch (e) { console.error("Erro ordem:", e); localStorage.removeItem(BOX_ORDER_KEY); }
-}
-function setupDragAndDrop() {
-    const container = document.getElementById('draggable-container'); if (!container) return; loadBoxOrder();
-    const boxes = container.querySelectorAll('.draggable-box');
-    boxes.forEach(box => { box.removeEventListener('dragstart', handleDragStart); box.removeEventListener('dragend', handleDragEnd); box.addEventListener('dragstart', handleDragStart); box.addEventListener('dragend', handleDragEnd); });
-    container.removeEventListener('dragover', handleDragOver); container.addEventListener('dragover', handleDragOver);
-}
-function handleDragStart(e) {
-    if (e.target.classList.contains('draggable-box')) { if (e.dataTransfer) { e.dataTransfer.setData('text/plain', e.target.id); e.dataTransfer.effectAllowed = 'move'; } setTimeout(() => e.target.classList.add('dragging'), 0); }
-}
-function handleDragEnd(e) {
-    if (e.target.classList.contains('draggable-box')) { e.target.classList.remove('dragging'); saveBoxOrder(); showNotification('Layout dos boxes salvo!'); }
-}
-function handleDragOver(e) {
-    e.preventDefault(); const container = e.currentTarget; const draggingBox = container.querySelector('.draggable-box.dragging'); if (!draggingBox) return;
-    const afterElement = getDragAfterElement(container, e.clientY);
-    if (afterElement == null) container.appendChild(draggingBox); else container.insertBefore(draggingBox, afterElement);
-}
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.draggable-box:not(.dragging)')];
-    return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) return { offset: offset, element: child }; else return closest; }, { offset: Number.NEGATIVE_INFINITY }).element;
+// =============================================
+// NOTIFICAÇÕES, FULLSCREEN
+// =============================================
+function showNotification(message, isError = false) {
+    const existingNotification = document.querySelector('.page-notification');
+    if (existingNotification) existingNotification.remove();
+    const notification = document.createElement('div');
+    const notificationTypeClass = isError ? 'error' : (message.toLowerCase().includes('copiado') ? 'success' : 'success');
+    notification.className = `page-notification ${notificationTypeClass}`;
+    notification.textContent = message; document.body.appendChild(notification);
+    setTimeout(() => { notification.classList.add('show'); }, 10);
+    setTimeout(() => { notification.classList.remove('show'); setTimeout(() => notification.remove(), 300); }, 4000);
 }
 
+function toggleFullscreen() { if (!document.fullscreenElement) { const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(handleFullscreenError); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(handleFullscreenError); } else { if (document.exitFullscreen) document.exitFullscreen().catch(handleFullscreenError); } }
+function handleFullscreenError(err) { console.error(`Erro tela cheia: ${err.message}`, err); showNotification('Erro ao alternar tela cheia.', true); }
+function handleFullscreenChange() {
+    const fsBtn = document.getElementById('fullscreen-btn'); const fsExitBtn = document.getElementById('fullscreen-exit-btn');
+    const isFullscreen = !!document.fullscreenElement;
+    if (fsBtn) fsBtn.style.display = isFullscreen ? 'none' : 'flex';
+    if (fsExitBtn) fsExitBtn.style.display = isFullscreen ? 'flex' : 'none';
+}
+
+// =============================================
+// FUNÇÕES DE GERENCIAMENTO DE SLOTS (NOVO/MODIFICADO)
+// =============================================
+function applySlotAssignments(assignments) {
+    if (!assignments) {
+        console.warn("Nenhuma atribuição de slot para aplicar, usando padrão.");
+        assignments = { ...DEFAULT_SLOT_ASSIGNMENTS };
+    }
+    document.querySelectorAll('.draggable-box').forEach(box => {
+        if (box.id === 'box-commentary' || box.id === 'box-market' || box.id === 'news-widget') {
+            box.style.gridArea = '';
+        }
+    });
+
+    for (const slotName in assignments) {
+        const boxId = assignments[slotName];
+        const boxElement = document.getElementById(boxId);
+        if (boxElement) {
+            boxElement.style.gridArea = slotName;
+        } else {
+            console.warn(`Box com ID "${boxId}" não encontrado para o slot "${slotName}". Tentando com padrão para este slot se possível.`);
+            // Se um box específico não for encontrado, o slot fica vazio.
+            // Poderia tentar reatribuir o box padrão para esse slot, mas isso pode complicar.
+        }
+    }
+}
+
+function loadSlotAssignments() {
+    let assignments = null;
+    try {
+        const savedAssignmentsJSON = localStorage.getItem(BOX_SLOT_ASSIGNMENT_KEY);
+        if (savedAssignmentsJSON) {
+            assignments = JSON.parse(savedAssignmentsJSON);
+            const expectedBoxIds = Object.values(DEFAULT_SLOT_ASSIGNMENTS).sort();
+            const assignedBoxIds = Object.values(assignments || {}).sort(); // Garante que assignments não é null
+            const expectedSlots = Object.keys(DEFAULT_SLOT_ASSIGNMENTS).sort();
+            const assignedSlots = Object.keys(assignments || {}).sort();
+
+            let isValid = assignments && // Garante que assignments não é null
+                          expectedSlots.length === assignedSlots.length &&
+                          expectedSlots.every((slot, index) => slot === assignedSlots[index]) &&
+                          expectedBoxIds.length === assignedBoxIds.length &&
+                          expectedBoxIds.every(id => assignedBoxIds.includes(id)) &&
+                          assignedBoxIds.every(id => expectedBoxIds.includes(id));
+
+            if (!isValid) {
+                console.warn("Atribuições salvas inválidas ou incompletas, revertendo para o padrão.", assignments);
+                assignments = { ...DEFAULT_SLOT_ASSIGNMENTS };
+                localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments));
+            }
+        } else {
+            assignments = { ...DEFAULT_SLOT_ASSIGNMENTS };
+            localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments));
+        }
+    } catch (e) {
+        console.error("Erro ao carregar atribuições de slot:", e);
+        assignments = { ...DEFAULT_SLOT_ASSIGNMENTS };
+        localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments));
+    }
+    applySlotAssignments(assignments);
+}
+
+function saveSlotAssignments() {
+    const assignmentsToSave = {};
+    const knownBoxIds = ['box-commentary', 'box-market', 'news-widget'];
+
+    knownBoxIds.forEach(boxId => {
+        const box = document.getElementById(boxId);
+        if (box && box.style.gridArea) {
+            if (['slotA', 'slotB', 'slotC'].includes(box.style.gridArea)) {
+                 assignmentsToSave[box.style.gridArea] = boxId;
+            } else {
+                console.warn(`Box ${boxId} tem gridArea inválida ao tentar salvar: ${box.style.gridArea}`);
+            }
+        } else {
+             console.warn(`Box ${boxId} não encontrado ou sem gridArea ao salvar.`);
+        }
+    });
+
+    if (assignmentsToSave.slotA && assignmentsToSave.slotB && assignmentsToSave.slotC) {
+        localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignmentsToSave));
+    } else {
+        console.error('Falha ao salvar atribuições de slot: mapeamento incorreto ou incompleto. Tentando salvar padrão.', assignmentsToSave);
+        // Como fallback, salva o padrão para evitar estado quebrado.
+        localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(DEFAULT_SLOT_ASSIGNMENTS));
+        applySlotAssignments({...DEFAULT_SLOT_ASSIGNMENTS}); // E aplica o padrão imediatamente
+    }
+}
+
+// =============================================
+// FUNÇÕES DE DRAG AND DROP (MODIFICADAS PARA SLOTS)
+// =============================================
+function setupDragAndDrop() {
+    loadSlotAssignments();
+
+    const boxes = document.querySelectorAll('.draggable-box');
+    boxes.forEach(box => {
+        if (box.id === 'box-commentary' || box.id === 'box-market' || box.id === 'news-widget') {
+            box.setAttribute('draggable', 'true');
+            box.style.cursor = 'grab';
+
+            box.addEventListener('dragstart', handleDragStart);
+            box.addEventListener('dragend', handleDragEnd);
+            box.addEventListener('dragenter', handleDragEnter);
+            box.addEventListener('dragover', handleDragOver);
+            box.addEventListener('dragleave', handleDragLeave);
+            box.addEventListener('drop', handleDrop);
+        } else {
+            box.setAttribute('draggable', 'false');
+            box.style.cursor = 'default';
+        }
+    });
+}
+
+function handleDragStart(e) {
+    if (e.target.closest('button, a, input, select, textarea, .box-header i, .box-header h2, .box-content')) {
+      if(!e.target.classList.contains('draggable-box') && !e.target.classList.contains('box-header')){
+         // Se o clique foi em um filho interativo, mas não no próprio box ou seu header direto (para permitir arrastar pelo header)
+         // e.preventDefault(); // Comentado para permitir arrastar pelo header. Ajustar se necessário.
+         // return;
+      }
+    }
+    if (!e.target.closest('.draggable-box')) return; // Garante que estamos começando o drag a partir de um draggable-box
+
+    const draggableBox = e.target.closest('.draggable-box');
+    if (!draggableBox || !['box-commentary', 'box-market', 'news-widget'].includes(draggableBox.id)) {
+        e.preventDefault(); // Não permite arrastar outros elementos
+        return;
+    }
+
+    draggingElementId = draggableBox.id;
+    if (e.dataTransfer) {
+        e.dataTransfer.setData('text/plain', draggingElementId);
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    setTimeout(() => {
+        const el = document.getElementById(draggingElementId);
+        if(el) el.classList.add('dragging');
+    }, 0);
+    draggableBox.style.cursor = 'grabbing';
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    const targetBox = e.currentTarget;
+    if (targetBox.classList.contains('draggable-box') && targetBox.id !== draggingElementId &&
+        ['box-commentary', 'box-market', 'news-widget'].includes(targetBox.id) ) { // Só marca os boxes principais como alvo
+        targetBox.classList.add('drag-over-target');
+    }
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDragLeave(e) {
+    const targetBox = e.currentTarget;
+     if (targetBox.classList.contains('draggable-box')) {
+        targetBox.classList.remove('drag-over-target');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const dropTargetBox = e.currentTarget;
+
+    if (dropTargetBox.classList.contains('drag-over-target')) {
+        dropTargetBox.classList.remove('drag-over-target');
+    }
+
+    if (draggingElementId && dropTargetBox && dropTargetBox.id !== draggingElementId &&
+        dropTargetBox.classList.contains('draggable-box') &&
+        ['box-commentary', 'box-market', 'news-widget'].includes(dropTargetBox.id) && // Garante que o alvo é um dos 3
+        ['box-commentary', 'box-market', 'news-widget'].includes(draggingElementId) // Garante que o arrastado é um dos 3
+        ) {
+
+        const draggingBox = document.getElementById(draggingElementId);
+
+        if (draggingBox) {
+            const areaOfDraggingBox = draggingBox.style.gridArea;
+            const areaOfDropTargetBox = dropTargetBox.style.gridArea;
+
+            if (areaOfDraggingBox && areaOfDropTargetBox && areaOfDraggingBox !== areaOfDropTargetBox) {
+                draggingBox.style.gridArea = areaOfDropTargetBox;
+                dropTargetBox.style.gridArea = areaOfDraggingBox;
+                saveSlotAssignments();
+                showNotification('Layout dos boxes atualizado!');
+            }
+        }
+    }
+}
+
+function handleDragEnd(e) {
+    const elDragged = document.getElementById(draggingElementId); // Usa o ID guardado
+    if(elDragged && elDragged.classList.contains('draggable-box')){
+        elDragged.classList.remove('dragging');
+        elDragged.style.cursor = 'grab';
+    }
+
+    document.querySelectorAll('.draggable-box.drag-over-target').forEach(box => {
+        box.classList.remove('drag-over-target');
+    });
+    draggingElementId = null;
+}
+
+// =============================================
+// SCROLL ANIMATIONS, PROGRESS BAR, ETC.
+// =============================================
 function setupScrollAnimations() {
     const boxes = document.querySelectorAll('.content-box');
     const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
@@ -604,190 +884,118 @@ const debouncedUpdateScrollProgressBar = debounce(function() {
     const scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight) - document.documentElement.clientHeight;
     if (scrollHeight > 0) progressBar.style.width = `${(scrollTop / scrollHeight) * 100}%`; else progressBar.style.width = '0%';
 }, 10);
-
 const debouncedUpdateBannerOnResize = debounce(updateBanner, 250);
 
+// =============================================
+// TOGGLE THEME
+// =============================================
 function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLightMode = document.body.classList.contains('light-mode');
     localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
     const newTheme = isLightMode ? 'light' : 'dark';
-
     const themeIcon = document.querySelector('#theme-toggle i');
-    if (themeIcon) {
-        themeIcon.classList.toggle('fa-moon', !isLightMode);
-        themeIcon.classList.toggle('fa-sun', isLightMode);
-    }
-
+    if (themeIcon) { themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
     const tickerTapeSkeleton = document.querySelector('#tradingview-ticker-tape-container .tv-skeleton');
     if (tickerTapeSkeleton) tickerTapeSkeleton.style.display = 'flex';
     const marketOverviewSkeleton = document.querySelector('#market-overview-widget-wrapper .tv-skeleton');
     if (marketOverviewSkeleton) marketOverviewSkeleton.style.display = 'flex';
-
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(newTheme);
     if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(newTheme);
-
     const calendarOverlay = document.getElementById('economic-calendar-overlay');
     if (calendarOverlay && calendarOverlay.classList.contains('is-active')) {
-        if (typeof loadEconomicCalendarWidget === 'function') {
-            loadEconomicCalendarWidget();
+        if (typeof loadEconomicCalendarWidget === 'function') loadEconomicCalendarWidget();
+    }
+    if (contentModalOverlay && contentModalOverlay.classList.contains('visible')) {
+        const modalMarketContainer = document.getElementById('modal-market-overview-container');
+        if (modalMarketContainer && modalMarketContainer.innerHTML !== '') {
+            if (typeof renderMarketOverviewWidget === 'function') {
+                renderMarketOverviewWidget(newTheme, 'modal-market-overview-container');
+            }
         }
     }
 }
 
+// =============================================
+// PULL TO REFRESH
+// =============================================
 function setupPullToRefresh() {
-    const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
-    if (!ptrIndicator) return;
-
-    let startY = 0;
-    let isDragging = false;
-    const PULL_THRESHOLD = 70;
-    const MAX_PULL_DISTANCE = 100;
-
-    document.body.addEventListener('touchstart', (e) => {
-        if (window.scrollY === 0) {
-            startY = e.touches[0].pageY;
-            isDragging = true;
-            ptrIndicator.classList.add('visible');
-        }
-    }, { passive: true });
-
+    const ptrIndicator = document.getElementById('pull-to-refresh-indicator'); if (!ptrIndicator) return;
+    let startY = 0, isDragging = false; const PULL_THRESHOLD = 70, MAX_PULL_DISTANCE = 100;
+    document.body.addEventListener('touchstart', (e) => { if (window.scrollY === 0) { startY = e.touches[0].pageY; isDragging = true; ptrIndicator.classList.add('visible'); }}, { passive: true });
     document.body.addEventListener('touchmove', (e) => {
-        if (!isDragging || window.scrollY !== 0) {
-            if(isDragging) { // Only reset if it was dragging and then user scrolled
-                 isDragging = false;
-                 ptrIndicator.style.transform = `translateY(-50px)`;
-                 ptrIndicator.classList.remove('active');
-                 ptrIndicator.classList.remove('visible');
-            }
-            return;
-        }
-
-        const currentY = e.touches[0].pageY;
-        let diffY = currentY - startY;
-
-        if (diffY > 0) {
-            if (e.cancelable) e.preventDefault(); // Prevent scroll only if pulling down
-            const pullDistance = Math.min(diffY, MAX_PULL_DISTANCE);
-            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`;
-
-            if (diffY > PULL_THRESHOLD) {
-                ptrIndicator.classList.add('active');
-                ptrIndicator.innerHTML = '<i class="fas fa-arrow-up"></i> Solte para atualizar';
-            } else {
-                ptrIndicator.classList.remove('active');
-                ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
-            }
-        } else {
-            ptrIndicator.style.transform = `translateY(-50px)`;
-        }
-    }, { passive: false });
-
+        if (!isDragging || window.scrollY !== 0) { if(isDragging) { isDragging = false; ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible');} return; }
+        const currentY = e.touches[0].pageY; let diffY = currentY - startY;
+        if (diffY > 0) { if (e.cancelable) e.preventDefault(); const pullDistance = Math.min(diffY, MAX_PULL_DISTANCE); ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`;
+            if (diffY > PULL_THRESHOLD) { ptrIndicator.classList.add('active'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-up"></i> Solte para atualizar'; }
+            else { ptrIndicator.classList.remove('active'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; }}
+        else { ptrIndicator.style.transform = `translateY(-50px)`; }
+    }, { passive: false }); // passive: false por causa do e.preventDefault()
     document.body.addEventListener('touchend', (e) => {
-        if (!isDragging) return;
-        isDragging = false; // Moved this to happen regardless of refresh trigger
-        
-        const currentY = e.changedTouches[0].pageY;
-        const diffY = currentY - startY;
-        
-        // Check if threshold met for refresh
+        if (!isDragging) return; isDragging = false; const currentY = e.changedTouches[0].pageY; const diffY = currentY - startY;
         if (diffY > PULL_THRESHOLD && window.scrollY === 0) {
-            ptrIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
-            ptrIndicator.classList.add('active'); 
-            // Keep visible, but ensure it will reset after refresh.
-            // The transform to hide it should be delayed until after operations.
-
+            ptrIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...'; ptrIndicator.classList.add('active');
             showNotification('Atualizando dados...');
-            Promise.all([
-                loadNewsWidget(true),
-                updateCommentaryContent()
-            ]).then(() => {
-                showNotification('Dados atualizados!');
-            }).catch(err => {
-                showNotification('Erro ao atualizar os dados.', true);
-                console.error("Erro no pull-to-refresh:", err);
-            }).finally(() => {
-                 setTimeout(() => {
-                    ptrIndicator.style.transform = `translateY(-50px)`;
-                    ptrIndicator.classList.remove('active');
-                    ptrIndicator.classList.remove('visible');
-                    ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
-                 }, 300); // Short delay before hiding
-            });
-        } else { // If not enough pull, or other conditions not met, hide immediately
-            ptrIndicator.style.transform = `translateY(-50px)`;
-            ptrIndicator.classList.remove('active');
-            ptrIndicator.classList.remove('visible');
-            ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar';
-        }
+            Promise.all([loadNewsWidget(true), updateCommentaryContent()]).then(() => showNotification('Dados atualizados!')).catch(err => { showNotification('Erro ao atualizar os dados.', true); console.error("Erro no pull-to-refresh:", err);})
+            .finally(() => { setTimeout(() => { ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; }, 300); });
+        } else { ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; }
         startY = 0;
     });
 }
-
 
 // =============================================
 // INICIALIZAÇÃO DOMContentLoaded
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
+    initializeModalElements();
+    if (typeof setupBoxVisibility === 'function') setupBoxVisibility();
+
     let currentTheme = 'dark';
     const savedTheme = localStorage.getItem('themePreference');
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-
-    if (savedTheme === 'light' || (!savedTheme && prefersLight)) {
-        currentTheme = 'light';
-        document.body.classList.add('light-mode');
-    } else {
-        document.body.classList.remove('light-mode');
-    }
-
+    if (savedTheme === 'light' || (!savedTheme && prefersLight)) { currentTheme = 'light'; document.body.classList.add('light-mode'); }
+    else { document.body.classList.remove('light-mode'); }
     const themeIcon = document.querySelector('#theme-toggle i');
-    if (themeIcon) {
-        themeIcon.classList.toggle('fa-moon', currentTheme === 'dark');
-        themeIcon.classList.toggle('fa-sun', currentTheme === 'light');
-    }
+    if (themeIcon) { themeIcon.classList.toggle('fa-moon', currentTheme === 'dark'); themeIcon.classList.toggle('fa-sun', currentTheme === 'light'); }
 
     if (typeof setupCommentaryActions === 'function') setupCommentaryActions();
-    if (typeof loadBannerPhrases === 'function') await loadBannerPhrases();
+    const marketBox = document.getElementById('box-market');
+    if (marketBox) {
+        const boxHeader = marketBox.querySelector('.box-header');
+        if (boxHeader) {
+            let actionsContainer = boxHeader.querySelector('.box-actions');
+            if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); }
+            addOrUpdateModalButton(marketBox, actionsContainer, 'expand-market-btn', 'fa-expand-arrows-alt');
+        }
+    }
+    const newsBox = document.getElementById('news-widget');
+    if (newsBox) {
+        const boxHeader = newsBox.querySelector('.box-header');
+        if (boxHeader) {
+            const actionsContainer = boxHeader.querySelector('.box-actions'); // Este já existe
+            if (actionsContainer) addOrUpdateModalButton(newsBox, actionsContainer, 'expand-news-btn', 'fa-expand-arrows-alt');
+        }
+    }
 
+    if (typeof loadBannerPhrases === 'function') await loadBannerPhrases();
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             showNotification('Atualizando todos os dados...');
-            Promise.all([
-                updateDateTime(),
-                loadNewsWidget(true),
-                updateCommentaryContent()
-            ]).then(() => {
-                showNotification('Todos os dados foram atualizados!');
-            }).catch(err => {
-                showNotification('Erro durante a atualização geral.', true);
-                console.error("Erro na atualização geral:", err);
-            });
+            Promise.all([ updateDateTime(), loadNewsWidget(true), updateCommentaryContent() ])
+            .then(() => showNotification('Todos os dados foram atualizados!'))
+            .catch(err => { showNotification('Erro durante a atualização geral.', true); console.error("Erro na atualização geral:", err); });
         });
     }
-
     const refreshNewsBtn = document.getElementById('refresh-news-btn');
-    if (refreshNewsBtn && typeof loadNewsWidget === 'function') {
-        refreshNewsBtn.addEventListener('click', () => loadNewsWidget(true));
-    }
-
+    if (refreshNewsBtn && typeof loadNewsWidget === 'function') { refreshNewsBtn.addEventListener('click', () => loadNewsWidget(true)); }
     const themeToggleBtn = document.getElementById('theme-toggle');
-    if (themeToggleBtn && typeof toggleTheme === 'function') {
-        themeToggleBtn.addEventListener('click', toggleTheme);
-    }
-
+    if (themeToggleBtn && typeof toggleTheme === 'function') { themeToggleBtn.addEventListener('click', toggleTheme); }
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    if (fullscreenBtn && typeof toggleFullscreen === 'function') {
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
-    }
+    if (fullscreenBtn && typeof toggleFullscreen === 'function') { fullscreenBtn.addEventListener('click', toggleFullscreen); }
     const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-    if (fullscreenExitBtn && typeof toggleFullscreen === 'function') {
-        fullscreenExitBtn.addEventListener('click', toggleFullscreen);
-    }
-
-    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event =>
-        document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {})
-    );
+    if (fullscreenExitBtn && typeof toggleFullscreen === 'function') { fullscreenExitBtn.addEventListener('click', toggleFullscreen); }
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {}));
 
     document.getElementById('analises-btn')?.addEventListener('click', () => window.location.href = 'analises.html');
     document.getElementById('indicadores-btn')?.addEventListener('click', () => window.location.href = 'indicadores.html');
@@ -798,17 +1006,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const calendarOverlay = document.getElementById('economic-calendar-overlay');
     const calendarContentPanel = document.getElementById('economic-calendar-content-panel');
     const closeCalendarBtn = document.getElementById('close-calendar-btn');
-
     if (calendarToggleBtn && calendarOverlay && calendarContentPanel && closeCalendarBtn) {
         calendarToggleBtn.addEventListener('click', () => {
-            calendarOverlay.classList.add('is-active');
-            calendarContentPanel.classList.add('is-visible');
+            calendarOverlay.classList.add('is-active'); calendarContentPanel.classList.add('is-visible');
             if (typeof loadEconomicCalendarWidget === 'function') loadEconomicCalendarWidget();
         });
-        const closeCalendarOverlay = () => {
-            calendarContentPanel.classList.remove('is-visible');
-            calendarOverlay.classList.remove('is-active');
-        };
+        const closeCalendarOverlay = () => { calendarContentPanel.classList.remove('is-visible'); calendarOverlay.classList.remove('is-active'); };
         closeCalendarBtn.addEventListener('click', closeCalendarOverlay);
         calendarOverlay.addEventListener('click', (event) => { if (event.target === calendarOverlay) closeCalendarOverlay(); });
     }
@@ -816,40 +1019,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('resize', debouncedUpdateBannerOnResize);
     window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
     debouncedUpdateScrollProgressBar();
-
     if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000);  }
     if (typeof loadNewsWidget === 'function') loadNewsWidget();
     if (typeof updateCommentaryContent === 'function') { updateCommentaryContent(); setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL); }
+    if (typeof updateBanner === 'function') { setInterval(updateBanner, 30 * 1000); }
 
-
-    if (typeof updateBanner === 'function') {
-        setInterval(updateBanner, 30 * 1000);
-    }
-
-    if (typeof setupDragAndDrop === 'function') setupDragAndDrop();
+    if (typeof setupDragAndDrop === 'function') setupDragAndDrop(); // CHAMA A NOVA LÓGICA DE D&D
     if (typeof setupScrollAnimations === 'function') setupScrollAnimations();
     if (typeof setupPullToRefresh === 'function') setupPullToRefresh();
-
-
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
     if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(currentTheme);
 
-    // const newsLastUpdatedEl = document.getElementById('news-last-updated'); // REMOVIDO
-    // if(newsLastUpdatedEl && getCacheTimestamp()) newsLastUpdatedEl.textContent = formatTimeSince(getCacheTimestamp()); // REMOVIDO
-    // const commentaryLastUpdatedEl = document.getElementById('commentary-last-updated'); // REMOVIDO
-    // if(commentaryLastUpdatedEl && commentaryLastUpdateTimestamp) commentaryLastUpdatedEl.textContent = formatTimeSince(commentaryLastUpdateTimestamp); // REMOVIDO
-
-
-    setTimeout(() => {
-        if (!document.querySelector('.page-notification') && typeof showNotification === "function") {
-             showNotification('Bem-vindo ao Mercado Macro!');
-        }
-    }, 1500);
+    setTimeout(() => { if (!document.querySelector('.page-notification') && typeof showNotification === "function") { showNotification('Bem-vindo ao Mercado Macro!'); } }, 1500);
 });
 
-if (typeof toggleFavorite === "function") {
-    window.toggleFavorite = toggleFavorite;
-}
-if (typeof loadNewsWidget === "function") {
-    window.loadNewsWidget = loadNewsWidget;
-}
+// Funções globais se necessário
+if (typeof toggleFavorite === "function") { window.toggleFavorite = toggleFavorite; }
+if (typeof loadNewsWidget === "function") { window.loadNewsWidget = loadNewsWidget; }
