@@ -62,6 +62,8 @@
                 <div class="box-header">
                     <i class="fas fa-chart-line"></i>
                     <h2>Monitor de Mercado</h2>
+                    <div class="box-actions"> 
+                    </div>                 
                 </div>
                 <div id="market-overview-widget-wrapper" class="box-content" style="height: 500px;">
                      <div class="tv-skeleton skeleton-market-overview">
@@ -114,10 +116,13 @@
     <button id="terminal-btn" class="action-btn floating-btn" aria-label="Ir para terminal de notícias">
         <i class="fas fa-newspaper"></i>
     </button>
+
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"> <i class="fas fa-moon"></i></button>
     <button id="economic-calendar-toggle-btn" class="action-btn floating-btn" aria-label="Abrir Calendário Econômico">
         <i class="fas fa-calendar-alt"></i>
     </button>
-    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"> <i class="fas fa-moon"></i>
+    <button id="settings-toggle-btn" class="floating-btn" aria-label="Configurações de Visibilidade">
+        <i class="fas fa-sliders-h"></i>
     </button>
 
     <div id="economic-calendar-overlay" class="overlay-panel">
@@ -127,11 +132,37 @@
                 <button id="close-calendar-btn" aria-label="Fechar Calendário Econômico"><i class="fas fa-times"></i></button>
             </div>
             <div class="overlay-main-content">
-                <div id="economicCalendarWidget">
-                    </div>
+                <div id="economicCalendarWidget"></div>
             </div>
         </div>
     </div>
 
-    <script src="js/main.js"></script></body>
+    <div id="visibility-settings-panel" class="settings-panel" style="display: none;">
+        <h4>Mostrar/Esconder Boxes</h4>
+        <div>
+            <input type="checkbox" id="toggle-box-commentary" data-boxid="box-commentary" class="visibility-toggle-checkbox">
+            <label for="toggle-box-commentary">Radar Financeiro</label>
+        </div>
+        <div>
+            <input type="checkbox" id="toggle-box-market" data-boxid="box-market" class="visibility-toggle-checkbox">
+            <label for="toggle-box-market">Monitor de Mercado</label>
+        </div>
+        <div>
+            <input type="checkbox" id="toggle-news-widget" data-boxid="news-widget" class="visibility-toggle-checkbox">
+            <label for="toggle-news-widget">Últimas Notícias</label>
+        </div>
+    </div>
+
+    <div id="content-modal-overlay" class="content-modal-overlay" style="display: none;">
+        <div class="content-modal-content">
+            <button id="content-modal-close-btn" class="content-modal-close-btn" aria-label="Fechar modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="modal-content-area" class="modal-content-area-inner">
+                </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
 </html>
