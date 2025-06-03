@@ -17,10 +17,8 @@
         --darker-bg: #010409;
         --text-color: #c9d1d9;
         --text-secondary: rgba(139, 148, 158, 0.7);
-        --card-bg: rgba(22, 27, 34, 0.85);
-        --card-bg-rgb-dark: 22, 27, 34;
-        --card-bg-rgb-light: 248, 249, 250;
-        --card-bg-rgb: var(--card-bg-rgb-dark);
+        --card-bg-val: 22, 27, 34; /* Usado para rgba */
+        --card-bg: rgba(var(--card-bg-val), 0.85);
         --border-color: rgba(48, 54, 61, 0.8);
         --error-color: #ff7b72;
         --transition-speed: 0.3s;
@@ -50,15 +48,13 @@
         transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
         display: flex; flex-direction: column;
         position: relative;
-        /* Estilos de scrollbar para Firefox */
         scrollbar-width: thin;
         scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
     }
-    body:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover do body, se desejado */
+    body:hover {
         scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
     }
 
-    /* Estilos de scrollbar para WebKit (Chrome, Safari, Edge, etc.) */
     ::-webkit-scrollbar {
         width: var(--scrollbar-size);
         height: var(--scrollbar-size);
@@ -70,12 +66,11 @@
     ::-webkit-scrollbar-thumb {
         background-color: var(--scrollbar-thumb-color);
         border-radius: calc(var(--scrollbar-size) / 2);
-        border: 1px solid var(--scrollbar-track-color); /* Para dar um pequeno espaçamento se o track não for transparente */
+        border: 1px solid var(--scrollbar-track-color);
     }
     ::-webkit-scrollbar-thumb:hover {
         background-color: var(--scrollbar-thumb-hover-color);
     }
-
 
     :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
     :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -101,10 +96,99 @@
         margin: 0 auto; border-radius: 3px;
     }
     .subheader {
-        font-size: 16px; margin-bottom: 25px;
+        font-size: 16px; margin-bottom: 15px; /* Reduzido para acomodar o toggle */
         color: var(--text-secondary); font-weight: 600;
         text-align: center;
     }
+
+    /* Estilos para o Toggle Switch de Escopo de Notícias */
+    .scope-toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 25px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        font-size: 0.9rem;
+        user-select: none; /* Impede seleção de texto nos labels */
+    }
+
+    .scope-toggle-container span {
+        padding: 0 10px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .scope-toggle-container span.active-scope {
+        color: var(--primary-color);
+        font-weight: 700;
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+        margin: 0 5px; /* Pequeno espaçamento entre labels e switch */
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(var(--card-bg-val), 0.4); /* Fundo um pouco mais transparente */
+        border: 1px solid var(--border-color);
+        transition: .4s;
+        border-radius: 26px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: var(--text-secondary);
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: var(--primary-color);
+        border-color: var(--primary-dark);
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(24px);
+        background-color: white;
+    }
+    body.light-mode input:checked + .slider {
+        background-color: var(--primary-color);
+        border-color: var(--primary-dark);
+    }
+    body.light-mode input:checked + .slider:before {
+        background-color: white;
+    }
+    body.light-mode .slider {
+        background-color: rgba(var(--card-bg-val),0.1); /* card-bg-val para light mode */
+    }
+
+
+    input:focus + .slider {
+        box-shadow: 0 0 0 2px var(--dark-bg), 0 0 0 4px var(--primary-color); /* Efeito de foco melhorado */
+    }
+
 
     .news-grid-wrapper {
         display: grid;
@@ -125,7 +209,14 @@
       font-family: 'Courier New', Courier, monospace;
       display: flex;
       flex-direction: column;
+      transition: opacity 0.3s ease, transform 0.3s ease; /* Para animação de mostrar/esconder */
     }
+    .news-widget[style*="display: none"] { /* Para quando o widget está escondido */
+        opacity: 0;
+        transform: scale(0.95);
+        pointer-events: none;
+    }
+
 
     .crypto-widget { border-top: 3px solid var(--crypto-accent-border); }
     .finance-widget { border-top: 3px solid var(--finance-accent-border); }
@@ -138,9 +229,8 @@
       padding: 5px; border-radius: 4px;
       transition: color 0.2s ease, background-color 0.2s ease;
     }
-    .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-rgb-dark), 0.5); }
-    body.light-mode .refresh-widget:hover { background-color: rgba(var(--card-bg-rgb-light), 0.5); }
-    /* :root { --primary-color-rgb: 0,209,128; } /* Removido pois já existe definição similar e pode ser confuso */
+    .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-val), 0.5); }
+    body.light-mode .refresh-widget:hover { background-color: rgba(var(--card-bg-val), 0.5); }
 
 
     .news-widget h3 {
@@ -157,12 +247,11 @@
       list-style: none; padding: 0; margin: 0;
       flex-grow: 1;
       overflow-y: auto;
-      max-height: 300px; /* Altura máxima para a lista antes de scrollar */
-      /* Estilos de scrollbar para Firefox (herda do body ou pode ser específico) */
+      max-height: 300px;
       scrollbar-width: thin;
       scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
     }
-    .news-list:hover { /* Para Firefox, para mostrar um thumb mais opaco no hover da lista */
+    .news-list:hover {
         scrollbar-color: var(--scrollbar-thumb-hover-color) var(--scrollbar-track-color);
     }
 
@@ -218,14 +307,12 @@
         --dark-bg: #ffffff; --darker-bg: #f0f2f5;
         --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
         --card-bg: rgba(255, 255, 255, 0.98); --border-color: rgba(200, 205, 210, 0.7);
-        --card-bg-rgb: var(--card-bg-rgb-light);
+        --card-bg-val: 248, 249, 250; /* Para light mode */
         --error-color: #dc3545;
         --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
         --link-color: #0056b3; --link-hover-color: #004085;
         --crypto-accent-border: var(--primary-light);
         --finance-accent-border: var(--primary-color);
-        /* --primary-color-rgb: 0,122,255;  Removido pois já existe definição similar e pode ser confuso */
-        /* Variáveis de Scrollbar para Light Mode */
         --scrollbar-thumb-color: rgba(51, 51, 51, 0.4);
         --scrollbar-thumb-hover-color: rgba(51, 51, 51, 0.6);
         background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
@@ -239,7 +326,7 @@
     body.light-mode .news-widget { background-color: #fff; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
     body.light-mode .news-widget h3 { color: var(--primary-color); border-bottom-color: var(--border-color); }
     body.light-mode .refresh-widget { color: var(--text-secondary); }
-    body.light-mode .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-rgb-light), 0.5); }
+    body.light-mode .refresh-widget:hover { color: var(--primary-color); background-color: rgba(var(--card-bg-val), 0.8); } /* Usa card-bg-val do light mode */
     body.light-mode .news-list li { border-left-color: var(--primary-light); }
     body.light-mode .news-list a { color: var(--link-color); }
     body.light-mode .news-list a:hover { color: var(--link-hover-color); }
@@ -273,6 +360,15 @@
     </div>
     <div class="subheader">Fontes de Notícias sobre Criptomoedas e Finanças Globais</div>
 
+    <div class="scope-toggle-container">
+        <span id="scope-label-international">Internacional</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="news-scope-toggle">
+            <span class="slider"></span>
+        </label>
+        <span id="scope-label-local">Local</span>
+    </div>
+
     <div class="news-grid-wrapper">
         <div class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="guiadobitcoin" aria-label="Atualizar Zero Hedge">
@@ -300,7 +396,7 @@
           <button class="refresh-widget" data-feedkey="cointelegraph" aria-label="Atualizar Cointelegraph">
             <i class="fas fa-sync-alt"></i>
           </button>
-          <h3><i class="fab fa-bitcoin"></i> Cointelegraph</h3>
+          <h3><i class="fab fa-bitcoin"></i> Cointelegraph BR</h3>
           <ul class="news-list" id="cointelegraph-news">
             <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
           </ul>
@@ -311,7 +407,7 @@
           <button class="refresh-widget" data-feedkey="advfn" aria-label="Atualizar ADVFN">
             <i class="fas fa-sync-alt"></i>
           </button>
-          <h3><i class="fas fa-newspaper"></i> ADVFN - Últimas Notícias</h3>
+          <h3><i class="fas fa-newspaper"></i> ADVFN BR</h3>
           <ul class="news-list" id="advfn-news">
             <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
           </ul>
@@ -322,7 +418,7 @@
           <button class="refresh-widget" data-feedkey="investing" aria-label="Atualizar Investing">
             <i class="fas fa-sync-alt"></i>
           </button>
-          <h3><i class="fas fa-chart-line"></i> Investing - Mercados</h3>
+          <h3><i class="fas fa-chart-line"></i> Investing.com BR</h3>
           <ul class="news-list" id="investing-news">
             <li><i class="fas fa-spinner fa-spin"></i> Carregando notícias...</li>
           </ul>
@@ -406,7 +502,7 @@
           <div class="timestamp" id="ing-timestamp"></div>
         </div>
     </div>
-    <div class="footer">© <span id="current-year">2025</span> Mercado Macro</div>
+    <div class="footer">© <span id="current-year"></span> Mercado Macro</div>
 </div>
 
 
@@ -426,28 +522,30 @@
 <script>
   const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
   const CACHE_TTL = 15 * 60 * 1000;
-  const FETCH_TIMEOUT = 15000; // Aumentado para 15 segundos
+  const FETCH_TIMEOUT = 15000;
 
   const PROXY_SERVICES = [
     { name: 'allorigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
     { name: 'codetabs', url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}` }
-    // Poderia adicionar mais proxies aqui no futuro, se necessário
   ];
-  let globalLastUsedProxySuccessIndex = 0; // Para tentar começar com o último proxy que funcionou globalmente
+  let globalLastUsedProxySuccessIndex = 0;
+
+  const NEWS_SCOPE_KEY = 'terminalNewsScope_v1';
+  let currentNewsScope = 'local'; // Padrão 'local', o toggle controla 'international' quando checked
 
   const rssFeeds = {
-    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge'},
-    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil'},
-    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph'},
-    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN'},
-    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com'},
-    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney'},
-    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico'},
-    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy'},
-    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive'},
-    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets'},
-    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet'},
-    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think'}
+    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge', scope: 'international'},
+    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil', scope: 'local'},
+    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph BR', scope: 'local'},
+    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN BR', scope: 'local'},
+    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com BR', scope: 'local'},
+    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney', scope: 'local'},
+    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico', scope: 'local'},
+    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy', scope: 'international'},
+    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive', scope: 'international'},
+    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets', scope: 'international'},
+    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet', scope: 'international'},
+    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think', scope: 'international'}
   };
 
   function formatTimeSince(timestamp) {
@@ -471,7 +569,15 @@
       itemsToShow.forEach(item => {
         const li = document.createElement('li');
         let cleanTitle = item.title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
-        li.innerHTML = `<a href="${item.link}" target="_blank" rel="noopener noreferrer" title="${cleanTitle}">${cleanTitle}</a>`;
+
+        const a = document.createElement('a');
+        a.href = item.link || '#';
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.setAttribute('title', cleanTitle);
+        a.textContent = cleanTitle;
+
+        li.appendChild(a);
         listElement.appendChild(li);
       });
     }
@@ -488,7 +594,13 @@
 
     const list = document.getElementById(feedConfig.elementId);
     const timestampEl = document.getElementById(feedConfig.timestampId);
-    if (list) list.innerHTML = `<li><i class="fas fa-spinner fa-spin"></i> Carregando ${feedConfig.displayName}...</li>`;
+
+    // Só mostra "carregando" se o widget estiver visível
+    const widgetElementForLoading = list?.closest('.news-widget');
+    if (list && widgetElementForLoading && widgetElementForLoading.style.display !== 'none') {
+        list.innerHTML = `<li><i class="fas fa-spinner fa-spin"></i> Carregando ${feedConfig.displayName}...</li>`;
+    }
+
 
     const cacheKey = `${CACHE_KEY_PREFIX}${feedConfig.elementId}`;
     if (!forceRefresh) {
@@ -497,7 +609,11 @@
         try {
           const { items, timestamp } = JSON.parse(cachedEntry);
           if ((Date.now() - timestamp) < CACHE_TTL) {
-            if (list && timestampEl) renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
+            // Só renderiza se o widget estiver visível
+            const widgetElement = list?.closest('.news-widget');
+            if (list && timestampEl && widgetElement && widgetElement.style.display !== 'none') {
+                 renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
+            }
             return;
           }
         } catch (e) {
@@ -510,7 +626,7 @@
     }
 
     let success = false;
-    let currentAttemptProxyIndex = globalLastUsedProxySuccessIndex; // Começa com o último proxy que funcionou globalmente
+    let currentAttemptProxyIndex = globalLastUsedProxySuccessIndex;
 
     for (let i = 0; i < PROXY_SERVICES.length; i++) {
         const proxyToTry = PROXY_SERVICES[currentAttemptProxyIndex];
@@ -534,32 +650,106 @@
             }
 
             const itemsXml = xmlDoc.getElementsByTagName("item");
-            const fetchedItems = Array.from(itemsXml).map(item => {
-                let title = item.querySelector("title")?.textContent || "Sem título";
+            const fetchedItems = Array.from(itemsXml).map(itemNode => {
+                let title = itemNode.querySelector("title")?.textContent || "Sem título";
                 title = title.replace(/^<!\[CDATA\[(.*)\]\]>$/, '$1').trim();
-                return { title: title, link: item.querySelector("link")?.textContent.trim() || "#" };
+                return { title: title, link: itemNode.querySelector("link")?.textContent.trim() || "#" };
             });
 
-            if (fetchedItems.length === 0 && xmlDoc.documentElement.textContent.length < 150 && !xmlText.toLowerCase().includes("<item>")) { // Verificação mais robusta de resposta vazia
+            if (fetchedItems.length === 0 && xmlDoc.documentElement.textContent.length < 150 && !xmlText.toLowerCase().includes("<item>")) {
                  throw new Error(`Resposta vazia ou inválida do proxy ${proxyToTry.name}`);
             }
 
             const updateTime = Date.now();
             localStorage.setItem(cacheKey, JSON.stringify({ items: fetchedItems, timestamp: updateTime }));
-            if (list && timestampEl) renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
+
+            const widgetElement = list?.closest('.news-widget');
+            if (list && timestampEl && widgetElement && widgetElement.style.display !== 'none') {
+                renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
+            }
             success = true;
-            globalLastUsedProxySuccessIndex = currentAttemptProxyIndex; // Salva o índice do proxy que funcionou
-            break; // Sai do loop de proxies se obteve sucesso
+            globalLastUsedProxySuccessIndex = currentAttemptProxyIndex;
+            break;
         } catch (error) {
             console.warn(`Falha com proxy ${proxyToTry.name} para ${feedConfig.displayName}:`, error.message);
-            // Prepara para tentar o próximo proxy na próxima iteração
             currentAttemptProxyIndex = (currentAttemptProxyIndex + 1) % PROXY_SERVICES.length;
-            if (i === PROXY_SERVICES.length - 1) { // Se esta foi a última tentativa de proxy
-                if (list) list.innerHTML = `<li><i class="fas fa-exclamation-triangle"></i> Erro ao carregar ${feedConfig.displayName}.</li>`;
-                if (timestampEl) timestampEl.textContent = "Falha";
+            if (i === PROXY_SERVICES.length - 1) {
+                const widgetElement = list?.closest('.news-widget');
+                if (list && widgetElement && widgetElement.style.display !== 'none') {
+                    list.innerHTML = `<li><i class="fas fa-exclamation-triangle"></i> Erro ao carregar ${feedConfig.displayName}.</li>`;
+                }
+                if (timestampEl && widgetElement && widgetElement.style.display !== 'none') {
+                    timestampEl.textContent = "Falha";
+                }
             }
         }
     }
+  }
+
+  function updateWidgetVisibility() {
+    Object.keys(rssFeeds).forEach(feedKey => {
+        const feedConfig = rssFeeds[feedKey];
+        const widgetElement = document.getElementById(feedConfig.elementId)?.closest('.news-widget');
+        if (widgetElement) {
+            if (feedConfig.scope === currentNewsScope) {
+                widgetElement.style.display = '';
+                // Se estiver visível e não tiver conteúdo ou o conteúdo for de erro/carregando, tenta carregar do cache/rede
+                const listElement = document.getElementById(feedConfig.elementId);
+                if (listElement && (listElement.children.length === 0 || listElement.querySelector('.fa-spinner, .fa-exclamation-triangle, .fa-exclamation-circle'))) {
+                    loadNews(feedKey, false); // Tenta carregar (usará cache se disponível e válido)
+                }
+            } else {
+                widgetElement.style.display = 'none';
+            }
+        }
+    });
+  }
+
+  function handleScopeChange() {
+    const toggle = document.getElementById('news-scope-toggle');
+    currentNewsScope = toggle.checked ? 'international' : 'local'; // 'local' if unchecked, 'international' if checked
+    localStorage.setItem(NEWS_SCOPE_KEY, currentNewsScope);
+
+    document.getElementById('scope-label-local').classList.toggle('active-scope', currentNewsScope === 'local');
+    document.getElementById('scope-label-international').classList.toggle('active-scope', currentNewsScope === 'international');
+
+    updateWidgetVisibility();
+    // Não precisa chamar refreshAllFeeds aqui, pois updateWidgetVisibility já chama loadNews para os feeds que se tornam visíveis.
+  }
+
+  function initializeScopeToggle() {
+    const savedScope = localStorage.getItem(NEWS_SCOPE_KEY);
+    const toggle = document.getElementById('news-scope-toggle');
+    const localLabel = document.getElementById('scope-label-local');
+    const internationalLabel = document.getElementById('scope-label-international');
+
+    if (savedScope && (savedScope === 'local' || savedScope === 'international')) {
+        currentNewsScope = savedScope;
+    } else {
+        currentNewsScope = 'local'; // Padrão
+        localStorage.setItem(NEWS_SCOPE_KEY, currentNewsScope);
+    }
+
+    toggle.checked = (currentNewsScope === 'international'); // Marca se for internacional
+
+    localLabel.classList.toggle('active-scope', currentNewsScope === 'local');
+    internationalLabel.classList.toggle('active-scope', currentNewsScope === 'international');
+
+    updateWidgetVisibility(); // Aplica a visibilidade inicial e carrega os feeds visíveis
+
+    toggle.addEventListener('change', handleScopeChange);
+    localLabel.addEventListener('click', () => {
+        if (currentNewsScope !== 'local') {
+            toggle.checked = false; // Para 'local'
+            handleScopeChange();
+        }
+    });
+    internationalLabel.addEventListener('click', () => {
+         if (currentNewsScope !== 'international') {
+            toggle.checked = true; // Para 'international'
+            handleScopeChange();
+        }
+    });
   }
 
   function refreshAllFeeds(force = true) {
@@ -569,13 +759,32 @@
       refreshBtnGlobal.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       refreshBtnGlobal.disabled = true;
     }
+
     if (force) {
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith(CACHE_KEY_PREFIX)) localStorage.removeItem(key);
+        console.log("Limpando cache de notícias do terminal para refresh forçado (APENAS ESCOPO ATUAL).");
+        Object.keys(rssFeeds).forEach(feedKey => {
+            if (rssFeeds[feedKey].scope === currentNewsScope) {
+                const cacheKey = `${CACHE_KEY_PREFIX}${rssFeeds[feedKey].elementId}`;
+                localStorage.removeItem(cacheKey);
+            }
         });
-        console.log("Cache de notícias do terminal limpo para refresh forçado.");
     }
-    const promises = Object.keys(rssFeeds).map(feedKey => loadNews(feedKey, force));
+
+    const feedsToLoad = Object.keys(rssFeeds).filter(feedKey => rssFeeds[feedKey].scope === currentNewsScope);
+
+    feedsToLoad.forEach(feedKey => {
+        const feedConfig = rssFeeds[feedKey];
+        const list = document.getElementById(feedConfig.elementId);
+        if (list) {
+            const widgetElement = list.closest('.news-widget');
+            if (widgetElement && widgetElement.style.display !== 'none') {
+                list.innerHTML = `<li><i class="fas fa-spinner fa-spin"></i> Carregando ${feedConfig.displayName}...</li>`;
+            }
+        }
+    });
+
+    const promises = feedsToLoad.map(feedKey => loadNews(feedKey, force));
+
     Promise.allSettled(promises).finally(() => {
       if(refreshBtnGlobal && force) {
         setTimeout(() => { refreshBtnGlobal.innerHTML = originalIconHTML; refreshBtnGlobal.disabled = false; }, 1000);
@@ -615,7 +824,8 @@
     const themeIcon = document.querySelector('#theme-toggle i');
     if(themeIcon){ themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
 
-    refreshAllFeeds(false);
+    initializeScopeToggle(); // Configura o toggle e carrega os feeds do escopo inicial
+    // refreshAllFeeds(false); // Não é mais necessário aqui, initializeScopeToggle -> updateWidgetVisibility -> loadNews cuida disso
 
     const refreshBtnGlobal = document.getElementById('refresh-btn');
     if(refreshBtnGlobal) refreshBtnGlobal.addEventListener('click', () => refreshAllFeeds(true));
@@ -635,8 +845,10 @@
     });
   });
 
-  // Atualiza os feeds periodicamente, mas sem forçar (usará cache se válido)
-  setInterval(() => refreshAllFeeds(false), 5 * 60 * 1000);
+  setInterval(() => {
+      console.log("Atualização periódica de feeds para o escopo: " + currentNewsScope);
+      refreshAllFeeds(false)
+    }, 5 * 60 * 1000);
 </script>
 
 </body>
