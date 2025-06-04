@@ -5,36 +5,40 @@ const CACHE_KEY_NEWS = 'newsCache_v6';
 const CACHE_TTL_NEWS = 15 * 60 * 1000;
 const FAVORITES_KEY = 'favorites_v2';
 const BOX_SLOT_ASSIGNMENT_KEY = 'boxSlotAssignment_v1'; // Para layout grid
-const DEFAULT_SLOT_ASSIGNMENTS = { 
+const DEFAULT_SLOT_ASSIGNMENTS = {
     slotA: 'box-commentary',
     slotB: 'box-market',
-    slotC: 'news-widget', // news-widget e watchlist podem compartilhar slotC ou ter slots separados
-    slotD: 'box-watchlist'  // Adicionando watchlist a um slot. Ajustar grid-template-areas em CSS se necessário.
+    slotC: 'news-widget',
+    slotD: 'box-watchlist'
 };
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
-const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
+const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo'; // Lembre-se de proteger sua chave API
 const COMMENTARY_UPDATE_INTERVAL = 5 * 60 * 1000;
 let commentaryLastUpdateTimestamp = null;
 let BANNER_PHRASES = [];
 
 let contentModalOverlay, modalContentArea, contentModalCloseBtn;
-let currentModalChartSymbol = null; 
+let currentModalChartSymbol = null;
 
 const VISIBILITY_PREFS_KEY = 'dashboardBoxVisibility_v1';
 const DEFAULT_BOX_VISIBILITY = {
     'box-commentary': true,
     'box-market': true,
-    'box-watchlist': true, 
+    'box-watchlist': true,
     'news-widget': true
 };
 let settingsToggleBtn, visibilitySettingsPanel;
-let visibilityCheckboxes = []; 
+let visibilityCheckboxes = [];
 
 const WATCHLIST_SYMBOLS_KEY = 'dashboardWatchlistSymbols_v1';
 let watchlistSymbolInput, addWatchlistSymbolBtn, watchlistItemsContainer;
 let watchlistSymbols = [];
 
-let draggingElementId = null; // Para Drag and Drop com Grid
+let draggingElementId = null;
+
+// START: Variáveis Modificadas/Novas para o Player Spotify
+let spotifyToggleBtn, spotifyPlayerOverlay, spotifyPlayerContentPanel, closeSpotifyPlayerBtn, spotifyIframe;
+// END: Variáveis Modificadas/Novas para o Player Spotify
 
 // =============================================
 // FUNÇÃO DEBOUNCE
@@ -61,20 +65,20 @@ function initializeModalElements() {
     document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && contentModalOverlay && contentModalOverlay.classList.contains('visible')) closeContentModal(); });
 }
 
-function openContentModal(boxId) { 
+function openContentModal(boxId) {
     if (!contentModalOverlay || !modalContentArea) { console.error('Elementos do modal não foram inicializados.'); return; }
     const originalBox = document.getElementById(boxId);
     const originalBoxContent = originalBox ? originalBox.querySelector('.box-content') : null;
-    
+
     while (modalContentArea.firstChild) { modalContentArea.removeChild(modalContentArea.firstChild); }
-    currentModalChartSymbol = null; 
+    currentModalChartSymbol = null;
 
     if (!originalBoxContent) {
         modalContentArea.innerHTML = '<p class="error-commentary"><i class="fas fa-exclamation-triangle"></i> Conteúdo não encontrado.</p>';
     } else {
         if (boxId === 'box-market') {
             const marketWidgetModalContainer = document.createElement('div');
-            marketWidgetModalContainer.id = 'modal-market-overview-container'; 
+            marketWidgetModalContainer.id = 'modal-market-overview-container';
             marketWidgetModalContainer.style.width = '100%'; marketWidgetModalContainer.style.height = '100%';
             modalContentArea.appendChild(marketWidgetModalContainer);
             const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
@@ -90,16 +94,16 @@ function openContentModal(boxId) {
     document.body.classList.add('body-modal-open');
 }
 
-function openChartDetailModal(symbol) { 
+function openChartDetailModal(symbol) {
     if (!contentModalOverlay || !modalContentArea || typeof TradingView === 'undefined') {
         console.error('Elementos do modal ou TradingView não disponíveis para o gráfico.');
         showNotification('Erro ao abrir gráfico detalhado.', true); return;
     }
     while (modalContentArea.firstChild) { modalContentArea.removeChild(modalContentArea.firstChild); }
-    currentModalChartSymbol = symbol; 
-    
+    currentModalChartSymbol = symbol;
+
     const chartContainerDiv = document.createElement('div');
-    chartContainerDiv.id = 'modal-tv-chart-container'; 
+    chartContainerDiv.id = 'modal-tv-chart-container';
     chartContainerDiv.style.width = '100%'; chartContainerDiv.style.height = '100%';
     modalContentArea.appendChild(chartContainerDiv);
     const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
@@ -108,8 +112,8 @@ function openChartDetailModal(symbol) {
             "container_id": chartContainerDiv.id, "symbol": symbol, "interval": "D",
             "theme": currentTheme, "autosize": true, "locale": "pt_BR",
             "toolbar_bg": currentTheme === "light" ? "#f1f3f6" : "#131722",
-            "enable_publishing": false, "allow_symbol_change": true, 
-            "hide_side_toolbar": false, "studies": ["MASimple@tv-basicstudies"], 
+            "enable_publishing": false, "allow_symbol_change": true,
+            "hide_side_toolbar": false, "studies": ["MASimple@tv-basicstudies"],
             "details": true, "hotlist": true, "calendar": true, "news": true, "style": "1",
         });
     } catch (error) {
@@ -126,11 +130,11 @@ function closeContentModal() {
         contentModalOverlay.classList.remove('visible');
         setTimeout(() => { if (!contentModalOverlay.classList.contains('visible')) contentModalOverlay.style.display = 'none'; }, 300);
     }
-    if (modalContentArea) { 
+    if (modalContentArea) {
         while (modalContentArea.firstChild) { modalContentArea.removeChild(modalContentArea.firstChild); }
     }
     document.body.classList.remove('body-modal-open');
-    currentModalChartSymbol = null; 
+    currentModalChartSymbol = null;
 }
 
 // =============================================
@@ -140,7 +144,7 @@ function setupBoxVisibility() {
     settingsToggleBtn = document.getElementById('settings-toggle-btn');
     visibilitySettingsPanel = document.getElementById('visibility-settings-panel');
     if (!settingsToggleBtn || !visibilitySettingsPanel) { console.warn('Elementos do painel de configurações de visibilidade não encontrados.'); return; }
-    
+
     let savedPrefs = {};
     try {
         const savedPrefsJSON = localStorage.getItem(VISIBILITY_PREFS_KEY);
@@ -153,7 +157,6 @@ function setupBoxVisibility() {
         console.error("Erro ao carregar preferências de visibilidade, usando padrão.", e);
         savedPrefs = { ...DEFAULT_BOX_VISIBILITY };
     }
-    // Garante que todas as chaves default estejam presentes
     for (const key in DEFAULT_BOX_VISIBILITY) {
         if (savedPrefs[key] === undefined) {
             savedPrefs[key] = DEFAULT_BOX_VISIBILITY[key];
@@ -164,13 +167,11 @@ function setupBoxVisibility() {
         const boxId = checkbox.dataset.boxid;
         if (boxId) {
             const boxElement = document.getElementById(boxId);
-            const isVisible = savedPrefs[boxId]; 
+            const isVisible = savedPrefs[boxId];
             checkbox.checked = isVisible;
             if (boxElement) {
-                 // O content-box usa display: flex por padrão no CSS.
                 boxElement.style.display = isVisible ? 'flex' : 'none';
             }
-
             checkbox.addEventListener('change', (event) => {
                 const currentBoxId = event.target.dataset.boxid;
                 const currentBoxElement = document.getElementById(currentBoxId);
@@ -178,13 +179,12 @@ function setupBoxVisibility() {
                 if (currentBoxElement) {
                     const wasHidden = window.getComputedStyle(currentBoxElement).display === 'none';
                     currentBoxElement.style.display = nowVisible ? 'flex' : 'none';
-                    if (nowVisible && wasHidden) { 
+                    if (nowVisible && wasHidden) {
                         if (currentBoxId === 'box-market' && typeof renderMarketOverviewWidget === 'function') {
                             const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
-                            renderMarketOverviewWidget(currentTheme, 'market-overview-widget-wrapper'); 
+                            renderMarketOverviewWidget(currentTheme, 'market-overview-widget-wrapper');
                         }
                     }
-                    // Se um box foi escondido, precisamos re-salvar a ordem dos slots baseada nos visíveis
                     if (typeof saveSlotAssignments === 'function') saveSlotAssignments();
                 }
                 const currentPrefs = JSON.parse(localStorage.getItem(VISIBILITY_PREFS_KEY)) || { ...DEFAULT_BOX_VISIBILITY };
@@ -226,26 +226,25 @@ function addSymbolToWatchlist() { if (!watchlistSymbolInput) return; const symbo
 function removeSymbolFromWatchlist(symbolToRemove) { watchlistSymbols = watchlistSymbols.filter(s => s !== symbolToRemove); saveWatchlistSymbols(); renderWatchlistItems(); showNotification(`"${symbolToRemove}" removido da watchlist.`); }
 function setupWatchlist() { watchlistSymbolInput = document.getElementById('watchlist-symbol-input'); addWatchlistSymbolBtn = document.getElementById('add-watchlist-symbol-btn'); watchlistItemsContainer = document.getElementById('watchlist-items-container'); if (!watchlistSymbolInput || !addWatchlistSymbolBtn || !watchlistItemsContainer) { console.warn('Elementos da watchlist não encontrados.'); return; } loadWatchlistSymbols(); renderWatchlistItems(); addWatchlistSymbolBtn.addEventListener('click', addSymbolToWatchlist); watchlistSymbolInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') addSymbolToWatchlist(); }); const watchlistBox = document.getElementById('box-watchlist'); if (watchlistBox) { const boxHeader = watchlistBox.querySelector('.box-header'); if (boxHeader) { let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } if (document.getElementById('draggable-container')) { addOrUpdateModalButton(watchlistBox, actionsContainer, 'expand-watchlist-box-btn'); } } } }
 
-
 // =============================================
-// FUNÇÃO PARA FORMATAR TEMPO RELATIVO (original)
+// FUNÇÃO PARA FORMATAR TEMPO RELATIVO
 // =============================================
 function formatTimeSince(timestamp) { if (!timestamp) return ''; const now = new Date(); const secondsPast = (now.getTime() - timestamp) / 1000; if (secondsPast < 60) return 'há menos de um minuto'; if (secondsPast < 3600) { const minutes = Math.round(secondsPast / 60); return `há ${minutes} min${minutes > 1 ? 's' : ''}`; } if (secondsPast <= 86400) { const hours = Math.round(secondsPast / 3600); return `há ${hours} hora${hours > 1 ? 's' : ''}`; } const date = new Date(timestamp); return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`; }
 
 // =============================================
-// FUNÇÃO PARA ATUALIZAR DATA E HORA (original)
+// FUNÇÃO PARA ATUALIZAR DATA E HORA
 // =============================================
 function updateDateTime() { const now = new Date(); const formattedDate = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); const dataAtualElement = document.getElementById('data-atual'); if (dataAtualElement) { const datetimeSpan = dataAtualElement.querySelector('.datetime'); if (datetimeSpan) datetimeSpan.textContent = formattedDate; } const footerElement = document.getElementById('footer'); if (footerElement) footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`; }
 
 // =============================================
-// CÓDIGO DAS NOTÍCIAS (original)
+// CÓDIGO DAS NOTÍCIAS
 // =============================================
 const RSS_SOURCES = [ { name: 'RSS2JSON', buildUrl: feedUrl => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`, processor: data => { if (!data.items) throw new Error('Formato RSS2JSON inválido'); return data.items.map(item => ({ title: item.title, description: item.description, link: item.link, pubDate: item.pubDate })); } }, { name: 'AllOrigins', buildUrl: feedUrl => `https://api.allorigins.win/raw?charset=UTF-8&url=${encodeURIComponent(feedUrl)}`, processor: dataText => { if (!dataText) throw new Error('Conteúdo AllOrigins vazio'); const parser = new DOMParser(); const xmlDoc = parser.parseFromString(dataText, "text/xml"); return parseXmlNews(xmlDoc); } } ];
 const RSS_FEEDS = [ 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', 'https://www.valor.com.br/rss', 'https://www.infomoney.com.br/feed/' ];
 const FALLBACK_NEWS = [ { title: "Mercado aguarda decisão do Fed", description: "Decisão sobre juros nos EUA é o foco.", link: "#", pubDate: new Date().toISOString() }, { title: "Ibovespa em alta com commodities", description: "Índice brasileiro acompanha otimismo externo.", link: "#", pubDate: new Date().toISOString() }, { title: "Dólar opera em queda", description: "Moeda americana perde força no cenário global.", link: "#", pubDate: new Date().toISOString() } ];
 
 // =============================================
-// FUNÇÕES PARA RENDERIZAR WIDGETS (renderTickerTapeWidget original, renderMarketOverviewWidget modificado)
+// FUNÇÕES PARA RENDERIZAR WIDGETS
 // =============================================
 function renderTickerTapeWidget(theme) { const container = document.getElementById('tradingview-ticker-tape-container'); if (!container) return; const skeleton = container.querySelector('.tv-skeleton'); if (skeleton) skeleton.style.display = 'none'; const widgetContent = container.querySelector('.tradingview-widget-container'); if(widgetContent) widgetContent.remove(); else { Array.from(container.childNodes).forEach(node => { if (!node.classList || !node.classList.contains('tv-skeleton')) container.removeChild(node); }); } const config = { "symbols": [ {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500"}, {"description": "IBOVESPA", "proName": "BMFBOVESPA:IBOV"}, {"description": "NASDAQ 100","proName": "FOREXCOM:NSXUSD"}, {"description": "USD/BRL","proName": "FX_IDC:USDBRL"}, {"description": "EUR/USD","proName": "FX:EURUSD"}, {"description": "BITCOIN","proName": "BITSTAMP:BTCUSD"}, {"description": "PETRÓLEO BRENT","proName": "TVC:UKOIL"}, {"description": "OURO","proName": "OANDA:XAUUSD"} ], "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive", "colorTheme": theme, "locale": "br" }; const script = document.createElement('script'); script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js'; script.async = true; script.text = JSON.stringify(config); container.appendChild(script); }
 function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-widget-wrapper') { const container = document.getElementById(targetContainerId); if (!container) { console.error(`Market Overview widget container com ID "${targetContainerId}" não encontrado.`); if (targetContainerId === 'modal-market-overview-container' && modalContentArea) { modalContentArea.innerHTML = `<p class="error-commentary" style="padding:20px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> Container do widget de mercado não encontrado no modal.</p>`; } return; } const skeleton = container.querySelector('.tv-skeleton'); if (skeleton) skeleton.style.display = 'none'; let oldTvWidgetDiv = container.querySelector('.tradingview-widget-container'); while(oldTvWidgetDiv){ oldTvWidgetDiv.remove(); oldTvWidgetDiv = container.querySelector('.tradingview-widget-container');} const tvWidgetDiv = document.createElement('div'); tvWidgetDiv.className = 'tradingview-widget-container'; tvWidgetDiv.style.width = '100%'; tvWidgetDiv.style.height = '100%'; const config = { "colorTheme": theme, "dateRange": "12M", "showChart": true, "locale": "br", "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true, "showFloatingTooltip": false, "width": "100%", "height": "100%", "plotLineColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 1)" : "rgba(0, 209, 128, 1)", "plotLineColorFalling": theme === 'light' ? "rgba(220, 53, 69, 1)" : "rgba(248, 81, 73, 1)", "gridLineColor": "rgba(240, 243, 250, 0)", "scaleFontColor": theme === 'light' ? "rgba(51, 51, 51, 0.7)" : "rgba(201, 209, 217, 0.7)", "belowLineFillColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)", "belowLineFillColorFalling": theme === 'light' ? "rgba(220, 53, 69, 0.12)" : "rgba(248, 81, 73, 0.12)", "belowLineFillColorGrowingBottom": theme === 'light' ? "rgba(0, 123, 255, 0)" : "rgba(0, 209, 128, 0)", "belowLineFillColorFallingBottom": theme === 'light' ? "rgba(220, 53, 69, 0)" : "rgba(248, 81, 73, 0)", "symbolActiveColor": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)", "tabs": [ { "title": "Indices", "symbols": [ {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "NASDAQ 100"}, {"s": "FOREXCOM:DJI", "d": "Dow Jones"}, {"s": "BMFBOVESPA:IBOV", "d":"IBOVESPA"}, {"s": "INDEX:DEU40", "d": "DAX"}, {"s": "FOREXCOM:UKXGBP", "d": "FTSE 100"} ], "originalTitle": "Indices" }, { "title": "Moedas", "symbols": [ {"s": "FX_IDC:USDBRL", "d":"USD/BRL"}, {"s": "FX:EURUSD", "d": "EUR/USD"}, {"s": "FX:GBPUSD", "d": "GBP/USD"}, {"s": "FX:USDJPY", "d": "USD/JPY"}, {"s": "FX:AUDUSD", "d": "AUD/USD"}, {"s": "FX:USDCAD", "d": "USD/CAD"} ], "originalTitle": "Forex" }, { "title": "Commodities", "symbols": [ {"s": "TVC:UKOIL", "d": "Petróleo Brent"}, {"s": "TVC:USOIL", "d": "Petróleo WTI"}, {"s": "OANDA:XAUUSD", "d": "Ouro"}, {"s": "TVC:SILVER", "d": "Prata"}, {"s": "COMEX:HG1!", "d": "Cobre"}], "originalTitle": "Commodities" }, { "title": "Cripto", "symbols": [ {"s": "BINANCE:BTCUSDT", "d": "Bitcoin"}, {"s": "BINANCE:ETHUSDT", "d": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "d": "Solana"} ], "originalTitle": "Crypto" } ] }; const script = document.createElement('script'); script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js'; script.async = true; script.text = JSON.stringify(config); tvWidgetDiv.appendChild(script); container.appendChild(tvWidgetDiv); }
@@ -295,14 +294,14 @@ function setupPullToRefresh() { const ptrIndicator = document.getElementById('pu
 // INICIALIZAÇÃO DOMContentLoaded
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    initializeModalElements(); 
-    if (typeof setupBoxVisibility === 'function') setupBoxVisibility(); 
-    if (typeof setupWatchlist === 'function') setupWatchlist(); 
+    initializeModalElements();
+    if (typeof setupBoxVisibility === 'function') setupBoxVisibility();
+    if (typeof setupWatchlist === 'function') setupWatchlist();
 
     let currentTheme = 'dark';
     const savedTheme = localStorage.getItem('themePreference');
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    if (savedTheme === 'light' || (!savedTheme && prefersLight)) { currentTheme = 'light'; document.body.classList.add('light-mode'); } 
+    if (savedTheme === 'light' || (!savedTheme && prefersLight)) { currentTheme = 'light'; document.body.classList.add('light-mode'); }
     else { document.body.classList.remove('light-mode'); }
     const themeIcon = document.querySelector('#theme-toggle i');
     if (themeIcon) { themeIcon.classList.toggle('fa-moon', currentTheme === 'dark'); themeIcon.classList.toggle('fa-sun', currentTheme === 'light'); }
@@ -326,7 +325,64 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else { const newActionsContainer = document.createElement('div'); newActionsContainer.className = 'box-actions'; boxHeader.appendChild(newActionsContainer); addOrUpdateModalButton(newsBox, newActionsContainer, 'expand-news-btn', 'fa-expand-arrows-alt');}
         }
     }
-    
+
+    // START: Inicializar Elementos do Player Spotify e Event Listeners (Modificado)
+    spotifyToggleBtn = document.getElementById('toggle-spotify-btn');
+    spotifyPlayerOverlay = document.getElementById('spotify-player-overlay');
+    spotifyPlayerContentPanel = document.getElementById('spotify-player-content-panel');
+    closeSpotifyPlayerBtn = document.getElementById('close-spotify-player-btn');
+    spotifyIframe = document.getElementById('spotify-iframe');
+
+    if (spotifyToggleBtn && spotifyPlayerOverlay && spotifyPlayerContentPanel && closeSpotifyPlayerBtn) {
+        // IMPORTANTE: Substitua o URL placeholder abaixo pelo seu URL de incorporação real do Spotify.
+        // Este URL deve ser o mesmo que você definiu no atributo src do <iframe> em index.html.
+        const spotifyPlayerInitialSrc = "https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator";
+
+        const toggleSpotifyPlayer = (show) => {
+            if (show) {
+                // Garante que o iframe tenha um src, especialmente se foi limpo ao fechar
+                if (spotifyIframe.getAttribute('src') !== spotifyPlayerInitialSrc && spotifyPlayerInitialSrc !== "https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator") {
+                    spotifyIframe.setAttribute('src', spotifyPlayerInitialSrc);
+                } else if (spotifyIframe.getAttribute('src') === "" && spotifyPlayerInitialSrc !== "https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator") {
+                    // Se o src estiver vazio e tivermos um src inicial válido (não o placeholder)
+                    spotifyIframe.setAttribute('src', spotifyPlayerInitialSrc);
+                }
+                spotifyPlayerOverlay.classList.add('is-active');
+                spotifyPlayerContentPanel.classList.add('is-visible');
+            } else {
+                spotifyPlayerOverlay.classList.remove('is-active');
+                spotifyPlayerContentPanel.classList.remove('is-visible');
+                // Opcional: parar o player Spotify removendo o src após esconder.
+                // Considere se esta é a experiência de usuário desejada, pois irá resetar o player.
+                // setTimeout(() => { // Atrasar a remoção do src até após a transição
+                //    if (!spotifyPlayerContentPanel.classList.contains('is-visible')) {
+                //        spotifyIframe.setAttribute('src', '');
+                //    }
+                // }, 350); // Deve corresponder à duração da transição do CSS
+            }
+        };
+
+        spotifyToggleBtn.addEventListener('click', () => {
+            const isCurrentlyVisible = spotifyPlayerContentPanel.classList.contains('is-visible');
+            toggleSpotifyPlayer(!isCurrentlyVisible);
+            spotifyToggleBtn.setAttribute('aria-label', !isCurrentlyVisible ? 'Fechar player de música' : 'Abrir player de música');
+        });
+
+        closeSpotifyPlayerBtn.addEventListener('click', () => {
+            toggleSpotifyPlayer(false);
+            spotifyToggleBtn.setAttribute('aria-label', 'Abrir player de música');
+        });
+
+        // Fechar clicando no overlay (como o calendário econômico)
+        spotifyPlayerOverlay.addEventListener('click', (event) => {
+            if (event.target === spotifyPlayerOverlay) { // Garante que o clique foi no próprio overlay
+                toggleSpotifyPlayer(false);
+                spotifyToggleBtn.setAttribute('aria-label', 'Abrir player de música');
+            }
+        });
+    }
+    // END: Inicializar Elementos do Player Spotify e Event Listeners (Modificado)
+
     if (typeof loadBannerPhrases === 'function') await loadBannerPhrases();
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
@@ -346,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
     if (fullscreenExitBtn && typeof toggleFullscreen === 'function') { fullscreenExitBtn.addEventListener('click', toggleFullscreen); }
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {}));
-    
+
     document.getElementById('analises-btn')?.addEventListener('click', () => window.location.href = 'analises.html');
     document.getElementById('indicadores-btn')?.addEventListener('click', () => window.location.href = 'indicadores.html');
     document.getElementById('calculadoras-btn')?.addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
@@ -361,9 +417,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             calendarOverlay.classList.add('is-active'); calendarContentPanel.classList.add('is-visible');
             if (typeof loadEconomicCalendarWidget === 'function') loadEconomicCalendarWidget();
         });
-        const closeCalendarOverlay = () => { calendarContentPanel.classList.remove('is-visible'); calendarOverlay.classList.remove('is-active'); };
-        closeCalendarBtn.addEventListener('click', closeCalendarOverlay);
-        calendarOverlay.addEventListener('click', (event) => { if (event.target === calendarOverlay) closeCalendarOverlay(); });
+        const closeCalendarOverlayFn = () => { // Renomeada para evitar conflito de escopo
+            calendarContentPanel.classList.remove('is-visible');
+            calendarOverlay.classList.remove('is-active');
+        };
+        closeCalendarBtn.addEventListener('click', closeCalendarOverlayFn);
+        calendarOverlay.addEventListener('click', (event) => {
+            if (event.target === calendarOverlay) closeCalendarOverlayFn();
+        });
     }
 
     window.addEventListener('resize', debouncedUpdateBannerOnResize);
@@ -377,14 +438,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof setupScrollAnimations === 'function') setupScrollAnimations();
     if (typeof setupPullToRefresh === 'function') setupPullToRefresh();
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
-    if (typeof renderMarketOverviewWidget === 'function') { 
+    if (typeof renderMarketOverviewWidget === 'function') {
         const marketBoxEl = document.getElementById('box-market');
-        // Verifica se o box está visível antes de renderizar o widget inicialmente
         if (marketBoxEl && window.getComputedStyle(marketBoxEl).display !== 'none') {
-             renderMarketOverviewWidget(currentTheme); 
+             renderMarketOverviewWidget(currentTheme);
         }
     }
-    
+
     setTimeout(() => { if (!document.querySelector('.page-notification') && typeof showNotification === "function") { showNotification('Bem-vindo ao Mercado Macro!'); } }, 1500);
 });
 
