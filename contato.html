@@ -25,10 +25,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     
-    <link rel="stylesheet" href="css/styles.css">
-
     <style>
-        /* Variáveis de Tema (inspirado em calculadoras.html) */
+        /* Variáveis de Tema */
         :root {
             --primary-color: #00d180;
             --primary-light: #5bffb0;
@@ -37,6 +35,7 @@
             --text-color: #c9d1d9;
             --text-secondary: rgba(139, 148, 158, 0.7);
             --card-bg: rgba(22, 27, 34, 0.7);
+            --card-bg-val: 22, 27, 34; /* Usado em alguns componentes herdados */
             --border-color: rgba(48, 54, 61, 0.8);
             --shadow-color-soft: rgba(0, 0, 0, 0.2);
             --shadow-color-medium: rgba(0, 0, 0, 0.3);
@@ -55,7 +54,23 @@
             --shadow-color-medium: rgba(0, 0, 0, 0.12);
         }
         
-        /* Estilos do Formulário (de contato.html) */
+        /* Estilos base (simplificado de styles.css) */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%); color: var(--text-color); min-height: 100vh; width: 100%; overflow-x: hidden; line-height: 1.6; transition: background var(--transition-speed) ease, color var(--transition-speed) ease; display: flex; flex-direction: column; }
+        .header { padding: 0; text-align: center; background-color: var(--darker-bg); border-bottom: 1px solid var(--border-color); }
+        .logo-container { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto; padding: 10px 20px; }
+        .logo { text-align: left; }
+        .page-title-header { font-size: 26px; font-weight: 800; background: linear-gradient(120deg, var(--primary-light), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+        .logo-divider { width: 60px; height: 3px; background: linear-gradient(to right, var(--primary-color), var(--primary-light)); border-radius: 3px; }
+        .banner { flex-grow: 1; max-width: 60%; background: rgba(var(--card-bg-val), 0.5); border-left: 2px solid var(--primary-color); padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+        .container { flex: 1; max-width: 1200px; width: 100%; margin: 0 auto; padding: 0 20px 30px 20px; }
+        .subheader { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-align: center; padding: 8px 0; margin-bottom: 20px; background-color: rgba(var(--card-bg-val), 0.2); border-bottom: 1px solid var(--border-color); }
+        .content-box { background: var(--card-bg); border-radius: 12px; padding: 20px; border-left: 4px solid var(--primary-color); }
+        .box-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .box-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: var(--primary-color); }
+        .box-header i { font-size: 18px; color: var(--primary-color); }
+        
+        /* Estilos do Formulário */
         .contact-form { display: flex; flex-direction: column; gap: 15px; padding: 20px 0; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
@@ -69,41 +84,15 @@
         .contact-info-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .contact-info-item i { color: var(--primary-color); font-size: 18px; width: 24px; text-align: center; }
 
-        /* Estilos dos Botões Flutuantes (de calculadoras.html) */
+        /* Estilos dos Botões Flutuantes */
         .floating-btn {
-            position: fixed;
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 5px 15px var(--shadow-color-soft);
-            -webkit-tap-highlight-color: transparent;
+            position: fixed; width: 50px; height: 50px; border-radius: 12px; background-color: var(--card-bg); color: var(--text-color);
+            border: 1px solid var(--border-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft); -webkit-tap-highlight-color: transparent;
         }
-
-        .floating-btn:hover {
-            background-color: var(--primary-color);
-            transform: translateY(-4px) scale(1.05);
-            color: var(--dark-bg);
-            box-shadow: 0 8px 20px var(--shadow-color-medium);
-        }
-
-        .floating-btn:active {
-            transform: translateY(0) scale(1);
-        }
-
-        .floating-btn i {
-            font-size: 20px;
-        }
-
+        .floating-btn:hover { background-color: var(--primary-color); transform: translateY(-4px) scale(1.05); color: var(--dark-bg); box-shadow: 0 8px 20px var(--shadow-color-medium); }
+        .floating-btn:active { transform: translateY(0) scale(1); }
+        .floating-btn i { font-size: 20px; }
         #refresh-btn { right: 20px; bottom: 20px; }
         #home-btn { right: 80px; bottom: 20px; }
         #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
@@ -111,35 +100,26 @@
         .theme-toggle { left: 20px; bottom: 20px; }
 
         /* Estilos de Botões Flutuantes para Modo Claro */
-        body.light-mode .floating-btn {
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-        body.light-mode .floating-btn:hover {
-            background-color: var(--primary-color);
-            color: white;
-        }
+        body.light-mode .floating-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+        body.light-mode .floating-btn:hover { background-color: var(--primary-color); color: white; }
+        body.light-mode .page-title-header { background: linear-gradient(120deg, #0056b3, var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
 <body>
-    <div id="scroll-progress-bar"></div>
-
     <header class="header">
         <div class="logo-container">
             <div class="logo">
-                <div class="page-title-header">Mercado Macro</div> <div class="logo-divider"></div>
+                <div class="page-title-header">Mercado Macro</div>
+                <div class="logo-divider"></div>
             </div>
-            <div class="banner" id="random-banner">
+            <div class="banner">
                 <div class="banner-text">Entre em contato conosco</div>
             </div>
         </div>
     </header>
 
     <div class="container">
-        <div class="subheader" id="data-atual">
-            <span class="update-status">CONTATO</span>
-        </div>
+        <div class="subheader"><span class="update-status">CONTATO</span></div>
 
         <div class="content-row">
             <div class="content-box" style="grid-column: 1 / -1;">
@@ -149,20 +129,16 @@
                 </div>
                 <div class="box-content">
                     <form id="contactForm" action="https://formsubmit.co/contato@mercadomacro.com.br" method="POST" class="contact-form">
-                        
                         <input type="hidden" name="_next" value="https://mercadomacro.github.io/obrigado.html">
                         <input type="hidden" name="_captcha" value="false">
-                        
                         <div class="form-group">
                             <label for="name">Seu Nome</label>
                             <input type="text" id="name" name="name" class="form-control" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="email">Seu E-mail</label>
                             <input type="email" id="email" name="email" class="form-control" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="subject">Assunto</label>
                             <select id="subject" name="_subject" class="form-control" required>
@@ -174,18 +150,15 @@
                                 <option value="Outro">Outro</option>
                             </select>
                         </div>
-                        
                         <div class="form-group">
                             <label for="message">Mensagem</label>
                             <textarea id="message" name="message" class="form-control" required></textarea>
                         </div>
-                        
                         <button type="submit" class="submit-btn" id="submitBtn">
                             <span id="submitText">Enviar Mensagem</span>
                             <span id="loadingSpinner" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>
                         </button>
                     </form>
-                    
                     <div class="contact-info">
                         <h3 style="margin-bottom:15px; color:var(--primary-color);">Outras formas de contato:</h3>
                         <div class="contact-info-item">
@@ -196,7 +169,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados">
@@ -211,8 +183,6 @@
     <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
         <i class="fas fa-moon"></i>
     </button>
-
-    <script src="js/main.js"></script>
 
     <script>
         // Função para o botão 'Voltar ao Topo'
@@ -252,7 +222,6 @@
 
         // Lógica Principal que executa quando a página carrega
         document.addEventListener('DOMContentLoaded', function() {
-            // Lógica do formulário de contato
             const contactForm = document.getElementById('contactForm');
             const submitBtn = document.getElementById('submitBtn');
             const submitText = document.getElementById('submitText');
@@ -266,31 +235,25 @@
                 });
             }
             
-            // Configura os novos botões flutuantes
             setupBackToTop();
             setupRefreshButton();
 
-            // Adiciona funcionalidade ao botão de tema
             const themeToggleButton = document.getElementById('theme-toggle');
             if(themeToggleButton) {
                 themeToggleButton.addEventListener('click', toggleTheme);
             }
             
-            // Adiciona funcionalidade ao botão 'home' para voltar à página de análise (ou outra de sua escolha)
             const homeButton = document.getElementById('home-btn');
             if(homeButton) {
                 homeButton.addEventListener('click', () => window.location.href = 'index.html'); 
             }
             
-            // Garante que o tema salvo seja aplicado ao carregar a página
             const savedTheme = localStorage.getItem('themePreference');
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             let isLightMode = (savedTheme === 'light') || (!savedTheme && !prefersDark);
 
             if (isLightMode) {
                 document.body.classList.add('light-mode');
-            } else {
-                document.body.classList.remove('light-mode');
             }
             
             const themeIcon = document.querySelector('#theme-toggle i');
