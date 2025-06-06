@@ -8,8 +8,9 @@ const BOX_SLOT_ASSIGNMENT_KEY = 'boxSlotAssignment_v1'; // Para layout grid
 const DEFAULT_SLOT_ASSIGNMENTS = {
     slotA: 'box-commentary',
     slotB: 'box-market',
-    slotC: 'news-widget', // news-widget e watchlist podem compartilhar slotC ou ter slots separados
-    slotD: 'box-watchlist'  // Adicionando watchlist a um slot. Ajustar grid-template-areas em CSS se necessário.
+    slotE: 'box-weekly-summary',
+    slotC: 'news-widget',
+    slotD: 'box-watchlist'
 };
 const GOOGLE_DOC_ID = '1IYFmfdajMtuquyfen070HRKfNjflwj-x9VvubEgs1XM';
 const GOOGLE_API_KEY = 'AIzaSyBuvcaEcTBr0EIZZZ45h8JilbcWytiyUWo';
@@ -24,6 +25,7 @@ const VISIBILITY_PREFS_KEY = 'dashboardBoxVisibility_v1';
 const DEFAULT_BOX_VISIBILITY = {
     'box-commentary': true,
     'box-market': true,
+    'box-weekly-summary': true,
     'box-watchlist': true,
     'news-widget': true
 };
@@ -252,9 +254,80 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
 function loadEconomicCalendarWidget() { const widgetContainer = document.getElementById('economicCalendarWidget'); if (!widgetContainer) { console.error('Contêiner do Calendário Econômico não encontrado.'); return; } widgetContainer.innerHTML = ''; const currentThemeIsLight = document.body.classList.contains('light-mode'); const widgetTheme = currentThemeIsLight ? 0 : 1;  const configJsonString = JSON.stringify({ "width": "100%", "height": "100%", "mode": "1", "theme": widgetTheme, "lang": "pt" }); const scriptTag = document.createElement('script'); scriptTag.async = true; scriptTag.type = 'text/javascript'; scriptTag.setAttribute('data-type', 'calendar-widget'); scriptTag.text = configJsonString; scriptTag.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13'; widgetContainer.appendChild(scriptTag); }
 async function loadBannerPhrases() { try { const response = await fetch('data/banner-phrases.json'); if (!response.ok) throw new Error(`Falha ao carregar frases: ${response.status}`); BANNER_PHRASES = (await response.json()).phrases; if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) { BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"]; } } catch (error) { console.error('Erro ao carregar frases do banner:', error); BANNER_PHRASES = ["Bem-vindo ao Mercado Macro"]; } updateBanner(); }
 function updateBanner() { const banner = document.getElementById('random-banner'); const bannerTextEl = banner ? banner.querySelector('.banner-text') : null; if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) { const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)]; bannerTextEl.textContent = randomPhrase; bannerTextEl.style.animation = 'none'; void bannerTextEl.offsetWidth;  if (window.innerWidth <= 768) { bannerTextEl.style.animation = 'scrollBanner 15s linear infinite'; } else { bannerTextEl.style.animation = ''; } } else if (bannerTextEl) { bannerTextEl.textContent = "Notícias e Análises Financeiras"; } }
+
+// --- Função para o Radar Financeiro (do Google Docs) ---
 async function fetchGoogleDocContent() { const url = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DOC_ID}/export?mimeType=text/plain&key=${GOOGLE_API_KEY}`; try { const response = await fetch(url, { signal: AbortSignal.timeout(10000) });  if (!response.ok) { const errorBody = await response.text(); console.error(`Google Docs API Error ${response.status}: ${response.statusText}`, errorBody); throw new Error(`Erro ${response.status} ao buscar Google Doc.`); } return await response.text(); } catch (error) { console.error('Falha na requisição ao Google Docs:', error); if (error.name !== 'AbortError') {  throw new Error('Não foi possível carregar a análise do Google Docs.'); } throw error;  } }
 function updateCommentary(content) { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) return; let formattedContent = content.replace(/\r\n/g, '\n').split('\n').map(line => { line = line.trim(); if (/^\s*$/.test(line)) return null;  if (/^([📌☐✔☑️✅]\s*.+)/.test(line)) return `<div class="commentary-highlight">${line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</div>`; line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');  if (/^[•*-]\s*(.+)/.test(line)) return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;  return `<p class="commentary-paragraph">${line}</p>`;  }).filter(line => line !== null).join(''); formattedContent = formattedContent.replace(/(<li>.*?<\/li>)+/sg, '<ul>$&</ul>'); commentaryContentEl.innerHTML = formattedContent || '<p>Nenhuma análise disponível.</p>'; }
 async function updateCommentaryContent() { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) return; commentaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando análise...</div>`; try { const content = await fetchGoogleDocContent(); updateCommentary(content); commentaryLastUpdateTimestamp = Date.now(); return true; } catch (error) { console.error('Falha ao atualizar comentário:', error); commentaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`; return false; } }
+
+// --- NOVAS FUNÇÕES PARA O RESUMO SEMANAL ---
+/**
+ * Busca o conteúdo do arquivo de texto do resumo semanal.
+ */
+async function fetchWeeklySummaryText() {
+    // O arquivo deve estar em /data/resumo-semanal.txt
+    const url = 'data/resumo-semanal.txt'; 
+    try {
+        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status} ao buscar o resumo semanal.`);
+        }
+        return await response.text();
+    } catch (error) {
+        console.error('Falha na requisição do resumo semanal:', error);
+        throw new Error('Não foi possível carregar o resumo da semana.');
+    }
+}
+/**
+ * Formata o texto bruto e o insere no elemento HTML do resumo.
+ * @param {string} content - O conteúdo de texto do resumo.
+ */
+function updateWeeklySummary(content) {
+    const summaryContentEl = document.getElementById('weekly-summary-content');
+    if (!summaryContentEl) return;
+
+    // Converte quebras de linha em parágrafos e formata destaques
+    let formattedContent = content.replace(/\r\n/g, '\n').split('\n').map(line => {
+        line = line.trim();
+        if (/^\s*$/.test(line)) return null; // Ignora linhas em branco
+
+        // Transforma **texto** em <strong>texto</strong>
+        line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); 
+
+        // Transforma linhas que começam com * ou • em itens de lista
+        if (/^[•*-]\s*(.+)/.test(line)) {
+            return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;
+        }
+        
+        return `<p class="commentary-paragraph">${line}</p>`; 
+    }).filter(line => line !== null).join('');
+
+    // Agrupa itens de lista <li> em uma <ul>
+    formattedContent = formattedContent.replace(/(<li>.*?<\/li>)+/sg, '<ul>$&</ul>');
+    
+    summaryContentEl.innerHTML = formattedContent || '<p>Nenhum resumo disponível.</p>';
+}
+/**
+ * Função principal para carregar o conteúdo do resumo semanal.
+ */
+async function updateWeeklySummaryContent() {
+    const summaryContentEl = document.getElementById('weekly-summary-content');
+    if (!summaryContentEl) return;
+    
+    summaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando resumo...</div>`;
+    
+    try {
+        const content = await fetchWeeklySummaryText();
+        updateWeeklySummary(content);
+        return true;
+    } catch (error) {
+        console.error('Falha ao atualizar resumo semanal:', error);
+        summaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`;
+        return false;
+    }
+}
+
+
 function addOrUpdateModalButton(boxElement, actionsContainer, buttonId, modalIconClass = 'fa-expand-arrows-alt') { if (!boxElement || !actionsContainer) { console.warn(`Elemento do Box ou actions container não encontrado para ID do botão: ${buttonId}`); return; } let modalBtn = actionsContainer.querySelector(`#${buttonId}`); let isNewButton = false; if (!modalBtn) { modalBtn = document.createElement('button'); modalBtn.id = buttonId; modalBtn.className = 'expand-btn'; isNewButton = true; } modalBtn.setAttribute('aria-label', 'Abrir em tela cheia'); const currentIconEl = modalBtn.querySelector('i'); if (currentIconEl) { currentIconEl.className = `fas ${modalIconClass}`; } else { modalBtn.innerHTML = `<i class="fas ${modalIconClass}"></i>`; } const newBtnInstance = modalBtn.cloneNode(true); if (!isNewButton && modalBtn.parentNode) { modalBtn.parentNode.replaceChild(newBtnInstance, modalBtn); } modalBtn = newBtnInstance; modalBtn.addEventListener('click', function(event) { event.stopPropagation(); openContentModal(boxElement.id); }); if (isNewButton) { if (actionsContainer.firstChild && actionsContainer.firstChild.id !== 'refresh-news-btn') { actionsContainer.insertBefore(modalBtn, actionsContainer.firstChild); } else { actionsContainer.appendChild(modalBtn); } } }
 function setupCommentaryActions() { const commentaryBox = document.getElementById('box-commentary'); if (!commentaryBox) return; const boxHeader = commentaryBox.querySelector('.box-header'); if (!boxHeader) return; let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } addOrUpdateModalButton(commentaryBox, actionsContainer, 'expand-commentary-btn', 'fa-expand-arrows-alt'); if (!actionsContainer.querySelector('#share-commentary-btn')) { const shareBtn = document.createElement('button'); shareBtn.id = 'share-commentary-btn'; shareBtn.className = 'expand-btn'; shareBtn.setAttribute('aria-label', 'Compartilhar'); shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>'; actionsContainer.appendChild(shareBtn); shareBtn.addEventListener('click', async function() { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) { showNotification('Conteúdo não encontrado.', true); return; } let textToShare = ""; commentaryContentEl.querySelectorAll('p, .commentary-highlight, li').forEach(el => { textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n"); }); textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim(); if (!textToShare) { showNotification('Não há conteúdo para compartilhar.', true); return; } const shareData = { title: 'Radar Financeiro - Análise', text: textToShare }; try { if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); showNotification('Conteúdo compartilhado!'); } else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(textToShare); showNotification('Texto da análise copiado!'); } else { throw new Error('Compartilhamento não suportado.'); } } catch (err) { console.error('Erro ao compartilhar:', err); if (err.name !== 'AbortError') { showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true); } } }); } }
 async function fetchNews() { let lastError = null; for (const feedUrl of RSS_FEEDS) { for (const source of RSS_SOURCES) { try { const url = source.buildUrl(feedUrl); const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(8000) }); if (!response.ok) throw new Error(`HTTP ${response.status} em ${source.name} para ${feedUrl}`); let dataToProcess = source.name === 'AllOrigins' ? await response.text() : await response.json(); const newsItems = source.processor(dataToProcess); if (newsItems && newsItems.length > 0) return newsItems; } catch (error) { lastError = error; console.warn(`Falha com ${source.name} para ${feedUrl}:`, error); } } } console.error("Todas as fontes de notícias falharam. Último erro:", lastError); throw lastError || new Error('Todas as fontes de notícias falharam.'); }
@@ -275,7 +348,23 @@ function showNotification(message, isError = false) { const existingNotification
 function toggleFullscreen() { if (!document.fullscreenElement) { const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(handleFullscreenError); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(handleFullscreenError); } else { if (document.exitFullscreen) document.exitFullscreen().catch(handleFullscreenError); } }
 function handleFullscreenError(err) { console.error(`Erro tela cheia: ${err.message}`, err); showNotification('Erro ao alternar tela cheia.', true); }
 function handleFullscreenChange() { const fsBtn = document.getElementById('fullscreen-btn'); const fsExitBtn = document.getElementById('fullscreen-exit-btn'); const isFullscreen = !!document.fullscreenElement; if (fsBtn) fsBtn.style.display = isFullscreen ? 'none' : 'flex'; if (fsExitBtn) fsExitBtn.style.display = isFullscreen ? 'flex' : 'none'; }
-function saveSlotAssignments() { const assignmentsToSave = {}; const draggableContainer = document.getElementById('draggable-container'); if (!draggableContainer) return; const knownBoxIds = ['box-commentary', 'box-market', 'news-widget', 'box-watchlist']; knownBoxIds.forEach(boxId => { const box = document.getElementById(boxId); if (box && box.style.gridArea && ['slotA', 'slotB', 'slotC', 'slotD'].includes(box.style.gridArea)) { assignmentsToSave[box.style.gridArea] = boxId; } }); if (Object.keys(assignmentsToSave).length === Object.keys(DEFAULT_SLOT_ASSIGNMENTS).length) { localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignmentsToSave)); } else { console.warn('Tentativa de salvar atribuições de slot incompletas, mantendo o anterior ou padrão.', assignmentsToSave); } }
+function saveSlotAssignments() {
+    const assignmentsToSave = {};
+    const draggableContainer = document.getElementById('draggable-container');
+    if (!draggableContainer) return;
+    const knownBoxIds = ['box-commentary', 'box-market', 'news-widget', 'box-watchlist', 'box-weekly-summary'];
+    knownBoxIds.forEach(boxId => {
+        const box = document.getElementById(boxId);
+        if (box && box.style.gridArea && ['slotA', 'slotB', 'slotC', 'slotD', 'slotE'].includes(box.style.gridArea)) {
+            assignmentsToSave[box.style.gridArea] = boxId;
+        }
+    });
+    if (Object.keys(assignmentsToSave).length === Object.keys(DEFAULT_SLOT_ASSIGNMENTS).length) {
+        localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignmentsToSave));
+    } else {
+        console.warn('Tentativa de salvar atribuições de slot incompletas, mantendo o anterior ou padrão.', assignmentsToSave);
+    }
+}
 function applySlotAssignments(assignments) { if (!assignments) assignments = { ...DEFAULT_SLOT_ASSIGNMENTS }; const draggableContainer = document.getElementById('draggable-container'); if (!draggableContainer) return; document.querySelectorAll('.draggable-box').forEach(box => { box.style.gridArea = ''; }); for (const slotName in assignments) { const boxId = assignments[slotName]; const boxElement = document.getElementById(boxId); if (boxElement) { boxElement.style.gridArea = slotName; draggableContainer.appendChild(boxElement); } else { console.warn(`Box com ID "${boxId}" atribuído ao slot "${slotName}" não encontrado no DOM.`); } } }
 function loadSlotAssignments() { let assignments = null; try { const savedAssignmentsJSON = localStorage.getItem(BOX_SLOT_ASSIGNMENT_KEY); if (savedAssignmentsJSON) { assignments = JSON.parse(savedAssignmentsJSON); const defaultKeys = Object.keys(DEFAULT_SLOT_ASSIGNMENTS); const assignmentKeys = Object.keys(assignments); const defaultValues = Object.values(DEFAULT_SLOT_ASSIGNMENTS); const assignmentValues = Object.values(assignments); const isValid = defaultKeys.length === assignmentKeys.length && defaultKeys.every(key => assignmentKeys.includes(key)) && defaultValues.every(val => assignmentValues.includes(val)) && assignmentValues.every(val => defaultValues.includes(val)); if (!isValid) { assignments = { ...DEFAULT_SLOT_ASSIGNMENTS }; localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments)); } } else { assignments = { ...DEFAULT_SLOT_ASSIGNMENTS }; localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments)); } } catch (e) { console.error("Erro ao carregar atribuições de slot:", e); assignments = { ...DEFAULT_SLOT_ASSIGNMENTS }; localStorage.setItem(BOX_SLOT_ASSIGNMENT_KEY, JSON.stringify(assignments)); } applySlotAssignments(assignments); }
 function setupDragAndDrop() { loadSlotAssignments(); const boxes = document.querySelectorAll('.draggable-box'); boxes.forEach(box => { if (DEFAULT_BOX_VISIBILITY.hasOwnProperty(box.id)) { box.setAttribute('draggable', 'true'); box.style.cursor = 'grab'; box.addEventListener('dragstart', handleDragStart); box.addEventListener('dragend', handleDragEnd); box.addEventListener('dragenter', handleDragEnter); box.addEventListener('dragover', handleDragOver); box.addEventListener('dragleave', handleDragLeave); box.addEventListener('drop', handleDrop); } }); }
@@ -326,13 +415,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else { const newActionsContainer = document.createElement('div'); newActionsContainer.className = 'box-actions'; boxHeader.appendChild(newActionsContainer); addOrUpdateModalButton(newsBox, newActionsContainer, 'expand-news-btn', 'fa-expand-arrows-alt');}
         }
     }
+    const summaryBox = document.getElementById('box-weekly-summary');
+    if (summaryBox) {
+        const boxHeader = summaryBox.querySelector('.box-header');
+        if (boxHeader) {
+            let actionsContainer = boxHeader.querySelector('.box-actions');
+            if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); }
+            addOrUpdateModalButton(summaryBox, actionsContainer, 'expand-summary-btn', 'fa-expand-arrows-alt');
+        }
+    }
+
 
     if (typeof loadBannerPhrases === 'function') await loadBannerPhrases();
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             showNotification('Atualizando todos os dados...');
-            Promise.all([ updateDateTime(), loadNewsWidget(true), updateCommentaryContent() ])
+            Promise.all([ updateDateTime(), loadNewsWidget(true), updateCommentaryContent(), updateWeeklySummaryContent() ])
             .then(() => showNotification('Todos os dados foram atualizados!'))
             .catch(err => { showNotification('Erro durante a atualização geral.', true); console.error("Erro na atualização geral:", err); });
         });
@@ -408,6 +507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000);  }
     if (typeof loadNewsWidget === 'function') loadNewsWidget();
     if (typeof updateCommentaryContent === 'function') { updateCommentaryContent(); setInterval(updateCommentaryContent, COMMENTARY_UPDATE_INTERVAL); }
+    if (typeof updateWeeklySummaryContent === 'function') { updateWeeklySummaryContent(); }
     if (typeof updateBanner === 'function') { setInterval(updateBanner, 30 * 1000); }
     if (typeof setupDragAndDrop === 'function') setupDragAndDrop();
     if (typeof setupScrollAnimations === 'function') setupScrollAnimations();
