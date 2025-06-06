@@ -155,7 +155,14 @@ body.body-modal-open { overflow: hidden; }
     transform: translateY(0);
     opacity: 1;
 }
-
+.footer {
+  text-align: center; /* Centraliza o texto */
+  padding: 20px; /* Adiciona um espaçamento interno */
+  margin-top: 40px; /* Adiciona um espaço acima do rodapé */
+  font-size: 14px; /* Define um tamanho de fonte */
+  color: var(--text-secondary); /* Usa a cor de texto secundária do seu tema */
+  border-top: 1px solid var(--border-color); /* Adiciona uma linha sutil no topo */
+}
 .news-status { background: rgba(var(--neutral-trend-rgb), 0.1); border-left: 3px solid rgb(var(--neutral-trend-rgb)); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; }
 .overlay-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(var(--darker-bg-val), 0.85); z-index: 1050; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s; backdrop-filter: blur(4px); }
 .overlay-panel.is-active { opacity: 1; visibility: visible; transition-delay: 0s; }
