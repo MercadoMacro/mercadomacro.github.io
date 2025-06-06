@@ -8,6 +8,7 @@
       gtag('js', new Date());
       gtag('config', 'G-5JZRK5NNKG');
     </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0">
     <meta name="description" content="Entre em contato com o Mercado Macro - Tire suas dúvidas, envie sugestões ou reporte problemas.">
@@ -19,11 +20,42 @@
     <meta property="og:url" content="https://mercadomacro.github.io/contato.html">
     <meta name="theme-color" content="#0d1117">
     <title>Mercado Macro - Contato</title>
+
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/styles.css">
+
     <style>
+        /* Variáveis de Tema (inspirado em calculadoras.html) */
+        :root {
+            --primary-color: #00d180;
+            --primary-light: #5bffb0;
+            --dark-bg: #0d1117;
+            --darker-bg: #010409;
+            --text-color: #c9d1d9;
+            --text-secondary: rgba(139, 148, 158, 0.7);
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --border-color: rgba(48, 54, 61, 0.8);
+            --shadow-color-soft: rgba(0, 0, 0, 0.2);
+            --shadow-color-medium: rgba(0, 0, 0, 0.3);
+            --transition-speed: 0.3s;
+        }
+
+        body.light-mode {
+            --primary-color: #007aff;
+            --dark-bg: #ffffff;
+            --darker-bg: #f0f2f5;
+            --text-color: #1c1e21;
+            --text-secondary: rgba(51, 51, 51, 0.75);
+            --card-bg: rgba(255, 255, 255, 0.98);
+            --border-color: rgba(200, 205, 210, 0.7);
+            --shadow-color-soft: rgba(0, 0, 0, 0.08);
+            --shadow-color-medium: rgba(0, 0, 0, 0.12);
+        }
+        
+        /* Estilos do Formulário (de contato.html) */
         .contact-form { display: flex; flex-direction: column; gap: 15px; padding: 20px 0; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
@@ -36,6 +68,58 @@
         .contact-info { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
         .contact-info-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .contact-info-item i { color: var(--primary-color); font-size: 18px; width: 24px; text-align: center; }
+
+        /* Estilos dos Botões Flutuantes (de calculadoras.html) */
+        .floating-btn {
+            position: fixed;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px var(--shadow-color-soft);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .floating-btn:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-4px) scale(1.05);
+            color: var(--dark-bg);
+            box-shadow: 0 8px 20px var(--shadow-color-medium);
+        }
+
+        .floating-btn:active {
+            transform: translateY(0) scale(1);
+        }
+
+        .floating-btn i {
+            font-size: 20px;
+        }
+
+        #refresh-btn { right: 20px; bottom: 20px; }
+        #home-btn { right: 80px; bottom: 20px; }
+        #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        #top-btn.visible { opacity: 1; visibility: visible; }
+        .theme-toggle { left: 20px; bottom: 20px; }
+
+        /* Estilos de Botões Flutuantes para Modo Claro */
+        body.light-mode .floating-btn {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        body.light-mode .floating-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -104,7 +188,6 @@
                     
                     <div class="contact-info">
                         <h3 style="margin-bottom:15px; color:var(--primary-color);">Outras formas de contato:</h3>
-                        
                         <div class="contact-info-item">
                             <i class="fas fa-envelope"></i>
                             <span>E-mail: contato@mercadomacro.com.br</span>
@@ -114,59 +197,106 @@
             </div>
         </div>
 
-        <div class="footer" id="footer">Fonte: Dados em atualização... • By Anderson Danilo</div>
     </div>
 
-    <button id="fullscreen-btn" class="action-btn floating-btn" aria-label="Modo tela cheia"><i class="fas fa-expand"></i></button>
-    <button id="fullscreen-exit-btn" class="action-btn floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"><i class="fas fa-compress"></i></button>
-    <button id="analises-btn" class="action-btn floating-btn" aria-label="Ir para Painel Financeiro"><i class="fas fa-border-all"></i></button>
-    <button id="indicadores-btn" class="action-btn floating-btn" aria-label="Ir para indicadores"><i class="fas fa-chart-pie"></i></button>
-    <button id="calculadoras-btn" class="action-btn floating-btn" aria-label="Ir para calculadoras"><i class="fas fa-calculator"></i></button>
-    <button id="terminal-btn" class="action-btn floating-btn" aria-label="Ir para terminal de notícias"><i class="fas fa-newspaper"></i></button>
-    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
-    <button id="economic-calendar-toggle-btn" class="action-btn floating-btn" aria-label="Abrir Calendário Econômico"><i class="fas fa-calendar-alt"></i></button>
-    <button id="spotify-btn" class="action-btn floating-btn" aria-label="Abrir player do Spotify"><i class="fab fa-spotify"></i></button>
-    <div id="spotify-player-container" style="display: none; position: fixed; bottom: 80px; right: 20px; width: 300px; z-index: 1000;">
-        <button id="close-spotify-btn" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--text-secondary); cursor: pointer;"><i class="fas fa-times"></i></button>
-        <iframe style="border-radius:12px" src="https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-    </div>
+    <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados">
+        <i class="fas fa-redo"></i>
+    </button>
+    <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial">
+        <i class="fas fa-home"></i>
+    </button>
+    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+        <i class="fas fa-moon"></i>
+    </button>
 
     <script src="js/main.js"></script>
+
     <script>
+        // Função para o botão 'Voltar ao Topo'
+        function setupBackToTop() {
+            const backToTopButton = document.getElementById('top-btn');
+            if (!backToTopButton) return;
+            window.addEventListener('scroll', () => {
+                backToTopButton.classList.toggle('visible', window.pageYOffset > 300);
+            });
+            backToTopButton.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        // Função para o botão 'Atualizar'
+        function setupRefreshButton() {
+            const refreshButton = document.getElementById('refresh-btn');
+            if (!refreshButton) return;
+            refreshButton.addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.disabled = true;
+                setTimeout(() => window.location.reload(), 500);
+            });
+        }
+
+        // Função para alternar o tema (claro/escuro)
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (themeIcon) {
+                themeIcon.classList.toggle('fa-moon', !isLightMode);
+                themeIcon.classList.toggle('fa-sun', isLightMode);
+            }
+        }
+
+        // Lógica Principal que executa quando a página carrega
         document.addEventListener('DOMContentLoaded', function() {
-            // PASSO 2: O SCRIPT FOI SIMPLIFICADO
+            // Lógica do formulário de contato
             const contactForm = document.getElementById('contactForm');
             const submitBtn = document.getElementById('submitBtn');
             const submitText = document.getElementById('submitText');
             const loadingSpinner = document.getElementById('loadingSpinner');
             
-            contactForm.addEventListener('submit', function(e) {
-                // Apenas mostra o feedback visual, mas DEIXA o formulário ser enviado
-                submitText.style.display = 'none';
-                loadingSpinner.style.display = 'inline';
-                submitBtn.disabled = true;
-            });
-            
-            // O resto das suas funções para os outros botões permanece aqui
-            if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000); }
-            if (typeof toggleTheme === 'function') { document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme); }
-            if (typeof toggleFullscreen === 'function') {
-                const fullscreenBtn = document.getElementById('fullscreen-btn');
-                const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-                if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
-                if (fullscreenExitBtn) fullscreenExitBtn.addEventListener('click', toggleFullscreen);
-                ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {}));
+            if (contactForm) {
+                contactForm.addEventListener('submit', function(e) {
+                    submitText.style.display = 'none';
+                    loadingSpinner.style.display = 'inline';
+                    submitBtn.disabled = true;
+                });
             }
-            document.getElementById('analises-btn')?.addEventListener('click', () => window.location.href = 'analises.html');
-            document.getElementById('indicadores-btn')?.addEventListener('click', () => window.location.href = 'indicadores.html');
-            document.getElementById('calculadoras-btn')?.addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
-            document.getElementById('terminal-btn')?.addEventListener('click', () => window.location.href = 'terminal-news.html');
-            const spotifyBtn = document.getElementById('spotify-btn');
-            const spotifyPlayer = document.getElementById('spotify-player-container');
-            const closeSpotifyBtn = document.getElementById('close-spotify-btn');
-            if (spotifyBtn && spotifyPlayer && closeSpotifyBtn) {
-                spotifyBtn.addEventListener('click', () => { spotifyPlayer.style.display = 'block'; });
-                closeSpotifyBtn.addEventListener('click', () => { spotifyPlayer.style.display = 'none'; });
+            
+            // Configura os novos botões flutuantes
+            setupBackToTop();
+            setupRefreshButton();
+
+            // Adiciona funcionalidade ao botão de tema
+            const themeToggleButton = document.getElementById('theme-toggle');
+            if(themeToggleButton) {
+                themeToggleButton.addEventListener('click', toggleTheme);
+            }
+            
+            // Adiciona funcionalidade ao botão 'home' para voltar à página de análise (ou outra de sua escolha)
+            const homeButton = document.getElementById('home-btn');
+            if(homeButton) {
+                homeButton.addEventListener('click', () => window.location.href = 'index.html'); 
+            }
+            
+            // Garante que o tema salvo seja aplicado ao carregar a página
+            const savedTheme = localStorage.getItem('themePreference');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let isLightMode = (savedTheme === 'light') || (!savedTheme && !prefersDark);
+
+            if (isLightMode) {
+                document.body.classList.add('light-mode');
+            } else {
+                document.body.classList.remove('light-mode');
+            }
+            
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if(themeIcon){
+                themeIcon.classList.toggle('fa-moon', !isLightMode);
+                themeIcon.classList.toggle('fa-sun', isLightMode);
             }
         });
     </script>
