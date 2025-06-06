@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5JZRK5NNKG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-5JZRK5NNKG');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0">
+    <meta name="description" content="Entre em contato com o Mercado Macro - Tire suas dúvidas, envie sugestões ou reporte problemas.">
+    <meta name="keywords" content="contato mercado macro, suporte, dúvidas, sugestões, investimentos">
+    <meta name="author" content="Anderson">
+    <meta property="og:title" content="Mercado Macro - Contato">
+    <meta property="og:description" content="Entre em contato com o Mercado Macro - Tire suas dúvidas, envie sugestões ou reporte problemas.">
+    <meta property="og:image" content="https://mercadomacro.github.io/assets/thumbnail.png">
+    <meta property="og:url" content="https://mercadomacro.github.io/contato.html">
+    <meta name="theme-color" content="#0d1117">
+    <title>Mercado Macro - Contato</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .contact-form { display: flex; flex-direction: column; gap: 15px; padding: 20px 0; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+        .form-control { padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color); background-color: rgba(var(--card-bg-val), 0.3); color: var(--text-color); font-size: 14px; font-family: 'Montserrat', sans-serif; }
+        .form-control:focus { outline: none; border-color: var(--primary-color); background-color: var(--dark-bg); }
+        textarea.form-control { min-height: 150px; resize: vertical; }
+        .submit-btn { background: var(--primary-color); color: var(--dark-bg); border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; transition: background-color var(--transition-speed); margin-top: 10px; }
+        .submit-btn:hover { background-color: var(--primary-light); }
+        .submit-btn:disabled { background-color: var(--border-color); cursor: not-allowed; }
+        .contact-info { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .contact-info-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .contact-info-item i { color: var(--primary-color); font-size: 18px; width: 24px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="scroll-progress-bar"></div>
+
+    <header class="header">
+        <div class="logo-container">
+            <div class="logo">
+                <div class="page-title-header">Mercado Macro</div> <div class="logo-divider"></div>
+            </div>
+            <div class="banner" id="random-banner">
+                <div class="banner-text">Entre em contato conosco</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="subheader" id="data-atual">
+            <span class="update-status">CONTATO</span>
+        </div>
+
+        <div class="content-row">
+            <div class="content-box" style="grid-column: 1 / -1;">
+                <div class="box-header">
+                    <i class="fas fa-envelope"></i>
+                    <h2>Formulário de Contato</h2>
+                </div>
+                <div class="box-content">
+                    <form id="contactForm" action="https://formsubmit.co/contato@mercadomacro.com.br" method="POST" class="contact-form">
+                        
+                        <input type="hidden" name="_next" value="https://mercadomacro.github.io/obrigado.html">
+                        <input type="hidden" name="_captcha" value="false">
+                        
+                        <div class="form-group">
+                            <label for="name">Seu Nome</label>
+                            <input type="text" id="name" name="name" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Seu E-mail</label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Assunto</label>
+                            <select id="subject" name="_subject" class="form-control" required>
+                                <option value="" disabled selected>Selecione um assunto</option>
+                                <option value="Dúvida">Dúvida</option>
+                                <option value="Sugestão">Sugestão</option>
+                                <option value="Problema">Reportar Problema</option>
+                                <option value="Parceria">Proposta de Parceria</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Mensagem</label>
+                            <textarea id="message" name="message" class="form-control" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn" id="submitBtn">
+                            <span id="submitText">Enviar Mensagem</span>
+                            <span id="loadingSpinner" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>
+                        </button>
+                    </form>
+                    
+                    <div class="contact-info">
+                        <h3 style="margin-bottom:15px; color:var(--primary-color);">Outras formas de contato:</h3>
+                        
+                        <div class="contact-info-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>E-mail: contato@mercadomacro.com.br</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer" id="footer">Fonte: Dados em atualização... • By Anderson Danilo</div>
+    </div>
+
+    <button id="fullscreen-btn" class="action-btn floating-btn" aria-label="Modo tela cheia"><i class="fas fa-expand"></i></button>
+    <button id="fullscreen-exit-btn" class="action-btn floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"><i class="fas fa-compress"></i></button>
+    <button id="analises-btn" class="action-btn floating-btn" aria-label="Ir para Painel Financeiro"><i class="fas fa-border-all"></i></button>
+    <button id="indicadores-btn" class="action-btn floating-btn" aria-label="Ir para indicadores"><i class="fas fa-chart-pie"></i></button>
+    <button id="calculadoras-btn" class="action-btn floating-btn" aria-label="Ir para calculadoras"><i class="fas fa-calculator"></i></button>
+    <button id="terminal-btn" class="action-btn floating-btn" aria-label="Ir para terminal de notícias"><i class="fas fa-newspaper"></i></button>
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
+    <button id="economic-calendar-toggle-btn" class="action-btn floating-btn" aria-label="Abrir Calendário Econômico"><i class="fas fa-calendar-alt"></i></button>
+    <button id="spotify-btn" class="action-btn floating-btn" aria-label="Abrir player do Spotify"><i class="fab fa-spotify"></i></button>
+    <div id="spotify-player-container" style="display: none; position: fixed; bottom: 80px; right: 20px; width: 300px; z-index: 1000;">
+        <button id="close-spotify-btn" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--text-secondary); cursor: pointer;"><i class="fas fa-times"></i></button>
+        <iframe style="border-radius:12px" src="https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // PASSO 2: O SCRIPT FOI SIMPLIFICADO
+            const contactForm = document.getElementById('contactForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            contactForm.addEventListener('submit', function(e) {
+                // Apenas mostra o feedback visual, mas DEIXA o formulário ser enviado
+                submitText.style.display = 'none';
+                loadingSpinner.style.display = 'inline';
+                submitBtn.disabled = true;
+            });
+            
+            // O resto das suas funções para os outros botões permanece aqui
+            if (typeof updateDateTime === 'function') { updateDateTime(); setInterval(updateDateTime, 30000); }
+            if (typeof toggleTheme === 'function') { document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme); }
+            if (typeof toggleFullscreen === 'function') {
+                const fullscreenBtn = document.getElementById('fullscreen-btn');
+                const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
+                if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
+                if (fullscreenExitBtn) fullscreenExitBtn.addEventListener('click', toggleFullscreen);
+                ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => document.addEventListener(event, typeof handleFullscreenChange === 'function' ? handleFullscreenChange : () => {}));
+            }
+            document.getElementById('analises-btn')?.addEventListener('click', () => window.location.href = 'analises.html');
+            document.getElementById('indicadores-btn')?.addEventListener('click', () => window.location.href = 'indicadores.html');
+            document.getElementById('calculadoras-btn')?.addEventListener('click', () => window.location.href = 'calculadoras/calculadoras.html');
+            document.getElementById('terminal-btn')?.addEventListener('click', () => window.location.href = 'terminal-news.html');
+            const spotifyBtn = document.getElementById('spotify-btn');
+            const spotifyPlayer = document.getElementById('spotify-player-container');
+            const closeSpotifyBtn = document.getElementById('close-spotify-btn');
+            if (spotifyBtn && spotifyPlayer && closeSpotifyBtn) {
+                spotifyBtn.addEventListener('click', () => { spotifyPlayer.style.display = 'block'; });
+                closeSpotifyBtn.addEventListener('click', () => { spotifyPlayer.style.display = 'none'; });
+            }
+        });
+    </script>
+</body>
+</html>
