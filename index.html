@@ -105,6 +105,18 @@
                 </div>
             </div>
 
+            <div class="content-box draggable-box" id="box-weekly-summary">
+                <div class="box-header">
+                    <i class="fas fa-calendar-week"></i>
+                    <h2>Resumo Semanal</h2>
+                    <div class="box-actions"></div>
+                </div>
+                <div id="weekly-summary-content" class="box-content">
+                    <div class="loading-commentary">
+                        <span class="loading-small"></span> Carregando resumo da semana...
+                    </div>
+                </div>
+            </div>
             <div class="content-box draggable-box" id="box-watchlist">
                 <div class="box-header">
                     <i class="fas fa-star"></i>
@@ -188,6 +200,10 @@
         <div>
             <input type="checkbox" id="toggle-box-market" data-boxid="box-market" class="visibility-toggle-checkbox">
             <label for="toggle-box-market">Monitor de Mercado</label>
+        </div>
+        <div>
+            <input type="checkbox" id="toggle-box-weekly-summary" data-boxid="box-weekly-summary" class="visibility-toggle-checkbox">
+            <label for="toggle-box-weekly-summary">Resumo Semanal</label>
         </div>
         <div>
             <input type="checkbox" id="toggle-box-watchlist" data-boxid="box-watchlist" class="visibility-toggle-checkbox">
