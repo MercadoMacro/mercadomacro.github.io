@@ -115,6 +115,44 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
                 ],
                 "originalTitle": "Indices"
             },
+			
+			
+			 {
+      "title": "Futuros",
+      "symbols": [
+        {
+          "s": "BMFBOVESPA:WIN1!",
+          "d": "IBOV FUTURO"
+        },
+        {
+          "s": "BMFBOVESPA:WDO1!",
+          "d": "DOL FUTURO"
+        },
+        {
+          "s": "BMFBOVESPA:HSI1!",
+          "d": "HANG SENG FUTURO"
+        },
+        {
+          "s": "BMFBOVESPA:ISP1!",
+          "d": "S&P 500 FUTURO"
+        },
+        {
+          "s": "BMFBOVESPA:DAX1!",
+          "d": "DAX Frankfurt"
+        },
+        {
+          "s": "BMFBOVESPA:INK1!",
+          "d": "NIKKEI FUTURO"
+        },
+        {
+          "s": "BMFBOVESPA:ESX1!",
+          "d": "EURO STOXX 50"
+        }
+      ]
+    },
+		
+			
+			
             {
                 "title": "Moedas",
                 "symbols": [
@@ -147,6 +185,7 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
                 ],
                 "originalTitle": "Crypto"
             }
+			
         ]
     };
 
