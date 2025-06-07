@@ -241,12 +241,28 @@ body.light-mode .contact-button-main:hover {
     } 
     .content-box { max-height: 420px; } 
     .content-box.expanded { max-height: 65vh; } 
-    .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
+    
+    /* ALTERAÇÃO: Remove padding do overlay em telas menores */
+    .content-modal-overlay {
+        padding: 0;
+    }
+    /* ALTERAÇÃO: Modal de conteúdo ocupa a tela inteira */
+    .content-modal-content { 
+        width: 100%; 
+        height: 100%; 
+        max-height: 100%;
+        border-radius: 0; 
+        padding: 20px 15px; /* Adiciona padding vertical para não colar no topo/baixo */
+        border: none;
+        top: 0; 
+        left: 0; 
+        transform: none !important; 
+    } 
     .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
     .settings-panel.visible { transform: translateY(0) scale(1); } 
 }
 @media (max-width: 600px) { 
-    body { zoom: 1.0; touch-action: manipulation; } 
+    body { zoom: 0.9; touch-action: manipulation; } 
     .page-title-header { font-size: 22px; } 
     .banner { font-size: 14px; padding: 6px 10px; min-height: 32px; } 
     .floating-btn { width: 40px; height: 40px; }
@@ -270,6 +286,9 @@ body.light-mode .contact-button-main:hover {
     #indicadores-btn { right: 145px; }
     #calculadoras-btn { right: 190px; }
     #terminal-btn { right: 235px; }
-    html { font-size: 13px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 11px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; } .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; }  .content-modal-content { width: 100%; height: 100%; border-radius: 0; padding: 10px; top:0; left:0; transform: none!important; } .content-modal-close-btn { top:10px; right:10px; width:30px; height:30px; font-size: 14px;} .modal-content-area-inner { margin-top: 5px; padding-right: 5px;} 
+    html { font-size: 13px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 11px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; } .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; } 
+
+    .content-modal-close-btn { top:10px; right:10px; width:30px; height:30px; font-size: 14px;} 
+    .modal-content-area-inner { margin-top: 5px; padding-right: 5px;} 
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
