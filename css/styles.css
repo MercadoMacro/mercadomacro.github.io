@@ -73,7 +73,7 @@ body.body-modal-open {
 .news-item { background: rgba(var(--card-bg-val), 0.5); margin-bottom: 10px; padding: 12px; border-radius: 8px; border-left: 3px solid transparent; transition: all 0.3s ease; position: relative; animation: fadeIn 0.3s ease forwards; }
 .news-item:hover { background: rgba(var(--card-bg-val), 0.8); border-left-color: var(--primary-color); transform: translateX(2px); }
 .news-item .news-link { font-family: Arial, Helvetica, sans-serif; }
-.news-item-title { font-weight: 600; margin-bottom: 6px; color: var(--text-color); font-size: 15px; line-height: 1.4; }
+.news-item-title { font-weight: 600; margin-bottom: 6px; color: var(--primary-color); font-size: 15px; line-height: 1.4; }
 .news-item-description { white-space: normal; text-align: justify; font-size: 14px; color: var(--text-color); opacity: 0.85; margin-bottom: 8px; line-height: 1.6;}
 .news-item-description br { display: none; }
 .news-item-date { font-size: 12px; opacity: 0.75; margin-top: 5px; color: var(--text-secondary); }
@@ -204,7 +204,7 @@ body.light-mode .contact-button-main:hover { background-color: var(--primary-dar
     .settings-panel label { font-size: 13px; } 
     .settings-panel input[type="checkbox"] { margin-right: 8px; transform: scale(1); }
     #refresh-btn { right: 10px; } #fullscreen-btn, #fullscreen-exit-btn { right: 55px; } #analises-btn { right: 100px; } #indicadores-btn { right: 145px; } #calculadoras-btn { right: 190px; } #terminal-btn { right: 235px; }
-    html { font-size: 15px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 11px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; }
+    html { font-size: 15px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 14px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; }
     .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; }
     
     /* Regra para o modal ter layout de tela cheia no mobile */
