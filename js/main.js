@@ -89,6 +89,9 @@ function openContentModal(boxId) {
     }
     contentModalOverlay.style.display = 'flex';
     setTimeout(() => { contentModalOverlay.classList.add('visible'); }, 10);
+    
+    // ======== ADIÇÃO IMPORTANTE (1 de 2) ========
+    // Adiciona uma classe ao body para o CSS remover o zoom
     document.body.classList.add('body-modal-open');
 }
 
@@ -120,6 +123,8 @@ function openChartDetailModal(symbol) {
     }
     contentModalOverlay.style.display = 'flex';
     setTimeout(() => { contentModalOverlay.classList.add('visible'); }, 10);
+    
+    // Também adiciona a classe aqui para garantir que funcione em todos os modais
     document.body.classList.add('body-modal-open');
 }
 
@@ -131,6 +136,9 @@ function closeContentModal() {
     if (modalContentArea) {
         while (modalContentArea.firstChild) { modalContentArea.removeChild(modalContentArea.firstChild); }
     }
+    
+    // ======== ADIÇÃO IMPORTANTE (2 de 2) ========
+    // Remove a classe do body para o zoom voltar ao normal
     document.body.classList.remove('body-modal-open');
     currentModalChartSymbol = null;
 }
@@ -170,45 +178,34 @@ function printBoxContent(boxId) {
             <link rel="stylesheet" href="css/styles.css">
             <style>
                 @media print {
-                    /* Estilos base para impressão */
                     body {
                         padding: 20px !important;
                         margin: 0 !important;
-                        background: #FFFFFF !important; /* Força fundo branco */
-                        color: #000000 !important; /* Cor do texto padrão preta */
+                        background: #FFFFFF !important;
+                        color: #000000 !important;
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                     }
-
-                    /* MANTÉM a cor original para elementos de destaque */
                     .commentary-highlight, strong {
                         color: var(--primary-color) !important;
                     }
-
-                    /* Garante que o resto do texto seja preto */
                     h1, h2, p, li, div, span, a {
                         text-shadow: none !important;
                     }
-                    
                     p, li, span, div:not(.commentary-highlight), a {
                          color: #000000 !important;
                     }
-                    
                     a {
                         text-decoration: underline;
                     }
-
                     .box-content {
                         overflow-y: visible !important;
                         max-height: none !important;
                         padding-right: 0 !important;
                     }
-
-                    /* Esconde elementos não interativos ou desnecessários */
                     .loading-commentary, .skeleton-loading, button, .watchlist-item-remove-btn, #watchlist-input-container {
                         display: none !important;
                     }
-
                     ul { padding-left: 20px; }
                 }
             </style>
@@ -267,7 +264,6 @@ function setupBoxVisibility() {
             const isVisible = savedPrefs[boxId];
             checkbox.checked = isVisible;
             if (boxElement) {
-                 // O content-box usa display: flex por padrão no CSS.
                 boxElement.style.display = isVisible ? 'flex' : 'none';
             }
 
@@ -284,7 +280,6 @@ function setupBoxVisibility() {
                             renderMarketOverviewWidget(currentTheme, 'market-overview-widget-wrapper');
                         }
                     }
-                    // Se um box foi escondido, precisamos re-salvar a ordem dos slots baseada nos visíveis
                     if (typeof saveSlotAssignments === 'function') saveSlotAssignments();
                 }
                 const currentPrefs = JSON.parse(localStorage.getItem(VISIBILITY_PREFS_KEY)) || { ...DEFAULT_BOX_VISIBILITY };
@@ -327,6 +322,7 @@ function removeSymbolFromWatchlist(symbolToRemove) { watchlistSymbols = watchlis
 function setupWatchlist() { watchlistSymbolInput = document.getElementById('watchlist-symbol-input'); addWatchlistSymbolBtn = document.getElementById('add-watchlist-symbol-btn'); watchlistItemsContainer = document.getElementById('watchlist-items-container'); if (!watchlistSymbolInput || !addWatchlistSymbolBtn || !watchlistItemsContainer) { console.warn('Elementos da watchlist não encontrados.'); return; } loadWatchlistSymbols(); renderWatchlistItems(); addWatchlistSymbolBtn.addEventListener('click', addSymbolToWatchlist); watchlistSymbolInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') addSymbolToWatchlist(); }); const watchlistBox = document.getElementById('box-watchlist'); if (watchlistBox) { const boxHeader = watchlistBox.querySelector('.box-header'); if (boxHeader) { let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } if (document.getElementById('draggable-container')) { addOrUpdateModalButton(watchlistBox, actionsContainer, 'expand-watchlist-box-btn'); } } } }
 
 
+// ... (O restante do arquivo main.js continua igual a partir daqui)
 // =============================================
 // FUNÇÃO PARA FORMATAR TEMPO RELATIVO (original)
 // =============================================
@@ -353,17 +349,11 @@ function loadEconomicCalendarWidget() { const widgetContainer = document.getElem
 async function loadBannerPhrases() { try { const response = await fetch('data/banner-phrases.json'); if (!response.ok) throw new Error(`Falha ao carregar frases: ${response.status}`); BANNER_PHRASES = (await response.json()).phrases; if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) { BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"]; } } catch (error) { console.error('Erro ao carregar frases do banner:', error); BANNER_PHRASES = ["Bem-vindo ao Mercado Macro"]; } updateBanner(); }
 function updateBanner() { const banner = document.getElementById('random-banner'); const bannerTextEl = banner ? banner.querySelector('.banner-text') : null; if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) { const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)]; bannerTextEl.textContent = randomPhrase; bannerTextEl.style.animation = 'none'; void bannerTextEl.offsetWidth;  if (window.innerWidth <= 768) { bannerTextEl.style.animation = 'scrollBanner 15s linear infinite'; } else { bannerTextEl.style.animation = ''; } } else if (bannerTextEl) { bannerTextEl.textContent = "Notícias e Análises Financeiras"; } }
 
-// --- Função para o Radar Financeiro (do Google Docs) ---
 async function fetchGoogleDocContent() { const url = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DOC_ID}/export?mimeType=text/plain&key=${GOOGLE_API_KEY}`; try { const response = await fetch(url, { signal: AbortSignal.timeout(10000) });  if (!response.ok) { const errorBody = await response.text(); console.error(`Google Docs API Error ${response.status}: ${response.statusText}`, errorBody); throw new Error(`Erro ${response.status} ao buscar Google Doc.`); } return await response.text(); } catch (error) { console.error('Falha na requisição ao Google Docs:', error); if (error.name !== 'AbortError') {  throw new Error('Não foi possível carregar a análise do Google Docs.'); } throw error;  } }
 function updateCommentary(content) { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) return; let formattedContent = content.replace(/\r\n/g, '\n').split('\n').map(line => { line = line.trim(); if (/^\s*$/.test(line)) return null;  if (/^([📌☐✔☑️✅]\s*.+)/.test(line)) return `<div class="commentary-highlight">${line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</div>`; line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');  if (/^[•*-]\s*(.+)/.test(line)) return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;  return `<p class="commentary-paragraph">${line}</p>`;  }).filter(line => line !== null).join(''); formattedContent = formattedContent.replace(/(<li>.*?<\/li>)+/sg, '<ul>$&</ul>'); commentaryContentEl.innerHTML = formattedContent || '<p>Nenhuma análise disponível.</p>'; }
 async function updateCommentaryContent() { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) return; commentaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando análise...</div>`; try { const content = await fetchGoogleDocContent(); updateCommentary(content); commentaryLastUpdateTimestamp = Date.now(); return true; } catch (error) { console.error('Falha ao atualizar comentário:', error); commentaryContentEl.innerHTML = `<div class="error-commentary"><i class="fas fa-exclamation-triangle"></i> ${error.message || 'Falha ao carregar.'}</div>`; return false; } }
 
-// --- NOVAS FUNÇÕES PARA O RESUMO SEMANAL ---
-/**
- * Busca o conteúdo do arquivo de texto do resumo semanal.
- */
 async function fetchWeeklySummaryText() {
-    // O arquivo deve estar em /data/resumo-semanal.txt
     const url = 'data/resumo-semanal.txt'; 
     try {
         const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
@@ -376,44 +366,25 @@ async function fetchWeeklySummaryText() {
         throw new Error('Não foi possível carregar o resumo da semana.');
     }
 }
-/**
- * Formata o texto bruto e o insere no elemento HTML do resumo.
- * @param {string} content - O conteúdo de texto do resumo.
- */
 function updateWeeklySummary(content) {
     const summaryContentEl = document.getElementById('weekly-summary-content');
     if (!summaryContentEl) return;
-
-    // Converte quebras de linha em parágrafos e formata destaques
     let formattedContent = content.replace(/\r\n/g, '\n').split('\n').map(line => {
         line = line.trim();
-        if (/^\s*$/.test(line)) return null; // Ignora linhas em branco
-
-        // Transforma **texto** em <strong>texto</strong>
+        if (/^\s*$/.test(line)) return null;
         line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); 
-
-        // Transforma linhas que começam com * ou • em itens de lista
         if (/^[•*-]\s*(.+)/.test(line)) {
             return `<li>${line.substring(line.search(/\S/)).replace(/^[•*-]\s*/, '')}</li>`;
         }
-        
         return `<p class="commentary-paragraph">${line}</p>`; 
     }).filter(line => line !== null).join('');
-
-    // Agrupa itens de lista <li> em uma <ul>
     formattedContent = formattedContent.replace(/(<li>.*?<\/li>)+/sg, '<ul>$&</ul>');
-    
     summaryContentEl.innerHTML = formattedContent || '<p>Nenhum resumo disponível.</p>';
 }
-/**
- * Função principal para carregar o conteúdo do resumo semanal.
- */
 async function updateWeeklySummaryContent() {
     const summaryContentEl = document.getElementById('weekly-summary-content');
     if (!summaryContentEl) return;
-    
     summaryContentEl.innerHTML = `<div class="loading-commentary"><span class="loading-small"></span> Carregando resumo...</div>`;
-    
     try {
         const content = await fetchWeeklySummaryText();
         updateWeeklySummary(content);
@@ -424,7 +395,6 @@ async function updateWeeklySummaryContent() {
         return false;
     }
 }
-
 
 function addOrUpdateModalButton(boxElement, actionsContainer, buttonId, modalIconClass = 'fa-expand-arrows-alt') { if (!boxElement || !actionsContainer) { console.warn(`Elemento do Box ou actions container não encontrado para ID do botão: ${buttonId}`); return; } let modalBtn = actionsContainer.querySelector(`#${buttonId}`); let isNewButton = false; if (!modalBtn) { modalBtn = document.createElement('button'); modalBtn.id = buttonId; modalBtn.className = 'expand-btn'; isNewButton = true; } modalBtn.setAttribute('aria-label', 'Abrir em tela cheia'); const currentIconEl = modalBtn.querySelector('i'); if (currentIconEl) { currentIconEl.className = `fas ${modalIconClass}`; } else { modalBtn.innerHTML = `<i class="fas ${modalIconClass}"></i>`; } const newBtnInstance = modalBtn.cloneNode(true); if (!isNewButton && modalBtn.parentNode) { modalBtn.parentNode.replaceChild(newBtnInstance, modalBtn); } modalBtn = newBtnInstance; modalBtn.addEventListener('click', function(event) { event.stopPropagation(); openContentModal(boxElement.id); }); if (isNewButton) { if (actionsContainer.firstChild && actionsContainer.firstChild.id !== 'refresh-news-btn') { actionsContainer.insertBefore(modalBtn, actionsContainer.firstChild); } else { actionsContainer.appendChild(modalBtn); } } }
 function setupCommentaryActions() { const commentaryBox = document.getElementById('box-commentary'); if (!commentaryBox) return; const boxHeader = commentaryBox.querySelector('.box-header'); if (!boxHeader) return; let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } addOrUpdateModalButton(commentaryBox, actionsContainer, 'expand-commentary-btn', 'fa-expand-arrows-alt'); if (!actionsContainer.querySelector('#share-commentary-btn')) { const shareBtn = document.createElement('button'); shareBtn.id = 'share-commentary-btn'; shareBtn.className = 'expand-btn'; shareBtn.setAttribute('aria-label', 'Compartilhar'); shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>'; actionsContainer.appendChild(shareBtn); shareBtn.addEventListener('click', async function() { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) { showNotification('Conteúdo não encontrado.', true); return; } let textToShare = ""; commentaryContentEl.querySelectorAll('p, .commentary-highlight, li').forEach(el => { textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n"); }); textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim(); if (!textToShare) { showNotification('Não há conteúdo para compartilhar.', true); return; } const shareData = { title: 'Radar Financeiro - Análise', text: textToShare }; try { if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); showNotification('Conteúdo compartilhado!'); } else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(textToShare); showNotification('Texto da análise copiado!'); } else { throw new Error('Compartilhamento não suportado.'); } } catch (err) { console.error('Erro ao compartilhar:', err); if (err.name !== 'AbortError') { showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true); } } }); } }
@@ -478,9 +448,6 @@ const debouncedUpdateBannerOnResize = debounce(updateBanner, 250);
 function toggleTheme() { document.body.classList.toggle('light-mode'); const isLightMode = document.body.classList.contains('light-mode'); localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark'); const newTheme = isLightMode ? 'light' : 'dark'; const themeIcon = document.querySelector('#theme-toggle i'); if (themeIcon) { themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); } const tickerTapeSkeleton = document.querySelector('#tradingview-ticker-tape-container .tv-skeleton'); if (tickerTapeSkeleton) tickerTapeSkeleton.style.display = 'flex'; const marketOverviewSkeleton = document.querySelector('#market-overview-widget-wrapper .tv-skeleton'); if (marketOverviewSkeleton) marketOverviewSkeleton.style.display = 'flex'; if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(newTheme); if (typeof renderMarketOverviewWidget === 'function') { const marketBoxEl = document.getElementById('box-market'); if (marketBoxEl && window.getComputedStyle(marketBoxEl).display !== 'none') renderMarketOverviewWidget(newTheme); } const calendarOverlay = document.getElementById('economic-calendar-overlay'); if (calendarOverlay && calendarOverlay.classList.contains('is-active')) { if (typeof loadEconomicCalendarWidget === 'function') loadEconomicCalendarWidget(); } if (contentModalOverlay && contentModalOverlay.classList.contains('visible')) { const modalMarketContainer = document.getElementById('modal-market-overview-container'); const modalTVChartContainer = document.getElementById('modal-tv-chart-container'); if (modalMarketContainer && modalMarketContainer.querySelector('.tradingview-widget-container')) { if (typeof renderMarketOverviewWidget === 'function') renderMarketOverviewWidget(newTheme, 'modal-market-overview-container'); } else if (currentModalChartSymbol && modalTVChartContainer && modalTVChartContainer.querySelector('.tradingview-widget-container')) { if (typeof openChartDetailModal === 'function') openChartDetailModal(currentModalChartSymbol); } } }
 function setupPullToRefresh() { const ptrIndicator = document.getElementById('pull-to-refresh-indicator'); if (!ptrIndicator) return; let startY = 0, isDragging = false; const PULL_THRESHOLD = 70, MAX_PULL_DISTANCE = 100; document.body.addEventListener('touchstart', (e) => { if (window.scrollY === 0) { startY = e.touches[0].pageY; isDragging = true; ptrIndicator.classList.add('visible'); }}, { passive: true }); document.body.addEventListener('touchmove', (e) => { if (!isDragging || window.scrollY !== 0) { if(isDragging) { isDragging = false; ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible');} return; } const currentY = e.touches[0].pageY; let diffY = currentY - startY; if (diffY > 0) { if (e.cancelable) e.preventDefault(); const pullDistance = Math.min(diffY, MAX_PULL_DISTANCE); ptrIndicator.style.transform = `translateY(${Math.min(pullDistance - 50, 50)}px)`; if (diffY > PULL_THRESHOLD) { ptrIndicator.classList.add('active'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-up"></i> Solte para atualizar'; } else { ptrIndicator.classList.remove('active'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; }} else { ptrIndicator.style.transform = `translateY(-50px)`; } }, { passive: false }); document.body.addEventListener('touchend', (e) => { if (!isDragging) return; isDragging = false; const currentY = e.changedTouches[0].pageY; const diffY = currentY - startY; if (diffY > PULL_THRESHOLD && window.scrollY === 0) { ptrIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...'; ptrIndicator.classList.add('active'); showNotification('Atualizando dados...'); Promise.all([loadNewsWidget(true), updateCommentaryContent()]).then(() => showNotification('Dados atualizados!')).catch(err => { showNotification('Erro ao atualizar os dados.', true); console.error("Erro no pull-to-refresh:", err);}) .finally(() => { setTimeout(() => { ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; }, 300); }); } else { ptrIndicator.style.transform = `translateY(-50px)`; ptrIndicator.classList.remove('active','visible'); ptrIndicator.innerHTML = '<i class="fas fa-arrow-down"></i> Puxe para atualizar'; } startY = 0; }); }
 
-// =============================================
-// INICIALIZAÇÃO DOMContentLoaded
-// =============================================
 document.addEventListener('DOMContentLoaded', async () => {
     initializeModalElements();
     if (typeof setupBoxVisibility === 'function') setupBoxVisibility();
@@ -525,7 +492,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             addOrUpdateModalButton(summaryBox, actionsContainer, 'expand-summary-btn', 'fa-expand-arrows-alt');
             
-            // Adiciona o botão de impressão
             const printBtn = document.createElement('button');
             printBtn.id = 'print-summary-btn';
             printBtn.className = 'expand-btn';
@@ -583,7 +549,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         calendarOverlay.addEventListener('click', (event) => { if (event.target === calendarOverlay) closeCalendarOverlay(); });
     }
 
-    // Spotify Player Toggle
     const spotifyBtn = document.getElementById('spotify-btn');
     const spotifyPlayer = document.getElementById('spotify-player-container');
     const closeSpotifyBtn = document.getElementById('close-spotify-btn');
@@ -592,21 +557,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         spotifyBtn.addEventListener('click', () => {
             const isPlayerVisible = spotifyPlayer.classList.contains('visible');
             if (isPlayerVisible) {
-                // Hide the player
                 spotifyPlayer.classList.remove('visible');
                 setTimeout(() => {
-                    // Only set display to none if it's still not visible (e.g., user didn't rapidly click again)
-                    // This check helps prevent issues if the button is clicked very fast multiple times.
                     if (!spotifyPlayer.classList.contains('visible')) {
                          spotifyPlayer.style.display = 'none';
                     }
-                }, 300); // Should match your CSS transition duration (0.3s)
+                }, 300);
             } else {
-                // Show the player
-                spotifyPlayer.style.display = 'block'; // Make it occupy space before transition
-                setTimeout(() => { // Allow display to take effect before adding class for transition
+                spotifyPlayer.style.display = 'block';
+                setTimeout(() => {
                     spotifyPlayer.classList.add('visible');
-                }, 10); // Small delay
+                }, 10);
             }
         });
 
@@ -614,10 +575,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             spotifyPlayer.classList.remove('visible');
             setTimeout(() => {
                 spotifyPlayer.style.display = 'none';
-            }, 300); // Should match your CSS transition duration
+            }, 300);
         });
     }
-    // End Spotify Player Toggle
 
     window.addEventListener('resize', debouncedUpdateBannerOnResize);
     window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
@@ -633,7 +593,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
     if (typeof renderMarketOverviewWidget === 'function') {
         const marketBoxEl = document.getElementById('box-market');
-        // Verifica se o box está visível antes de renderizar o widget inicialmente
         if (marketBoxEl && window.getComputedStyle(marketBoxEl).display !== 'none') {
              renderMarketOverviewWidget(currentTheme);
         }
