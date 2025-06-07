@@ -90,8 +90,6 @@ function openContentModal(boxId) {
     contentModalOverlay.style.display = 'flex';
     setTimeout(() => { contentModalOverlay.classList.add('visible'); }, 10);
     
-    // ======== ADIÇÃO IMPORTANTE (1 de 2) ========
-    // Adiciona uma classe ao body para o CSS remover o zoom
     document.body.classList.add('body-modal-open');
 }
 
@@ -124,7 +122,6 @@ function openChartDetailModal(symbol) {
     contentModalOverlay.style.display = 'flex';
     setTimeout(() => { contentModalOverlay.classList.add('visible'); }, 10);
     
-    // Também adiciona a classe aqui para garantir que funcione em todos os modais
     document.body.classList.add('body-modal-open');
 }
 
@@ -137,16 +134,10 @@ function closeContentModal() {
         while (modalContentArea.firstChild) { modalContentArea.removeChild(modalContentArea.firstChild); }
     }
     
-    // ======== ADIÇÃO IMPORTANTE (2 de 2) ========
-    // Remove a classe do body para o zoom voltar ao normal
     document.body.classList.remove('body-modal-open');
     currentModalChartSymbol = null;
 }
 
-/**
- * Imprime o conteúdo de um box específico.
- * @param {string} boxId - O ID do elemento do box a ser impresso.
- */
 function printBoxContent(boxId) {
     const boxToPrint = document.getElementById(boxId);
     if (!boxToPrint) {
@@ -160,7 +151,6 @@ function printBoxContent(boxId) {
     const isLightMode = document.body.classList.contains('light-mode');
     const themeClass = isLightMode ? 'light-mode' : '';
 
-    // Cria um iframe invisível para não atrapalhar a visualização
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
@@ -250,7 +240,6 @@ function setupBoxVisibility() {
         console.error("Erro ao carregar preferências de visibilidade, usando padrão.", e);
         savedPrefs = { ...DEFAULT_BOX_VISIBILITY };
     }
-    // Garante que todas as chaves default estejam presentes
     for (const key in DEFAULT_BOX_VISIBILITY) {
         if (savedPrefs[key] === undefined) {
             savedPrefs[key] = DEFAULT_BOX_VISIBILITY[key];
@@ -321,31 +310,26 @@ function addSymbolToWatchlist() { if (!watchlistSymbolInput) return; const symbo
 function removeSymbolFromWatchlist(symbolToRemove) { watchlistSymbols = watchlistSymbols.filter(s => s !== symbolToRemove); saveWatchlistSymbols(); renderWatchlistItems(); showNotification(`"${symbolToRemove}" removido da watchlist.`); }
 function setupWatchlist() { watchlistSymbolInput = document.getElementById('watchlist-symbol-input'); addWatchlistSymbolBtn = document.getElementById('add-watchlist-symbol-btn'); watchlistItemsContainer = document.getElementById('watchlist-items-container'); if (!watchlistSymbolInput || !addWatchlistSymbolBtn || !watchlistItemsContainer) { console.warn('Elementos da watchlist não encontrados.'); return; } loadWatchlistSymbols(); renderWatchlistItems(); addWatchlistSymbolBtn.addEventListener('click', addSymbolToWatchlist); watchlistSymbolInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') addSymbolToWatchlist(); }); const watchlistBox = document.getElementById('box-watchlist'); if (watchlistBox) { const boxHeader = watchlistBox.querySelector('.box-header'); if (boxHeader) { let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } if (document.getElementById('draggable-container')) { addOrUpdateModalButton(watchlistBox, actionsContainer, 'expand-watchlist-box-btn'); } } } }
 
-
-// ... (O restante do arquivo main.js continua igual a partir daqui)
 // =============================================
-// FUNÇÃO PARA FORMATAR TEMPO RELATIVO (original)
+// FUNÇÃO PARA FORMATAR TEMPO RELATIVO
 // =============================================
 function formatTimeSince(timestamp) { if (!timestamp) return ''; const now = new Date(); const secondsPast = (now.getTime() - timestamp) / 1000; if (secondsPast < 60) return 'há menos de um minuto'; if (secondsPast < 3600) { const minutes = Math.round(secondsPast / 60); return `há ${minutes} min${minutes > 1 ? 's' : ''}`; } if (secondsPast <= 86400) { const hours = Math.round(secondsPast / 3600); return `há ${hours} hora${hours > 1 ? 's' : ''}`; } const date = new Date(timestamp); return `em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`; }
 
 // =============================================
-// FUNÇÃO PARA ATUALIZAR DATA E HORA (original)
+// FUNÇÃO PARA ATUALIZAR DATA E HORA
 // =============================================
 function updateDateTime() { const now = new Date(); const formattedDate = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); const dataAtualElement = document.getElementById('data-atual'); if (dataAtualElement) { const datetimeSpan = dataAtualElement.querySelector('.datetime'); if (datetimeSpan) datetimeSpan.textContent = formattedDate; } const footerElement = document.getElementById('footer'); if (footerElement) footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`; }
 
 // =============================================
-// CÓDIGO DAS NOTÍCIAS (original)
+// CÓDIGO DAS NOTÍCIAS
 // =============================================
 const RSS_SOURCES = [ { name: 'RSS2JSON', buildUrl: feedUrl => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`, processor: data => { if (!data.items) throw new Error('Formato RSS2JSON inválido'); return data.items.map(item => ({ title: item.title, description: item.description, link: item.link, pubDate: item.pubDate })); } }, { name: 'AllOrigins', buildUrl: feedUrl => `https://api.allorigins.win/raw?charset=UTF-8&url=${encodeURIComponent(feedUrl)}`, processor: dataText => { if (!dataText) throw new Error('Conteúdo AllOrigins vazio'); const parser = new DOMParser(); const xmlDoc = parser.parseFromString(dataText, "text/xml"); return parseXmlNews(xmlDoc); } } ];
 const RSS_FEEDS = [ 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', 'https://www.valor.com.br/rss', 'https://www.infomoney.com.br/feed/' ];
 const FALLBACK_NEWS = [ { title: "Mercado aguarda decisão do Fed", description: "Decisão sobre juros nos EUA é o foco.", link: "#", pubDate: new Date().toISOString() }, { title: "Ibovespa em alta com commodities", description: "Índice brasileiro acompanha otimismo externo.", link: "#", pubDate: new Date().toISOString() }, { title: "Dólar opera em queda", description: "Moeda americana perde força no cenário global.", link: "#", pubDate: new Date().toISOString() } ];
 
 // =============================================
-// FUNÇÕES PARA RENDERIZAR WIDGETS (renderTickerTapeWidget original, renderMarketOverviewWidget modificado)
+// FUNÇÕES DE DADOS E CONTEÚDO
 // =============================================
-function renderTickerTapeWidget(theme) { const container = document.getElementById('tradingview-ticker-tape-container'); if (!container) return; const skeleton = container.querySelector('.tv-skeleton'); if (skeleton) skeleton.style.display = 'none'; const widgetContent = container.querySelector('.tradingview-widget-container'); if(widgetContent) widgetContent.remove(); else { Array.from(container.childNodes).forEach(node => { if (!node.classList || !node.classList.contains('tv-skeleton')) container.removeChild(node); }); } const config = { "symbols": [ {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500"}, {"description": "IBOVESPA", "proName": "BMFBOVESPA:IBOV"}, {"description": "NASDAQ 100","proName": "FOREXCOM:NSXUSD"}, {"description": "USD/BRL","proName": "FX_IDC:USDBRL"}, {"description": "EUR/USD","proName": "FX:EURUSD"}, {"description": "BITCOIN","proName": "BITSTAMP:BTCUSD"}, {"description": "PETRÓLEO BRENT","proName": "TVC:UKOIL"}, {"description": "OURO","proName": "OANDA:XAUUSD"} ], "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive", "colorTheme": theme, "locale": "br" }; const script = document.createElement('script'); script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js'; script.async = true; script.text = JSON.stringify(config); container.appendChild(script); }
-function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-widget-wrapper') { const container = document.getElementById(targetContainerId); if (!container) { console.error(`Market Overview widget container com ID "${targetContainerId}" não encontrado.`); if (targetContainerId === 'modal-market-overview-container' && modalContentArea) { modalContentArea.innerHTML = `<p class="error-commentary" style="padding:20px; text-align:center;"><i class="fas fa-exclamation-triangle"></i> Container do widget de mercado não encontrado no modal.</p>`; } return; } const skeleton = container.querySelector('.tv-skeleton'); if (skeleton) skeleton.style.display = 'none'; let oldTvWidgetDiv = container.querySelector('.tradingview-widget-container'); while(oldTvWidgetDiv){ oldTvWidgetDiv.remove(); oldTvWidgetDiv = container.querySelector('.tradingview-widget-container');} const tvWidgetDiv = document.createElement('div'); tvWidgetDiv.className = 'tradingview-widget-container'; tvWidgetDiv.style.width = '100%'; tvWidgetDiv.style.height = '100%'; const config = { "colorTheme": theme, "dateRange": "12M", "showChart": true, "locale": "br", "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true, "showFloatingTooltip": false, "width": "100%", "height": "100%", "plotLineColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 1)" : "rgba(0, 209, 128, 1)", "plotLineColorFalling": theme === 'light' ? "rgba(220, 53, 69, 1)" : "rgba(248, 81, 73, 1)", "gridLineColor": "rgba(240, 243, 250, 0)", "scaleFontColor": theme === 'light' ? "rgba(51, 51, 51, 0.7)" : "rgba(201, 209, 217, 0.7)", "belowLineFillColorGrowing": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)", "belowLineFillColorFalling": theme === 'light' ? "rgba(220, 53, 69, 0.12)" : "rgba(248, 81, 73, 0.12)", "belowLineFillColorGrowingBottom": theme === 'light' ? "rgba(0, 123, 255, 0)" : "rgba(0, 209, 128, 0)", "belowLineFillColorFallingBottom": theme === 'light' ? "rgba(220, 53, 69, 0)" : "rgba(248, 81, 73, 0)", "symbolActiveColor": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)", "tabs": [ { "title": "Indices", "symbols": [ {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "NASDAQ 100"}, {"s": "FOREXCOM:DJI", "d": "Dow Jones"}, {"s": "BMFBOVESPA:IBOV", "d":"IBOVESPA"}, {"s": "INDEX:DEU40", "d": "DAX"}, {"s": "FOREXCOM:UKXGBP", "d": "FTSE 100"} ], "originalTitle": "Indices" }, { "title": "Moedas", "symbols": [ {"s": "FX_IDC:USDBRL", "d":"USD/BRL"}, {"s": "FX:EURUSD", "d": "EUR/USD"}, {"s": "FX:GBPUSD", "d": "GBP/USD"}, {"s": "FX:USDJPY", "d": "USD/JPY"}, {"s": "FX:AUDUSD", "d": "AUD/USD"}, {"s": "FX:USDCAD", "d": "USD/CAD"} ], "originalTitle": "Forex" }, { "title": "Commodities", "symbols": [ {"s": "TVC:UKOIL", "d": "Petróleo Brent"}, {"s": "TVC:USOIL", "d": "Petróleo WTI"}, {"s": "OANDA:XAUUSD", "d": "Ouro"}, {"s": "TVC:SILVER", "d": "Prata"}, {"s": "COMEX:HG1!", "d": "Cobre"}], "originalTitle": "Commodities" }, { "title": "Cripto", "symbols": [ {"s": "BINANCE:BTCUSDT", "d": "Bitcoin"}, {"s": "BINANCE:ETHUSDT", "d": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "d": "Solana"} ], "originalTitle": "Crypto" } ] }; const script = document.createElement('script'); script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js'; script.async = true; script.text = JSON.stringify(config); tvWidgetDiv.appendChild(script); container.appendChild(tvWidgetDiv); }
-function loadEconomicCalendarWidget() { const widgetContainer = document.getElementById('economicCalendarWidget'); if (!widgetContainer) { console.error('Contêiner do Calendário Econômico não encontrado.'); return; } widgetContainer.innerHTML = ''; const currentThemeIsLight = document.body.classList.contains('light-mode'); const widgetTheme = currentThemeIsLight ? 0 : 1;  const configJsonString = JSON.stringify({ "width": "100%", "height": "100%", "mode": "1", "theme": widgetTheme, "lang": "pt" }); const scriptTag = document.createElement('script'); scriptTag.async = true; scriptTag.type = 'text/javascript'; scriptTag.setAttribute('data-type', 'calendar-widget'); scriptTag.text = configJsonString; scriptTag.src = 'https://www.tradays.com/c/js/widgets/calendar/widget.js?v=13'; widgetContainer.appendChild(scriptTag); }
 async function loadBannerPhrases() { try { const response = await fetch('data/banner-phrases.json'); if (!response.ok) throw new Error(`Falha ao carregar frases: ${response.status}`); BANNER_PHRASES = (await response.json()).phrases; if (!BANNER_PHRASES || BANNER_PHRASES.length === 0) { BANNER_PHRASES = ["Acompanhe as últimas movimentações do mercado financeiro"]; } } catch (error) { console.error('Erro ao carregar frases do banner:', error); BANNER_PHRASES = ["Bem-vindo ao Mercado Macro"]; } updateBanner(); }
 function updateBanner() { const banner = document.getElementById('random-banner'); const bannerTextEl = banner ? banner.querySelector('.banner-text') : null; if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) { const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)]; bannerTextEl.textContent = randomPhrase; bannerTextEl.style.animation = 'none'; void bannerTextEl.offsetWidth;  if (window.innerWidth <= 768) { bannerTextEl.style.animation = 'scrollBanner 15s linear infinite'; } else { bannerTextEl.style.animation = ''; } } else if (bannerTextEl) { bannerTextEl.textContent = "Notícias e Análises Financeiras"; } }
 
