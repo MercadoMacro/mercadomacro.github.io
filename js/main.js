@@ -135,6 +135,84 @@ function closeContentModal() {
     currentModalChartSymbol = null;
 }
 
+/**
+ * Imprime o conteúdo de um box específico.
+ * @param {string} boxId - O ID do elemento do box a ser impresso.
+ */
+function printBoxContent(boxId) {
+    const boxToPrint = document.getElementById(boxId);
+    if (!boxToPrint) {
+        console.error('Elemento do box para impressão não encontrado:', boxId);
+        showNotification('Erro: Box não encontrado para impressão.', true);
+        return;
+    }
+
+    const title = boxToPrint.querySelector('.box-header h2')?.textContent || 'Conteúdo';
+    const contentHTML = boxToPrint.querySelector('.box-content')?.innerHTML || '';
+
+    // Cria um iframe invisível para não atrapalhar a visualização
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    const isLightMode = document.body.classList.contains('light-mode');
+    const themeClass = isLightMode ? 'light-mode' : '';
+
+    doc.open();
+    doc.write(`
+        <html>
+        <head>
+            <title>Imprimir - ${title}</title>
+            <link rel="stylesheet" href="css/styles.css">
+            <style>
+                @media print {
+                    body {
+                        padding: 20px !important;
+                        margin: 0 !important;
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                    }
+                    .box-content {
+                        overflow-y: visible !important;
+                        max-height: none !important;
+                        padding-right: 0 !important;
+                    }
+                    .loading-commentary, .skeleton-loading, button, .watchlist-item-remove-btn, #watchlist-input-container {
+                        display: none !important;
+                    }
+                    p, li, strong, div {
+                        display: block !important;
+                        opacity: 1 !important;
+                        transform: none !important;
+                    }
+                    ul { padding-left: 20px; }
+                }
+            </style>
+        </head>
+        <body class="${themeClass}">
+            <h1 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">${title}</h1>
+            <div class="box-content">
+                ${contentHTML}
+            </div>
+        </body>
+        </html>
+    `);
+    doc.close();
+
+    iframe.onload = function() {
+        setTimeout(function() {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+        }, 500);
+    };
+}
+
+
 // =============================================
 // FUNÇÕES DE VISIBILIDADE DOS BOXES
 // =============================================
@@ -420,8 +498,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const boxHeader = summaryBox.querySelector('.box-header');
         if (boxHeader) {
             let actionsContainer = boxHeader.querySelector('.box-actions');
-            if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); }
+            if (!actionsContainer) {
+                actionsContainer = document.createElement('div');
+                actionsContainer.className = 'box-actions';
+                boxHeader.appendChild(actionsContainer);
+            }
             addOrUpdateModalButton(summaryBox, actionsContainer, 'expand-summary-btn', 'fa-expand-arrows-alt');
+            
+            // Adiciona o botão de impressão
+            const printBtn = document.createElement('button');
+            printBtn.id = 'print-summary-btn';
+            printBtn.className = 'expand-btn';
+            printBtn.setAttribute('aria-label', 'Imprimir Resumo Semanal');
+            printBtn.innerHTML = '<i class="fas fa-print"></i>';
+            printBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (typeof printBoxContent === 'function') {
+                    printBoxContent('box-weekly-summary');
+                } else {
+                    showNotification('Função de impressão não disponível.', true);
+                }
+            });
+            actionsContainer.appendChild(printBtn);
         }
     }
 
