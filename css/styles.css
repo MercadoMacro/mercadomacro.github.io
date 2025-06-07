@@ -246,7 +246,7 @@ body.light-mode .contact-button-main:hover {
     .settings-panel.visible { transform: translateY(0) scale(1); } 
 }
 @media (max-width: 600px) { 
-    body { zoom: 0.8; touch-action: manipulation; } 
+    body { zoom: 1.0; touch-action: manipulation; } 
     .page-title-header { font-size: 22px; } 
     .banner { font-size: 14px; padding: 6px 10px; min-height: 32px; } 
     .floating-btn { width: 40px; height: 40px; }
