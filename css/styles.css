@@ -241,54 +241,76 @@ body.light-mode .contact-button-main:hover {
     } 
     .content-box { max-height: 420px; } 
     .content-box.expanded { max-height: 65vh; } 
-    
-    /* ALTERAÇÃO: Remove padding do overlay em telas menores */
-    .content-modal-overlay {
-        padding: 0;
-    }
-    /* ALTERAÇÃO: Modal de conteúdo ocupa a tela inteira */
-    .content-modal-content { 
-        width: 100%; 
-        height: 100%; 
-        max-height: 100%;
-        border-radius: 0; 
-        padding: 20px 15px; /* Adiciona padding vertical para não colar no topo/baixo */
-        border: none;
-        top: 0; 
-        left: 0; 
-        transform: none !important; 
-    } 
+    .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
     .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
     .settings-panel.visible { transform: translateY(0) scale(1); } 
 }
-@media (max-width: 600px) { 
-    body { zoom: 0.9; touch-action: manipulation; } 
-    .page-title-header { font-size: 22px; } 
-    .banner { font-size: 14px; padding: 6px 10px; min-height: 32px; } 
+
+@media (max-width: 600px) {
+    /* REMOVIDO: A propriedade 'zoom' foi removida para um controle mais fino do layout. */
+    body {
+        touch-action: manipulation;
+    }
+
+    /* ADICIONADO: Reduz o espaçamento lateral do container principal. */
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    /* ADICIONADO: Reduz o padding interno dos cards para ganhar mais espaço. */
+    .content-box {
+        padding: 15px;
+    }
+
+    .page-title-header { font-size: 22px; }
+    .banner { font-size: 14px; padding: 6px 10px; min-height: 32px; }
     .floating-btn { width: 40px; height: 40px; }
-    /* Left Floating Buttons - Small Screens */
+
+    /* Botões Flutuantes à Esquerda */
     .theme-toggle { left: 10px; bottom: 10px; }
     #economic-calendar-toggle-btn { left: 10px; bottom: 60px; }
     #settings-toggle-btn { left: 10px; bottom: 110px; }
     #spotify-btn {
-        left: 10px; /* Aligns with settings button on small screens */
-        bottom: 160px; /* Positioned above settings button (110 + 40 + 10) */
-        right: auto; /* Ensure right is not conflicting */
+        left: 10px;
+        bottom: 160px;
+        right: auto;
     }
-    .settings-panel { width: calc(100% - 20px); left: 10px; right: 10px; padding: 10px; top: 50px; bottom: auto;} 
-    .settings-panel h4 { font-size: 14px; margin-bottom: 10px; padding-bottom: 8px; } 
-    .settings-panel label { font-size: 13px; } 
+
+    .settings-panel { width: calc(100% - 20px); left: 10px; right: 10px; padding: 10px; top: 50px; bottom: auto;}
+    .settings-panel h4 { font-size: 14px; margin-bottom: 10px; padding-bottom: 8px; }
+    .settings-panel label { font-size: 13px; }
     .settings-panel input[type="checkbox"] { margin-right: 8px; transform: scale(1); }
-    /* Right Floating Buttons - Small Screens */
+
+    /* Botões Flutuantes à Direita */
     #refresh-btn { right: 10px; }
     #fullscreen-btn, #fullscreen-exit-btn { right: 55px; }
     #analises-btn { right: 100px; }
     #indicadores-btn { right: 145px; }
     #calculadoras-btn { right: 190px; }
     #terminal-btn { right: 235px; }
-    html { font-size: 13px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 11px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; } .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; } 
 
-    .content-modal-close-btn { top:10px; right:10px; width:30px; height:30px; font-size: 14px;} 
-    .modal-content-area-inner { margin-top: 5px; padding-right: 5px;} 
+    html { font-size: 13px; }
+    .news-item-title { font-size: 13px; }
+    .news-item-description { font-size: 11px; }
+    .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; }
+    .subheader { font-size: 11px; }
+    .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; }
+
+    /* MODIFICADO: O modal de conteúdo agora usa o espaço máximo da tela, com padding mínimo. */
+    .content-modal-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        padding: 10px 5px; /* Padding horizontal reduzido para aproveitar as bordas */
+        top: 0;
+        left: 0;
+        transform: none !important;
+        border: none; /* Remove a borda para um visual mais limpo */
+    }
+
+    .content-modal-close-btn { top: 10px; right: 10px; width: 30px; height: 30px; font-size: 14px; }
+    .modal-content-area-inner { margin-top: 5px; padding-right: 5px; }
 }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
