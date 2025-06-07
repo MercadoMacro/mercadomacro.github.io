@@ -149,6 +149,8 @@ function printBoxContent(boxId) {
 
     const title = boxToPrint.querySelector('.box-header h2')?.textContent || 'Conteúdo';
     const contentHTML = boxToPrint.querySelector('.box-content')?.innerHTML || '';
+    const isLightMode = document.body.classList.contains('light-mode');
+    const themeClass = isLightMode ? 'light-mode' : '';
 
     // Cria um iframe invisível para não atrapalhar a visualização
     const iframe = document.createElement('iframe');
@@ -173,18 +175,27 @@ function printBoxContent(boxId) {
                         padding: 20px !important;
                         margin: 0 !important;
                         background: #FFFFFF !important; /* Força fundo branco */
+                        color: #000000 !important; /* Cor do texto padrão preta */
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                     }
 
-                    /* Força o texto para a cor preta para melhor legibilidade */
-                    body, h1, h2, p, li, div, strong, span, a {
-                        color: #000000 !important;
+                    /* MANTÉM a cor original para elementos de destaque */
+                    .commentary-highlight, strong {
+                        color: var(--primary-color) !important;
+                    }
+
+                    /* Garante que o resto do texto seja preto */
+                    h1, h2, p, li, div, span, a {
                         text-shadow: none !important;
                     }
                     
+                    p, li, span, div:not(.commentary-highlight), a {
+                         color: #000000 !important;
+                    }
+                    
                     a {
-                        text-decoration: underline; /* Sublinha links para identificá-los */
+                        text-decoration: underline;
                     }
 
                     .box-content {
@@ -198,20 +209,11 @@ function printBoxContent(boxId) {
                         display: none !important;
                     }
 
-                    /* Garante que o layout do conteúdo esteja correto */
-                    p, li, div {
-                        display: block !important;
-                        opacity: 1 !important;
-                        transform: none !important;
-                    }
-
-                    ul {
-                        padding-left: 20px;
-                    }
+                    ul { padding-left: 20px; }
                 }
             </style>
         </head>
-        <body>
+        <body class="${themeClass}">
             <h1>${title}</h1>
             <div class="box-content">
                 ${contentHTML}
