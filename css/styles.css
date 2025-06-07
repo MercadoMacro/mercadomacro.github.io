@@ -204,7 +204,7 @@ body.light-mode .contact-button-main:hover { background-color: var(--primary-dar
     .settings-panel label { font-size: 13px; } 
     .settings-panel input[type="checkbox"] { margin-right: 8px; transform: scale(1); }
     #refresh-btn { right: 10px; } #fullscreen-btn, #fullscreen-exit-btn { right: 55px; } #analises-btn { right: 100px; } #indicadores-btn { right: 145px; } #calculadoras-btn { right: 190px; } #terminal-btn { right: 235px; }
-    html { font-size: 15px; } .news-item-title { font-size: 13px; } .news-item-description { font-size: 14px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; }
+    html { font-size: 15px; } .news-item-title { font-size: 14px; } .news-item-description { font-size: 16px; } .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; } .subheader { font-size: 11px; }
     .overlay-content { width: 100vw; max-width: 100vw; left: -100vw; }
     
     /* Regra para o modal ter layout de tela cheia no mobile */
