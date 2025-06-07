@@ -248,10 +248,9 @@ body.light-mode .contact-button-main:hover {
 
 @media (max-width: 600px) {
     /* REMOVIDO: A propriedade 'zoom' foi removida para um controle mais fino do layout. */
-    body {
-        touch-action: manipulation;
-    }
+body { zoom: 0.8; touch-action: manipulation; } 
 
+ 
     /* ADICIONADO: Reduz o espaçamento lateral do container principal. */
     .container {
         padding-left: 10px;
@@ -290,7 +289,7 @@ body.light-mode .contact-button-main:hover {
     #calculadoras-btn { right: 190px; }
     #terminal-btn { right: 235px; }
 
-    html { font-size: 13px; }
+    html { font-size: 15px; }
     .news-item-title { font-size: 13px; }
     .news-item-description { font-size: 11px; }
     .page-notification { max-width: 90%; font-size: 13px; padding: 10px 15px; }
