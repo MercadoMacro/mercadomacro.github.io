@@ -159,8 +159,6 @@ function printBoxContent(boxId) {
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow.document;
-    const isLightMode = document.body.classList.contains('light-mode');
-    const themeClass = isLightMode ? 'light-mode' : '';
 
     doc.open();
     doc.write(`
@@ -170,31 +168,51 @@ function printBoxContent(boxId) {
             <link rel="stylesheet" href="css/styles.css">
             <style>
                 @media print {
+                    /* Estilos base para impressão */
                     body {
                         padding: 20px !important;
                         margin: 0 !important;
+                        background: #FFFFFF !important; /* Força fundo branco */
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                     }
+
+                    /* Força o texto para a cor preta para melhor legibilidade */
+                    body, h1, h2, p, li, div, strong, span, a {
+                        color: #000000 !important;
+                        text-shadow: none !important;
+                    }
+                    
+                    a {
+                        text-decoration: underline; /* Sublinha links para identificá-los */
+                    }
+
                     .box-content {
                         overflow-y: visible !important;
                         max-height: none !important;
                         padding-right: 0 !important;
                     }
+
+                    /* Esconde elementos não interativos ou desnecessários */
                     .loading-commentary, .skeleton-loading, button, .watchlist-item-remove-btn, #watchlist-input-container {
                         display: none !important;
                     }
-                    p, li, strong, div {
+
+                    /* Garante que o layout do conteúdo esteja correto */
+                    p, li, div {
                         display: block !important;
                         opacity: 1 !important;
                         transform: none !important;
                     }
-                    ul { padding-left: 20px; }
+
+                    ul {
+                        padding-left: 20px;
+                    }
                 }
             </style>
         </head>
-        <body class="${themeClass}">
-            <h1 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">${title}</h1>
+        <body>
+            <h1>${title}</h1>
             <div class="box-content">
                 ${contentHTML}
             </div>
