@@ -226,4 +226,9 @@ body.light-mode .contact-button-main:hover { background-color: var(--primary-dar
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Estilo para expandir a altura de um content-box */
+.content-box.box-expanded-height {
+    /* Usamos !important para garantir que esta regra tenha prioridade */
+    max-height: 900px !important;
 }
