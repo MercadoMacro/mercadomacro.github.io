@@ -381,7 +381,94 @@ async function updateWeeklySummaryContent() {
 }
 
 function addOrUpdateModalButton(boxElement, actionsContainer, buttonId, modalIconClass = 'fa-expand-arrows-alt') { if (!boxElement || !actionsContainer) { console.warn(`Elemento do Box ou actions container não encontrado para ID do botão: ${buttonId}`); return; } let modalBtn = actionsContainer.querySelector(`#${buttonId}`); let isNewButton = false; if (!modalBtn) { modalBtn = document.createElement('button'); modalBtn.id = buttonId; modalBtn.className = 'expand-btn'; isNewButton = true; } modalBtn.setAttribute('aria-label', 'Abrir em tela cheia'); const currentIconEl = modalBtn.querySelector('i'); if (currentIconEl) { currentIconEl.className = `fas ${modalIconClass}`; } else { modalBtn.innerHTML = `<i class="fas ${modalIconClass}"></i>`; } const newBtnInstance = modalBtn.cloneNode(true); if (!isNewButton && modalBtn.parentNode) { modalBtn.parentNode.replaceChild(newBtnInstance, modalBtn); } modalBtn = newBtnInstance; modalBtn.addEventListener('click', function(event) { event.stopPropagation(); openContentModal(boxElement.id); }); if (isNewButton) { if (actionsContainer.firstChild && actionsContainer.firstChild.id !== 'refresh-news-btn') { actionsContainer.insertBefore(modalBtn, actionsContainer.firstChild); } else { actionsContainer.appendChild(modalBtn); } } }
-function setupCommentaryActions() { const commentaryBox = document.getElementById('box-commentary'); if (!commentaryBox) return; const boxHeader = commentaryBox.querySelector('.box-header'); if (!boxHeader) return; let actionsContainer = boxHeader.querySelector('.box-actions'); if (!actionsContainer) { actionsContainer = document.createElement('div'); actionsContainer.className = 'box-actions'; boxHeader.appendChild(actionsContainer); } addOrUpdateModalButton(commentaryBox, actionsContainer, 'expand-commentary-btn', 'fa-expand-arrows-alt'); if (!actionsContainer.querySelector('#share-commentary-btn')) { const shareBtn = document.createElement('button'); shareBtn.id = 'share-commentary-btn'; shareBtn.className = 'expand-btn'; shareBtn.setAttribute('aria-label', 'Compartilhar'); shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>'; actionsContainer.appendChild(shareBtn); shareBtn.addEventListener('click', async function() { const commentaryContentEl = document.getElementById('commentary-content'); if (!commentaryContentEl) { showNotification('Conteúdo não encontrado.', true); return; } let textToShare = ""; commentaryContentEl.querySelectorAll('p, .commentary-highlight, li').forEach(el => { textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n"); }); textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim(); if (!textToShare) { showNotification('Não há conteúdo para compartilhar.', true); return; } const shareData = { title: 'Radar Financeiro - Análise', text: textToShare }; try { if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); showNotification('Conteúdo compartilhado!'); } else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(textToShare); showNotification('Texto da análise copiado!'); } else { throw new Error('Compartilhamento não suportado.'); } } catch (err) { console.error('Erro ao compartilhar:', err); if (err.name !== 'AbortError') { showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true); } } }); } }
+function setupCommentaryActions() {
+    const commentaryBox = document.getElementById('box-commentary');
+    if (!commentaryBox) return;
+    const boxHeader = commentaryBox.querySelector('.box-header');
+    if (!boxHeader) return;
+    let actionsContainer = boxHeader.querySelector('.box-actions');
+    if (!actionsContainer) {
+        actionsContainer = document.createElement('div');
+        actionsContainer.className = 'box-actions';
+        boxHeader.appendChild(actionsContainer);
+    }
+    addOrUpdateModalButton(commentaryBox, actionsContainer, 'expand-commentary-btn', 'fa-expand-arrows-alt');
+    if (!actionsContainer.querySelector('#share-commentary-btn')) {
+        const shareBtn = document.createElement('button');
+        shareBtn.id = 'share-commentary-btn';
+        shareBtn.className = 'expand-btn';
+        shareBtn.setAttribute('aria-label', 'Compartilhar');
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        actionsContainer.appendChild(shareBtn);
+        shareBtn.addEventListener('click', async function() {
+            const commentaryContentEl = document.getElementById('commentary-content');
+            if (!commentaryContentEl) {
+                showNotification('Conteúdo não encontrado.', true);
+                return;
+            }
+            let textToShare = "";
+            commentaryContentEl.querySelectorAll('p, .commentary-highlight, li').forEach(el => {
+                textToShare += (el.tagName === 'LI' ? "• " : "") + el.textContent.trim() + (el.tagName === 'LI' ? "\n" : "\n\n");
+            });
+            textToShare = textToShare.replace(/\n\s*\n/g, '\n\n').trim();
+            if (!textToShare) {
+                showNotification('Não há conteúdo para compartilhar.', true);
+                return;
+            }
+            const shareData = {
+                title: 'Radar Financeiro - Análise',
+                text: textToShare
+            };
+            try {
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    showNotification('Conteúdo compartilhado!');
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(textToShare);
+                    showNotification('Texto da análise copiado!');
+                } else {
+                    throw new Error('Compartilhamento não suportado.');
+                }
+            } catch (err) {
+                console.error('Erro ao compartilhar:', err);
+                if (err.name !== 'AbortError') {
+                    showNotification(err.message.includes('não suportado') ? err.message : 'Falha ao compartilhar.', true);
+                }
+            }
+        });
+    }
+
+    // Se o botão de expandir altura ainda não existir, crie-o
+    if (actionsContainer && commentaryBox && !actionsContainer.querySelector('#toggle-height-commentary-btn')) {
+        const expandHeightBtn = document.createElement('button');
+        expandHeightBtn.id = 'toggle-height-commentary-btn';
+        expandHeightBtn.className = 'expand-btn'; // Reutiliza o estilo dos outros botões
+        expandHeightBtn.setAttribute('aria-label', 'Expandir altura');
+        expandHeightBtn.innerHTML = '<i class="fas fa-arrows-alt-v"></i>'; // Ícone de setas verticais
+
+        // Adiciona o evento de clique ao botão
+        expandHeightBtn.addEventListener('click', (event) => {
+            event.stopPropagation(); // Impede que outros eventos de clique sejam disparados
+
+            // Alterna a classe que expande a altura do card
+            commentaryBox.classList.toggle('box-expanded-height');
+
+            const icon = expandHeightBtn.querySelector('i');
+
+            // Verifica se o card está expandido para mudar o ícone e o texto de ajuda
+            if (commentaryBox.classList.contains('box-expanded-height')) {
+                icon.className = 'fas fa-compress-alt'; // Ícone de compressão
+                expandHeightBtn.setAttribute('aria-label', 'Restaurar altura');
+            } else {
+                icon.className = 'fas fa-arrows-alt-v'; // Volta ao ícone original
+                expandHeightBtn.setAttribute('aria-label', 'Expandir altura');
+            }
+        });
+
+        // Adiciona o novo botão ao lado dos outros
+        actionsContainer.appendChild(expandHeightBtn);
+    }
+}
 async function fetchNews() { let lastError = null; for (const feedUrl of RSS_FEEDS) { for (const source of RSS_SOURCES) { try { const url = source.buildUrl(feedUrl); const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: AbortSignal.timeout(8000) }); if (!response.ok) throw new Error(`HTTP ${response.status} em ${source.name} para ${feedUrl}`); let dataToProcess = source.name === 'AllOrigins' ? await response.text() : await response.json(); const newsItems = source.processor(dataToProcess); if (newsItems && newsItems.length > 0) return newsItems; } catch (error) { lastError = error; console.warn(`Falha com ${source.name} para ${feedUrl}:`, error); } } } console.error("Todas as fontes de notícias falharam. Último erro:", lastError); throw lastError || new Error('Todas as fontes de notícias falharam.'); }
 async function loadNewsWidget(forceUpdate = false) { const newsContentBox = document.querySelector('#news-widget .news-content'); if (!newsContentBox) return; updateLoadingState(true); if (!forceUpdate) { const cachedData = getCachedNews(); if (cachedData) { renderNewsList(cachedData, true); updateLoadingState(false); return; } } if (!navigator.onLine) { showNotification('Sem conexão com a internet.', true); const cachedData = getCachedNews(); if (cachedData) renderNewsList(cachedData, true); else newsContentBox.innerHTML = '<div class="error"><i class="fas fa-wifi"></i> Sem conexão e sem notícias no cache.</div>'; updateLoadingState(false); return; } try { const newsItems = await fetchNews(); if (newsItems.length > 0) { cacheNews(newsItems); renderNewsList(newsItems); if (forceUpdate) showNotification('Notícias atualizadas!'); } else { renderNewsList([], false, false); if (forceUpdate) showNotification('Nenhuma notícia nova.', false); } localStorage.setItem('retryCount', '0'); } catch (fetchError) { console.error('Falha ao buscar notícias:', fetchError); if (forceUpdate) showNotification(`Falha na atualização: ${fetchError.message}.`, true); const cachedData = getCachedNews(); if (cachedData) { renderNewsList(cachedData, true); if (forceUpdate) showNotification('Mostrando notícias do cache.', false); } else { renderNewsList(FALLBACK_NEWS, false, true); if (forceUpdate) showNotification('Mostrando exemplos.', true); } scheduleRetry(); } finally { updateLoadingState(false); localStorage.setItem('lastTry', Date.now().toString()); } }
 function updateLoadingState(isLoading) { const refreshNewsBtn = document.getElementById('refresh-news-btn'); const icon = refreshNewsBtn ? refreshNewsBtn.querySelector('i') : null; if (refreshNewsBtn && icon) { refreshNewsBtn.disabled = isLoading; icon.classList.toggle('fa-spin', isLoading); } }
