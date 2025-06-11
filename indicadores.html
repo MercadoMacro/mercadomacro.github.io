@@ -11,8 +11,8 @@
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <meta name="description" content="Indicadores atualizados do mercado financeiro">
-    <meta name="keywords" content="indicadores financeiros, CDI, SELIC, IPCA, IGP-M, poupança, api bcb">
+    <meta name="description" content="Indicadores atualizados do mercado financeiro, incluindo CDI, SELIC, Dólar, Euro e inflação.">
+    <meta name="keywords" content="indicadores financeiros, cdi, selic, ipca, igpm, poupança, dolar, euro, ptax, api bcb">
     <meta name="author" content="Anderson">
     <meta property="og:title" content="Indicadores de Mercado Financeiro - Mercado Macro">
     <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro em tempo real">
@@ -315,30 +315,36 @@
         }
 
 
+        @media (max-width: 1024px) {
+             .indicator-card {
+                flex: 0 0 calc(33.33% - 15px);
+            }
+        }
+
         @media (max-width: 768px) {
             .indicator-card {
-                flex: 0 0 calc(50% - 15px); /* Ajustado para novo gap */
+                flex: 0 0 calc(50% - 15px);
                 min-height: 190px;
                 max-height: 220px;
             }
             .indicator-card--multi-value { min-height: 200px; }
-            .page-title-header { font-size: 38px; } /* Ajuste de analises.html para telas médias */
+            .page-title-header { font-size: 38px; }
         }
 
-        @media (max-width: 600px) { /* Estilos de analises.html para 600px */
+        @media (max-width: 600px) {
             .container { padding: 15px 12px; }
             .page-title-header { font-size: 34px; }
             .logo { margin-bottom: 20px;}
 
-            .indicator-card { padding: 10px; } /* Reduz padding dos cards */
+            .indicator-card { padding: 10px; }
             .indicator-name { font-size: 12px; }
             .indicator-value { font-size: 15px; }
             .indicator-icon { font-size: 20px; }
 
             .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
             #back-btn { right: 15px; }
-            #refresh-btn { right: 70px; } /* Ajustado */
-            #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } /* Ajustado */
+            #refresh-btn { right: 70px; }
+            #fullscreen-btn, #fullscreen-exit-btn { right: 125px; }
             .theme-toggle { left: 15px; }
 
             .profile-btn { width: 40px; height: 40px; top: 15px; right: 15px; border-radius: 10px;}
@@ -347,21 +353,20 @@
 
         @media (max-width: 480px) {
             .indicator-card {
-                flex: 0 0 100%; /* Ocupa largura total */
+                flex: 0 0 100%;
                 min-height: 170px;
-                max-height: none; /* Permite crescer se necessário */
+                max-height: none;
             }
             .indicator-back { font-size: 12px; padding: 12px 15px; }
             .indicator-card--multi-value { min-height: 190px; }
             .page-title-header { font-size: 30px; }
         }
 
-        @supports(padding: max(0px)) { /* Mantido de indicadores.html - bom para safe areas */
-            /* Removido .header já que não é mais sticky */
+        @supports(padding: max(0px)) {
             .floating-btn, .theme-toggle {
                 bottom: max(15px, env(safe-area-inset-bottom));
             }
-             .profile-btn { /* Ajuste para safe area no topo */
+             .profile-btn {
                 top: max(15px, env(safe-area-inset-top));
                 right: max(15px, env(safe-area-inset-right));
             }
@@ -378,6 +383,36 @@
         
         <main>
             <div class="indicators-container">
+                <article class="indicator-card indicator-card--multi-value" id="card-dolar">
+                    <div class="indicator-front">
+                        <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="indicator-name">DÓLAR</div>
+                        <div class="indicator-value" id="dolar-buy-value">Carregando...</div>
+                        <div class="indicator-description">Compra</div>
+                        <div class="indicator-value" id="dolar-sell-value">Carregando...</div>
+                        <div class="indicator-description">Venda</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>O que é a PTAX?</strong>
+                        A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário. É a taxa utilizada para a maioria dos contratos e transações financeiras em moeda estrangeira no país.
+                    </div>
+                </article>
+
+                <article class="indicator-card indicator-card--multi-value" id="card-euro">
+                    <div class="indicator-front">
+                        <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div>
+                        <div class="indicator-name">EURO</div>
+                        <div class="indicator-value" id="euro-buy-value">Carregando...</div>
+                        <div class="indicator-description">Compra</div>
+                        <div class="indicator-value" id="euro-sell-value">Carregando...</div>
+                        <div class="indicator-description">Venda</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>Cotação do Euro</strong>
+                        Assim como o Dólar, a cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro. As taxas de compra e venda são baseadas nas negociações do mercado de câmbio europeu e sua relação com o mercado brasileiro.
+                    </div>
+                </article>
+                
                 <article class="indicator-card indicator-card--multi-value" id="card-cdi">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
@@ -389,7 +424,7 @@
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o CDI?</strong>
-                        O Certificado de Depósito Interbancário (CDI) é um título emitido por bancos para empréstimos entre si, com prazo de um dia útil. A taxa CDI é a média dessas operações e serve como referência para investimentos como CDB, LCI e LCA. A taxa anual é uma projeção baseada na composição da taxa diária.
+                        O Certificado de Depósito Interbancário (CDI) é um título emitido por bancos para empréstimos entre si. A taxa CDI é a média dessas operações e serve como referência para investimentos. A taxa anual é uma projeção baseada na composição da taxa diária.
                     </div>
                 </article>
 
@@ -404,37 +439,7 @@
                     </div>
                     <div class="indicator-back">
                         <strong>O que é a SELIC?</strong>
-                        A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país, desde empréstimos até investimentos. A SELIC Over é a taxa efetiva do dia, enquanto a Meta é o valor definido pelo Banco Central.
-                    </div>
-                </article>
-
-                <article class="indicator-card indicator-card--multi-value" id="card-igp-di">
-                    <div class="indicator-front">
-                        <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
-                        <div class="indicator-name">IGP-DI</div>
-                        <div class="indicator-value" id="igp-di-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o IGP-DI?</strong>
-                        O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais. É calculado pela FGV e usado em contratos de aluguel e alguns financiamentos.
-                    </div>
-                </article>
-
-                <article class="indicator-card indicator-card--multi-value" id="card-igp-m">
-                    <div class="indicator-front">
-                        <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
-                        <div class="indicator-name">IGP-M</div>
-                        <div class="indicator-value" id="igp-m-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o IGP-M?</strong>
-                        O Índice Geral de Preços do Mercado (IGP-M) é semelhante ao IGP-DI, mas com período de coleta diferente. É o índice mais usado em contratos de aluguel e alguns planos de saúde. Também conhecido como "inflação do aluguel".
+                        A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país, desde empréstimos até investimentos.
                     </div>
                 </article>
 
@@ -449,7 +454,22 @@
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o IPCA?</strong>
-                        O Índice Nacional de Preços ao Consumidor Amplo (IPCA) é o principal indicador de inflação no Brasil, medido pelo IBGE. Reflete o custo de vida das famílias com renda de 1 a 40 salários mínimos. É o índice usado pelo governo no sistema de metas de inflação.
+                        O Índice Nacional de Preços ao Consumidor Amplo (IPCA) é o principal indicador de inflação no Brasil, medido pelo IBGE. Reflete o custo de vida das famílias com renda de 1 a 40 salários mínimos.
+                    </div>
+                </article>
+
+                <article class="indicator-card indicator-card--multi-value" id="card-igp-m">
+                    <div class="indicator-front">
+                        <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
+                        <div class="indicator-name">IGP-M</div>
+                        <div class="indicator-value" id="igp-m-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
+                        <div class="indicator-description">12 Meses</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>O que é o IGP-M?</strong>
+                        O Índice Geral de Preços do Mercado (IGP-M), calculado pela FGV, é muito usado em contratos de aluguel e alguns planos de saúde. É conhecido como a "inflação do aluguel".
                     </div>
                 </article>
 
@@ -462,7 +482,22 @@
                     </div>
                     <div class="indicator-back">
                         <strong>Como funciona a Poupança?</strong>
-                        A caderneta de poupança rende 0,5% ao mês + TR (Taxa Referencial) quando a SELIC está acima de 8,5% ao ano. Abaixo disso, rende 70% da SELIC + TR. É isenta de IR para pessoas físicas e tem garantia do FGC até R$ 250 mil por CPF e instituição financeira.
+                        A poupança rende 0,5% ao mês + TR quando a SELIC está acima de 8,5% a.a. Abaixo disso, rende 70% da SELIC + TR. É isenta de IR para pessoas físicas.
+                    </div>
+                </article>
+
+                 <article class="indicator-card indicator-card--multi-value" id="card-igp-di">
+                    <div class="indicator-front">
+                        <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div class="indicator-name">IGP-DI</div>
+                        <div class="indicator-value" id="igp-di-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
+                        <div class="indicator-description">12 Meses</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>O que é o IGP-DI?</strong>
+                        O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.
                     </div>
                 </article>
             </div>
@@ -493,8 +528,17 @@
         // --- INÍCIO DO CÓDIGO DA API DO BANCO CENTRAL ---
 
         const APICodes = {
-            cdi: 12, selic: 11, selicMeta: 432, ipca: 433,
-            igpm: 189, igpdi: 190, poupanca: 195
+            dolarBuy: 1,
+            dolarSell: 10813,
+            euroBuy: 21619,
+            euroSell: 21620,
+            cdi: 12, 
+            selic: 11, 
+            selicMeta: 432, 
+            ipca: 433,
+            igpm: 189, 
+            igpdi: 190, 
+            poupanca: 195
         };
 
         async function getBCBData(seriesId, days = 1) {
@@ -512,6 +556,8 @@
         async function fetchIndicadores() {
             try {
                 const promises = [
+                    getBCBData(APICodes.dolarBuy, 1), getBCBData(APICodes.dolarSell, 1),
+                    getBCBData(APICodes.euroBuy, 1), getBCBData(APICodes.euroSell, 1),
                     getBCBData(APICodes.cdi, 1), getBCBData(APICodes.selic, 1),
                     getBCBData(APICodes.selicMeta, 1), getBCBData(APICodes.ipca, 12),
                     getBCBData(APICodes.igpm, 12), getBCBData(APICodes.igpdi, 12),
@@ -519,9 +565,30 @@
                 ];
 
                 const [
+                    dolarBuyData, dolarSellData, euroBuyData, euroSellData,
                     cdiData, selicOverData, selicMetaData, ipcaData,
                     igpmData, igpdiData, poupancaData
                 ] = await Promise.all(promises);
+
+                // --- DÓLAR ---
+                if (dolarBuyData && dolarBuyData.length > 0) {
+                    const value = parseFloat(dolarBuyData[0].valor).toFixed(4);
+                    document.getElementById('dolar-buy-value').textContent = `R$ ${value}`;
+                }
+                 if (dolarSellData && dolarSellData.length > 0) {
+                    const value = parseFloat(dolarSellData[0].valor).toFixed(4);
+                    document.getElementById('dolar-sell-value').textContent = `R$ ${value}`;
+                }
+
+                // --- EURO ---
+                if (euroBuyData && euroBuyData.length > 0) {
+                    const value = parseFloat(euroBuyData[0].valor).toFixed(4);
+                    document.getElementById('euro-buy-value').textContent = `R$ ${value}`;
+                }
+                 if (euroSellData && euroSellData.length > 0) {
+                    const value = parseFloat(euroSellData[0].valor).toFixed(4);
+                    document.getElementById('euro-sell-value').textContent = `R$ ${value}`;
+                }
 
                 // --- CDI ---
                 if (cdiData && cdiData.length > 0) {
