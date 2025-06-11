@@ -378,16 +378,18 @@
         
         <main>
             <div class="indicators-container">
-                <article class="indicator-card" id="card-cdi">
+                <article class="indicator-card indicator-card--multi-value" id="card-cdi">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
                         <div class="indicator-name">CDI</div>
-                        <div class="indicator-value" id="cdi-value">Carregando...</div>
+                        <div class="indicator-value" id="cdi-daily-value">Carregando...</div>
                         <div class="indicator-description">Taxa Diária</div>
+                        <div class="indicator-value" id="cdi-annual-value">Carregando...</div>
+                        <div class="indicator-description">Taxa Anual (a.a.)</div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o CDI?</strong>
-                        O Certificado de Depósito Interbancário (CDI) é um título emitido por bancos para empréstimos entre si, com prazo de um dia útil. A taxa CDI é a média dessas operações e serve como referência para investimentos como CDB, LCI e LCA.
+                        O Certificado de Depósito Interbancário (CDI) é um título emitido por bancos para empréstimos entre si, com prazo de um dia útil. A taxa CDI é a média dessas operações e serve como referência para investimentos como CDB, LCI e LCA. A taxa anual é uma projeção baseada na composição da taxa diária.
                     </div>
                 </article>
 
@@ -490,65 +492,32 @@
     <script>
         // --- INÍCIO DO CÓDIGO DA API DO BANCO CENTRAL ---
 
-        // Objeto que mapeia os nomes dos indicadores aos seus códigos na API do BCB.
         const APICodes = {
-            cdi: 12,
-            selic: 11,
-            selicMeta: 432,
-            ipca: 433,
-            igpm: 189,
-            igpdi: 190,
-            poupanca: 195
+            cdi: 12, selic: 11, selicMeta: 432, ipca: 433,
+            igpm: 189, igpdi: 190, poupanca: 195
         };
 
-        /**
-         * Função auxiliar para buscar dados na API do BCB
-         * @param {number} seriesId - O código da série temporal a ser buscada.
-         * @param {number} days - A quantidade de registros a serem retornados (padrão: 1 para o mais recente).
-         * @returns {Promise<Object>} - Uma promessa que resolve com os dados da API.
-         */
         async function getBCBData(seriesId, days = 1) {
-            // A URL da API do BCB para consulta de séries temporais.
             const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados/ultimos/${days}?formato=json`;
-            
             try {
-                // Usa o 'fetch' para fazer a requisição à API. 'await' pausa a função até a resposta chegar.
                 const response = await fetch(url);
-                
-                // Se a resposta não for bem-sucedida (ex: erro 404, 500), lança um erro.
-                if (!response.ok) {
-                    throw new Error(`Erro na rede: ${response.statusText}`);
-                }
-                
-                // Converte a resposta em formato JSON. 'await' pausa até a conversão terminar.
-                const data = await response.json();
-                return data;
-
+                if (!response.ok) throw new Error(`Erro na rede: ${response.statusText}`);
+                return await response.json();
             } catch (error) {
-                // Se qualquer parte do 'try' falhar, o erro é capturado aqui.
                 console.error(`Falha ao buscar dados para a série ${seriesId}:`, error);
-                // Retorna null para que possamos tratar o erro na função principal.
                 return null;
             }
         }
 
-        /**
-         * Função principal para buscar todos os indicadores e atualizar a página.
-         */
         async function fetchIndicadores() {
             try {
-                // Cria um array de promessas para buscar os dados de forma mais eficiente.
                 const promises = [
-                    getBCBData(APICodes.cdi, 1),
-                    getBCBData(APICodes.selic, 1),
-                    getBCBData(APICodes.selicMeta, 1),
-                    getBCBData(APICodes.ipca, 12),
-                    getBCBData(APICodes.igpm, 12),
-                    getBCBData(APICodes.igpdi, 12),
+                    getBCBData(APICodes.cdi, 1), getBCBData(APICodes.selic, 1),
+                    getBCBData(APICodes.selicMeta, 1), getBCBData(APICodes.ipca, 12),
+                    getBCBData(APICodes.igpm, 12), getBCBData(APICodes.igpdi, 12),
                     getBCBData(APICodes.poupanca, 1)
                 ];
 
-                // Espera todas as chamadas à API terminarem.
                 const [
                     cdiData, selicOverData, selicMetaData, ipcaData,
                     igpmData, igpdiData, poupancaData
@@ -556,54 +525,43 @@
 
                 // --- CDI ---
                 if (cdiData && cdiData.length > 0) {
-                    const cdiValue = parseFloat(cdiData[0].valor).toFixed(2);
-                    document.getElementById('cdi-value').textContent = `${cdiValue}%`;
+                    const dailyRateRaw = parseFloat(cdiData[0].valor);
+                    document.getElementById('cdi-daily-value').textContent = `${dailyRateRaw.toFixed(4)}%`;
+                    
+                    const dailyRateDecimal = dailyRateRaw / 100;
+                    const annualRate = (Math.pow(1 + dailyRateDecimal, 252) - 1) * 100;
+                    document.getElementById('cdi-annual-value').textContent = `${annualRate.toFixed(2)}%`;
                 }
 
                 // --- SELIC ---
                 if (selicOverData && selicOverData.length > 0) {
-                    const selicOverValue = parseFloat(selicOverData[0].valor).toFixed(2);
-                    document.getElementById('selic-over-value').textContent = `${selicOverValue}%`;
+                    document.getElementById('selic-over-value').textContent = `${parseFloat(selicOverData[0].valor).toFixed(2)}%`;
                 }
                 if (selicMetaData && selicMetaData.length > 0) {
-                    const selicMetaValue = parseFloat(selicMetaData[0].valor).toFixed(2);
-                    document.getElementById('selic-meta-value').textContent = `${selicMetaValue}% a.a.`;
+                    document.getElementById('selic-meta-value').textContent = `${parseFloat(selicMetaData[0].valor).toFixed(2)}% a.a.`;
                 }
                 
-                // --- IPCA ---
-                if (ipcaData && ipcaData.length > 0) {
-                    const ipcaMonthValue = parseFloat(ipcaData[ipcaData.length - 1].valor).toFixed(2);
-                    document.getElementById('ipca-month-value').textContent = `${ipcaMonthValue}%`;
-                    const ipca12mValue = ipcaData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-                    const ipca12mPercent = ((ipca12mValue - 1) * 100).toFixed(2);
-                    document.getElementById('ipca-12m-value').textContent = `${ipca12mPercent}%`;
-                }
-                
-                // --- IGP-M ---
-                 if (igpmData && igpmData.length > 0) {
-                    const igpmMonthValue = parseFloat(igpmData[igpmData.length - 1].valor).toFixed(2);
-                    document.getElementById('igp-m-month-value').textContent = `${igpmMonthValue}%`;
-                    const igpm12mValue = igpmData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-                    const igpm12mPercent = ((igpm12mValue - 1) * 100).toFixed(2);
-                    document.getElementById('igp-m-12m-value').textContent = `${igpm12mPercent}%`;
-                }
-                
-                 // --- IGP-DI ---
-                 if (igpdiData && igpdiData.length > 0) {
-                    const igpdiMonthValue = parseFloat(igpdiData[igpdiData.length - 1].valor).toFixed(2);
-                    document.getElementById('igp-di-month-value').textContent = `${igpdiMonthValue}%`;
-                    const igpdi12mValue = igpdiData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-                    const igpdi12mPercent = ((igpdi12mValue - 1) * 100).toFixed(2);
-                    document.getElementById('igp-di-12m-value').textContent = `${igpdi12mPercent}%`;
-                }
+                // --- ÍNDICES DE INFLAÇÃO (IPCA, IGP-M, IGP-DI) ---
+                const processInflationIndex = (data, monthElemId, yearElemId) => {
+                    if (data && data.length > 0) {
+                        const monthValue = parseFloat(data[data.length - 1].valor);
+                        document.getElementById(monthElemId).textContent = `${monthValue.toFixed(2)}%`;
+                        
+                        const yearValue = data.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
+                        const yearPercent = ((yearValue - 1) * 100).toFixed(2);
+                        document.getElementById(yearElemId).textContent = `${yearPercent}%`;
+                    }
+                };
+                processInflationIndex(ipcaData, 'ipca-month-value', 'ipca-12m-value');
+                processInflationIndex(igpmData, 'igp-m-month-value', 'igp-m-12m-value');
+                processInflationIndex(igpdiData, 'igp-di-month-value', 'igp-di-12m-value');
 
                 // --- POUPANÇA ---
                 if (poupancaData && poupancaData.length > 0) {
-                    const poupancaValue = parseFloat(poupancaData[0].valor).toFixed(2);
-                    document.getElementById('poupanca-month-value').textContent = `${poupancaValue}%`;
+                    document.getElementById('poupanca-month-value').textContent = `${parseFloat(poupancaData[0].valor).toFixed(2)}%`;
                 }
                 
-                updateDateTime(); // Atualiza a data/hora após os dados carregarem
+                updateDateTime();
 
             } catch (error) {
                 console.error("Erro geral ao buscar indicadores:", error);
@@ -611,120 +569,88 @@
             }
         }
         
-        // --- FIM DO CÓDIGO DA API DO BANCO CENTRAL ---
+        // --- FIM DO CÓDIGO DA API ---
 
-
-        // --- INÍCIO DO CÓDIGO ORIGINAL DA PÁGINA ---
+        // --- INÍCIO DO CÓDIGO DE UI ---
         
-        // Funções compartilhadas
         function updateDateTime() {
             const now = new Date();
             const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
             const formattedDate = now.toLocaleDateString('pt-BR', options);
-            const subheaderElem = document.getElementById('data-atual');
-            if(subheaderElem) subheaderElem.textContent = `Atualizado em ${formattedDate}`;
+            document.getElementById('data-atual').textContent = `Atualizado em ${formattedDate}`;
             
             const footerElem = document.getElementById('footer');
             if (footerElem) {
-                 const currentYear = now.getFullYear();
-                 footerElem.textContent = `Fonte: API do Banco Central do Brasil • © ${currentYear} Mercado Macro`;
+                 footerElem.textContent = `Fonte: API do Banco Central do Brasil • © ${now.getFullYear()} Mercado Macro`;
             }
         }
 
         function toggleFullscreen() {
-            const fullscreenBtn = document.getElementById('fullscreen-btn');
-            const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Erro ao tentar entrar em tela cheia: ${err.message}`);
-                });
+                document.documentElement.requestFullscreen().catch(err => console.error(`Erro: ${err.message}`));
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
             }
         }
         
-        function handleFullscreenChange() { // Função para lidar com a mudança de estado do fullscreen
-            const fullscreenBtn = document.getElementById('fullscreen-btn');
-            const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-            if (document.fullscreenElement) {
-                if(fullscreenBtn) fullscreenBtn.style.display = 'none';
-                if(fullscreenExitBtn) fullscreenExitBtn.style.display = 'flex';
-            } else {
-                if(fullscreenExitBtn) fullscreenExitBtn.style.display = 'none';
-                if(fullscreenBtn) fullscreenBtn.style.display = 'flex';
-            }
+        function handleFullscreenChange() {
+            const isFullscreen = !!document.fullscreenElement;
+            document.getElementById('fullscreen-btn').style.display = isFullscreen ? 'none' : 'flex';
+            document.getElementById('fullscreen-exit-btn').style.display = isFullscreen ? 'flex' : 'none';
         }
-
 
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isLightMode = document.body.classList.contains('light-mode');
             localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
-
             const themeIcon = document.getElementById('theme-toggle').querySelector('i');
             if(themeIcon) {
-                themeIcon.classList.toggle('fa-moon', !isLightMode);
-                themeIcon.classList.toggle('fa-sun', isLightMode);
+                themeIcon.className = isLightMode ? 'fas fa-sun' : 'fas fa-moon';
             }
         }
 
         function flipCard(card) {
-            const isCurrentlyFlipped = card.classList.contains('flipped');
-            document.querySelectorAll('article.indicator-card.flipped').forEach(otherCard => {
-                if (otherCard !== card) { // Só desvira os outros cards
-                    otherCard.classList.remove('flipped');
-                    otherCard.setAttribute('aria-pressed', 'false');
-                }
-            });
-            card.classList.toggle('flipped'); // Vira ou desvira o card clicado
+            card.classList.toggle('flipped');
             card.setAttribute('aria-pressed', card.classList.contains('flipped').toString());
         }
 
-        // Event Listeners
         function setupEventListeners() {
-            const backBtn = document.getElementById('back-btn');
-            if(backBtn) backBtn.addEventListener('click', function() { window.location.href = 'index.html'; });
-
-            const refreshBtn = document.getElementById('refresh-btn');
-            // O botão de refresh agora chama a função da API
-            if(refreshBtn) refreshBtn.addEventListener('click', () => {
+            document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
+            document.getElementById('refresh-btn').addEventListener('click', () => {
                 document.getElementById('data-atual').textContent = "Atualizando dados...";
                 fetchIndicadores();
             });
-            
-            const fullscreenBtn = document.getElementById('fullscreen-btn');
-            if(fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
-            
-            const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
-            if(fullscreenExitBtn) fullscreenExitBtn.addEventListener('click', toggleFullscreen);
-            
-            const themeToggleBtn = document.getElementById('theme-toggle');
-            if(themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+            document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+            document.getElementById('fullscreen-exit-btn').addEventListener('click', toggleFullscreen);
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
-            document.addEventListener('fullscreenchange', handleFullscreenChange);
-            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
+            ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach( event =>
+                document.addEventListener(event, handleFullscreenChange, false)
+            );
 
             document.querySelectorAll('article.indicator-card').forEach(card => {
                 card.setAttribute('tabindex', '0');
                 card.setAttribute('role', 'button');
                 card.setAttribute('aria-pressed', 'false');
-
-                card.addEventListener('click', function(e) {
+                card.addEventListener('click', e => {
                     if (e.target.closest('a, button')) return;
-                    flipCard(this);
+                    document.querySelectorAll('article.indicator-card.flipped').forEach(other => {
+                        if (other !== card) other.classList.remove('flipped');
+                    });
+                    flipCard(card);
                 });
-                card.addEventListener('keydown', function(e) {
+                card.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        flipCard(this);
+                        document.querySelectorAll('article.indicator-card.flipped').forEach(other => {
+                             if (other !== card) other.classList.remove('flipped');
+                        });
+                        flipCard(card);
                     }
                 });
             });
 
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', e => {
                 if (e.key === 'Escape') {
                     const flippedCard = document.querySelector('article.indicator-card.flipped');
                     if (flippedCard) {
@@ -735,32 +661,18 @@
             });
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Lógica de Tema
             const savedTheme = localStorage.getItem('themePreference');
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            let isLightMode = false;
-
-            if (savedTheme === 'light') isLightMode = true;
-            else if (savedTheme === 'dark') isLightMode = false;
-            else isLightMode = !prefersDark;
-
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isLightMode = savedTheme === 'light' || (savedTheme !== 'dark' && !prefersDark);
+            
             if (isLightMode) document.body.classList.add('light-mode');
-            else document.body.classList.remove('light-mode');
-            
             const themeIcon = document.getElementById('theme-toggle')?.querySelector('i');
-            if (themeIcon) {
-                themeIcon.classList.toggle('fa-moon', !isLightMode);
-                themeIcon.classList.toggle('fa-sun', isLightMode);
-            }
+            if (themeIcon) themeIcon.className = isLightMode ? 'fas fa-sun' : 'fas fa-moon';
             
-            // Configuração Inicial
-            handleFullscreenChange(); // Seta o estado inicial dos botões de fullscreen
-            setupEventListeners(); // Configura todos os botões e interações
-            fetchIndicadores(); // **CHAMA A FUNÇÃO DA API PARA BUSCAR OS DADOS**
-
-            // Remove o 'setInterval' para updateDateTime, pois a data é atualizada ao final da busca na API.
+            handleFullscreenChange();
+            setupEventListeners();
+            fetchIndicadores();
         });
     </script>
 </body>
