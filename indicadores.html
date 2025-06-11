@@ -29,7 +29,8 @@
             --darker-bg: #010409;
             --text-color: #c9d1d9;
             --text-secondary: rgba(139, 148, 158, 0.7);
-            --card-bg: rgba(22, 27, 34, 0.7); 
+            --card-bg-val: 22, 27, 34;
+            --card-bg: rgba(var(--card-bg-val), 0.85); 
             --border-color: rgba(48, 54, 61, 0.8);
             --shadow-color-soft: rgba(0, 0, 0, 0.2);
             --shadow-color-medium: rgba(0, 0, 0, 0.3);
@@ -104,7 +105,9 @@
             transform: translateY(-6px) scale(1.01);
             box-shadow: 0 8px 20px var(--shadow-color-medium);
         }
-        
+        .up-trend { color: var(--up-trend); }
+        .down-trend { color: var(--down-trend); }
+
         .indicator-front, .indicator-back {
             backface-visibility: hidden; -webkit-backface-visibility: hidden;
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -142,14 +145,61 @@
             border-top: 1px solid var(--border-color);
         }
 
+        /* ======================================== */
+        /* NOVO ESTILO DOS BOTÕES FLUTUANTES */
+        /* ======================================== */
         .floating-btn {
-            position: fixed; width: 50px; height: 50px; border-radius: 12px;
-            background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);
-            cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
+            position: fixed;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(var(--card-bg-val), 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            overflow: hidden;
+            will-change: transform, background-color, box-shadow;
         }
-        .floating-btn:hover { background-color: var(--primary-color); transform: translateY(-4px) scale(1.05); color: var(--dark-bg); box-shadow: 0 8px 20px var(--shadow-color-medium); }
-        .floating-btn i { font-size: 20px; }
+
+        .floating-btn::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -50%;
+            width: 200%;
+            height: 150%;
+            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% );
+            transform: rotate(20deg);
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+
+        .floating-btn:hover {
+            transform: translateY(-6px) scale(1.1);
+            background: rgba(var(--card-bg-val), 0.6);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+            color: #fff;
+        }
+
+        .floating-btn:hover::before {
+            transform: translate(20px, -10px) rotate(20deg) scale(1.1);
+            opacity: 0.8;
+        }
+
+        .floating-btn i {
+            font-size: 18px;
+            transition: color 0.3s ease;
+        }
+        
+        /* Posições dos botões - Mantidas da página de indicadores */
         #back-btn { right: 20px; bottom: 20px; }
         #refresh-btn { right: 80px; bottom: 20px; }
         #fullscreen-btn { right: 140px; bottom: 20px; }
@@ -158,36 +208,67 @@
         
         .profile-btn {
             position: fixed; top: 20px; right: 20px; width: 45px; height: 45px;
-            border-radius: 12px; background: var(--card-bg); color: var(--primary-color);
-            border: 1px solid var(--border-color); cursor: pointer; z-index: 1000;
+            border-radius: 50%; /* Arredondado também */
+            background: rgba(var(--card-bg-val), 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--primary-color);
+            cursor: pointer; z-index: 1000;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.3s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
+            transition: all 0.3s ease; box-shadow: 0 5px 15px var(--shadow-color-soft);
         }
         .profile-btn i { font-size: 18px; }
         .profile-btn:hover { background: var(--primary-color); color: var(--dark-bg); transform: translateY(-2px) scale(1.05); }
 
         body.light-mode {
-            --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
-            --dark-bg: #ffffff; --darker-bg: #f0f2f5;
-            --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
-            --card-bg: rgba(255, 255, 255, 0.98); --border-color: rgba(200, 205, 210, 0.7);
-            --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
+            --primary-color: #007bff;
+            --primary-light: #53a6ff;
+            --primary-dark: #0056b3;
+            --dark-bg: #f8f9fa;
+            --darker-bg: #e9ecef;
+            --text-color: #212529;
+            --text-secondary: #495057;
+            --card-bg-val: 255, 255, 255;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --shadow-color-soft: rgba(0,0,0,0.07);
+            --shadow-color-medium: rgba(0,0,0,0.1);
             background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
         }
         body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
-        body.light-mode .floating-btn:hover { color: white; }
-        body.light-mode .profile-btn:hover { color: white; }
+        
+        /* NOVO: Estilo dos botões para o tema claro */
+        body.light-mode .floating-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--text-secondary);
+            box-shadow: 0 8px 20px var(--shadow-color-soft);
+        }
+        body.light-mode .floating-btn::before {
+            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 40%, rgba(255, 255, 255, 0) 80% );
+        }
+        body.light-mode .floating-btn:hover {
+            background: rgba(255, 255, 255, 0.85);
+            color: var(--primary-dark);
+        }
+        body.light-mode .profile-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--primary-color);
+        }
+        body.light-mode .profile-btn:hover { background-color: var(--primary-color); color: white; }
 
         @media (max-width: 1200px) { .indicator-card { max-width: calc(33.33% - 15px); } }
         @media (max-width: 768px) { .indicator-card { max-width: calc(50% - 15px); } .page-title-header { font-size: 38px; } }
         @media (max-width: 600px) {
             .indicator-card { max-width: 100%; }
             .container { padding: 15px 12px; } .page-title-header { font-size: 34px; }
-            .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
+            .floating-btn, .profile-btn { width: 45px; height: 45px; }
             #back-btn { right: 15px; } #refresh-btn { right: 70px; }
             #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } .theme-toggle { left: 15px; }
-            .profile-btn { width: 40px; height: 40px; top: 15px; right: 15px; border-radius: 10px;}
+            .profile-btn { top: 15px; right: 15px; }
         }
         @supports(padding: max(0px)) {
             .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); }
@@ -342,7 +423,7 @@
     </div>
 
     <a href="api.html" class="profile-btn floating-btn" aria-label="Análise de Perfil do Investidor"> <i class="fas fa-user-tie"></i></a>
-    <button id="back-btn" class="floating-btn" aria-label="Voltar para página inicial"> <i class="fas fa-arrow-left"></i></button>
+    <button id="back-btn" class="floating-btn" aria-label="Voltar para página inicial"> <i class="fas fa-home"></i></button>
     <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados"> <i class="fas fa-redo"></i></button>
     <button id="fullscreen-btn" class="floating-btn" aria-label="Modo tela cheia"> <i class="fas fa-expand"></i></button>
     <button id="fullscreen-exit-btn" class="floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"> <i class="fas fa-compress"></i></button>
@@ -370,7 +451,7 @@
                 return null;
             }
         }
-
+        
         async function fetchIndicadores() {
             try {
                 const promises = [
