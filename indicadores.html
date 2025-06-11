@@ -10,15 +10,14 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <meta name="description" content="Indicadores atualizados do mercado financeiro, incluindo Risco-País, CDI, SELIC, Dólar, Euro e inflação.">
-    <meta name="keywords" content="indicadores financeiros, risco-país, cdi, selic, ipca, igpm, igp-di, poupança, dolar, euro, ptax, api bcb">
+    <meta name="description" content="Indicadores atualizados do mercado financeiro, incluindo CDS Risco-País, CDI, SELIC, Dólar, Euro e inflação.">
+    <meta name="keywords" content="indicadores financeiros, cds, risco-país, cdi, selic, ipca, igpm, igp-di, poupança, dolar, euro, ptax, api bcb">
     <meta name="author" content="Anderson">
     <meta property="og:title" content="Indicadores de Mercado Financeiro - Mercado Macro">
     <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro em tempo real">
     <meta property="og:image" content="https://example.com/indicators-thumbnail.jpg">
     <meta property="og:url" content="https://mercadomacro.github.io/indicadores.html">
     <meta name="theme-color" content="#0d1117">
-    <meta http-equiv="X-Frame-Options" content="DENY">
     <title>Indicadores Financeiros - Mercado Macro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -98,14 +97,14 @@
             <div class="indicators-container">
                  <article class="indicator-card" id="card-risk">
                     <div class="indicator-front">
-                        <div class="indicator-icon"><i class="fas fa-globe-americas"></i></div>
-                        <div class="indicator-name">RISCO BRASIL</div>
+                        <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="indicator-name">RISCO PAÍS (CDS 5 ANOS)</div>
                         <div class="indicator-value" id="risk-value">Carregando...</div>
-                        <div class="indicator-description">EMBI+ (pontos)</div>
+                        <div class="indicator-description">CDS (pontos-base)</div>
                     </div>
                     <div class="indicator-back">
-                        <strong>O que é o Risco Brasil?</strong>
-                        O EMBI+ Br (Emerging Markets Bond Index Plus) é calculado para medir o risco de crédito de um país. Ele reflete a diferença entre as taxas de juros de títulos do Brasil e dos EUA. Quanto maior a pontuação, maior a percepção de risco.
+                        <strong>O que é o CDS?</strong>
+                        O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.
                     </div>
                 </article>
                 <article class="indicator-card indicator-card--multi-value" id="card-dolar">
@@ -235,6 +234,9 @@
         // --- 1. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
+            // URL de um proxy CORS mais estável para buscar o dado do CDS.
+            // O encodeURIComponent é usado para garantir que a URL de destino seja passada corretamente.
+            cdsApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
             errorText: 'Erro',
             loadingText: 'Carregando...',
             selectors: {
@@ -258,7 +260,7 @@
                 poupancaMonth: '#poupanca-month-value',
             },
             apiCodes: {
-                riscoPais: 13961, dolarBuy: 1, dolarSell: 10813, euroBuy: 21619,
+                dolarBuy: 1, dolarSell: 10813, euroBuy: 21619,
                 euroSell: 21620, cdi: 12, selic: 11, selicMeta: 432, ipca: 433,
                 igpm: 189, igpdi: 190, poupanca: 195
             }
@@ -274,7 +276,26 @@
                     return await response.json();
                 } catch (error) {
                     console.error(error.message);
-                    throw error; // Re-throw to be caught by Promise.allSettled
+                    throw error;
+                }
+            },
+            async getCDSData() {
+                try {
+                    // ATENÇÃO: A busca do CDS depende de um proxy e do HTML do Investing.com,
+                    // que pode mudar a qualquer momento e quebrar a busca do valor.
+                    const response = await fetch(config.cdsApiUrl);
+                    if (!response.ok) throw new Error(`CDS API Error: ${response.statusText}`);
+                    const htmlContent = await response.text();
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    const cdsValueElement = doc.querySelector('[data-test="instrument-price-last"]');
+                    if (!cdsValueElement) throw new Error('Elemento do valor do CDS não encontrado no HTML.');
+                    
+                    return parseFloat(cdsValueElement.textContent.replace(',', '.')).toFixed(2);
+                } catch (error) {
+                    console.error("Erro ao buscar CDS:", error.message);
+                    throw error;
                 }
             }
         };
@@ -291,7 +312,7 @@
                 const now = new Date();
                 const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
                 this.updateText(config.selectors.updateTime, `Atualizado em ${now.toLocaleDateString('pt-BR', options)}`);
-                this.updateText(config.selectors.footer, `Fonte: API do Banco Central do Brasil • © ${now.getFullYear()} Mercado Macro`);
+                this.updateText(config.selectors.footer, `Fontes: Banco Central, Investing.com • © ${now.getFullYear()} Mercado Macro`);
             },
             setLoadingState(isLoading) {
                 if (isLoading) {
@@ -312,7 +333,7 @@
                 
                 const { apiCodes } = config;
                 const promises = {
-                    riscoPais: apiService.getBCBData(apiCodes.riscoPais, 1),
+                    cds: apiService.getCDSData(),
                     dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
                     dolarSell: apiService.getBCBData(apiCodes.dolarSell, 1),
                     euroBuy: apiService.getBCBData(apiCodes.euroBuy, 1),
@@ -339,11 +360,9 @@
             processResults(data) {
                 const { selectors, errorText } = config;
                 
-                // --- RISCO-PAÍS ---
-                const riscoValue = data.riscoPais.status === 'fulfilled' ? parseFloat(data.riscoPais.value?.[0]?.valor).toFixed(0) : errorText;
+                const riscoValue = data.cds.status === 'fulfilled' ? data.cds.value : errorText;
                 uiController.updateText(selectors.riskValue, riscoValue);
 
-                // --- MOEDAS ---
                 const dolarBuyValue = data.dolarBuy.status === 'fulfilled' ? `R$ ${parseFloat(data.dolarBuy.value?.[0]?.valor).toFixed(4)}` : errorText;
                 uiController.updateText(selectors.dolarBuy, dolarBuyValue);
                 const dolarSellValue = data.dolarSell.status === 'fulfilled' ? `R$ ${parseFloat(data.dolarSell.value?.[0]?.valor).toFixed(4)}` : errorText;
@@ -353,7 +372,6 @@
                 const euroSellValue = data.euroSell.status === 'fulfilled' ? `R$ ${parseFloat(data.euroSell.value?.[0]?.valor).toFixed(4)}` : errorText;
                 uiController.updateText(selectors.euroSell, euroSellValue);
                 
-                // --- CDI ---
                 if (data.cdi.status === 'fulfilled' && data.cdi.value?.[0]) {
                     const dailyRateRaw = parseFloat(data.cdi.value[0].valor);
                     const annualRate = (Math.pow(1 + (dailyRateRaw / 100), 252) - 1) * 100;
@@ -364,18 +382,15 @@
                     uiController.updateText(selectors.cdiAnnual, errorText);
                 }
 
-                // --- SELIC ---
                 const selicOverValue = data.selicOver.status === 'fulfilled' ? `${parseFloat(data.selicOver.value?.[0]?.valor).toFixed(2)}%` : errorText;
                 uiController.updateText(selectors.selicOver, selicOverValue);
                 const selicMetaValue = data.selicMeta.status === 'fulfilled' ? `${parseFloat(data.selicMeta.value?.[0]?.valor).toFixed(2)}% a.a.` : errorText;
                 uiController.updateText(selectors.selicMeta, selicMetaValue);
 
-                // --- ÍNDICES DE INFLAÇÃO ---
                 this.processInflationIndex(data.ipca, selectors.ipcaMonth, selectors.ipca12m);
                 this.processInflationIndex(data.igpm, selectors.igpmMonth, selectors.igpm12m);
                 this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m);
                 
-                // --- POUPANÇA ---
                 const poupancaValue = data.poupanca.status === 'fulfilled' ? `${parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2)}%` : errorText;
                 uiController.updateText(selectors.poupancaMonth, poupancaValue);
             },
