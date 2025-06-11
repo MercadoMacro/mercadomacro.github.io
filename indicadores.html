@@ -12,10 +12,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <meta name="description" content="Indicadores atualizados do mercado financeiro">
-    <meta name="keywords" content="indicadores financeiros, CDI, SELIC, IPCA, IGP-M, poupança">
+    <meta name="keywords" content="indicadores financeiros, CDI, SELIC, IPCA, IGP-M, poupança, api bcb">
     <meta name="author" content="Anderson">
     <meta property="og:title" content="Indicadores de Mercado Financeiro - Mercado Macro">
-    <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro">
+    <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro em tempo real">
     <meta property="og:image" content="https://example.com/indicators-thumbnail.jpg"> <meta property="og:url" content="https://mercadomacro.github.io/indicadores.html"> <meta name="theme-color" content="#0d1117"> <meta http-equiv="X-Frame-Options" content="DENY">
     <title>Indicadores Financeiros - Mercado Macro</title> <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -374,14 +374,16 @@
             <div class="page-title-header">Indicadores Financeiros</div> <div class="logo-divider"></div>
         </div>
 
-        <div class="subheader" id="data-atual">Atualizado em DD/MM/AAAA, HH:MM</div> <main>
+        <div class="subheader" id="data-atual">Atualizando dados...</div>
+        
+        <main>
             <div class="indicators-container">
-                <article class="indicator-card">
+                <article class="indicator-card" id="card-cdi">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
                         <div class="indicator-name">CDI</div>
-                        <div class="indicator-value">14,65%</div>
-                        <div class="indicator-description">Diário</div>
+                        <div class="indicator-value" id="cdi-value">Carregando...</div>
+                        <div class="indicator-description">Taxa Diária</div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o CDI?</strong>
@@ -389,14 +391,14 @@
                     </div>
                 </article>
 
-                <article class="indicator-card">
+                <article class="indicator-card indicator-card--multi-value" id="card-selic">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-percentage"></i></div>
                         <div class="indicator-name">SELIC</div>
-                        <div class="indicator-value">14,65%</div>
-                        <div class="indicator-description">Over</div>
-                        <div class="indicator-value">14,75%</div>
-                        <div class="indicator-description">Meta ao ano</div>
+                        <div class="indicator-value" id="selic-over-value">Carregando...</div>
+                        <div class="indicator-description">Over (Diária)</div>
+                        <div class="indicator-value" id="selic-meta-value">Carregando...</div>
+                        <div class="indicator-description">Meta ao Ano</div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é a SELIC?</strong>
@@ -404,13 +406,13 @@
                     </div>
                 </article>
 
-                <article class="indicator-card">
+                <article class="indicator-card indicator-card--multi-value" id="card-igp-di">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
                         <div class="indicator-name">IGP-DI</div>
-                        <div class="indicator-value">0,91%</div>
-                        <div class="indicator-description">Ano</div>
-                        <div class="indicator-value">8,12%</div>
+                        <div class="indicator-value" id="igp-di-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                     </div>
                     <div class="indicator-back">
@@ -419,13 +421,13 @@
                     </div>
                 </article>
 
-                <article class="indicator-card">
+                <article class="indicator-card indicator-card--multi-value" id="card-igp-m">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
                         <div class="indicator-name">IGP-M</div>
-                        <div class="indicator-value">1,23%</div>
-                        <div class="indicator-description">Ano</div>
-                        <div class="indicator-value">8,51%</div>
+                        <div class="indicator-value" id="igp-m-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                     </div>
                     <div class="indicator-back">
@@ -434,13 +436,13 @@
                     </div>
                 </article>
 
-                <article class="indicator-card">
+                <article class="indicator-card indicator-card--multi-value" id="card-ipca">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
                         <div class="indicator-name">IPCA</div>
-                        <div class="indicator-value">2,48%</div>
-                        <div class="indicator-description">Ano</div>
-                        <div class="indicator-value">5,53%</div>
+                        <div class="indicator-value" id="ipca-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="ipca-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                     </div>
                     <div class="indicator-back">
@@ -449,16 +451,12 @@
                     </div>
                 </article>
 
-                <article class="indicator-card indicator-card--multi-value">
+                <article class="indicator-card" id="card-poupanca">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div>
                         <div class="indicator-name">POUPANÇA</div>
-                        <div class="indicator-value">2,61%</div>
-                        <div class="indicator-description">Ano</div>
-                        <div class="indicator-value">0,68%</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value">7,41%</div>
-                        <div class="indicator-description">12 Meses</div>
+                        <div class="indicator-value" id="poupanca-month-value">Carregando...</div>
+                        <div class="indicator-description">Rendimento no Mês</div>
                     </div>
                     <div class="indicator-back">
                         <strong>Como funciona a Poupança?</strong>
@@ -467,7 +465,9 @@
                 </article>
             </div>
         </main>
-        <div class="footer" id="footer">Fonte: Dados manuais • Atualizado em DD/MM/AAAA HH:MM</div> </div>
+        
+        <div class="footer" id="footer">Fonte: API do Banco Central do Brasil • © 2024 Mercado Macro</div>
+    </div>
 
     <a href="api.html" class="profile-btn floating-btn" aria-label="Análise de Perfil do Investidor"> <i class="fas fa-user-tie"></i>
     </a>
@@ -488,6 +488,134 @@
     </button>
 
     <script>
+        // --- INÍCIO DO CÓDIGO DA API DO BANCO CENTRAL ---
+
+        // Objeto que mapeia os nomes dos indicadores aos seus códigos na API do BCB.
+        const APICodes = {
+            cdi: 12,
+            selic: 11,
+            selicMeta: 432,
+            ipca: 433,
+            igpm: 189,
+            igpdi: 190,
+            poupanca: 195
+        };
+
+        /**
+         * Função auxiliar para buscar dados na API do BCB
+         * @param {number} seriesId - O código da série temporal a ser buscada.
+         * @param {number} days - A quantidade de registros a serem retornados (padrão: 1 para o mais recente).
+         * @returns {Promise<Object>} - Uma promessa que resolve com os dados da API.
+         */
+        async function getBCBData(seriesId, days = 1) {
+            // A URL da API do BCB para consulta de séries temporais.
+            const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados/ultimos/${days}?formato=json`;
+            
+            try {
+                // Usa o 'fetch' para fazer a requisição à API. 'await' pausa a função até a resposta chegar.
+                const response = await fetch(url);
+                
+                // Se a resposta não for bem-sucedida (ex: erro 404, 500), lança um erro.
+                if (!response.ok) {
+                    throw new Error(`Erro na rede: ${response.statusText}`);
+                }
+                
+                // Converte a resposta em formato JSON. 'await' pausa até a conversão terminar.
+                const data = await response.json();
+                return data;
+
+            } catch (error) {
+                // Se qualquer parte do 'try' falhar, o erro é capturado aqui.
+                console.error(`Falha ao buscar dados para a série ${seriesId}:`, error);
+                // Retorna null para que possamos tratar o erro na função principal.
+                return null;
+            }
+        }
+
+        /**
+         * Função principal para buscar todos os indicadores e atualizar a página.
+         */
+        async function fetchIndicadores() {
+            try {
+                // Cria um array de promessas para buscar os dados de forma mais eficiente.
+                const promises = [
+                    getBCBData(APICodes.cdi, 1),
+                    getBCBData(APICodes.selic, 1),
+                    getBCBData(APICodes.selicMeta, 1),
+                    getBCBData(APICodes.ipca, 12),
+                    getBCBData(APICodes.igpm, 12),
+                    getBCBData(APICodes.igpdi, 12),
+                    getBCBData(APICodes.poupanca, 1)
+                ];
+
+                // Espera todas as chamadas à API terminarem.
+                const [
+                    cdiData, selicOverData, selicMetaData, ipcaData,
+                    igpmData, igpdiData, poupancaData
+                ] = await Promise.all(promises);
+
+                // --- CDI ---
+                if (cdiData && cdiData.length > 0) {
+                    const cdiValue = parseFloat(cdiData[0].valor).toFixed(2);
+                    document.getElementById('cdi-value').textContent = `${cdiValue}%`;
+                }
+
+                // --- SELIC ---
+                if (selicOverData && selicOverData.length > 0) {
+                    const selicOverValue = parseFloat(selicOverData[0].valor).toFixed(2);
+                    document.getElementById('selic-over-value').textContent = `${selicOverValue}%`;
+                }
+                if (selicMetaData && selicMetaData.length > 0) {
+                    const selicMetaValue = parseFloat(selicMetaData[0].valor).toFixed(2);
+                    document.getElementById('selic-meta-value').textContent = `${selicMetaValue}% a.a.`;
+                }
+                
+                // --- IPCA ---
+                if (ipcaData && ipcaData.length > 0) {
+                    const ipcaMonthValue = parseFloat(ipcaData[ipcaData.length - 1].valor).toFixed(2);
+                    document.getElementById('ipca-month-value').textContent = `${ipcaMonthValue}%`;
+                    const ipca12mValue = ipcaData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
+                    const ipca12mPercent = ((ipca12mValue - 1) * 100).toFixed(2);
+                    document.getElementById('ipca-12m-value').textContent = `${ipca12mPercent}%`;
+                }
+                
+                // --- IGP-M ---
+                 if (igpmData && igpmData.length > 0) {
+                    const igpmMonthValue = parseFloat(igpmData[igpmData.length - 1].valor).toFixed(2);
+                    document.getElementById('igp-m-month-value').textContent = `${igpmMonthValue}%`;
+                    const igpm12mValue = igpmData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
+                    const igpm12mPercent = ((igpm12mValue - 1) * 100).toFixed(2);
+                    document.getElementById('igp-m-12m-value').textContent = `${igpm12mPercent}%`;
+                }
+                
+                 // --- IGP-DI ---
+                 if (igpdiData && igpdiData.length > 0) {
+                    const igpdiMonthValue = parseFloat(igpdiData[igpdiData.length - 1].valor).toFixed(2);
+                    document.getElementById('igp-di-month-value').textContent = `${igpdiMonthValue}%`;
+                    const igpdi12mValue = igpdiData.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
+                    const igpdi12mPercent = ((igpdi12mValue - 1) * 100).toFixed(2);
+                    document.getElementById('igp-di-12m-value').textContent = `${igpdi12mPercent}%`;
+                }
+
+                // --- POUPANÇA ---
+                if (poupancaData && poupancaData.length > 0) {
+                    const poupancaValue = parseFloat(poupancaData[0].valor).toFixed(2);
+                    document.getElementById('poupanca-month-value').textContent = `${poupancaValue}%`;
+                }
+                
+                updateDateTime(); // Atualiza a data/hora após os dados carregarem
+
+            } catch (error) {
+                console.error("Erro geral ao buscar indicadores:", error);
+                document.getElementById('data-atual').textContent = "Falha ao carregar dados.";
+            }
+        }
+        
+        // --- FIM DO CÓDIGO DA API DO BANCO CENTRAL ---
+
+
+        // --- INÍCIO DO CÓDIGO ORIGINAL DA PÁGINA ---
+        
         // Funções compartilhadas
         function updateDateTime() {
             const now = new Date();
@@ -498,8 +626,8 @@
             
             const footerElem = document.getElementById('footer');
             if (footerElem) {
-                 const currentYear = now.getFullYear(); // Adicionado para o ano dinâmico no footer
-                 footerElem.textContent = `Fonte: Dados manuais • © ${currentYear} Mercado Macro`;
+                 const currentYear = now.getFullYear();
+                 footerElem.textContent = `Fonte: API do Banco Central do Brasil • © ${currentYear} Mercado Macro`;
             }
         }
 
@@ -558,7 +686,11 @@
             if(backBtn) backBtn.addEventListener('click', function() { window.location.href = 'index.html'; });
 
             const refreshBtn = document.getElementById('refresh-btn');
-            if(refreshBtn) refreshBtn.addEventListener('click', updateDateTime);
+            // O botão de refresh agora chama a função da API
+            if(refreshBtn) refreshBtn.addEventListener('click', () => {
+                document.getElementById('data-atual').textContent = "Atualizando dados...";
+                fetchIndicadores();
+            });
             
             const fullscreenBtn = document.getElementById('fullscreen-btn');
             if(fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -590,7 +722,6 @@
                         flipCard(this);
                     }
                 });
-                // Efeitos de toque removidos para consistência com o flip ao clicar/teclar
             });
 
             document.addEventListener('keydown', function(e) {
@@ -606,37 +737,30 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Lógica de Tema
             const savedTheme = localStorage.getItem('themePreference');
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             let isLightMode = false;
 
             if (savedTheme === 'light') isLightMode = true;
             else if (savedTheme === 'dark') isLightMode = false;
-            else isLightMode = !prefersDark; // Default to system preference, or light if system is dark and no preference
+            else isLightMode = !prefersDark;
 
             if (isLightMode) document.body.classList.add('light-mode');
             else document.body.classList.remove('light-mode');
             
-            const themeIcon = document.getElementById('theme-toggle')?.querySelector('i'); // Optional chaining
+            const themeIcon = document.getElementById('theme-toggle')?.querySelector('i');
             if (themeIcon) {
                 themeIcon.classList.toggle('fa-moon', !isLightMode);
                 themeIcon.classList.toggle('fa-sun', isLightMode);
             }
             
+            // Configuração Inicial
             handleFullscreenChange(); // Seta o estado inicial dos botões de fullscreen
-            updateDateTime(); // Chamada inicial
-            setInterval(updateDateTime, 60000); // Atualiza a cada minuto
-            setupEventListeners();
+            setupEventListeners(); // Configura todos os botões e interações
+            fetchIndicadores(); // **CHAMA A FUNÇÃO DA API PARA BUSCAR OS DADOS**
 
-            // Opcional: Remover transições de ícones se o usuário tiver o modo de economia de dados ativado
-            if ('connection' in navigator && navigator.connection.saveData) {
-                document.querySelectorAll('i').forEach(icon => {
-                    // Esta abordagem pode ser muito genérica.
-                    // Se for para remover transições específicas, seria melhor adicionar uma classe ao body
-                    // e condicionar as transições a essa classe. Por ora, vou comentar.
-                    // icon.style.transition = 'none';
-                });
-            }
+            // Remove o 'setInterval' para updateDateTime, pois a data é atualizada ao final da busca na API.
         });
     </script>
 </body>
