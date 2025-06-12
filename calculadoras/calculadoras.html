@@ -245,16 +245,80 @@
 
         .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
 
-        /* Estilos do Modal HP12C */
+        /* ======================================================= */
+        /* ESTILOS UNIFICADOS PARA O BOTÃO FLUTUANTE DA HP12C      */
+        /* ======================================================= */
+
         .hp12c-btn {
-            position: fixed; top: 20px; right: 20px; width: 45px; height: 45px;
-            border-radius: 12px; background-color: #FF6B00; color: white;
-            border: none; box-shadow: 0 5px 15px var(--shadow-color-soft);
-            cursor: pointer; z-index: 1001; display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; transition: all 0.3s ease;
+            /* Posição única mantida */
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+
+            /* Estilos herdados da classe .floating-btn */
+            width: 50px;
+            height: 50px;
+            border-radius: 50%; /* Agora é circular */
+            background: rgba(var(--card-bg-val), 0.4); /* Fundo semi-transparente que se adapta ao tema */
+            backdrop-filter: blur(10px); /* Efeito de vidro */
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Borda sutil */
+            color: var(--text-color); /* Cor do ícone se adapta ao tema */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px var(--shadow-color-soft);
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); /* Transição suave */
+            overflow: hidden; /* Necessário para o efeito de brilho */
+            will-change: transform, background-color, box-shadow;
+            -webkit-tap-highlight-color: transparent;
         }
-        .hp12c-btn:hover { transform: scale(1.1); background-color: #E55E00; }
-        .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain; }
+
+        /* Efeito de brilho (exatamente como em .floating-btn) */
+        .hp12c-btn::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -50%;
+            width: 200%;
+            height: 150%;
+            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% );
+            transform: rotate(20deg);
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+
+        /* Efeito HOVER alterado para preto escuro */
+        .hp12c-btn:hover {
+            transform: translateY(-6px) scale(1.1); /* Animação de "salto" */
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+            
+            /* Efeito de fundo escuro, igual aos outros botões flutuantes */
+            background: rgba(var(--card-bg-val), 0.6); 
+            color: #fff; 
+        }
+
+        /* Animação do brilho no hover */
+        .hp12c-btn:hover::before {
+            transform: translate(20px, -10px) rotate(20deg) scale(1.1);
+            opacity: 0.8;
+        }
+
+        /* Efeito ao clicar no botão */
+        .hp12c-btn:active {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Mantém o estilo do ícone interno sem alterações */
+        .hp12c-icon {
+            width: 125%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: contain;
+        }
+
         .hp12c-modal {
             display: none; /* MODIFICADO: Inicia oculto, JS muda para 'flex' */
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -795,7 +859,7 @@
             window.addEventListener('scroll', () => backToTopButton.classList.toggle('visible', window.scrollY > 300));
             backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
             document.getElementById('refresh-btn').addEventListener('click', () => { localStorage.removeItem(lsKey); window.location.reload(); });
-            document.getElementById('home-btn').addEventListener('click', () => window.location.href = 'index.html');
+            document.getElementById('home-btn').addEventListener('click', () => window.location.href = '/index.html');
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = themeToggle.querySelector('i');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
