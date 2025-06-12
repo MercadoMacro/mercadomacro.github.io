@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5JZRK5NNKG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-5JZRK5NNKG');
-</script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5JZRK5NNKG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-5JZRK5NNKG');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Calculadoras financeiras completas para investimentos">
-    <meta name="keywords" content="calculadora financeira, CDB, LCI, LCA, amortização, preço médio">
+    <meta name="description" content="Calculadoras financeiras completas com gráficos, tabelas detalhadas e salvamento automático. Calcule preço médio, juros compostos, amortização e rendimentos.">
+    <meta name="keywords" content="calculadora financeira, hp12c, juros compostos, gráfico, amortização, tabela sac, tabela price, preço médio, cdb, lci, lca">
     <meta name="author" content="Anderson">
-    <title>Calculadoras Financeiras - Mercado Macro</title>
+    <title>Calculadoras Financeiras Avançadas - Mercado Macro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     
-    <link href="css/styles.css" rel="stylesheet"> <style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/imask"></script>
+
+    <style>
         :root {
             --primary-color: #00d180;
             --primary-light: #5bffb0;
@@ -44,25 +46,22 @@
             background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
             color: var(--text-color);
             min-height: 100vh; width: 100%;
-            overflow-x: hidden;
             line-height: 1.7;
             transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
             display: flex; flex-direction: column;
         }
-        body.body-modal-open { overflow: hidden; }
-        :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+        body.modal-open { overflow: hidden; }
         :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 
         .container {
-            flex: 1; max-width: 1200px; width: 100%;
+            flex: 1; max-width: 800px; width: 100%;
             margin: 0 auto; padding: 30px 20px;
             box-sizing: border-box; text-align: center;
             display: flex; flex-direction: column;
         }
         .logo { text-align: center; margin-bottom: 30px; }
         .page-title-header {
-            font-size: 44px; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
-            color: var(--text-color);
+            font-size: 2.5rem; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
             background: linear-gradient(120deg, var(--primary-light), var(--primary-color));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 8px; padding: 0 10px;
@@ -73,110 +72,236 @@
             margin: 0 auto; border-radius: 3px;
         }
         .subheader {
-            font-size: 16px; margin-bottom: 25px;
+            font-size: 1rem; margin-bottom: 25px;
             color: var(--text-secondary); font-weight: 600;
-            text-align: center;
+            text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;
         }
         
-        /* Estilos dos Botões Flutuantes (Atualizado) */
-        .floating-btn {
+        .calculator {
+            background: rgba(var(--card-bg-val), 0.5);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--primary-color);
+            box-shadow: 0 4px 12px var(--shadow-color-soft);
+            transition: all var(--transition-speed);
+            text-align: left;
+            overflow: hidden;
+        }
+        .calculator:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px var(--shadow-color-medium);
+        }
+        .calculator h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+        }
+
+        .input-group { margin-bottom: 16px; }
+        .input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 209, 128, 0.25);
+        }
+
+        .button-group { display: flex; gap: 16px; margin-top: 24px; }
+        .btn, .calculate-btn {
+            cursor: pointer; font-family: inherit; transition: all 0.3s ease;
+            padding: 14px 24px; border-radius: 8px; font-weight: 700;
+            font-size: 1rem; width: 100%; display: flex;
+            align-items: center; justify-content: center; gap: 8px;
+            border: none;
+        }
+        .calculate-btn {
+            background: var(--primary-color);
+            color: var(--dark-bg);
+            box-shadow: 0 2px 4px var(--shadow-color-soft);
+        }
+        .calculate-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow-color-medium);
+        }
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.2); }
+
+        .result {
+            margin-top: 24px; padding: 20px;
+            background: rgba(0, 209, 128, 0.1);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 8px;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .result h3 { margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
+        .result p { margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .result-value { font-weight: 700; color: var(--primary-color); font-size: 1.1rem; }
+
+        .operation-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px; padding: 16px;
+            margin-bottom: 16px; border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        .operation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .operation-number {
+            background-color: var(--primary-color); color: var(--dark-bg);
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; font-weight: bold; flex-shrink: 0;
+        }
+        .remove-operation {
+            background: none; border: none; color: var(--error-color); cursor: pointer;
+            font-size: 1.2rem; width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: all 0.15s ease;
+        }
+        .remove-operation:hover { background: rgba(255, 107, 107, 0.1); }
+        
+        .floating-buttons-container {
             position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+        }
+        .floating-btn {
+            position: relative;
             width: 50px;
             height: 50px;
             border-radius: 50%;
             background: rgba(var(--card-bg-val), 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-color);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color);
             cursor: pointer;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
             transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            overflow: hidden;
-            will-change: transform, background-color, box-shadow;
+            overflow: hidden; will-change: transform, background-color, box-shadow;
             -webkit-tap-highlight-color: transparent;
         }
         .floating-btn::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            left: -50%;
-            width: 200%;
-            height: 150%;
+            content: ''; position: absolute; top: -20%; left: -50%;
+            width: 200%; height: 150%;
             background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% );
-            transform: rotate(20deg);
-            transition: all 0.4s ease;
-            pointer-events: none;
+            transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none;
         }
         .floating-btn:hover {
             transform: translateY(-6px) scale(1.1);
             background: rgba(var(--card-bg-val), 0.6);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
-            color: #fff;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff;
         }
-        .floating-btn:hover::before {
-            transform: translate(20px, -10px) rotate(20deg) scale(1.1);
-            opacity: 0.8;
-        }
+        .floating-btn:hover::before { transform: translate(20px, -10px) rotate(20deg) scale(1.1); opacity: 0.8; }
         .floating-btn:active { transform: translateY(0) scale(1); }
         .floating-btn i { font-size: 18px; transition: color 0.3s ease; }
 
-        #refresh-btn { right: 20px; bottom: 20px; }
-        #home-btn { right: 80px; bottom: 20px; }
-        #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        #top-btn { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
         #top-btn.visible { opacity: 1; visibility: visible; }
-        .theme-toggle { left: 20px; bottom: 20px; }
+        .theme-toggle { position: fixed; left: 20px; bottom: 20px; }
         
+        .amortization-table-container {
+            margin-top: 16px;
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .amortization-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .amortization-table th, .amortization-table td { padding: 12px; text-align: right; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .amortization-table th { background-color: rgba(0,0,0,0.2); color: var(--primary-color); position: sticky; top: 0; z-index: 1; }
+        .amortization-table tr:last-child td { border-bottom: none; }
+        .amortization-table tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
+
+        #chart-container { margin-top: 24px; padding: 16px; height: auto; max-height: 400px; aspect-ratio: 16 / 10; }
+
+        .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
+
+        /* Estilos do Modal HP12C */
         .hp12c-btn {
             position: fixed; top: 20px; right: 20px; width: 45px; height: 45px;
             border-radius: 12px; background-color: #FF6B00; color: white;
             border: none; box-shadow: 0 5px 15px var(--shadow-color-soft);
-            cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; transition: all var(--transition-normal);
+            cursor: pointer; z-index: 1001; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; transition: all 0.3s ease;
         }
-        .hp12c-btn:hover { transform: scale(1.1); background-color: #E55E00;}
-        .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain;}
-
+        .hp12c-btn:hover { transform: scale(1.1); background-color: #E55E00; }
+        .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain; }
         .hp12c-modal {
-          display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-          background-color: rgba(10, 10, 42, 0.85); 
-          z-index: 2000; 
-          justify-content: center; align-items: center; backdrop-filter: blur(5px);
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(10, 10, 42, 0.85); z-index: 2000; 
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s;
+            padding: 20px; box-sizing: border-box;
+            overflow: auto; /* Permite rolar o modal inteiro se for maior que a tela */
+            text-align: center; /* Ajuda a centralizar o conteúdo */
+        }
+        .hp12c-modal:before { /* Truque para centralizar verticalmente com scroll */
+            content: '';
+            display: inline-block;
+            height: 100%;
+            vertical-align: middle;
+            margin-right: -0.25em;
         }
         .hp12c-modal-content {
-          background-color: var(--darker-bg); 
-          border-radius: 12px; 
-          overflow: hidden; width: 90%; max-width: 620px; height: 90%; max-height: 620px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-          animation: modalFadeIn var(--transition-speed);
-          border: 1px solid var(--border-color); 
-          display: flex; flex-direction: column;
+            background-color: var(--darker-bg); border-radius: 12px; 
+            overflow: visible; /* Mudado para não cortar a sombra */
+            width: auto;
+            height: auto;
+            display: inline-block; /* Permite centralização e tamanho automático */
+            vertical-align: middle;
+            text-align: left;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
+            border: 1px solid var(--border-color);
         }
         .hp12c-modal-header {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 15px; 
-          border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 15px; border-bottom: 1px solid var(--border-color);
         }
-        .hp12c-modal-title { font-weight: bold; color: var(--primary-color); font-size: 16px; }
+        .hp12c-modal-title { font-weight: bold; color: var(--primary-color); }
         .hp12c-close-btn {
-          border: none; background: rgba(255,255,255,0.1); font-size: 18px; cursor: pointer;
-          color: var(--text-secondary); transition: color var(--transition-speed);
-          width: 32px; height: 32px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center; line-height: 1;
+            border: none; background: rgba(255,255,255,0.1); font-size: 1.2rem; cursor: pointer;
+            color: var(--text-secondary); transition: all 0.15s ease;
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; line-height: 1;
         }
-        .hp12c-close-btn:hover { color: var(--primary-color); background: var(--primary-color); color: var(--dark-bg);}
-        .hp12c-iframe-container { width: 100%; flex-grow: 1; }
+        .hp12c-close-btn:hover { color: var(--dark-bg); background: var(--primary-color); }
+        .hp12c-iframe-container { 
+            width: 475px;
+            height: 290px;
+            overflow: hidden; /* Mantém o iframe sem scroll interno */
+            border-radius: 0 0 12px 12px; /* Arredonda cantos inferiores */
+        }
         .hp12c-iframe-container iframe { width: 100%; height: 100%; border: none; }
-        
-        .footer {
-            font-size: 13px; margin-top: 40px; text-align: center;
-            color: var(--text-secondary); padding: 20px 0;
-            border-top: 1px solid var(--border-color);
-        }
+
 
         body.light-mode {
             --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
@@ -187,67 +312,29 @@
             --border-color: rgba(200, 205, 210, 0.7);
             --error-color: #dc3545;
             --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
-            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
         }
         body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
-        
-        body.light-mode .floating-btn {
-            background: rgba(var(--card-bg-val), 0.6);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: var(--text-secondary);
-            box-shadow: 0 8px 20px var(--shadow-color-soft);
-        }
-        body.light-mode .floating-btn::before {
-            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 40%, rgba(255, 255, 255, 0) 80% );
-        }
-        body.light-mode .floating-btn:hover {
-            background: rgba(var(--card-bg-val), 0.85);
-            color: var(--primary-dark);
-        }
-        
-        body.light-mode .hp12c-modal-content { background-color: var(--dark-bg); border-color: var(--border-color); }
-        body.light-mode .hp12c-modal-header { border-bottom-color: var(--border-color); }
-        body.light-mode .hp12c-modal-title { color: var(--primary-color); }
-        body.light-mode .hp12c-close-btn { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
+        body.light-mode .calculator { background: white; border-color: var(--border-color); }
+        body.light-mode .input-group input, body.light-mode .input-group select { background: #f8f9fa; color: var(--text-color); border-color: #ced4da; }
+        body.light-mode .result { background: rgba(0, 123, 255, 0.08); }
+        body.light-mode .btn-secondary { background: #e9ecef; color: #495057; border-color: #ced4da; }
+        body.light-mode .btn-secondary:hover { background: #dce1e6; }
+        body.light-mode .amortization-table th { background-color: #e9ecef; }
+        body.light-mode .amortization-table tr:nth-child(even) { background-color: #f8f9fa; }
+        body.light-mode .floating-btn { background: rgba(var(--card-bg-val), 0.8); border: 1px solid rgba(0, 0, 0, 0.1); color: var(--text-secondary); box-shadow: 0 8px 20px var(--shadow-color-soft); }
+        body.light-mode .floating-btn::before { background: linear-gradient( 145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 40%, rgba(255, 255, 255, 0) 80% ); }
+        body.light-mode .floating-btn:hover { background: rgba(255,255,255,0.95); color: var(--primary-dark); }
+        body.light-mode .hp12c-modal-content { background-color: var(--dark-bg); }
+        body.light-mode .hp12c-close-btn { background-color: #e9ecef; color: #495057; }
         body.light-mode .hp12c-close-btn:hover { background: var(--primary-color); color: white; }
-
-        @media (min-width: 768px) { .page-title-header { font-size: 48px; } }
-        @media (max-width: 600px) {
-            .container { padding: 15px 12px; } 
-            .page-title-header { font-size: 34px; }
-            .logo { margin-bottom: 20px;}
-            .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; }
-            #refresh-btn { right: 15px; } 
-            #home-btn { right: 70px; } 
-            #top-btn { right: 125px; }
-            .theme-toggle { left: 15px; }
-            .hp12c-btn { width: 40px; height: 40px; top: 15px; right: 15px; border-radius: 10px; }
-            .hp12c-btn i { font-size: 16px;}
-            .calculator .button-group, .calculator .export-buttons { flex-direction: column; }
-        }
-        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes highlight { 0% { background-color: rgba(0, 255, 136, 0.15); } 100% { background-color: transparent; } }
-        .new-operation { animation: highlight 1.5s; }
+        .new-operation { animation: fadeIn 0.5s; }
 
-        .btn-clear {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-        .btn-clear:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-color);
-        }
-        body.light-mode .btn-clear {
-            background-color: rgba(0, 0, 0, 0.03);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-        body.light-mode .btn-clear:hover {
-            background-color: rgba(0, 0, 0, 0.06);
-            color: var(--text-color);
+        @media (max-width: 768px) {
+            .page-title-header { font-size: 2rem; }
+            .button-group { flex-direction: column; }
         }
     </style>
 </head>
@@ -255,7 +342,6 @@
     <button class="hp12c-btn" id="hp12cButton" title="Abrir Calculadora HP12C" aria-label="Abrir Calculadora HP12C">
         <img src="http://mercadomacro.github.io/hp12c_logo_orange_white.png" alt="Ícone HP 12C" class="hp12c-icon"/>
     </button>
-
     <div class="hp12c-modal" id="hp12cModal">
         <div class="hp12c-modal-content">
             <div class="hp12c-modal-header">
@@ -263,216 +349,445 @@
                 <button class="hp12c-close-btn" id="hp12cCloseBtn" aria-label="Fechar calculadora">&times;</button>
             </div>
             <div class="hp12c-iframe-container">
-                <iframe src="https://www.vichinsky.com.br/hp12c/hp12c.php" title="Calculadora HP12C Virtual"></iframe>
+                <iframe scrolling="no" src="https://www.vichinsky.com.br/hp12c/hp12c.php" title="Calculadora HP12C Virtual"></iframe>
             </div>
         </div>
     </div>
 
     <div class="container">
         <div class="logo">
-            <div class="page-title-header">Calculadoras Financeiras</div>
+            <div class="page-title-header">Calculadoras Avançadas</div>
             <div class="logo-divider"></div>
         </div>
-        <div class="subheader">Ferramentas Essenciais para Seus Cálculos</div>
+        <div class="subheader">Ferramentas Essenciais com Gráficos e Tabelas Detalhadas</div>
 
-        <div class="calculator" id="price-average-calc">
-            <h2><i class="fas fa-chart-line"></i> Calculadora de Preço Médio</h2>
-            <div class="operations-list" id="operations-container">
-                <div class="operation-card" id="operation1">
-                    <div class="operation-header">
-                        <div class="operation-number">1</div>
-                        <button class="remove-operation" aria-label="Remover operação"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="input-group">
-                        <label for="quantity1">Quantidade</label>
-                        <div class="input-field">
-                            <i class="fas fa-hashtag"></i>
-                            <input type="number" id="quantity1" placeholder="Ex: 100" step="any" min="0" required>
-                        </div>
-                        <div class="error-message" id="quantity-error1"></div>
-                    </div>
-                    <div class="input-group">
-                        <label for="price1">Preço Unitário (R$)</label>
-                        <div class="input-field">
-                            <i class="fas fa-dollar-sign"></i>
-                            <input type="number" id="price1" placeholder="Ex: 25.50" step="0.01" min="0" required>
-                        </div>
-                        <div class="error-message" id="price-error1"></div>
-                    </div>
-                </div>
+        <section class="calculator" id="price-average-calc" aria-labelledby="pm-title">
+            <h2 id="pm-title"><i class="fas fa-chart-line"></i> Preço Médio de Ativos</h2>
+            <div id="operations-container"></div>
+            <div class="button-group">
+                <button class="btn btn-secondary" id="add-operation"><i class="fas fa-plus"></i> Adicionar Operação</button>
+            </div>
+            <div class="input-group">
+                <label for="current-quantity">Posição Atual: Quantidade (Opcional)</label>
+                <input type="text" id="current-quantity" placeholder="Quantidade que você já possui">
+            </div>
+            <div class="input-group">
+                <label for="current-price">Posição Atual: Preço Médio (R$)</label>
+                <input type="text" id="current-price" placeholder="Seu preço médio atual">
             </div>
             <div class="button-group">
-                <button class="btn btn-secondary" id="add-operation">
-                    <i class="fas fa-plus"></i> Adicionar Operação
-                </button>
-                <button class="btn btn-clear" id="clear-average-calc">
-                    <i class="fas fa-eraser"></i> Limpar
-                </button>
+                <button class="calculate-btn" id="calculate-average"><i class="fas fa-calculator"></i> Calcular Preço Médio</button>
+                <button class="btn btn-secondary" id="clear-average-calc"><i class="fas fa-eraser"></i> Limpar</button>
             </div>
-            <div class="input-group">
-                <label for="current-quantity">Quantidade Atual (Opcional)</label>
-                <div class="input-field">
-                    <i class="fas fa-boxes"></i>
-                    <input type="number" id="current-quantity" placeholder="Quantidade que você já possui" step="any" min="0">
-                </div>
-            </div>
-            <div class="input-group">
-                <label for="current-price">Preço Médio Atual (R$ - Opcional)</label>
-                <div class="input-field">
-                    <i class="fas fa-dollar-sign"></i>
-                    <input type="number" id="current-price" placeholder="Seu preço médio atual" step="0.01" min="0">
-                </div>
-            </div>
-            <button class="calculate-btn" id="calculate-average">
-                <i class="fas fa-calculator"></i> Calcular Preço Médio
-            </button>
-            <div class="result" id="average-results" style="display: none;">
+            <div class="result" id="average-results" style="display: none;" aria-live="polite">
                 <h3><i class="fas fa-chart-pie"></i> Resultados</h3>
-                <p><span>Quantidade Total:</span> <span class="result-value" id="total-quantity">0</span></p>
-                <p><span>Investimento Total:</span> <span class="result-value" id="total-investment">R$ 0,00</span></p>
-                <p><span>Preço Médio:</span> <span class="result-value" id="average-price">R$ 0,00</span></p>
-                <button class="btn btn-secondary copy-btn" data-target="average-results">
-                    <i class="fas fa-copy"></i> Copiar Resultados
-                </button>
-                </div>
-        </div>
+                <p><span>Quantidade Total:</span> <span class="result-value" id="total-quantity"></span></p>
+                <p><span>Investimento Total:</span> <span class="result-value" id="total-investment"></span></p>
+                <p><span>Preço Médio Final:</span> <span class="result-value" id="average-price"></span></p>
+            </div>
+        </section>
 
-        <div class="calculator" id="amortizacao">
-            <h2><i class="fas fa-home"></i> Calculadora de Amortização</h2>
+        <section class="calculator" id="amortizacao-calc" aria-labelledby="amort-title">
+            <h2 id="amort-title"><i class="fas fa-home"></i> Amortização de Financiamento</h2>
             <div class="input-group">
                 <label for="loan-amount">Valor do Financiamento (R$):</label>
-                <input type="number" id="loan-amount" placeholder="Ex: 200000">
+                <input type="text" id="loan-amount" placeholder="Ex: R$ 200.000,00">
             </div>
             <div class="input-group">
                 <label for="loan-rate">Taxa de Juros (% ao ano):</label>
-                <input type="number" id="loan-rate" placeholder="Ex: 8.5" step="0.1">
+                <input type="text" id="loan-rate" placeholder="Ex: 8,50 %">
             </div>
             <div class="input-group">
                 <label for="loan-term">Prazo (anos):</label>
-                <input type="number" id="loan-term" placeholder="Ex: 30">
+                <input type="text" id="loan-term" placeholder="Ex: 30">
             </div>
             <div class="input-group">
-                <label for="loan-type">Sistema:</label>
+                <label for="loan-type">Sistema de Amortização:</label>
                 <select id="loan-type">
-                    <option value="price">PRICE (Parcelas Fixas)</option>
-                    <option value="sac">SAC (Amortização Constante)</option>
+                    <option value="price">Tabela PRICE (Parcelas Fixas)</option>
+                    <option value="sac">Tabela SAC (Amortização Constante)</option>
                 </select>
             </div>
             <div class="button-group">
-                <button class="calculate-btn" id="calculate-amortization">
-                    <i class="fas fa-calculator"></i> Calcular
-                </button>
-                 <button class="btn btn-clear" id="clear-amortization-calc">
-                    <i class="fas fa-eraser"></i> Limpar
-                </button>
+                <button class="calculate-btn" id="calculate-amortization"><i class="fas fa-calculator"></i> Calcular</button>
+                <button class="btn btn-secondary" id="clear-amortization-calc"><i class="fas fa-eraser"></i> Limpar</button>
             </div>
-            <div class="result" id="amortization-result" style="display: none;">
+            <div class="result" id="amortization-result" style="display: none;" aria-live="polite">
                 <h3><i class="fas fa-coins"></i> Resultado</h3>
-                <p><span>Valor da Parcela:</span> <span class="result-value" id="monthly-payment"></span></p>
-                <p><span>Total de Juros:</span> <span class="result-value" id="total-loan-interest"></span></p>
-                <p><span>Total Pago:</span> <span class="result-value" id="total-paid"></span></p>
-                <button class="btn btn-secondary copy-btn" data-target="amortization-result">
-                    <i class="fas fa-copy"></i> Copiar Resultados
-                </button>
-                </div>
-        </div>
-
-        <div class="calculator" id="cdb">
-            <h2><i class="fas fa-file-invoice-dollar"></i> Rendimento CDB/LCI/LCA</h2>
+                <p><span>Valor da 1ª Parcela:</span> <span class="result-value" id="monthly-payment"></span></p>
+                <p><span>Total de Juros Pagos:</span> <span class="result-value" id="total-loan-interest"></span></p>
+                <p><span>Valor Total Pago:</span> <span class="result-value" id="total-paid"></span></p>
+                <button class="btn btn-secondary" id="show-amortization-table" style="margin-top: 16px; width: 100%; display: none;"><i class="fas fa-table"></i> Exibir Tabela de Amortização</button>
+                <div class="amortization-table-container" id="amortization-table-container" style="display: none;"></div>
+            </div>
+        </section>
+        
+        <section class="calculator" id="cdb-calc" aria-labelledby="cdb-title">
+            <h2 id="cdb-title"><i class="fas fa-file-invoice-dollar"></i> Rendimento de Renda Fixa</h2>
             <div class="input-group">
                 <label for="cdb-amount">Valor Investido (R$):</label>
-                <input type="number" id="cdb-amount" placeholder="Ex: 10000">
+                <input type="text" id="cdb-amount" placeholder="Ex: R$ 10.000,00">
             </div>
             <div class="input-group">
-                <label for="cdb-rate">Taxa do CDB (% ao ano):</label>
-                <input type="number" id="cdb-rate" placeholder="Ex: 12.5" step="0.1">
+                <label for="cdb-rate">Taxa do Ativo (% do CDI ou prefixado):</label>
+                <input type="text" id="cdb-rate" placeholder="Ex: 110 %">
             </div>
             <div class="input-group">
-                <label for="cdb-days">Prazo (dias):</label>
-                <input type="number" id="cdb-days" placeholder="Ex: 365">
+                <label for="cdb-days">Prazo do Investimento (dias):</label>
+                <input type="text" id="cdb-days" placeholder="Ex: 365">
             </div>
             <div class="input-group">
                 <label for="cdb-type">Tipo de Investimento:</label>
                 <select id="cdb-type">
-                    <option value="cdb">CDB (Tributado)</option>
-                    <option value="lci">LCI (Isento IR)</option>
-                    <option value="lca">LCA (Isento IR)</option>
+                    <option value="cdb">CDB / Outro (com IR)</option>
+                    <option value="lci-lca">LCI / LCA (Isento IR)</option>
                 </select>
             </div>
             <div class="button-group">
-                <button class="calculate-btn" id="calculate-cdb">
-                    <i class="fas fa-calculator"></i> Calcular
-                </button>
-                <button class="btn btn-clear" id="clear-cdb-calc">
-                    <i class="fas fa-eraser"></i> Limpar
-                </button>
+                <button class="calculate-btn" id="calculate-cdb"><i class="fas fa-calculator"></i> Calcular</button>
+                <button class="btn btn-secondary" id="clear-cdb-calc"><i class="fas fa-eraser"></i> Limpar</button>
             </div>
-            <div class="result" id="cdb-result" style="display: none;">
-                <h3><i class="fas fa-coins"></i> Resultado</h3>
+            <div class="result" id="cdb-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-chart-pie"></i> Resultado do Investimento</h3>
                 <p><span>Rendimento Bruto:</span> <span class="result-value" id="cdb-gross"></span></p>
-                <p><span>Imposto de Renda:</span> <span class="result-value" id="cdb-tax"></span></p>
+                <p><span>Imposto de Renda (IR):</span> <span class="result-value" id="cdb-tax"></span></p>
                 <p><span>Rendimento Líquido:</span> <span class="result-value" id="cdb-net"></span></p>
-                <p><span>Valor Final:</span> <span class="result-value" id="cdb-final"></span></p>
-                <button class="btn btn-secondary copy-btn" data-target="cdb-result">
-                    <i class="fas fa-copy"></i> Copiar Resultados
-                </button>
-                </div>
-        </div>
+                <p><span>Valor Final Líquido:</span> <span class="result-value" id="cdb-final"></span></p>
+            </div>
+        </section>
 
-        <div class="calculator" id="juros-compostos">
-            <h2><i class="fas fa-chart-line"></i> Juros Compostos</h2>
+        <section class="calculator" id="juros-compostos-calc" aria-labelledby="jc-title">
+            <h2 id="jc-title"><i class="fas fa-chart-area"></i> Juros Compostos com Gráfico</h2>
             <div class="input-group">
                 <label for="principal">Valor Inicial (R$):</label>
-                <input type="number" id="principal" placeholder="Ex: 1000">
+                <input type="text" id="principal" placeholder="Ex: R$ 1.000,00">
             </div>
             <div class="input-group">
                 <label for="monthly">Aporte Mensal (R$):</label>
-                <input type="number" id="monthly" placeholder="Ex: 200">
+                <input type="text" id="monthly" placeholder="Ex: R$ 200,00">
             </div>
             <div class="input-group">
                 <label for="rate">Taxa de Juros (% ao ano):</label>
-                <input type="number" id="rate" placeholder="Ex: 8.5" step="0.1">
+                <input type="text" id="rate" placeholder="Ex: 8,50 %">
             </div>
             <div class="input-group">
                 <label for="time">Período (anos):</label>
-                <input type="number" id="time" placeholder="Ex: 10">
+                <input type="text" id="time" placeholder="Ex: 10">
             </div>
             <div class="button-group">
-                <button class="calculate-btn" id="calculate-compound">
-                    <i class="fas fa-calculator"></i> Calcular
-                </button>
-                 <button class="btn btn-clear" id="clear-compound-calc">
-                    <i class="fas fa-eraser"></i> Limpar
-                </button>
+                <button class="calculate-btn" id="calculate-compound"><i class="fas fa-calculator"></i> Calcular</button>
+                <button class="btn btn-secondary" id="clear-compound-calc"><i class="fas fa-eraser"></i> Limpar</button>
             </div>
-            <div class="result" id="compound-result" style="display: none;">
-                <h3><i class="fas fa-coins"></i> Resultado</h3>
-                <p><span>Valor Investido:</span> <span class="result-value" id="total-invested"></span></p>
-                <p><span>Juros Acumulados:</span> <span class="result-value" id="total-interest"></span></p>
-                <p><span>Valor Final:</span> <span class="result-value" id="final-amount"></span></p>
-                <button class="btn btn-secondary copy-btn" data-target="compound-result">
-                    <i class="fas fa-copy"></i> Copiar Resultados
-                </button>
-                </div>
-        </div>
+            <div class="result" id="compound-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-coins"></i> Resultado Final</h3>
+                <p><span>Total Investido (Aportes):</span> <span class="result-value" id="total-invested"></span></p>
+                <p><span>Total em Juros:</span> <span class="result-value" id="total-interest"></span></p>
+                <p><span>Valor Final Acumulado:</span> <span class="result-value" id="final-amount"></span></p>
+                <div id="chart-container"><canvas id="compound-chart"></canvas></div>
+            </div>
+        </section>
+
         <div class="footer" id="footer">© 2025 Mercado Macro</div>
     </div>
 
-    <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados">
-        <i class="fas fa-redo"></i>
-    </button>
-    <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial">
-        <i class="fas fa-home"></i>
-    </button>
-    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
-        <i class="fas fa-moon"></i>
-    </button>
+    <div class="floating-buttons-container">
+        <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo"><i class="fas fa-arrow-up"></i></button>
+        <button id="home-btn" class="floating-btn" aria-label="Voltar para página inicial"><i class="fas fa-home"></i></button>
+        <button id="refresh-btn" class="floating-btn" aria-label="Limpar e recarregar a página"><i class="fas fa-redo"></i></button>
+    </div>
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
 
-    <div id="toast" class="toast" aria-live="polite"></div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let compoundChartInstance = null;
+        const masks = {};
+        const lsKey = 'financialCalculatorsData_v4';
 
-    <script src="js/script.js"></script>
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const formatNumber = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(value);
+        const getMaskedValue = (id) => masks[id] ? parseFloat(masks[id].unmaskedValue) || 0 : parseFloat(document.getElementById(id)?.value.replace(/\./g, '').replace(',', '.')) || 0;
+
+        const handleCalculation = (button, calculationLogic) => {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Calculando...`;
+            button.disabled = true;
+            setTimeout(() => {
+                calculationLogic();
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+                saveInputsToLocalStorage();
+            }, 250);
+        };
+        
+        const clearCalculator = (calcId) => {
+            const calcElement = document.getElementById(calcId);
+            if (!calcElement) return;
+            calcElement.querySelectorAll('input, select').forEach(el => {
+                if (masks[el.id]) masks[el.id].value = '';
+                else if(el.tagName === 'SELECT') el.selectedIndex = 0;
+                else el.value = '';
+            });
+            const resultEl = calcElement.querySelector('.result');
+            if (resultEl) resultEl.style.display = 'none';
+            if(calcId === 'juros-compostos-calc' && compoundChartInstance) { compoundChartInstance.destroy(); compoundChartInstance = null; }
+            if(calcId === 'amortizacao-calc') {
+                const tableContainer = document.getElementById('amortization-table-container');
+                if(tableContainer) tableContainer.innerHTML = '';
+            }
+            saveInputsToLocalStorage();
+        };
+
+        const initMasks = () => {
+            const moneyOptions = { mask: 'R$ num', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',', mapToRadix: ['.'] }}};
+            const percentOptions = { mask: 'num %', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',' }}};
+            const numberOptions = { mask: Number, scale: 0, thousandsSeparator: '.' };
+            const anyNumberOptions = { mask: Number, scale: 4, thousandsSeparator: '.', radix: ',' };
+            const elementsToMask = [
+                { id: 'current-price', options: moneyOptions }, { id: 'loan-amount', options: moneyOptions },
+                { id: 'principal', options: moneyOptions }, { id: 'monthly', options: moneyOptions },
+                { id: 'cdb-amount', options: moneyOptions },
+                { id: 'loan-rate', options: percentOptions }, { id: 'rate', options: percentOptions },
+                { id: 'cdb-rate', options: percentOptions },
+                { id: 'loan-term', options: numberOptions }, { id: 'time', options: numberOptions },
+                { id: 'cdb-days', options: numberOptions },
+                { id: 'current-quantity', options: anyNumberOptions }
+            ];
+            elementsToMask.forEach(({id, options}) => {
+                const element = document.getElementById(id);
+                if (element) masks[id] = IMask(element, options);
+            });
+        };
+
+        const setupPriceAverageCalculator = () => {
+            const container = document.getElementById('operations-container');
+            if (!container) return;
+            const addOperation = () => {
+                const opCount = Date.now();
+                const div = document.createElement('div');
+                div.className = 'operation-card new-operation';
+                div.innerHTML = `<div class="operation-header"><div class="operation-number"></div><button class="remove-operation" aria-label="Remover operação"><i class="fas fa-times"></i></button></div><div class="input-group"><label>Quantidade</label><input type="text" id="op_q_${opCount}" class="op-quantity" placeholder="Ex: 100"></div><div class="input-group"><label>Preço Unitário (R$)</label><input type="text" id="op_p_${opCount}" class="op-price" placeholder="Ex: R$ 25,50"></div>`;
+                container.appendChild(div);
+                masks[`op_q_${opCount}`] = IMask(div.querySelector('.op-quantity'), { mask: Number, scale: 4, thousandsSeparator: '.', radix: ',' });
+                masks[`op_p_${opCount}`] = IMask(div.querySelector('.op-price'), { mask: 'R$ num', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',', mapToRadix: ['.'] }}});
+                div.querySelector('.remove-operation').addEventListener('click', () => removeOperation(div));
+                updateOperationNumbers();
+            };
+            const removeOperation = (element) => {
+                if (container.children.length > 1) {
+                    element.querySelectorAll('input').forEach(input => { if (masks[input.id]) { masks[input.id].destroy(); delete masks[input.id]; }});
+                    element.remove();
+                    updateOperationNumbers();
+                }
+            };
+            const updateOperationNumbers = () => Array.from(container.children).forEach((card, i) => card.querySelector('.operation-number').textContent = i + 1);
+            const calculateAverage = () => {
+                let totalQuantity = getMaskedValue('current-quantity');
+                let totalInvestment = totalQuantity * getMaskedValue('current-price');
+                document.querySelectorAll('.op-quantity').forEach(qInput => {
+                    const pInput = qInput.closest('.operation-card').querySelector('.op-price');
+                    const quantity = getMaskedValue(qInput.id);
+                    const price = getMaskedValue(pInput.id);
+                    if (quantity > 0 && price > 0) {
+                        totalQuantity += quantity;
+                        totalInvestment += quantity * price;
+                    }
+                });
+                const averagePrice = totalQuantity > 0 ? totalInvestment / totalQuantity : 0;
+                document.getElementById('total-quantity').textContent = formatNumber(totalQuantity);
+                document.getElementById('total-investment').textContent = formatCurrency(totalInvestment);
+                document.getElementById('average-price').textContent = formatCurrency(averagePrice);
+                document.getElementById('average-results').style.display = 'block';
+            };
+            document.getElementById('add-operation').addEventListener('click', addOperation);
+            document.getElementById('calculate-average').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateAverage));
+            document.getElementById('clear-average-calc').addEventListener('click', () => {
+                 const opContainer = document.getElementById('operations-container');
+                 opContainer.innerHTML = '';
+                 clearCalculator('price-average-calc');
+                 addOperation();
+            });
+            addOperation();
+        };
+
+        const setupAmortizationCalculator = () => {
+            const calcEl = document.getElementById('amortizacao-calc');
+            if(!calcEl) return;
+            const calculateAmortization = () => {
+                const amount = getMaskedValue('loan-amount'), annualRate = getMaskedValue('loan-rate') / 100, years = getMaskedValue('loan-term');
+                if (amount <= 0 || annualRate <= 0 || years <= 0) return;
+                const months = years * 12, monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
+                let firstInstallment = 0, totalInterest = 0, balance = amount;
+                const type = document.getElementById('loan-type').value;
+                if (type === 'price') {
+                    firstInstallment = amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+                    totalInterest = (firstInstallment * months) - amount;
+                } else {
+                    const amortization = amount / months;
+                    for (let i = 0; i < months; i++) {
+                        const interestPayment = balance * monthlyRate;
+                        totalInterest += interestPayment;
+                        if (i === 0) firstInstallment = amortization + interestPayment;
+                        balance -= amortization;
+                    }
+                }
+                document.getElementById('monthly-payment').textContent = formatCurrency(firstInstallment || 0);
+                document.getElementById('total-loan-interest').textContent = formatCurrency(totalInterest);
+                document.getElementById('total-paid').textContent = formatCurrency(amount + totalInterest);
+                document.getElementById('amortization-result').style.display = 'block';
+                document.getElementById('show-amortization-table').style.display = 'block';
+            };
+            document.getElementById('show-amortization-table').addEventListener('click', () => {
+                 generateAmortizationTable();
+                 const container = document.getElementById('amortization-table-container');
+                 container.style.display = 'block';
+                 container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+            document.getElementById('calculate-amortization').addEventListener('click', (e) => {
+                document.getElementById('amortization-table-container').style.display = 'none';
+                handleCalculation(e.currentTarget, calculateAmortization);
+            });
+            document.getElementById('clear-amortization-calc').addEventListener('click', () => clearCalculator('amortizacao-calc'));
+        };
+        const generateAmortizationTable = () => {
+            const amount = getMaskedValue('loan-amount'), annualRate = getMaskedValue('loan-rate')/100, years = getMaskedValue('loan-term'), type = document.getElementById('loan-type').value, months = years * 12;
+            if(amount <= 0 || annualRate <= 0 || years <= 0) return;
+            const monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
+            let balance = amount, tableHTML = `<table class="amortization-table"><thead><tr><th>Mês</th><th>Parcela</th><th>Juros</th><th>Amort.</th><th>Saldo Devedor</th></tr></thead><tbody>`;
+            const priceInstallment = type === 'price' ? amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1) : 0;
+            const sacAmortization = type === 'sac' ? amount / months : 0;
+            for (let i = 1; i <= months; i++) {
+                const interest = balance * monthlyRate;
+                const amortization = type === 'price' ? priceInstallment - interest : sacAmortization;
+                const installment = type === 'price' ? priceInstallment : amortization + interest;
+                balance -= amortization;
+                if (balance < 0.01) balance = 0;
+                tableHTML += `<tr><td>${i}</td><td>${formatCurrency(installment)}</td><td>${formatCurrency(interest)}</td><td>${formatCurrency(amortization)}</td><td>${formatCurrency(balance)}</td></tr>`;
+            }
+            tableHTML += `</tbody></table>`;
+            document.getElementById('amortization-table-container').innerHTML = tableHTML;
+        };
+
+        const setupCdbCalculator = () => {
+            const calcEl = document.getElementById('cdb-calc');
+            if(!calcEl) return;
+            const calculateCDB = () => {
+                const amount=getMaskedValue('cdb-amount'), rate=getMaskedValue('cdb-rate')/100, days=getMaskedValue('cdb-days'), type=document.getElementById('cdb-type').value;
+                if(amount <= 0 || rate <= 0 || days <= 0) return;
+                const dailyRate = Math.pow(1 + rate, 1/252) - 1;
+                const grossEarnings = amount * (Math.pow(1 + dailyRate, days) - 1);
+                let taxRate = 0;
+                if (type === 'cdb') {
+                    if (days <= 180) taxRate = 0.225; else if (days <= 360) taxRate = 0.20;
+                    else if (days <= 720) taxRate = 0.175; else taxRate = 0.15;
+                }
+                const tax = grossEarnings * taxRate, netEarnings = grossEarnings - tax, netValue = amount + netEarnings;
+                document.getElementById('cdb-gross').textContent = formatCurrency(grossEarnings);
+                document.getElementById('cdb-tax').textContent = formatCurrency(tax);
+                document.getElementById('cdb-net').textContent = formatCurrency(netEarnings);
+                document.getElementById('cdb-final').textContent = formatCurrency(netValue);
+                document.getElementById('cdb-result').style.display = 'block';
+            };
+            document.getElementById('calculate-cdb').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCDB));
+            document.getElementById('clear-cdb-calc').addEventListener('click', () => clearCalculator('cdb-calc'));
+        };
+
+        const setupCompoundInterestCalculator = () => {
+            const calcEl = document.getElementById('juros-compostos-calc');
+            if(!calcEl) return;
+            const calculateCompoundInterest = () => {
+                const principal=getMaskedValue('principal'), monthly=getMaskedValue('monthly'), annualRate=getMaskedValue('rate')/100, years=getMaskedValue('time');
+                if ((principal < 0 && monthly <= 0) || annualRate <= 0 || years <= 0) return;
+                const dataPoints=[], monthlyRate = Math.pow(1 + annualRate, 1/12)-1, months=years*12;
+                let currentAmount=principal, totalInvested=principal;
+                for (let i=1; i<=months; i++) {
+                    currentAmount*=(1+monthlyRate);
+                    currentAmount+=monthly;
+                    totalInvested+=monthly;
+                    if (i%12===0 || i===months) dataPoints.push({ year: Math.ceil(i/12), totalInvested: totalInvested, interest: currentAmount - totalInvested });
+                }
+                document.getElementById('total-invested').textContent = formatCurrency(totalInvested);
+                document.getElementById('total-interest').textContent = formatCurrency(currentAmount - totalInvested);
+                document.getElementById('final-amount').textContent = formatCurrency(currentAmount);
+                document.getElementById('compound-result').style.display = 'block';
+                renderCompoundChart(dataPoints);
+            };
+            document.getElementById('calculate-compound').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCompoundInterest));
+            document.getElementById('clear-compound-calc').addEventListener('click', () => clearCalculator('juros-compostos-calc'));
+        };
+        const renderCompoundChart = (data) => {
+            const ctx = document.getElementById('compound-chart').getContext('2d');
+            if (compoundChartInstance) compoundChartInstance.destroy();
+            const labels = data.map(d=>`Ano ${d.year}`), isDarkMode=!document.body.classList.contains('light-mode'), gridColor=isDarkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)', labelColor=isDarkMode?'#c9d1d9':'#333';
+            compoundChartInstance = new Chart(ctx, {
+                type:'bar', data: { labels: labels, datasets: [ { label: 'Total Investido', data: data.map(d=>d.totalInvested), backgroundColor: isDarkMode ? '#007aff' : '#0056b3' }, { label: 'Juros', data: data.map(d=>d.interest), backgroundColor: '#00d180' } ]},
+                options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { labels: { color: labelColor }}}, scales: { x: { stacked:true, ticks:{color:labelColor}, grid:{color:gridColor} }, y: { stacked:true, ticks:{color:labelColor, callback:(v) => `R$${(v/1000).toFixed(0)}k`}, grid:{color:gridColor} } } }
+            });
+        };
+        
+        const setupHP12CModal = () => {
+            const modal = document.getElementById('hp12cModal');
+            const openBtn = document.getElementById('hp12cButton');
+            const closeBtn = document.getElementById('hp12cCloseBtn');
+            if(!modal || !openBtn || !closeBtn) return;
+            const openModal = () => { modal.style.display = 'block'; document.body.classList.add('modal-open'); };
+            const closeModal = () => { modal.style.display = 'none'; document.body.classList.remove('modal-open'); };
+            openBtn.addEventListener('click', openModal);
+            closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+            document.addEventListener('keydown', (e) => { if(e.key === "Escape" && modal.style.display === 'block') closeModal(); });
+        };
+        
+        const saveInputsToLocalStorage = () => {
+            const data = {};
+            document.querySelectorAll('input[type="text"], select').forEach(el => { if(el.id) data[el.id] = el.value; });
+            localStorage.setItem(lsKey, JSON.stringify(data));
+        };
+        const loadInputsFromLocalStorage = () => {
+            const data = JSON.parse(localStorage.getItem(lsKey));
+            if(!data) return;
+            Object.keys(data).forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.value = data[id]; if(masks[id]) masks[id].updateValue(); }
+            });
+        };
+
+        const init = () => {
+            setupHP12CModal();
+            initMasks();
+            setupPriceAverageCalculator();
+            setupAmortizationCalculator();
+            setupCdbCalculator();
+            setupCompoundInterestCalculator();
+            loadInputsFromLocalStorage();
+            document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', saveInputsToLocalStorage));
+            const backToTopButton = document.getElementById('top-btn');
+            window.addEventListener('scroll', () => backToTopButton.classList.toggle('visible', window.scrollY > 300));
+            backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+            document.getElementById('refresh-btn').addEventListener('click', () => { localStorage.removeItem(lsKey); window.location.reload(); });
+            document.getElementById('home-btn').addEventListener('click', () => window.location.href = 'index.html');
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = themeToggle.querySelector('i');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const applyTheme = (light) => {
+                document.body.classList.toggle('light-mode', light);
+                themeIcon.className = light ? 'fas fa-sun' : 'fas fa-moon';
+                localStorage.setItem('themePreference', light ? 'light' : 'dark');
+                if (compoundChartInstance) {
+                    const gridColor = !light ? 'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'; const labelColor = !light ? '#c9d1d9' : '#333';
+                    compoundChartInstance.options.plugins.legend.labels.color = labelColor;
+                    compoundChartInstance.options.scales.x.ticks.color = labelColor;
+                    compoundChartInstance.options.scales.y.ticks.color = labelColor;
+                    compoundChartInstance.options.scales.x.grid.color = gridColor;
+                    compoundChartInstance.options.scales.y.grid.color = gridColor;
+                    compoundChartInstance.data.datasets[0].backgroundColor = light ? '#0056b3' : '#007aff';
+                    compoundChartInstance.update('none');
+                }
+            };
+            themeToggle.addEventListener('click', () => applyTheme(!document.body.classList.contains('light-mode')));
+            applyTheme(localStorage.getItem('themePreference') === 'light' || (localStorage.getItem('themePreference') === null && !prefersDark));
+        };
+        init();
+    });
+    </script>
 </body>
 </html>
