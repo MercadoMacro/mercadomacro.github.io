@@ -204,7 +204,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color);
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 20px var(--shadow-color-soft);
             transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
             overflow: hidden; will-change: transform, background-color, box-shadow;
             -webkit-tap-highlight-color: transparent;
@@ -256,31 +256,24 @@
         .hp12c-btn:hover { transform: scale(1.1); background-color: #E55E00; }
         .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain; }
         .hp12c-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; /* MODIFICADO: Inicia oculto, JS muda para 'flex' */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(10, 10, 42, 0.85); z-index: 2000; 
             backdrop-filter: blur(5px);
             animation: fadeIn 0.3s;
             padding: 20px; box-sizing: border-box;
-            overflow: auto; /* Permite rolar o modal inteiro se for maior que a tela */
-            text-align: center; /* Ajuda a centralizar o conteúdo */
-        }
-        .hp12c-modal:before { /* Truque para centralizar verticalmente com scroll */
-            content: '';
-            display: inline-block;
-            height: 100%;
-            vertical-align: middle;
-            margin-right: -0.25em;
+            overflow-y: auto; /* Permite rolar verticalmente se o conteúdo for maior */
+            
+            /* MODIFICADO: Centralização com Flexbox */
+            justify-content: center;
+            align-items: center;
         }
         .hp12c-modal-content {
             background-color: var(--darker-bg); border-radius: 12px; 
-            overflow: visible; /* Mudado para não cortar a sombra */
-            width: auto;
-            height: auto;
-            display: inline-block; /* Permite centralização e tamanho automático */
-            vertical-align: middle;
-            text-align: left;
+            width: auto; height: auto;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
             border: 1px solid var(--border-color);
+            flex-shrink: 0; /* Previne que o modal encolha */
         }
         .hp12c-modal-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -295,10 +288,10 @@
         }
         .hp12c-close-btn:hover { color: var(--dark-bg); background: var(--primary-color); }
         .hp12c-iframe-container { 
-            width: 475px;
-            height: 290px;
-            overflow: hidden; /* Mantém o iframe sem scroll interno */
-            border-radius: 0 0 12px 12px; /* Arredonda cantos inferiores */
+            width: 465px;
+            height: 295px;
+            overflow: hidden;
+            border-radius: 0 0 12px 12px;
         }
         .hp12c-iframe-container iframe { width: 100%; height: 100%; border: none; }
 
@@ -358,6 +351,12 @@
             .container {
                 padding-left: 10px;
                 padding-right: 10px;
+            }
+            /* CORREÇÃO: Alinha modal da HP12C no topo em telas pequenas */
+            .hp12c-modal {
+                align-items: flex-start; /* Alinha o conteúdo no topo */
+                padding-top: 30px;
+                padding-bottom: 30px;
             }
         }
     </style>
@@ -753,12 +752,20 @@
             const openBtn = document.getElementById('hp12cButton');
             const closeBtn = document.getElementById('hp12cCloseBtn');
             if(!modal || !openBtn || !closeBtn) return;
-            const openModal = () => { modal.style.display = 'block'; document.body.classList.add('modal-open'); };
-            const closeModal = () => { modal.style.display = 'none'; document.body.classList.remove('modal-open'); };
+            
+            const openModal = () => { 
+                modal.style.display = 'flex'; // MODIFICADO: Usa flex para ativar
+                document.body.classList.add('modal-open'); 
+            };
+            const closeModal = () => { 
+                modal.style.display = 'none'; 
+                document.body.classList.remove('modal-open'); 
+            };
+            
             openBtn.addEventListener('click', openModal);
             closeBtn.addEventListener('click', closeModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-            document.addEventListener('keydown', (e) => { if(e.key === "Escape" && modal.style.display === 'block') closeModal(); });
+            document.addEventListener('keydown', (e) => { if(e.key === "Escape" && modal.style.display === 'flex') closeModal(); }); // MODIFICADO: checa por 'flex'
         };
         
         const saveInputsToLocalStorage = () => {
