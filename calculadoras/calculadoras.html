@@ -9,7 +9,7 @@
       gtag('config', 'G-5JZRK5NNKG');
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0">
     <meta name="description" content="Calculadoras financeiras completas com gráficos, tabelas detalhadas e salvamento automático. Calcule preço médio, juros compostos, amortização e rendimentos.">
     <meta name="keywords" content="calculadora financeira, hp12c, juros compostos, gráfico, amortização, tabela sac, tabela price, preço médio, cdb, lci, lca">
     <meta name="author" content="Anderson">
@@ -333,8 +333,32 @@
         .new-operation { animation: fadeIn 0.5s; }
 
         @media (max-width: 768px) {
-            .page-title-header { font-size: 2rem; }
             .button-group { flex-direction: column; }
+            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; } 
+            .logo { text-align: center; } 
+            .page-title-header { font-size: 24px; } 
+            .logo-divider { margin: 5px auto; } 
+            .banner { max-width: 100%; margin-left: 0; text-align: center; font-size: 13px; } 
+            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; } 
+            .content-box { max-height: 420px; } 
+            .content-box.expanded { max-height: 65vh; } 
+            .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
+            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
+            .settings-panel.visible { transform: translateY(0) scale(1); } 
+        }
+
+        /* ======================================================= */
+        /* REGRAS PARA CELULAR (COM A CORREÇÃO FINAL)              */
+        /* ======================================================= */
+        @media (max-width: 600px) { 
+            body {
+                zoom: 0.8;
+                touch-action: manipulation;
+            }
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
         }
     </style>
 </head>
