@@ -247,16 +247,24 @@
                         O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.
                     </div>
                 </article>
-                <article class="indicator-card" id="card-poupanca">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div>
                         <div class="indicator-name">POUPANÇA</div>
                         <div class="indicator-value" id="poupanca-month-value">Carregando...</div>
                         <div class="indicator-description">Rendimento no Mês</div>
+                        <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div>
+                        <div class="indicator-description">Rendimento Anualizado</div>
+                        <div class="sparkline-chart" id="poupanca-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>Como funciona a Poupança?</strong>
-                        A poupança rende 0,5% ao mês + TR quando a SELIC está acima de 8,5% a.a. Abaixo disso, rende 70% da SELIC + TR. É isenta de IR para pessoas físicas.
+                        <p style="text-align: left; margin: 0; font-size: 12px;">A remuneração é composta pela <strong>Taxa Referencial (TR)</strong> mais uma remuneração adicional, que depende da SELIC:</p>
+                        <ul style="text-align: left; padding-left: 18px; margin-top: 5px; margin-bottom: 5px; font-size: 12px;">
+                            <li>Se a SELIC for <strong>maior que 8,5%</strong> ao ano: <br><strong>0,5% ao mês</strong> + TR.</li>
+                            <li style="margin-top:5px;">Se a SELIC for <strong>menor ou igual a 8,5%</strong> ao ano: <br><strong>70% da SELIC</strong> + TR.</li>
+                        </ul>
+                        <p style="text-align: left; margin: 0; font-size: 12px;">Esta regra (Lei 12.703/2012) é válida para depósitos feitos a partir de 04/05/2012. O rendimento é isento de Imposto de Renda para pessoas físicas.</p>
                     </div>
                 </article>
                 <article class="indicator-card" id="card-desemprego">
@@ -310,6 +318,7 @@
                 igpdiMonth: '#igp-di-month-value',
                 igpdi12m: '#igp-di-12m-value',
                 poupancaMonth: '#poupanca-month-value',
+                poupancaAnnualized: '#poupanca-annualized-value',
                 desemprego: '#desemprego-value',
             },
             apiCodes: {
@@ -398,7 +407,7 @@
                         }
                     });
                     // Limpa gráficos antigos ao carregar novos dados
-                    const chartSelectors = ['#ipca-chart-container', '#inpc-chart-container', '#igpm-chart-container', '#igpdi-chart-container', '#dolar-chart-container', '#euro-chart-container', '#cdi-chart-container', '#selic-chart-container'];
+                    const chartSelectors = ['#ipca-chart-container', '#inpc-chart-container', '#igpm-chart-container', '#igpdi-chart-container', '#dolar-chart-container', '#euro-chart-container', '#cdi-chart-container', '#selic-chart-container', '#poupanca-chart-container'];
                     chartSelectors.forEach(sel => {
                         const chartElement = document.querySelector(sel);
                         if(chartElement) chartElement.innerHTML = '';
@@ -457,6 +466,7 @@
                 uiController.setLoadingState(true);
                 
                 const { apiCodes } = config;
+
                 const promises = {
                     cds: apiService.getCDSData(),
                     dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
@@ -469,7 +479,7 @@
                     inpc: apiService.getBCBData(apiCodes.inpc, 12),
                     igpm: apiService.getBCBData(apiCodes.igpm, 12),
                     igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
-                    poupanca: apiService.getBCBData(apiCodes.poupanca, 1),
+                    poupanca: apiService.getBCBDataByDateRange(apiCodes.poupanca, 365),
                     desemprego: apiService.getBCBData(apiCodes.desemprego, 1)
                 };
 
@@ -508,9 +518,7 @@
                 this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m, '#igpdi-chart-container', 'IGP-DI Mensal');
                 
                 // Outros
-                const poupancaValue = data.poupanca.status === 'fulfilled' ? `${parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2)}%` : errorText;
-                uiController.updateText(selectors.poupancaMonth, poupancaValue);
-
+                this.processPoupanca(data.poupanca);
                 const desempregoValue = data.desemprego.status === 'fulfilled' ? `${parseFloat(data.desemprego.value?.[0]?.valor).toFixed(2)}%` : errorText;
                 uiController.updateText(selectors.desemprego, desempregoValue);
             },
@@ -564,6 +572,30 @@
                     uiController.createSparklineChart('#selic-chart-container', data, 'Meta Selic', '%', 'dd/mm');
                 } else {
                     uiController.updateText(config.selectors.selicMeta, config.errorText);
+                }
+            },
+
+            processPoupanca(promiseResult) {
+                const { selectors, errorText } = config;
+                if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    const data = promiseResult.value;
+                    const lastMonthRate = parseFloat(data[data.length - 1].valor);
+                    
+                    // Exibe o rendimento mensal
+                    const monthValue = `${lastMonthRate.toFixed(2)}%`;
+                    uiController.updateText(selectors.poupancaMonth, monthValue);
+
+                    // Calcula e exibe o rendimento anualizado
+                    const annualizedRate = (Math.pow(1 + (lastMonthRate / 100), 12) - 1) * 100;
+                    const annualizedValue = `${annualizedRate.toFixed(2)}%`;
+                    uiController.updateText(selectors.poupancaAnnualized, annualizedValue);
+                    
+                    // Cria o gráfico com o histórico
+                    uiController.createSparklineChart('#poupanca-chart-container', data, 'Poupança Mensal', '%', 'mm/yyyy');
+
+                } else {
+                    uiController.updateText(selectors.poupancaMonth, errorText);
+                    uiController.updateText(selectors.poupancaAnnualized, errorText);
                 }
             },
             
