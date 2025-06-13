@@ -1,16 +1,39 @@
- **🗞️ Semana de 2 a 6 de Junho de 2025 – Crise fiscal no centro, tensão no ar**
+ **🗞️ Semana de 2 a 6 de Junho de 2025 **
+*Mercado sob Pressão: Haddad, IOF e a Tempestade Fiscal na Sombra da Guerra
+Depois de uma semana marcada por volatilidade geopolítica e tensão fiscal, o mercado brasileiro navegou por águas agitadas — e Brasília foi o centro do furacão. Em meio a embates sobre o IOF, ruídos entre Congresso e Planalto, e um Oriente Médio à beira da guerra, o Ibovespa ficou sem bússola, os criptoativos perderam força e os investidores buscaram proteção.
+🟠 Segunda-feira (09/06) – Um começo em compasso de espera
+Com a agenda dominada por rumores de mudanças fiscais, o Ibovespa caiu ⬇️ 0,30%, aos 135.699 pontos. Apesar do otimismo global com a reaproximação comercial entre EUA e China, o mercado local respirava apreensão com o novo pacote de Haddad, que envolvia o fim de isenções para LCIs e LCAs.
+🟢Bitcoin ⬆️ 2,07%
+🟢Ethereum ⬆️ 2,00%
+🟢Brent ⬆️ 0,86%
+🔴PETR3 ⬇️ 1,05%
 
-Era para ser uma semana técnica, com foco nos dados econômicos e no payroll americano. Mas o que se viu foi um verdadeiro jogo político-fiscal no Brasil, que ofuscou até o otimismo global. O Ibovespa, que começou a semana tentando se firmar, terminou com queda acumulada de 0,67%, num enredo dominado por Brasília.
+🟢 Terça-feira (10/06) – Inflação dá trégua e bolsa responde
+A leitura abaixo do esperado do IPCA (0,26%) trouxe alívio e reacendeu a esperança de manutenção da Selic. O Ibovespa subiu ⬆️ 0,54%. O petróleo recuou, mas isso não impediu a valorização de PETR3 ⬆️ 3,65% e VALE3 ⬆️ 0,68%.
+🟢Ibovespa: 136.436 pts ⬆️
+🔴Brent: US$ 66,87 ⬇️
+🟢Bitcoin: US$ 109.318 ⬆️
+🟢Ethereum: US$ 2.756 ⬆️ 6,67%
 
-*🟢 **Segunda-feira** começou morna. Com a guerra comercial esquentando entre EUA e China, o mercado brasileiro resistiu. Vale e Petrobras sustentaram o índice, enquanto o dólar recuava. As criptos? Andaram de lado. Um dia que mais disse "espera" do que "ação".
+🟢 Quarta-feira (11/06) – Otimismo com China, petróleo dispara
+A trégua comercial entre EUA e China sustentou o apetite por risco. E com o petróleo Brent subindo ⬆️ 4,34%, a Petrobras brilhou: PETR4 ⬆️ 3,33%. Mas a tensão sobre o IOF continuava. O Ibovespa fechou em alta ⬆️ 0,51%.
 
-*🔴 **Terça-feira**, o clima esquentou com as falas de Fernando Haddad sobre alternativas ao aumento do IOF. O Ibovespa subiu, mas carregou nas costas o peso da desconfiança: a Vale e a Petrobras recuaram, afetadas por revisões de rating. A tensão fiscal já rondava os bastidores — e os preços dos ativos mostravam isso.
+🟢WTI: US$ 68,15 ⬆️ 4,88%
+🔴VALE3: ⬇️ 0,88%
+🔴Dólar: R$ 5,5376 ⬇️ 0,59%
 
-*🟠 **Quarta-feira**, o investidor brasileiro percebeu que o jogo era mais complicado. Rumores sobre o “pacotão do petróleo” derrubaram a Petrobras, e o mercado não digeriu bem as incertezas sobre arrecadação. O dólar subiu, o petróleo caiu, e o Ibovespa cedeu. Em Wall Street, o pano de fundo era a tensão comercial renovada, com Trump e Xi voltando à cena com discursos duros.
+🟠 Quinta-feira (12/06) – MP do IOF agita Brasília, mercado em alerta
+Com a publicação da nova Medida Provisória que altera regras de tributação, incluindo cripto e apostas, o clima azedou. A Petrobras ignorou o recuo do petróleo e subiu forte: PETR3 ⬆️ 2,76%. Mas o Ibovespa oscilou. À tarde, retomou fôlego e subiu ⬆️ 0,49%.
+🔴Brent: US$ 69,36 ⬇️ 0,59%
+🔴Bitcoin: US$ 107.544 ⬇️ 1,13%
+🔴Ethereum: US$ 2.733 ⬇️ 2,98%
 
-*🔴 **Quinta-feira** foi marcada pela cautela. Mesmo com a manutenção da nota de crédito do Brasil pela S\&P, o Ibovespa caiu. O mercado não se convenceu de que isso bastava. Faltavam ações concretas em Brasília, e os investidores já olhavam para o payroll nos EUA. Os criptoativos devolveram ganhos e mostraram que a aversão ao risco aumentava.
+🔴 Sexta-feira (13/06) – Oriente Médio em chamas e aversão a risco
+O ataque de Israel ao Irã e a retaliação com drones trouxeram pânico aos mercados. O Ibovespa perdeu força, ainda sustentado por PETR3 ⬆️ 2,34%, mas fechou a semana com viés de baixa. Dólar em leve alta e criptos sangrando.
+🔴Stoxx 600: ⬇️ 0,89%
+🟢PETR3: ⬆️ 2,34%
+🔴Dow Jones: ⬇️ 1,09%
+🔴Bitcoin: ⬇️ 1,13%
 
-*🟢 **Sexta-feira**, o mundo respirou com o payroll, a economia dos Estados Unidos criou em maio bem menos empregos do que em abril, mas acima do esperado por analistas.. Wall Street comemorou. Mas o Brasil... seguiu em marcha lenta. Apesar da valorização da Petrobras e da queda do dólar, o Ibovespa fechou em leve baixa. Tudo por conta do peso fiscal e da curva de juros pressionada. O clima? De expectativa pelo domingo, quando Haddad deve apresentar seu novo plano de arrecadação ao Congresso.
-
-📌 **Resumo da Semana**:
-Enquanto o mundo se animava com números e diplomacia, o Brasil patinava entre promessas e desconfiança. O fiscal se impôs como tema central, e os investidores deram seu recado: sem solução concreta, não há alívio. O domingo virou o novo "superquarta" — é de Brasília que virá o próximo gatilho.
+📌 Resumo da Semana
+A semana foi guiada por incertezas: o impasse em torno do IOF e os riscos fiscais minaram a confiança do investidor local, enquanto o conflito Israel-Irã elevou a tensão global. Mesmo com sinais de trégua comercial entre EUA e China, o pano de fundo foi dominado por política, petróleo e geopolítica. No Brasil, os olhos se voltam agora para o Congresso, que deve reagir à MP do IOF — e isso pode ditar o humor do mercado nos próximos dias.
