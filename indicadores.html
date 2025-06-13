@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <meta name="description" content="Indicadores atualizados do mercado financeiro, incluindo CDS Risco-País, CDI, SELIC, Dólar, Euro e inflação.">
-    <meta name="keywords" content="indicadores financeiros, cds, risco-país, cdi, selic, ipca, igpm, igp-di, poupança, dolar, euro, ptax, api bcb">
+    <meta name="keywords" content="indicadores financeiros, cds, risco-país, cdi, selic, ipca, igpm, igp-di, poupança, dolar, euro, ptax, api bcb, inpc">
     <meta name="author" content="Anderson">
     <meta property="og:title" content="Indicadores de Mercado Financeiro - Mercado Macro">
     <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro em tempo real">
@@ -163,7 +163,7 @@
                         A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-ipca">
+                 <article class="indicator-card indicator-card--multi-value" id="card-ipca">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
                         <div class="indicator-name">IPCA</div>
@@ -174,7 +174,21 @@
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o IPCA?</strong>
-                        O IPCA é o principal indicador de inflação do Brasil. Mede a variação de preços de um conjunto de produtos e serviços para o consumidor final.
+                        O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.
+                    </div>
+                </article>
+                <article class="indicator-card indicator-card--multi-value" id="card-inpc">
+                    <div class="indicator-front">
+                        <div class="indicator-icon"><i class="fas fa-wallet"></i></div>
+                        <div class="indicator-name">INPC</div>
+                        <div class="indicator-value" id="inpc-month-value">Carregando...</div>
+                        <div class="indicator-description">Mês</div>
+                        <div class="indicator-value" id="inpc-12m-value">Carregando...</div>
+                        <div class="indicator-description">12 Meses</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>O que é o INPC?</strong>
+                        O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.
                     </div>
                 </article>
                 <article class="indicator-card indicator-card--multi-value" id="card-igp-m">
@@ -217,6 +231,18 @@
                         A poupança rende 0,5% ao mês + TR quando a SELIC está acima de 8,5% a.a. Abaixo disso, rende 70% da SELIC + TR. É isenta de IR para pessoas físicas.
                     </div>
                 </article>
+                <article class="indicator-card" id="card-desemprego">
+                  <div class="indicator-front">
+                    <div class="indicator-icon"><i class="fas fa-user-times"></i></div>
+                    <div class="indicator-name">DESEMPREGO</div>
+                    <div class="indicator-value" id="desemprego-value">Carregando...</div>
+                    <div class="indicator-description">Taxa de Desocupação</div>
+                  </div>
+                  <div class="indicator-back">
+                    <strong>O que é a Taxa de Desemprego?</strong>
+                    Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.
+                  </div>
+                </article>
             </div>
         </main>
         
@@ -234,8 +260,6 @@
         // --- 1. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
-            // URL de um proxy CORS mais estável para buscar o dado do CDS.
-            // O encodeURIComponent é usado para garantir que a URL de destino seja passada corretamente.
             cdsApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
             errorText: 'Erro',
             loadingText: 'Carregando...',
@@ -253,16 +277,20 @@
                 selicMeta: '#selic-meta-value',
                 ipcaMonth: '#ipca-month-value',
                 ipca12m: '#ipca-12m-value',
+                inpcMonth: '#inpc-month-value', // Adicionado
+                inpc12m: '#inpc-12m-value',   // Adicionado
                 igpmMonth: '#igp-m-month-value',
                 igpm12m: '#igp-m-12m-value',
                 igpdiMonth: '#igp-di-month-value',
                 igpdi12m: '#igp-di-12m-value',
                 poupancaMonth: '#poupanca-month-value',
+                desemprego: '#desemprego-value',
             },
             apiCodes: {
                 dolarBuy: 1, dolarSell: 10813, euroBuy: 21619,
-                euroSell: 21620, cdi: 12, selic: 11, selicMeta: 432, ipca: 433,
-                igpm: 189, igpdi: 190, poupanca: 195
+                euroSell: 21620, cdi: 12, selic: 11, selicMeta: 432, 
+                ipca: 433, inpc: 188, igpm: 189, igpdi: 190, 
+                poupanca: 195, desemprego: 24369
             }
         };
 
@@ -281,17 +309,13 @@
             },
             async getCDSData() {
                 try {
-                    // ATENÇÃO: A busca do CDS depende de um proxy e do HTML do Investing.com,
-                    // que pode mudar a qualquer momento e quebrar a busca do valor.
                     const response = await fetch(config.cdsApiUrl);
                     if (!response.ok) throw new Error(`CDS API Error: ${response.statusText}`);
                     const htmlContent = await response.text();
-                    
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlContent, 'text/html');
                     const cdsValueElement = doc.querySelector('[data-test="instrument-price-last"]');
                     if (!cdsValueElement) throw new Error('Elemento do valor do CDS não encontrado no HTML.');
-                    
                     return parseFloat(cdsValueElement.textContent.replace(',', '.')).toFixed(2);
                 } catch (error) {
                     console.error("Erro ao buscar CDS:", error.message);
@@ -302,17 +326,18 @@
 
         // --- 3. UI CONTROLLER ---
         const uiController = {
-            updateText(selector, text) {
+            updateText(selector, text, unit = '') {
                 const element = document.querySelector(selector);
                 if (element) {
-                    element.textContent = text ?? config.errorText;
+                    const value = text ?? config.errorText;
+                    element.textContent = value === config.errorText ? value : `${value}${unit}`;
                 }
             },
             updateDateTime() {
                 const now = new Date();
                 const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
                 this.updateText(config.selectors.updateTime, `Atualizado em ${now.toLocaleDateString('pt-BR', options)}`);
-                this.updateText(config.selectors.footer, `Fontes: Banco Central, Investing.com • © ${now.getFullYear()} Mercado Macro`);
+                this.updateText(config.selectors.footer, `Fontes: BCB, Investing.com • © ${now.getFullYear()} Mercado Macro`);
             },
             setLoadingState(isLoading) {
                 if (isLoading) {
@@ -342,9 +367,11 @@
                     selicOver: apiService.getBCBData(apiCodes.selic, 1),
                     selicMeta: apiService.getBCBData(apiCodes.selicMeta, 1),
                     ipca: apiService.getBCBData(apiCodes.ipca, 12),
+                    inpc: apiService.getBCBData(apiCodes.inpc, 12), // Modificado para buscar 12 meses
                     igpm: apiService.getBCBData(apiCodes.igpm, 12),
                     igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
-                    poupanca: apiService.getBCBData(apiCodes.poupanca, 1)
+                    poupanca: apiService.getBCBData(apiCodes.poupanca, 1),
+                    desemprego: apiService.getBCBData(apiCodes.desemprego, 1)
                 };
 
                 const results = await Promise.allSettled(Object.values(promises));
@@ -375,34 +402,35 @@
                 if (data.cdi.status === 'fulfilled' && data.cdi.value?.[0]) {
                     const dailyRateRaw = parseFloat(data.cdi.value[0].valor);
                     const annualRate = (Math.pow(1 + (dailyRateRaw / 100), 252) - 1) * 100;
-                    uiController.updateText(selectors.cdiDaily, `${dailyRateRaw.toFixed(4)}%`);
-                    uiController.updateText(selectors.cdiAnnual, `${annualRate.toFixed(2)}%`);
+                    uiController.updateText(selectors.cdiDaily, dailyRateRaw.toFixed(4), '%');
+                    uiController.updateText(selectors.cdiAnnual, annualRate.toFixed(2), '%');
                 } else {
                     uiController.updateText(selectors.cdiDaily, errorText);
                     uiController.updateText(selectors.cdiAnnual, errorText);
                 }
 
-                const selicOverValue = data.selicOver.status === 'fulfilled' ? `${parseFloat(data.selicOver.value?.[0]?.valor).toFixed(2)}%` : errorText;
-                uiController.updateText(selectors.selicOver, selicOverValue);
-                const selicMetaValue = data.selicMeta.status === 'fulfilled' ? `${parseFloat(data.selicMeta.value?.[0]?.valor).toFixed(2)}% a.a.` : errorText;
-                uiController.updateText(selectors.selicMeta, selicMetaValue);
+                uiController.updateText(selectors.selicOver, data.selicOver.status === 'fulfilled' ? parseFloat(data.selicOver.value?.[0]?.valor).toFixed(2) : errorText, '%');
+                uiController.updateText(selectors.selicMeta, data.selicMeta.status === 'fulfilled' ? `${parseFloat(data.selicMeta.value?.[0]?.valor).toFixed(2)}% a.a.` : errorText);
 
+                // Processa todos os índices de inflação da mesma forma
                 this.processInflationIndex(data.ipca, selectors.ipcaMonth, selectors.ipca12m);
+                this.processInflationIndex(data.inpc, selectors.inpcMonth, selectors.inpc12m); // Adicionado
                 this.processInflationIndex(data.igpm, selectors.igpmMonth, selectors.igpm12m);
                 this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m);
                 
-                const poupancaValue = data.poupanca.status === 'fulfilled' ? `${parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2)}%` : errorText;
-                uiController.updateText(selectors.poupancaMonth, poupancaValue);
+                uiController.updateText(selectors.poupancaMonth, data.poupanca.status === 'fulfilled' ? parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2) : errorText, '%');
+                uiController.updateText(selectors.desemprego, data.desemprego.status === 'fulfilled' ? parseFloat(data.desemprego.value?.[0]?.valor).toFixed(2) : errorText, '%');
             },
             
             processInflationIndex(promiseResult, monthElemSelector, yearElemSelector) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value;
                     const monthValue = parseFloat(data[data.length - 1].valor).toFixed(2);
+                    // Cálculo do acumulado em 12 meses
                     const yearValue = data.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
                     const accumulated = ((yearValue - 1) * 100).toFixed(2);
-                    uiController.updateText(monthElemSelector, `${monthValue}%`);
-                    uiController.updateText(yearElemSelector, `${accumulated}%`);
+                    uiController.updateText(monthElemSelector, monthValue, '%');
+                    uiController.updateText(yearElemSelector, accumulated, '%');
                 } else {
                     uiController.updateText(monthElemSelector, config.errorText);
                     uiController.updateText(yearElemSelector, config.errorText);
@@ -460,7 +488,7 @@
                 });
             }
         };
-        
+
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
