@@ -22,6 +22,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <style>
         :root { 
             --primary-color: #00d180; --primary-light: #5bffb0; --primary-dark: #009e53;
@@ -42,6 +43,7 @@
         main { flex: 1; display: flex; flex-direction: column; width: 100%; }
         .indicators-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; padding: 8px 0 15px; width: 100%; flex-grow: 1; }
         .indicator-card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 12px var(--shadow-color-soft); padding: 0; flex: 1 1 280px; max-width: calc(25% - 15px); text-align: center; transition: all 0.3s ease; border: 1px solid var(--border-color); min-height: 190px; display: flex; flex-direction: column; justify-content: center; position: relative; transform-style: preserve-3d; overflow: hidden; perspective: 1000px; cursor: pointer; }
+        .indicator-card--with-chart { min-height: 260px; max-width: calc(33.33% - 15px); }
         .indicator-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 8px 20px var(--shadow-color-medium); }
         .up-trend { color: var(--up-trend); }
         .down-trend { color: var(--down-trend); }
@@ -56,10 +58,11 @@
         .indicator-description { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; line-height: 1.3; }
         .indicator-card--multi-value .indicator-front { padding: 10px 12px; }
         .indicator-card--multi-value .indicator-value { font-size: 15px; }
+        .sparkline-chart { min-height: 80px; margin: 8px 0; }
         .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
         .floating-btn { position: fixed; width: 50px; height: 50px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); overflow: hidden; will-change: transform, background-color, box-shadow; }
         .floating-btn::before { content: ''; position: absolute; top: -20%; left: -50%; width: 200%; height: 150%; background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% ); transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none; }
-        .floating-btn:hover { transform: translateY(-6px) scale(1.1); background: rgba(var(--card-bg-val), 0.6); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff; }
+        .floating-btn:hover { transform: translateY(-6px) scale(1.01); background: rgba(var(--card-bg-val), 0.6); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff; }
         .floating-btn:hover::before { transform: translate(20px, -10px) rotate(20deg) scale(1.1); opacity: 0.8; }
         .floating-btn i { font-size: 18px; transition: color 0.3s ease; }
         #back-btn { right: 20px; bottom: 20px; }
@@ -78,10 +81,31 @@
         body.light-mode .floating-btn:hover { background: rgba(255, 255, 255, 0.85); color: var(--primary-dark); }
         body.light-mode .profile-btn { background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0, 0, 0, 0.1); color: var(--primary-color); }
         body.light-mode .profile-btn:hover { background-color: var(--primary-color); color: white; }
-        @media (max-width: 1200px) { .indicator-card { max-width: calc(33.33% - 15px); } }
-        @media (max-width: 768px) { .indicator-card { max-width: calc(50% - 15px); } .page-title-header { font-size: 38px; } }
-        @media (max-width: 600px) { .indicator-card { max-width: 100%; } .container { padding: 15px 12px; } .page-title-header { font-size: 34px; } .floating-btn, .profile-btn { width: 45px; height: 45px; } #back-btn { right: 15px; } #refresh-btn { right: 70px; } #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } .theme-toggle { left: 15px; } .profile-btn { top: 15px; right: 15px; } }
-        @supports(padding: max(0px)) { .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); } .profile-btn { top: max(15px, env(safe-area-inset-top)); right: max(15px, env(safe-area-inset-right)); } }
+        @media (max-width: 1200px) { 
+            .indicator-card { max-width: calc(33.33% - 15px); } 
+            .indicator-card--with-chart { max-width: calc(50% - 15px); }
+        }
+        @media (max-width: 768px) { 
+            .indicator-card { max-width: calc(50% - 15px); } 
+            .indicator-card--with-chart { max-width: calc(50% - 15px); }
+            .page-title-header { font-size: 38px; } 
+        }
+        @media (max-width: 600px) { 
+            .indicator-card { max-width: 100%; } 
+            .indicator-card--with-chart { max-width: 100%; }
+            .container { padding: 15px 12px; } 
+            .page-title-header { font-size: 34px; } 
+            .floating-btn, .profile-btn { width: 45px; height: 45px; } 
+            #back-btn { right: 15px; } 
+            #refresh-btn { right: 70px; } 
+            #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } 
+            .theme-toggle { left: 15px; } 
+            .profile-btn { top: 15px; right: 15px; } 
+        }
+        @supports(padding: max(0px)) { 
+            .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); } 
+            .profile-btn { top: max(15px, env(safe-area-inset-top)); right: max(15px, env(safe-area-inset-right)); } 
+        }
     </style>
 </head>
 <body>
@@ -107,7 +131,7 @@
                         O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-dolar">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
                         <div class="indicator-name">DÓLAR</div>
@@ -115,13 +139,14 @@
                         <div class="indicator-description">Compra</div>
                         <div class="indicator-value" id="dolar-sell-value">Carregando...</div>
                         <div class="indicator-description">Venda</div>
+                        <div class="sparkline-chart" id="dolar-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é a PTAX?</strong>
                         A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-euro">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div>
                         <div class="indicator-name">EURO</div>
@@ -129,41 +154,40 @@
                         <div class="indicator-description">Compra</div>
                         <div class="indicator-value" id="euro-sell-value">Carregando...</div>
                         <div class="indicator-description">Venda</div>
+                        <div class="sparkline-chart" id="euro-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>Cotação do Euro</strong>
                         A cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro, com base nas negociações do mercado.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-cdi">
+                <article class="indicator-card indicator-card--with-chart" id="card-cdi">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
                         <div class="indicator-name">CDI</div>
-                        <div class="indicator-value" id="cdi-daily-value">Carregando...</div>
-                        <div class="indicator-description">Taxa Diária</div>
                         <div class="indicator-value" id="cdi-annual-value">Carregando...</div>
                         <div class="indicator-description">Taxa Anual (a.a.)</div>
+                        <div class="sparkline-chart" id="cdi-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o CDI?</strong>
                         É a taxa de juros dos empréstimos entre bancos. Serve de referência para a maioria dos investimentos de renda fixa. A taxa anual é uma projeção baseada na composição da taxa diária.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-selic">
+                <article class="indicator-card indicator-card--with-chart" id="card-selic">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-percentage"></i></div>
                         <div class="indicator-name">SELIC</div>
-                        <div class="indicator-value" id="selic-over-value">Carregando...</div>
-                        <div class="indicator-description">Over (Diária)</div>
                         <div class="indicator-value" id="selic-meta-value">Carregando...</div>
                         <div class="indicator-description">Meta ao Ano</div>
+                        <div class="sparkline-chart" id="selic-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é a SELIC?</strong>
                         A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.
                     </div>
                 </article>
-                 <article class="indicator-card indicator-card--multi-value" id="card-ipca">
+                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
                         <div class="indicator-name">IPCA</div>
@@ -171,13 +195,14 @@
                         <div class="indicator-description">Mês</div>
                         <div class="indicator-value" id="ipca-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
+                        <div class="sparkline-chart" id="ipca-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o IPCA?</strong>
                         O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-inpc">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-wallet"></i></div>
                         <div class="indicator-name">INPC</div>
@@ -185,13 +210,14 @@
                         <div class="indicator-description">Mês</div>
                         <div class="indicator-value" id="inpc-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
+                        <div class="sparkline-chart" id="inpc-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o INPC?</strong>
                         O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-igp-m">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
                         <div class="indicator-name">IGP-M</div>
@@ -199,13 +225,14 @@
                         <div class="indicator-description">Mês</div>
                         <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
+                        <div class="sparkline-chart" id="igpm-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o IGP-M?</strong>
                         O IGP-M é um importante indicador de inflação, conhecido como a "inflação do aluguel" por ser muito usado para reajustar contratos de locação.
                     </div>
                 </article>
-                <article class="indicator-card indicator-card--multi-value" id="card-igp-di">
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di">
                     <div class="indicator-front">
                         <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
                         <div class="indicator-name">IGP-DI</div>
@@ -213,6 +240,7 @@
                         <div class="indicator-description">Mês</div>
                         <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
+                        <div class="sparkline-chart" id="igpdi-chart-container"></div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o IGP-DI?</strong>
@@ -246,7 +274,7 @@
             </div>
         </main>
         
-        <footer class="footer" id="footer">Fonte: API do Banco Central do Brasil • © 2024 Mercado Macro</footer>
+        <footer class="footer" id="footer">Fonte: API do Banco Central do Brasil • © 2025 Mercado Macro</footer>
     </div>
 
     <a href="api.html" class="profile-btn floating-btn" aria-label="Análise de Perfil do Investidor"> <i class="fas fa-user-tie"></i></a>
@@ -271,14 +299,12 @@
                 dolarSell: '#dolar-sell-value',
                 euroBuy: '#euro-buy-value',
                 euroSell: '#euro-sell-value',
-                cdiDaily: '#cdi-daily-value',
                 cdiAnnual: '#cdi-annual-value',
-                selicOver: '#selic-over-value',
                 selicMeta: '#selic-meta-value',
                 ipcaMonth: '#ipca-month-value',
                 ipca12m: '#ipca-12m-value',
-                inpcMonth: '#inpc-month-value', // Adicionado
-                inpc12m: '#inpc-12m-value',   // Adicionado
+                inpcMonth: '#inpc-month-value',
+                inpc12m: '#inpc-12m-value',
                 igpmMonth: '#igp-m-month-value',
                 igpm12m: '#igp-m-12m-value',
                 igpdiMonth: '#igp-di-month-value',
@@ -288,7 +314,7 @@
             },
             apiCodes: {
                 dolarBuy: 1, dolarSell: 10813, euroBuy: 21619,
-                euroSell: 21620, cdi: 12, selic: 11, selicMeta: 432, 
+                euroSell: 21620, cdi: 12, selicMeta: 432, 
                 ipca: 433, inpc: 188, igpm: 189, igpdi: 190, 
                 poupanca: 195, desemprego: 24369
             }
@@ -298,6 +324,29 @@
         const apiService = {
             async getBCBData(seriesId, days = 1) {
                 const url = `${config.apiBaseUrl}${seriesId}/dados/ultimos/${days}?formato=json`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error(error.message);
+                    throw error;
+                }
+            },
+            async getBCBDataByDateRange(seriesId, days) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - days);
+
+                const formatDate = (date) => {
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                };
+
+                const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`;
+                
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`);
@@ -330,7 +379,8 @@
                 const element = document.querySelector(selector);
                 if (element) {
                     const value = text ?? config.errorText;
-                    element.textContent = value === config.errorText ? value : `${value}${unit}`;
+                    const formattedText = String(value).replace('.', ',');
+                    element.textContent = value === config.errorText ? value : `${unit}${formattedText}`;
                 }
             },
             updateDateTime() {
@@ -347,6 +397,56 @@
                            this.updateText(selector, config.loadingText);
                         }
                     });
+                    // Limpa gráficos antigos ao carregar novos dados
+                    const chartSelectors = ['#ipca-chart-container', '#inpc-chart-container', '#igpm-chart-container', '#igpdi-chart-container', '#dolar-chart-container', '#euro-chart-container', '#cdi-chart-container', '#selic-chart-container'];
+                    chartSelectors.forEach(sel => {
+                        const chartElement = document.querySelector(sel);
+                        if(chartElement) chartElement.innerHTML = '';
+                    });
+                }
+            },
+            createSparklineChart(selector, seriesData, name = 'Valor Mensal', tooltipUnit = '%', dateFormat = 'mm/yyyy') {
+                const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+                const options = {
+                    series: [{
+                        name: name,
+                        data: seriesData.map(item => parseFloat(item.valor))
+                    }],
+                    chart: {
+                        type: 'area',
+                        height: 80,
+                        sparkline: { enabled: true },
+                        animations: { enabled: true, speed: 800 }
+                    },
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: { opacity: 0.3 },
+                    colors: [primaryColor],
+                    tooltip: {
+                        theme: 'dark',
+                        style: { fontSize: '12px', fontFamily: 'Montserrat' },
+                        x: {
+                            formatter: (val, opts) => {
+                                const dateParts = seriesData[opts.dataPointIndex].data.split('/');
+                                return dateFormat === 'dd/mm' ? `${dateParts[0]}/${dateParts[1]}` : `${dateParts[1]}/${dateParts[2]}`;
+                            }
+                        },
+                        y: {
+                            formatter: (value) => {
+                                const formattedValue = value.toFixed(2).replace('.', ',');
+                                return tooltipUnit === 'R$' ? `${tooltipUnit} ${formattedValue}` : `${formattedValue}${tooltipUnit}`;
+                            },
+                            title: {
+                                formatter: () => ''
+                            }
+                        },
+                        marker: { show: false }
+                    }
+                };
+                
+                const chartElement = document.querySelector(selector);
+                if(chartElement){
+                    const chart = new ApexCharts(chartElement, options);
+                    chart.render();
                 }
             }
         };
@@ -360,14 +460,13 @@
                 const promises = {
                     cds: apiService.getCDSData(),
                     dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
-                    dolarSell: apiService.getBCBData(apiCodes.dolarSell, 1),
+                    dolarSell: apiService.getBCBDataByDateRange(apiCodes.dolarSell, 60),
                     euroBuy: apiService.getBCBData(apiCodes.euroBuy, 1),
-                    euroSell: apiService.getBCBData(apiCodes.euroSell, 1),
-                    cdi: apiService.getBCBData(apiCodes.cdi, 1),
-                    selicOver: apiService.getBCBData(apiCodes.selic, 1),
-                    selicMeta: apiService.getBCBData(apiCodes.selicMeta, 1),
+                    euroSell: apiService.getBCBDataByDateRange(apiCodes.euroSell, 60),
+                    cdi: apiService.getBCBDataByDateRange(apiCodes.cdi, 365),
+                    selicMeta: apiService.getBCBDataByDateRange(apiCodes.selicMeta, 365),
                     ipca: apiService.getBCBData(apiCodes.ipca, 12),
-                    inpc: apiService.getBCBData(apiCodes.inpc, 12), // Modificado para buscar 12 meses
+                    inpc: apiService.getBCBData(apiCodes.inpc, 12),
                     igpm: apiService.getBCBData(apiCodes.igpm, 12),
                     igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
                     poupanca: apiService.getBCBData(apiCodes.poupanca, 1),
@@ -387,53 +486,84 @@
             processResults(data) {
                 const { selectors, errorText } = config;
                 
-                const riscoValue = data.cds.status === 'fulfilled' ? data.cds.value : errorText;
-                uiController.updateText(selectors.riskValue, riscoValue);
-
-                const dolarBuyValue = data.dolarBuy.status === 'fulfilled' ? `R$ ${parseFloat(data.dolarBuy.value?.[0]?.valor).toFixed(4)}` : errorText;
-                uiController.updateText(selectors.dolarBuy, dolarBuyValue);
-                const dolarSellValue = data.dolarSell.status === 'fulfilled' ? `R$ ${parseFloat(data.dolarSell.value?.[0]?.valor).toFixed(4)}` : errorText;
-                uiController.updateText(selectors.dolarSell, dolarSellValue);
-                const euroBuyValue = data.euroBuy.status === 'fulfilled' ? `R$ ${parseFloat(data.euroBuy.value?.[0]?.valor).toFixed(4)}` : errorText;
-                uiController.updateText(selectors.euroBuy, euroBuyValue);
-                const euroSellValue = data.euroSell.status === 'fulfilled' ? `R$ ${parseFloat(data.euroSell.value?.[0]?.valor).toFixed(4)}` : errorText;
-                uiController.updateText(selectors.euroSell, euroSellValue);
+                uiController.updateText(selectors.riskValue, data.cds.status === 'fulfilled' ? data.cds.value : errorText);
                 
-                if (data.cdi.status === 'fulfilled' && data.cdi.value?.[0]) {
-                    const dailyRateRaw = parseFloat(data.cdi.value[0].valor);
-                    const annualRate = (Math.pow(1 + (dailyRateRaw / 100), 252) - 1) * 100;
-                    uiController.updateText(selectors.cdiDaily, dailyRateRaw.toFixed(4), '%');
-                    uiController.updateText(selectors.cdiAnnual, annualRate.toFixed(2), '%');
-                } else {
-                    uiController.updateText(selectors.cdiDaily, errorText);
-                    uiController.updateText(selectors.cdiAnnual, errorText);
-                }
-
-                uiController.updateText(selectors.selicOver, data.selicOver.status === 'fulfilled' ? parseFloat(data.selicOver.value?.[0]?.valor).toFixed(2) : errorText, '%');
-                uiController.updateText(selectors.selicMeta, data.selicMeta.status === 'fulfilled' ? `${parseFloat(data.selicMeta.value?.[0]?.valor).toFixed(2)}% a.a.` : errorText);
-
-                // Processa todos os índices de inflação da mesma forma
-                this.processInflationIndex(data.ipca, selectors.ipcaMonth, selectors.ipca12m);
-                this.processInflationIndex(data.inpc, selectors.inpcMonth, selectors.inpc12m); // Adicionado
-                this.processInflationIndex(data.igpm, selectors.igpmMonth, selectors.igpm12m);
-                this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m);
+                // Moedas
+                uiController.updateText(selectors.dolarBuy, data.dolarBuy.status === 'fulfilled' ? parseFloat(data.dolarBuy.value?.[0]?.valor).toFixed(2) : errorText, 'R$ ');
+                uiController.updateText(selectors.dolarSell, data.dolarSell.status === 'fulfilled' && data.dolarSell.value.length > 0 ? parseFloat(data.dolarSell.value?.[data.dolarSell.value.length - 1]?.valor).toFixed(2) : errorText, 'R$ ');
+                uiController.updateText(selectors.euroBuy, data.euroBuy.status === 'fulfilled' ? parseFloat(data.euroBuy.value?.[0]?.valor).toFixed(2) : errorText, 'R$ ');
+                uiController.updateText(selectors.euroSell, data.euroSell.status === 'fulfilled' && data.euroSell.value.length > 0 ? parseFloat(data.euroSell.value?.[data.euroSell.value.length - 1]?.valor).toFixed(2) : errorText, 'R$ ');
                 
-                uiController.updateText(selectors.poupancaMonth, data.poupanca.status === 'fulfilled' ? parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2) : errorText, '%');
-                uiController.updateText(selectors.desemprego, data.desemprego.status === 'fulfilled' ? parseFloat(data.desemprego.value?.[0]?.valor).toFixed(2) : errorText, '%');
+                this.processCurrency(data.dolarSell, '#dolar-chart-container', 'Dólar Venda');
+                this.processCurrency(data.euroSell, '#euro-chart-container', 'Euro Venda');
+
+                // Juros
+                this.processCDI(data.cdi);
+                this.processSelic(data.selicMeta);
+
+                // Inflação
+                this.processInflationIndex(data.ipca, selectors.ipcaMonth, selectors.ipca12m, '#ipca-chart-container', 'IPCA Mensal');
+                this.processInflationIndex(data.inpc, selectors.inpcMonth, selectors.inpc12m, '#inpc-chart-container', 'INPC Mensal');
+                this.processInflationIndex(data.igpm, selectors.igpmMonth, selectors.igpm12m, '#igpm-chart-container', 'IGP-M Mensal');
+                this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m, '#igpdi-chart-container', 'IGP-DI Mensal');
+                
+                // Outros
+                const poupancaValue = data.poupanca.status === 'fulfilled' ? `${parseFloat(data.poupanca.value?.[0]?.valor).toFixed(2)}%` : errorText;
+                uiController.updateText(selectors.poupancaMonth, poupancaValue);
+
+                const desempregoValue = data.desemprego.status === 'fulfilled' ? `${parseFloat(data.desemprego.value?.[0]?.valor).toFixed(2)}%` : errorText;
+                uiController.updateText(selectors.desemprego, desempregoValue);
             },
             
-            processInflationIndex(promiseResult, monthElemSelector, yearElemSelector) {
+            processInflationIndex(promiseResult, monthElemSelector, yearElemSelector, chartSelector = null, chartName = 'Valor Mensal') {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value;
                     const monthValue = parseFloat(data[data.length - 1].valor).toFixed(2);
-                    // Cálculo do acumulado em 12 meses
                     const yearValue = data.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
                     const accumulated = ((yearValue - 1) * 100).toFixed(2);
-                    uiController.updateText(monthElemSelector, monthValue, '%');
-                    uiController.updateText(yearElemSelector, accumulated, '%');
+                    uiController.updateText(monthElemSelector, `${monthValue}%`);
+                    uiController.updateText(yearElemSelector, `${accumulated}%`);
+
+                    if (chartSelector) {
+                        uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy');
+                    }
                 } else {
                     uiController.updateText(monthElemSelector, config.errorText);
                     uiController.updateText(yearElemSelector, config.errorText);
+                }
+            },
+
+            processCurrency(promiseResult, chartSelector, chartName) {
+                if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    uiController.createSparklineChart(chartSelector, promiseResult.value, chartName, 'R$', 'dd/mm');
+                }
+            },
+
+            processCDI(promiseResult) {
+                if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    const data = promiseResult.value;
+                    const lastDailyRate = parseFloat(data[data.length - 1].valor);
+                    const lastAnnualRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100;
+                    uiController.updateText(config.selectors.cdiAnnual, `${lastAnnualRate.toFixed(2)}% a.a.`);
+
+                    const annualizedHistory = data.map(item => ({
+                        data: item.data,
+                        valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100).toFixed(2)
+                    }));
+                    uiController.createSparklineChart('#cdi-chart-container', annualizedHistory, 'CDI Anualizado', '%', 'dd/mm');
+                } else {
+                    uiController.updateText(config.selectors.cdiAnnual, config.errorText);
+                }
+            },
+
+            processSelic(promiseResult) {
+                if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    const data = promiseResult.value;
+                    const lastValue = parseFloat(data[data.length - 1].valor);
+                    uiController.updateText(config.selectors.selicMeta, `${lastValue.toFixed(2)}% a.a.`);
+                    uiController.createSparklineChart('#selic-chart-container', data, 'Meta Selic', '%', 'dd/mm');
+                } else {
+                    uiController.updateText(config.selectors.selicMeta, config.errorText);
                 }
             },
             
