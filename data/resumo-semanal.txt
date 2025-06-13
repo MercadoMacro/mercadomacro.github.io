@@ -1,39 +1,38 @@
- **🗞️ Semana de **9** a **13** de Junho de 2025 **
+ **🗞️ Semana de 9 a 13 de Junho de 2025 **
 *Mercado sob Pressão: Haddad, IOF e a Tempestade Fiscal na Sombra da Guerra
 Depois de uma semana marcada por volatilidade geopolítica e tensão fiscal, o mercado brasileiro navegou por águas agitadas — e Brasília foi o centro do furacão. Em meio a embates sobre o IOF, ruídos entre Congresso e Planalto, e um Oriente Médio à beira da guerra, o Ibovespa ficou sem bússola, os criptoativos perderam força e os investidores buscaram proteção.
-🟠 Segunda-feira (09/06) – Um começo em compasso de espera
+
+*Segunda-feira (09/06) – Um começo em compasso de espera
 Com a agenda dominada por rumores de mudanças fiscais, o Ibovespa caiu ⬇️ 0,30%, aos 135.699 pontos. Apesar do otimismo global com a reaproximação comercial entre EUA e China, o mercado local respirava apreensão com o novo pacote de Haddad, que envolvia o fim de isenções para LCIs e LCAs.
-🟢Bitcoin ⬆️ 2,07%
-🟢Ethereum ⬆️ 2,00%
-🟢Brent ⬆️ 0,86%
-🔴PETR3 ⬇️ 1,05%
+Bitcoin ⬆️ 2,07%
+Ethereum ⬆️ 2,00%
+Brent ⬆️ 0,86%
+PETR3 ⬇️ 1,05%
 
-🟢 Terça-feira (10/06) – Inflação dá trégua e bolsa responde
+*Terça-feira (10/06) – Inflação dá trégua e bolsa responde
 A leitura abaixo do esperado do IPCA (0,26%) trouxe alívio e reacendeu a esperança de manutenção da Selic. O Ibovespa subiu ⬆️ 0,54%. O petróleo recuou, mas isso não impediu a valorização de PETR3 ⬆️ 3,65% e VALE3 ⬆️ 0,68%.
-🟢Ibovespa: 136.436 pts ⬆️
-🔴Brent: US$ 66,87 ⬇️
-🟢Bitcoin: US$ 109.318 ⬆️
-🟢Ethereum: US$ 2.756 ⬆️ 6,67%
+Ibovespa: 136.436 pts ⬆️
+Brent: US$ 66,87 ⬇️
+Bitcoin: US$ 109.318 ⬆️
+Ethereum: US$ 2.756 ⬆️ 6,67%
 
-🟢 Quarta-feira (11/06) – Otimismo com China, petróleo dispara
+*Quarta-feira (11/06) – Otimismo com China, petróleo dispara
 A trégua comercial entre EUA e China sustentou o apetite por risco. E com o petróleo Brent subindo ⬆️ 4,34%, a Petrobras brilhou: PETR4 ⬆️ 3,33%. Mas a tensão sobre o IOF continuava. O Ibovespa fechou em alta ⬆️ 0,51%.
+WTI: US$ 68,15 ⬆️ 4,88%
+VALE3: ⬇️ 0,88%
+Dólar: R$ 5,5376 ⬇️ 0,59%
 
-🟢WTI: US$ 68,15 ⬆️ 4,88%
-🔴VALE3: ⬇️ 0,88%
-🔴Dólar: R$ 5,5376 ⬇️ 0,59%
-
-🟠 Quinta-feira (12/06) – MP do IOF agita Brasília, mercado em alerta
+*Quinta-feira (12/06) – MP do IOF agita Brasília, mercado em alerta
 Com a publicação da nova Medida Provisória que altera regras de tributação, incluindo cripto e apostas, o clima azedou. A Petrobras ignorou o recuo do petróleo e subiu forte: PETR3 ⬆️ 2,76%. Mas o Ibovespa oscilou. À tarde, retomou fôlego e subiu ⬆️ 0,49%.
-🔴Brent: US$ 69,36 ⬇️ 0,59%
-🔴Bitcoin: US$ 107.544 ⬇️ 1,13%
-🔴Ethereum: US$ 2.733 ⬇️ 2,98%
+Brent: US$ 69,36 ⬇️ 0,59%
+Bitcoin: US$ 107.544 ⬇️ 1,13%
+Ethereum: US$ 2.733 ⬇️ 2,98%
 
-🔴 Sexta-feira (13/06) – Oriente Médio em chamas e aversão a risco
+*Sexta-feira (13/06) – Oriente Médio em chamas e aversão a risco
 O ataque de Israel ao Irã e a retaliação com drones trouxeram pânico aos mercados. O Ibovespa perdeu força, ainda sustentado por PETR3 ⬆️ 2,34%, mas fechou a semana com viés de baixa. Dólar em leve alta e criptos sangrando.
-🔴Stoxx 600: ⬇️ 0,89%
-🟢PETR3: ⬆️ 2,34%
-🔴Dow Jones: ⬇️ 1,09%
-🔴Bitcoin: ⬇️ 1,13%
-
+Stoxx 600: ⬇️ 0,89%
+PETR3: ⬆️ 2,34%
+Dow Jones: ⬇️ 1,09%
+Bitcoin: ⬇️ 1,13%
 📌 Resumo da Semana
 A semana foi guiada por incertezas: o impasse em torno do IOF e os riscos fiscais minaram a confiança do investidor local, enquanto o conflito Israel-Irã elevou a tensão global. Mesmo com sinais de trégua comercial entre EUA e China, o pano de fundo foi dominado por política, petróleo e geopolítica. No Brasil, os olhos se voltam agora para o Congresso, que deve reagir à MP do IOF — e isso pode ditar o humor do mercado nos próximos dias.
