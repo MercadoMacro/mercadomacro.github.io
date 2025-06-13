@@ -88,7 +88,23 @@
         @media (max-width: 768px) { 
             .indicator-card { max-width: calc(50% - 15px); } 
             .indicator-card--with-chart { max-width: calc(50% - 15px); }
-            .page-title-header { font-size: 38px; } 
+            /* A regra original '.page-title-header { font-size: 38px; }' será sobrescrita pela sua regra abaixo */
+            
+            /* ======================================= */
+            /* SUAS CONFIGURAÇÕES ADICIONADAS (768px)  */
+            /* ======================================= */
+            .button-group { flex-direction: column; } 
+            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; } 
+            .logo { text-align: center; } 
+            .page-title-header { font-size: 24px; } 
+            .logo-divider { margin: 5px auto; } 
+            .banner { max-width: 100%; margin-left: 0; text-align: center; font-size: 13px; } 
+            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; } 
+            .content-box { max-height: 420px; } 
+            .content-box.expanded { max-height: 65vh; } 
+            .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
+            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
+            .settings-panel.visible { transform: translateY(0) scale(1); } 
         }
         @media (max-width: 600px) { 
             .indicator-card { max-width: 100%; } 
@@ -101,6 +117,24 @@
             #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } 
             .theme-toggle { left: 15px; } 
             .profile-btn { top: 15px; right: 15px; } 
+            
+            /* ======================================= */
+            /* SUAS CONFIGURAÇÕES ADICIONADAS (600px)  */
+            /* ======================================= */
+            body { 
+                zoom: 0.8; 
+                touch-action: manipulation; 
+            } 
+            .container { 
+                padding-left: 10px; 
+                padding-right: 10px; 
+            } 
+            /* CORREÇÃO: Alinha modal da HP12C no topo em telas pequenas */ 
+            .hp12c-modal { 
+                align-items: flex-start; /* Alinha o conteúdo no topo */ 
+                padding-top: 30px; 
+                padding-bottom: 30px; 
+            } 
         }
         @supports(padding: max(0px)) { 
             .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); } 
@@ -288,6 +322,8 @@
     <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"> <i class="fas fa-moon"></i></button>
 
     <script>
+        // --- SEU SCRIPT JAVASCRIPT ---
+        // O código JS permanece o mesmo.
         // --- 1. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
