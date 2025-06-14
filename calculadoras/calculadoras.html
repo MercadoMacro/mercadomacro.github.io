@@ -10,8 +10,8 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimum-scale=1.0">
-    <meta name="description" content="Calculadoras financeiras completas com gráficos, tabelas detalhadas e salvamento automático. Calcule preço médio, juros compostos, amortização e rendimentos.">
-    <meta name="keywords" content="calculadora financeira, hp12c, juros compostos, gráfico, amortização, tabela sac, tabela price, preço médio, cdb, lci, lca, cdi">
+    <meta name="description" content="Calculadoras financeiras completas com gráficos, tabelas detalhadas e salvamento automático. Calcule preço médio, juros compostos, amortização, rendimentos, inflação (IPCA), aposentadoria e conversão de moedas.">
+    <meta name="keywords" content="calculadora financeira, hp12c, juros compostos, ipca, inflação, aposentadoria, conversor de moedas, dólar, euro, amortização, tabela sac, tabela price, preço médio, cdb, lci, lca, cdi">
     <meta name="author" content="Anderson">
     <title>Calculadoras Financeiras Avançadas - Mercado Macro</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -33,326 +33,95 @@
             --card-bg-rgb-dark: 22, 27, 34;
             --card-bg-rgb-light: 255, 255, 255;
             --card-bg-val: var(--card-bg-rgb-dark);
-            --card-bg: rgba(var(--card-bg-val), 0.7);
+            --card-bg: rgba(var(--card-bg-val), 0.5);
             --border-color: rgba(48, 54, 61, 0.8);
             --error-color: #ff7b72;
             --transition-speed: 0.3s;
             --shadow-color-soft: rgba(0, 0, 0, 0.2);
             --shadow-color-medium: rgba(0, 0, 0, 0.3);
         }
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
-            color: var(--text-color);
-            min-height: 100vh; width: 100%;
-            line-height: 1.7;
-            transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
-            display: flex; flex-direction: column;
-        }
+        html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+        body { margin: 0; padding: 0; font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%); color: var(--text-color); min-height: 100vh; width: 100%; line-height: 1.7; transition: background var(--transition-speed) ease, color var(--transition-speed) ease; display: flex; flex-direction: column; }
         body.modal-open { overflow: hidden; }
         :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
-
-        .container {
-            flex: 1; max-width: 800px; width: 100%;
-            margin: 0 auto; padding: 30px 20px;
-            box-sizing: border-box; text-align: center;
-            display: flex; flex-direction: column;
-        }
+        .container { flex: 1; max-width: 800px; width: 100%; margin: 0 auto; padding: 30px 20px; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; }
         .logo { text-align: center; margin-bottom: 30px; }
-        .page-title-header {
-            font-size: 2.5rem; font-weight: 800; line-height: 1.2; letter-spacing: -1px;
-            background: linear-gradient(120deg, var(--primary-light), var(--primary-color));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 8px; padding: 0 10px;
-        }
-        .logo-divider {
-            width: 80px; height: 4px;
-            background: linear-gradient(to right, var(--primary-color), var(--primary-light));
-            margin: 0 auto; border-radius: 3px;
-        }
-        .subheader {
-            font-size: 1rem; margin-bottom: 25px;
-            color: var(--text-secondary); font-weight: 600;
-            text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;
-        }
+        .page-title-header { font-size: 2.5rem; font-weight: 800; line-height: 1.2; letter-spacing: -1px; background: linear-gradient(120deg, var(--primary-light), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; padding: 0 10px; }
+        .logo-divider { width: 80px; height: 4px; background: linear-gradient(to right, var(--primary-color), var(--primary-light)); margin: 0 auto; border-radius: 3px; }
+        .subheader { font-size: 1rem; margin-bottom: 25px; color: var(--text-secondary); font-weight: 600; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; }
         
-        .calculator {
-            background: rgba(var(--card-bg-val), 0.5);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            border-left: 4px solid var(--primary-color);
-            box-shadow: 0 4px 12px var(--shadow-color-soft);
-            transition: all var(--transition-speed);
-            text-align: left;
-            overflow: hidden;
-        }
-        .calculator:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px var(--shadow-color-medium);
-        }
-        .calculator h2 {
-            color: var(--primary-color);
-            margin-top: 0;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-        }
+        .calculator-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 40px; }
+        .nav-btn { padding: 8px 18px; border-radius: 20px; background-color: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease-in-out; cursor: pointer; }
+        .nav-btn:hover { color: var(--text-color); border-color: var(--primary-color); transform: translateY(-2px); }
+        .nav-btn.active { background-color: var(--primary-color); color: var(--dark-bg); border-color: var(--primary-color); box-shadow: 0 2px 10px rgba(0, 209, 128, 0.3); }
 
+        .calculator { background: rgba(var(--card-bg-val), 0.5); border-radius: 12px; padding: 24px; margin-bottom: 24px; border-left: 4px solid var(--primary-color); box-shadow: 0 4px 12px var(--shadow-color-soft); text-align: left; overflow: hidden; animation: fadeInCalc 0.6s ease-out; }
+        .calculator.hidden { display: none; }
+        @keyframes fadeInCalc { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .calculator:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow-color-medium); }
+        .calculator h2 { color: var(--primary-color); margin-top: 0; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; font-size: 1.5rem; }
         .input-group { margin-bottom: 16px; }
-        .input-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: rgba(0, 0, 0, 0.2);
-            color: var(--text-color);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.15s ease;
-            box-sizing: border-box;
-        }
-        .input-group input:focus, .input-group select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 209, 128, 0.25);
-        }
-
+        .input-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); }
+        .input-group input, .input-group select { width: 100%; padding: 14px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2); color: var(--text-color); font-family: inherit; font-size: 1rem; transition: all 0.15s ease; box-sizing: border-box; }
+        .input-group input[type="date"] { color-scheme: dark; }
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 209, 128, 0.25); }
         .button-group { display: flex; gap: 16px; margin-top: 24px; }
-        .btn, .calculate-btn {
-            cursor: pointer; font-family: inherit; transition: all 0.3s ease;
-            padding: 14px 24px; border-radius: 8px; font-weight: 700;
-            font-size: 1rem; width: 100%; display: flex;
-            align-items: center; justify-content: center; gap: 8px;
-            border: none;
-        }
-        .calculate-btn {
-            background: var(--primary-color);
-            color: var(--dark-bg);
-            box-shadow: 0 2px 4px var(--shadow-color-soft);
-        }
-        .calculate-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px var(--shadow-color-medium);
-        }
-        .btn-secondary {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
+        .btn, .calculate-btn { cursor: pointer; font-family: inherit; transition: all 0.3s ease; padding: 14px 24px; border-radius: 8px; font-weight: 700; font-size: 1rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; }
+        .calculate-btn { background: var(--primary-color); color: var(--dark-bg); box-shadow: 0 2px 4px var(--shadow-color-soft); }
+        .calculate-btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 4px 8px var(--shadow-color-medium); }
+        .btn-secondary { background-color: rgba(255, 255, 255, 0.1); color: var(--text-color); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.2); }
-
-        .result {
-            margin-top: 24px; padding: 20px;
-            background: rgba(0, 209, 128, 0.1);
-            border-left: 4px solid var(--primary-color);
-            border-radius: 8px;
-            animation: fadeIn 0.4s ease-out;
-        }
+        .result { margin-top: 24px; padding: 20px; background: rgba(0, 209, 128, 0.1); border-left: 4px solid var(--primary-color); border-radius: 8px; animation: fadeIn 0.4s ease-out; }
         .result h3 { margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
         .result p { margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
         .result-value { font-weight: 700; color: var(--primary-color); font-size: 1.1rem; }
-
-        .operation-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px; padding: 16px;
-            margin-bottom: 16px; border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
+        .operation-card { background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
         .operation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .operation-number {
-            background-color: var(--primary-color); color: var(--dark-bg);
-            width: 28px; height: 28px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem; font-weight: bold; flex-shrink: 0;
-        }
-        .remove-operation {
-            background: none; border: none; color: var(--error-color); cursor: pointer;
-            font-size: 1.2rem; width: 32px; height: 32px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; transition: all 0.15s ease;
-        }
+        .operation-number { background-color: var(--primary-color); color: var(--dark-bg); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; flex-shrink: 0; }
+        .remove-operation { background: none; border: none; color: var(--error-color); cursor: pointer; font-size: 1.2rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.15s ease; }
         .remove-operation:hover { background: rgba(255, 107, 107, 0.1); }
-        
-        .floating-buttons-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 1000;
-        }
-        .floating-btn {
-            position: relative;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(var(--card-bg-val), 0.4);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color);
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 8px 20px var(--shadow-color-soft);
-            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            overflow: hidden; will-change: transform, background-color, box-shadow;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .floating-btn::before {
-            content: ''; position: absolute; top: -20%; left: -50%;
-            width: 200%; height: 150%;
-            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% );
-            transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none;
-        }
-        .floating-btn:hover {
-            transform: translateY(-6px) scale(1.1);
-            background: rgba(var(--card-bg-val), 0.6);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff;
-        }
+        .floating-buttons-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; }
+        .floating-btn { position: relative; width: 50px; height: 50px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px var(--shadow-color-soft); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); overflow: hidden; will-change: transform, background-color, box-shadow; -webkit-tap-highlight-color: transparent; }
+        .floating-btn::before { content: ''; position: absolute; top: -20%; left: -50%; width: 200%; height: 150%; background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% ); transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none; }
+        .floating-btn:hover { transform: translateY(-6px) scale(1.1); background: rgba(var(--card-bg-val), 0.6); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff; }
         .floating-btn:hover::before { transform: translate(20px, -10px) rotate(20deg) scale(1.1); opacity: 0.8; }
         .floating-btn:active { transform: translateY(0) scale(1); }
         .floating-btn i { font-size: 18px; transition: color 0.3s ease; }
-
         #top-btn { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
         #top-btn.visible { opacity: 1; visibility: visible; }
         .theme-toggle { position: fixed; left: 20px; bottom: 20px; }
-        
-        .amortization-table-container {
-            margin-top: 16px;
-            max-height: 400px;
-            overflow: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-        }
+        .amortization-table-container { margin-top: 16px; max-height: 400px; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; }
         .amortization-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .amortization-table th, .amortization-table td { padding: 12px; text-align: right; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
         .amortization-table th { background-color: rgba(0,0,0,0.2); color: var(--primary-color); position: sticky; top: 0; z-index: 1; }
         .amortization-table tr:last-child td { border-bottom: none; }
         .amortization-table tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
-
         #chart-container { margin-top: 24px; padding: 16px; height: auto; max-height: 400px; aspect-ratio: 16 / 10; }
-
         .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
-
-        .hp12c-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(var(--card-bg-val), 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-color);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 20px var(--shadow-color-soft);
-            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            overflow: hidden;
-            will-change: transform, background-color, box-shadow;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .hp12c-btn::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            left: -50%;
-            width: 200%;
-            height: 150%;
-            background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% );
-            transform: rotate(20deg);
-            transition: all 0.4s ease;
-            pointer-events: none;
-        }
-        .hp12c-btn:hover {
-            transform: translateY(-6px) scale(1.1);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
-            background: rgba(var(--card-bg-val), 0.6); 
-            color: #fff; 
-        }
-        .hp12c-btn:hover::before {
-            transform: translate(20px, -10px) rotate(20deg) scale(1.1);
-            opacity: 0.8;
-        }
-        .hp12c-btn:active {
-            transform: translateY(0) scale(1);
-        }
-        .hp12c-icon {
-            width: 125%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: contain;
-        }
-
-        .hp12c-modal {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(10, 10, 42, 0.85); z-index: 2000; 
-            backdrop-filter: blur(5px);
-            animation: fadeIn 0.3s;
-            padding: 20px; box-sizing: border-box;
-            overflow-y: auto;
-            justify-content: center;
-            align-items: center;
-        }
-        .hp12c-modal-content {
-            background-color: var(--darker-bg); border-radius: 12px; 
-            width: auto; height: auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-            border: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
-        .hp12c-modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 15px; border-bottom: 1px solid var(--border-color);
-        }
+        .hp12c-btn { position: fixed; top: 20px; right: 20px; z-index: 1001; width: 50px; height: 50px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px var(--shadow-color-soft); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); overflow: hidden; will-change: transform, background-color, box-shadow; -webkit-tap-highlight-color: transparent; }
+        .hp12c-btn::before { content: ''; position: absolute; top: -20%; left: -50%; width: 200%; height: 150%; background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% ); transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none; }
+        .hp12c-btn:hover { transform: translateY(-6px) scale(1.1); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); background: rgba(var(--card-bg-val), 0.6);  color: #fff;  }
+        .hp12c-btn:hover::before { transform: translate(20px, -10px) rotate(20deg) scale(1.1); opacity: 0.8; }
+        .hp12c-btn:active { transform: translateY(0) scale(1); }
+        .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain; }
+        .hp12c-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 10, 42, 0.85); z-index: 2000;  backdrop-filter: blur(5px); animation: fadeIn 0.3s; padding: 20px; box-sizing: border-box; overflow-y: auto; justify-content: center; align-items: center; }
+        .hp12c-modal-content { background-color: var(--darker-bg); border-radius: 12px;  width: auto; height: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6);  border: 1px solid var(--border-color); flex-shrink: 0; }
+        .hp12c-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid var(--border-color); }
         .hp12c-modal-title { font-weight: bold; color: var(--primary-color); }
-        .hp12c-close-btn {
-            border: none; background: rgba(255,255,255,0.1); font-size: 1.2rem; cursor: pointer;
-            color: var(--text-secondary); transition: all 0.15s ease;
-            width: 32px; height: 32px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; line-height: 1;
-        }
+        .hp12c-close-btn { border: none; background: rgba(255,255,255,0.1); font-size: 1.2rem; cursor: pointer; color: var(--text-secondary); transition: all 0.15s ease; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; }
         .hp12c-close-btn:hover { color: var(--dark-bg); background: var(--primary-color); }
-        .hp12c-iframe-container { 
-            width: 465px;
-            height: 295px;
-            overflow: hidden;
-            border-radius: 0 0 12px 12px;
-        }
+        .hp12c-iframe-container {  width: 465px; height: 295px; overflow: hidden; border-radius: 0 0 12px 12px; }
         .hp12c-iframe-container iframe { width: 100%; height: 100%; border: none; }
-
-
-        body.light-mode {
-            --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
-            --dark-bg: #ffffff; --darker-bg: #f0f2f5;
-            --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
-            --card-bg-val: var(--card-bg-rgb-light);
-            --card-bg: rgba(var(--card-bg-val), 0.98);
-            --border-color: rgba(200, 205, 210, 0.7);
-            --error-color: #dc3545;
-            --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
-        }
+        body.light-mode { --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3; --dark-bg: #ffffff; --darker-bg: #f0f2f5; --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75); --card-bg-val: var(--card-bg-rgb-light); --card-bg: rgba(var(--card-bg-val), 0.98); --border-color: rgba(200, 205, 210, 0.7); --error-color: #dc3545; --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12); }
         body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
+        body.light-mode .calculator-nav .nav-btn { background-color: #e9ecef; color: #495057; border-color: #ced4da; }
+        body.light-mode .calculator-nav .nav-btn:hover { color: #1c1e21; border-color: var(--primary-dark); }
+        body.light-mode .calculator-nav .nav-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
         body.light-mode .calculator { background: white; border-color: var(--border-color); }
         body.light-mode .input-group input, body.light-mode .input-group select { background: #f8f9fa; color: var(--text-color); border-color: #ced4da; }
+        body.light-mode .input-group input[type="date"] { color-scheme: light; }
         body.light-mode .result { background: rgba(0, 123, 255, 0.08); }
         body.light-mode .btn-secondary { background: #e9ecef; color: #495057; border-color: #ced4da; }
         body.light-mode .btn-secondary:hover { background: #dce1e6; }
@@ -364,40 +133,10 @@
         body.light-mode .hp12c-modal-content { background-color: var(--dark-bg); }
         body.light-mode .hp12c-close-btn { background-color: #e9ecef; color: #495057; }
         body.light-mode .hp12c-close-btn:hover { background: var(--primary-color); color: white; }
-        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .new-operation { animation: fadeIn 0.5s; }
-
-        @media (max-width: 768px) {
-            .button-group { flex-direction: column; }
-            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; } 
-            .logo { text-align: center; } 
-            .page-title-header { font-size: 24px; } 
-            .logo-divider { margin: 5px auto; } 
-            .banner { max-width: 100%; margin-left: 0; text-align: center; font-size: 13px; } 
-            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; } 
-            .content-box { max-height: 420px; } 
-            .content-box.expanded { max-height: 65vh; } 
-            .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
-            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
-            .settings-panel.visible { transform: translateY(0) scale(1); } 
-        }
-
-        @media (max-width: 600px) { 
-            body {
-                zoom: 0.8;
-                touch-action: manipulation;
-            }
-            .container {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-            .hp12c-modal {
-                align-items: flex-start;
-                padding-top: 30px;
-                padding-bottom: 30px;
-            }
-        }
+        @media (max-width: 768px) { .button-group { flex-direction: column; } .page-title-header { font-size: 24px; } }
+        @media (max-width: 600px) { body { touch-action: manipulation; } .container { padding-left: 10px; padding-right: 10px; } .hp12c-modal { align-items: flex-start; padding-top: 30px; padding-bottom: 30px; } }
     </style>
 </head>
 <body>
@@ -422,6 +161,179 @@
             <div class="logo-divider"></div>
         </div>
         <div class="subheader">Ferramentas Essenciais com Gráficos e Tabelas Detalhadas</div>
+
+        <nav class="calculator-nav" aria-label="Navegação das Calculadoras">
+            <a href="#" class="nav-btn active" data-filter="all">Todos</a>
+            <a href="#retirement-calc" class="nav-btn" data-filter="retirement-calc">Aposentadoria</a>
+            <a href="#currency-calc" class="nav-btn" data-filter="currency-calc">Moedas</a>
+            <a href="#inflation-calc" class="nav-btn" data-filter="inflation-calc">Inflação</a>
+            <a href="#cdb-calc" class="nav-btn" data-filter="cdb-calc">Renda Fixa</a>
+            <a href="#juros-compostos-calc" class="nav-btn" data-filter="juros-compostos-calc">Juros Compostos</a>
+            <a href="#price-average-calc" class="nav-btn" data-filter="price-average-calc">Preço Médio</a>
+            <a href="#amortizacao-calc" class="nav-btn" data-filter="amortizacao-calc">Financiamento</a>
+        </nav>
+
+        <section class="calculator" id="retirement-calc" aria-labelledby="retirement-title">
+            <h2 id="retirement-title"><i class="fas fa-umbrella-beach"></i> Calculadora de Aposentadoria</h2>
+            <div class="input-group">
+                <label for="retirement-current-age">Idade Atual:</label>
+                <input type="text" id="retirement-current-age" placeholder="Ex: 30">
+            </div>
+            <div class="input-group">
+                <label for="retirement-age">Idade para se Aposentar:</label>
+                <input type="text" id="retirement-age" placeholder="Ex: 65">
+            </div>
+            <div class="input-group">
+                <label for="retirement-initial-savings">Patrimônio Atual (R$):</label>
+                <input type="text" id="retirement-initial-savings" placeholder="Ex: R$ 50.000,00">
+            </div>
+            <div class="input-group">
+                <label for="retirement-monthly-contribution">Aporte Mensal (R$):</label>
+                <input type="text" id="retirement-monthly-contribution" placeholder="Ex: R$ 500,00">
+            </div>
+            <div class="input-group">
+                <label for="retirement-annual-rate">Rendimento Anual dos Investimentos (%):</label>
+                <input type="text" id="retirement-annual-rate" placeholder="Ex: 8,00 %">
+            </div>
+            <div class="input-group">
+                <label for="retirement-payout-years">Período de Recebimento (anos):</label>
+                <input type="text" id="retirement-payout-years" value="20" placeholder="Ex: 20">
+            </div>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-retirement"><i class="fas fa-calculator"></i> Calcular Projeção</button>
+                <button class="btn btn-secondary" id="clear-retirement-calc"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+            <div class="result" id="retirement-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-piggy-bank"></i> Projeção Futura</h3>
+                <p><span>Valor Total Acumulado:</span> <span class="result-value" id="retirement-final-amount"></span></p>
+                <p><span>Renda Mensal Estimada*:</span> <span class="result-value" id="retirement-monthly-income"></span></p>
+                <small id="retirement-note" style="display: block; margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);"></small>
+            </div>
+        </section>
+
+        <section class="calculator" id="currency-calc" aria-labelledby="currency-title">
+            <h2 id="currency-title"><i class="fas fa-exchange-alt"></i> Conversor de Moedas</h2>
+            <div class="input-group">
+                <label for="currency-amount">Valor a Converter:</label>
+                <input type="text" id="currency-amount" placeholder="Ex: 100,00">
+            </div>
+            <div class="input-group">
+                <label for="currency-from">De:</label>
+                <select id="currency-from"></select>
+            </div>
+            <div class="input-group">
+                <label for="currency-to">Para:</label>
+                <select id="currency-to"></select>
+            </div>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-currency"><i class="fas fa-calculator"></i> Converter</button>
+                <button class="btn btn-secondary" id="clear-currency-calc"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+            <div class="result" id="currency-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-money-bill-wave"></i> Resultado da Conversão</h3>
+                <p><span>Valor Convertido:</span> <span class="result-value" id="converted-value"></span></p>
+                <p><span>Taxa de Câmbio:</span> <span class="result-value" id="exchange-rate"></span></p>
+            </div>
+        </section>
+
+        <section class="calculator" id="inflation-calc" aria-labelledby="inflation-title">
+            <h2 id="inflation-title"><i class="fas fa-chart-area"></i> Correção pela Inflação (IPCA)</h2>
+            <div class="input-group">
+                <label for="inflation-value">Valor Original (R$):</label>
+                <input type="text" id="inflation-value" placeholder="Ex: R$ 1.000,00">
+            </div>
+            <div class="input-group">
+                <label for="inflation-start-date">Data Inicial:</label>
+                <input type="date" id="inflation-start-date" >
+            </div>
+            <div class="input-group">
+                <label for="inflation-end-date">Data Final:</label>
+                <input type="date" id="inflation-end-date" >
+            </div>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-inflation"><i class="fas fa-calculator"></i> Corrigir Valor</button>
+                <button class="btn btn-secondary" id="clear-inflation-calc"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+            <div class="result" id="inflation-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-balance-scale"></i> Resultado da Correção</h3>
+                <p><span>Valor Corrigido:</span> <span class="result-value" id="corrected-value"></span></p>
+                <p><span>Inflação Acumulada no Período:</span> <span class="result-value" id="accumulated-inflation"></span></p>
+            </div>
+        </section>
+        
+        <section class="calculator" id="cdb-calc" aria-labelledby="cdb-title">
+            <h2 id="cdb-title"><i class="fas fa-file-invoice-dollar"></i> Rendimento de Renda Fixa</h2>
+            <div class="input-group">
+                <label for="cdb-amount">Valor Investido (R$):</label>
+                <input type="text" id="cdb-amount" placeholder="Ex: R$ 10.000,00">
+            </div>
+            <div class="input-group">
+                <label for="cdb-rate-type">Tipo de Taxa:</label>
+                <select id="cdb-rate-type">
+                    <option value="cdi">Pós-fixado (% do CDI)</option>
+                    <option value="prefixado">Prefixado (% a.a.)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="cdb-rate">Taxa (% do CDI):</label>
+                <small id="cdi-rate-info" style="display: block; margin-top: -10px; margin-bottom: 10px; color: var(--text-secondary); font-size: 0.8rem;"></small>
+                <input type="text" id="cdb-rate" placeholder="Ex: 110 %">
+            </div>
+            <div class="input-group">
+                <label for="cdb-days">Prazo do Investimento (dias):</label>
+                <input type="text" id="cdb-days" placeholder="Ex: 365">
+            </div>
+            <div class="input-group">
+                <label for="cdb-type">Tipo de Investimento:</label>
+                <select id="cdb-type">
+                    <option value="cdb">CDB / Outro (com IR)</option>
+                    <option value="lci-lca">LCI / LCA (Isento IR)</option>
+                </select>
+            </div>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-cdb"><i class="fas fa-calculator"></i> Calcular</button>
+                <button class="btn btn-secondary" id="clear-cdb-calc"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+            <div class="result" id="cdb-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-chart-pie"></i> Resultado do Investimento</h3>
+                <p><span>Rendimento Bruto:</span> <span class="result-value" id="cdb-gross"></span></p>
+                <p><span>Alíquota de IR (Regressiva):</span> <span class="result-value" id="cdb-tax-rate"></span></p>
+                <p><span>Imposto de Renda (IR):</span> <span class="result-value" id="cdb-tax"></span></p>
+                <p><span>Rendimento Líquido:</span> <span class="result-value" id="cdb-net"></span></p>
+                <p><span>Valor Final Líquido:</span> <span class="result-value" id="cdb-final"></span></p>
+            </div>
+        </section>
+
+        <section class="calculator" id="juros-compostos-calc" aria-labelledby="jc-title">
+            <h2 id="jc-title"><i class="fas fa-chart-area"></i> Juros Compostos com Gráfico</h2>
+            <div class="input-group">
+                <label for="principal">Valor Inicial (R$):</label>
+                <input type="text" id="principal" placeholder="Ex: R$ 1.000,00">
+            </div>
+            <div class="input-group">
+                <label for="monthly">Aporte Mensal (R$):</label>
+                <input type="text" id="monthly" placeholder="Ex: R$ 200,00">
+            </div>
+            <div class="input-group">
+                <label for="rate">Taxa de Juros (% ao ano):</label>
+                <input type="text" id="rate" placeholder="Ex: 8,50 %">
+            </div>
+            <div class="input-group">
+                <label for="time">Período (anos):</label>
+                <input type="text" id="time" placeholder="Ex: 10">
+            </div>
+            <div class="button-group">
+                <button class="calculate-btn" id="calculate-compound"><i class="fas fa-calculator"></i> Calcular</button>
+                <button class="btn btn-secondary" id="clear-compound-calc"><i class="fas fa-eraser"></i> Limpar</button>
+            </div>
+            <div class="result" id="compound-result" style="display: none;" aria-live="polite">
+                <h3><i class="fas fa-coins"></i> Resultado Final</h3>
+                <p><span>Total Aportado:</span> <span class="result-value" id="total-invested"></span></p>
+                <p><span>Total em Juros:</span> <span class="result-value" id="total-interest"></span></p>
+                <p><span>Valor Final Acumulado:</span> <span class="result-value" id="final-amount"></span></p>
+                <div id="chart-container"><canvas id="compound-chart"></canvas></div>
+            </div>
+        </section>
 
         <section class="calculator" id="price-average-calc" aria-labelledby="pm-title">
             <h2 id="pm-title"><i class="fas fa-chart-line"></i> Preço Médio de Ativos</h2>
@@ -483,80 +395,6 @@
                 <div class="amortization-table-container" id="amortization-table-container" style="display: none;"></div>
             </div>
         </section>
-        
-        <section class="calculator" id="cdb-calc" aria-labelledby="cdb-title">
-            <h2 id="cdb-title"><i class="fas fa-file-invoice-dollar"></i> Rendimento de Renda Fixa</h2>
-            <div class="input-group">
-                <label for="cdb-amount">Valor Investido (R$):</label>
-                <input type="text" id="cdb-amount" placeholder="Ex: R$ 10.000,00">
-            </div>
-            
-            <div class="input-group">
-                <label for="cdb-rate-type">Tipo de Taxa:</label>
-                <select id="cdb-rate-type">
-                    <option value="cdi">Pós-fixado (% do CDI)</option>
-                    <option value="prefixado">Prefixado (% a.a.)</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label for="cdb-rate">Taxa (% do CDI):</label>
-                <small id="cdi-rate-info" style="display: block; margin-top: -10px; margin-bottom: 10px; color: var(--text-secondary); font-size: 0.8rem;"></small>
-                <input type="text" id="cdb-rate" placeholder="Ex: 110 %">
-            </div>
-            <div class="input-group">
-                <label for="cdb-days">Prazo do Investimento (dias):</label>
-                <input type="text" id="cdb-days" placeholder="Ex: 365">
-            </div>
-            <div class="input-group">
-                <label for="cdb-type">Tipo de Investimento:</label>
-                <select id="cdb-type">
-                    <option value="cdb">CDB / Outro (com IR)</option>
-                    <option value="lci-lca">LCI / LCA (Isento IR)</option>
-                </select>
-            </div>
-            <div class="button-group">
-                <button class="calculate-btn" id="calculate-cdb"><i class="fas fa-calculator"></i> Calcular</button>
-                <button class="btn btn-secondary" id="clear-cdb-calc"><i class="fas fa-eraser"></i> Limpar</button>
-            </div>
-            <div class="result" id="cdb-result" style="display: none;" aria-live="polite">
-                <h3><i class="fas fa-chart-pie"></i> Resultado do Investimento</h3>
-                <p><span>Rendimento Bruto:</span> <span class="result-value" id="cdb-gross"></span></p>
-                <p><span>Imposto de Renda (IR):</span> <span class="result-value" id="cdb-tax"></span></p>
-                <p><span>Rendimento Líquido:</span> <span class="result-value" id="cdb-net"></span></p>
-                <p><span>Valor Final Líquido:</span> <span class="result-value" id="cdb-final"></span></p>
-            </div>
-        </section>
-        <section class="calculator" id="juros-compostos-calc" aria-labelledby="jc-title">
-            <h2 id="jc-title"><i class="fas fa-chart-area"></i> Juros Compostos com Gráfico</h2>
-            <div class="input-group">
-                <label for="principal">Valor Inicial (R$):</label>
-                <input type="text" id="principal" placeholder="Ex: R$ 1.000,00">
-            </div>
-            <div class="input-group">
-                <label for="monthly">Aporte Mensal (R$):</label>
-                <input type="text" id="monthly" placeholder="Ex: R$ 200,00">
-            </div>
-            <div class="input-group">
-                <label for="rate">Taxa de Juros (% ao ano):</label>
-                <input type="text" id="rate" placeholder="Ex: 8,50 %">
-            </div>
-            <div class="input-group">
-                <label for="time">Período (anos):</label>
-                <input type="text" id="time" placeholder="Ex: 10">
-            </div>
-            <div class="button-group">
-                <button class="calculate-btn" id="calculate-compound"><i class="fas fa-calculator"></i> Calcular</button>
-                <button class="btn btn-secondary" id="clear-compound-calc"><i class="fas fa-eraser"></i> Limpar</button>
-            </div>
-            <div class="result" id="compound-result" style="display: none;" aria-live="polite">
-                <h3><i class="fas fa-coins"></i> Resultado Final</h3>
-                <p><span>Total Investido (Aportes):</span> <span class="result-value" id="total-invested"></span></p>
-                <p><span>Total em Juros:</span> <span class="result-value" id="total-interest"></span></p>
-                <p><span>Valor Final Acumulado:</span> <span class="result-value" id="final-amount"></span></p>
-                <div id="chart-container"><canvas id="compound-chart"></canvas></div>
-            </div>
-        </section>
 
         <div class="footer" id="footer">© 2025 Mercado Macro</div>
     </div>
@@ -570,34 +408,43 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. GLOBAL STATE & CONFIG ---
         let compoundChartInstance = null;
         const masks = {};
-        const lsKey = 'financialCalculatorsData_v4';
-        
-        // NOVO: Variável global para armazenar a taxa CDI anualizada
+        const lsKey = 'financialCalculatorsData_v10'; // Version bump
         let annualizedCdiRate = null;
 
-        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-        const formatNumber = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(value);
+        // --- 2. HELPER FUNCTIONS ---
+        const formatCurrency = (value, currency = 'BRL') => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: currency }).format(value);
+        const formatNumber = (value, digits = 4) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: digits }).format(value);
         const getMaskedValue = (id) => masks[id] ? parseFloat(masks[id].unmaskedValue) || 0 : parseFloat(document.getElementById(id)?.value.replace(/\./g, '').replace(',', '.')) || 0;
 
         const handleCalculation = (button, calculationLogic) => {
             const originalHTML = button.innerHTML;
             button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Calculando...`;
             button.disabled = true;
-            setTimeout(() => {
-                calculationLogic();
+            try {
+                Promise.resolve(calculationLogic()).catch(err => {
+                    console.error("Calculation error:", err);
+                    alert("Ocorreu um erro durante o cálculo. Verifique os valores e tente novamente.");
+                }).finally(() => {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    saveInputsToLocalStorage();
+                });
+            } catch (error) {
+                console.error("Error setting up calculation:", error);
                 button.innerHTML = originalHTML;
                 button.disabled = false;
-                saveInputsToLocalStorage();
-            }, 250);
+            }
         };
-        
+
         const clearCalculator = (calcId) => {
             const calcElement = document.getElementById(calcId);
             if (!calcElement) return;
             calcElement.querySelectorAll('input, select').forEach(el => {
                 if (masks[el.id]) masks[el.id].value = '';
+                else if (el.type === 'date') el.value = '';
                 else if(el.tagName === 'SELECT') el.selectedIndex = 0;
                 else el.value = '';
             });
@@ -616,20 +463,330 @@
             const percentOptions = { mask: 'num %', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',' }}};
             const numberOptions = { mask: Number, scale: 0, thousandsSeparator: '.' };
             const anyNumberOptions = { mask: Number, scale: 4, thousandsSeparator: '.', radix: ',' };
+            const floatOptions = { mask: Number, scale: 2, thousandsSeparator: '.', radix: ',' };
             const elementsToMask = [
                 { id: 'current-price', options: moneyOptions }, { id: 'loan-amount', options: moneyOptions },
                 { id: 'principal', options: moneyOptions }, { id: 'monthly', options: moneyOptions },
-                { id: 'cdb-amount', options: moneyOptions },
-                { id: 'loan-rate', options: percentOptions }, { id: 'rate', options: percentOptions },
-                { id: 'cdb-rate', options: percentOptions },
+                { id: 'cdb-amount', options: moneyOptions }, { id: 'inflation-value', options: moneyOptions },
+                { id: 'retirement-initial-savings', options: moneyOptions }, { id: 'retirement-monthly-contribution', options: moneyOptions },
+                { id: 'currency-amount', options: floatOptions }, { id: 'loan-rate', options: percentOptions }, 
+                { id: 'rate', options: percentOptions }, { id: 'cdb-rate', options: percentOptions }, { id: 'retirement-annual-rate', options: percentOptions },
                 { id: 'loan-term', options: numberOptions }, { id: 'time', options: numberOptions },
-                { id: 'cdb-days', options: numberOptions },
+                { id: 'cdb-days', options: numberOptions }, { id: 'retirement-current-age', options: numberOptions },
+                { id: 'retirement-age', options: numberOptions }, { id: 'retirement-payout-years', options: numberOptions },
                 { id: 'current-quantity', options: anyNumberOptions }
             ];
             elementsToMask.forEach(({id, options}) => {
                 const element = document.getElementById(id);
                 if (element) masks[id] = IMask(element, options);
             });
+        };
+        
+        // --- 3. CALCULATOR & UI SETUP FUNCTIONS ---
+
+        const setupCalculatorNav = () => {
+            const navContainer = document.querySelector('.calculator-nav');
+            const sections = document.querySelectorAll('.calculator');
+            if (!navContainer || sections.length === 0) return;
+
+            navContainer.addEventListener('click', (e) => {
+                const clickedBtn = e.target.closest('.nav-btn');
+                if (!clickedBtn) return;
+                
+                e.preventDefault();
+                const filter = clickedBtn.dataset.filter;
+
+                // Update active button
+                navContainer.querySelector('.nav-btn.active').classList.remove('active');
+                clickedBtn.classList.add('active');
+
+                // Filter sections
+                let firstVisibleSection = null;
+                sections.forEach(section => {
+                    const isMatch = section.id === filter;
+                    const isAll = filter === 'all';
+
+                    if (isAll || isMatch) {
+                        section.classList.remove('hidden');
+                        if (!firstVisibleSection) {
+                           firstVisibleSection = section;
+                        }
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+
+                // Scroll to the top of the container after filtering
+                if (firstVisibleSection && filter !== 'all') {
+                    const offsetTop = firstVisibleSection.offsetTop - 20;
+                    window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+                }
+            });
+        };
+
+        const setupRetirementCalculator = () => {
+            const calculateRetirement = () => {
+                const currentAge = getMaskedValue('retirement-current-age');
+                const retirementAge = getMaskedValue('retirement-age');
+                const initialSavings = getMaskedValue('retirement-initial-savings');
+                const monthlyContribution = getMaskedValue('retirement-monthly-contribution');
+                const annualRate = getMaskedValue('retirement-annual-rate') / 100;
+                const payoutYears = getMaskedValue('retirement-payout-years');
+
+                if (currentAge <= 0 || retirementAge <= currentAge || annualRate < 0 || payoutYears <= 0) {
+                    if (payoutYears <= 0) alert('O período de recebimento deve ser maior que zero.');
+                    return;
+                }
+
+                const months = (retirementAge - currentAge) * 12;
+                const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+
+                let futureValue;
+                if (monthlyRate > 0) {
+                    futureValue = initialSavings * Math.pow(1 + monthlyRate, months) + monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+                } else {
+                    futureValue = initialSavings + (monthlyContribution * months);
+                }
+                
+                const payoutMonths = payoutYears * 12;
+                let monthlyIncome;
+                if (monthlyRate > 0) {
+                    monthlyIncome = futureValue * (monthlyRate * Math.pow(1 + monthlyRate, payoutMonths)) / (Math.pow(1 + monthlyRate, payoutMonths) - 1);
+                } else {
+                    monthlyIncome = payoutMonths > 0 ? futureValue / payoutMonths : 0;
+                }
+
+                document.getElementById('retirement-final-amount').textContent = formatCurrency(futureValue);
+                document.getElementById('retirement-monthly-income').textContent = formatCurrency(monthlyIncome);
+                document.getElementById('retirement-note').textContent = `*Renda estimada considerando o consumo total do patrimônio ao longo de ${payoutYears} anos.`;
+                document.getElementById('retirement-result').style.display = 'block';
+            };
+            document.getElementById('calculate-retirement').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateRetirement));
+            document.getElementById('clear-retirement-calc').addEventListener('click', () => clearCalculator('retirement-calc'));
+        };
+
+        const setupCurrencyConverter = () => {
+            const fromSelect = document.getElementById('currency-from');
+            const toSelect = document.getElementById('currency-to');
+            if (!fromSelect || !toSelect) return;
+            const popularCurrencies = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'ARS'];
+            const populateSelects = async () => {
+                try {
+                    const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+                    const currencies = await response.json();
+                    popularCurrencies.forEach(code => {
+                        const option = new Option(`${code.toUpperCase()} - ${currencies[code.toLowerCase()] || 'Moeda'}`, code.toLowerCase());
+                        fromSelect.add(option.cloneNode(true));
+                        toSelect.add(option);
+                    });
+                    fromSelect.value = 'usd';
+                    toSelect.value = 'brl';
+                } catch(e) {
+                    console.error("Falha ao carregar moedas:", e);
+                    fromSelect.innerHTML = ''; toSelect.innerHTML = '';
+                    popularCurrencies.forEach(code => {
+                        fromSelect.add(new Option(code, code.toLowerCase()));
+                        toSelect.add(new Option(code, code.toLowerCase()));
+                    });
+                }
+            };
+            const calculateConversion = async () => {
+                const amount = getMaskedValue('currency-amount');
+                const from = fromSelect.value;
+                const to = toSelect.value;
+                if (amount <= 0 || !from || !to) return;
+                try {
+                    const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${from}.json`);
+                    const data = await res.json();
+                    const rate = data[from][to];
+                    const converted = amount * rate;
+                    document.getElementById('converted-value').textContent = formatCurrency(converted, to.toUpperCase());
+                    document.getElementById('exchange-rate').textContent = `1 ${from.toUpperCase()} = ${formatNumber(rate, 6)} ${to.toUpperCase()}`;
+                    document.getElementById('currency-result').style.display = 'block';
+                } catch(e) {
+                    alert('Não foi possível obter a cotação. Tente novamente.');
+                    console.error("Erro na conversão:", e);
+                }
+            };
+            populateSelects();
+            document.getElementById('calculate-currency').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateConversion));
+            document.getElementById('clear-currency-calc').addEventListener('click', () => clearCalculator('currency-calc'));
+        };
+
+        const setupInflationCalculator = () => {
+            const startDateEl = document.getElementById('inflation-start-date');
+            const endDateEl = document.getElementById('inflation-end-date');
+            if(!startDateEl || !endDateEl) return;
+            const today = new Date();
+            const oneYearAgo = new Date(new Date().setFullYear(today.getFullYear() - 1));
+            startDateEl.value = oneYearAgo.toISOString().split('T')[0];
+            endDateEl.value = today.toISOString().split('T')[0];
+            const calculateInflation = async () => {
+                const value = getMaskedValue('inflation-value');
+                const startDate = startDateEl.value;
+                const endDate = endDateEl.value;
+                if (value <= 0 || !startDate || !endDate) return;
+                const formatDate = (date) => date.split('-').reverse().join('/');
+                const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`;
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if(data.length === 0) {
+                        alert("Não há dados de inflação para o período selecionado. Tente um período que inclua meses completos.");
+                        return;
+                    }
+                    const totalMultiplier = data.reduce((acc, month) => acc * (1 + parseFloat(month.valor) / 100), 1);
+                    const correctedValue = value * totalMultiplier;
+                    const accumulatedInflation = (totalMultiplier - 1) * 100;
+                    document.getElementById('corrected-value').textContent = formatCurrency(correctedValue);
+                    document.getElementById('accumulated-inflation').textContent = `${formatNumber(accumulatedInflation, 2)} %`;
+                    document.getElementById('inflation-result').style.display = 'block';
+                } catch(e) {
+                    alert('Falha ao buscar dados do IPCA. Tente novamente.');
+                    console.error("Erro no cálculo de inflação:", e);
+                }
+            };
+            document.getElementById('calculate-inflation').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateInflation));
+            document.getElementById('clear-inflation-calc').addEventListener('click', () => clearCalculator('inflation-calc'));
+        };
+
+        const fetchAndDisplayCDI = async () => {
+            const infoEl = document.getElementById('cdi-rate-info');
+            const cdbRateTypeSelect = document.getElementById('cdb-rate-type');
+            if(!infoEl || !cdbRateTypeSelect) return;
+            try {
+                infoEl.textContent = 'Carregando CDI...';
+                const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json');
+                if (!response.ok) throw new Error('Falha na resposta da rede.');
+                const data = await response.json();
+                if (!data || data.length === 0) throw new Error('Dados do CDI não encontrados.');
+                const lastDailyRate = parseFloat(data[0].valor);
+                annualizedCdiRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100;
+                if (cdbRateTypeSelect.value === 'cdi') {
+                    infoEl.textContent = `CDI Anualizado (projeção): ${annualizedCdiRate.toFixed(2)}% a.a.`;
+                    infoEl.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Erro ao buscar CDI:", error);
+                annualizedCdiRate = 10.50; 
+                if (cdbRateTypeSelect.value === 'cdi') {
+                    infoEl.textContent = `Falha ao carregar CDI. Usando taxa padrão: ${annualizedCdiRate.toFixed(2)}% a.a.`;
+                    infoEl.style.display = 'block';
+                }
+            }
+        };
+
+        const setupCdbCalculator = () => {
+            const calcEl = document.getElementById('cdb-calc');
+            if(!calcEl) return;
+            const rateTypeSelect = document.getElementById('cdb-rate-type');
+            const cdbRateLabel = calcEl.querySelector('label[for="cdb-rate"]');
+            const cdiInfo = document.getElementById('cdi-rate-info');
+            rateTypeSelect.addEventListener('change', () => {
+                if (rateTypeSelect.value === 'cdi') {
+                    cdbRateLabel.textContent = 'Taxa (% do CDI):';
+                    cdiInfo.style.display = 'block';
+                    if (annualizedCdiRate) cdiInfo.textContent = `CDI Anualizado (projeção): ${annualizedCdiRate.toFixed(2)}% a.a.`;
+                } else {
+                    cdbRateLabel.textContent = 'Taxa (% ao ano):';
+                    cdiInfo.style.display = 'none';
+                }
+                saveInputsToLocalStorage();
+            });
+            const calculateCDB = () => {
+                const amount = getMaskedValue('cdb-amount'), userInputRate = getMaskedValue('cdb-rate'), days = getMaskedValue('cdb-days');
+                const investmentType = document.getElementById('cdb-type').value, rateType = document.getElementById('cdb-rate-type').value;
+                if(amount <= 0 || userInputRate <= 0 || days <= 0 || (rateType === 'cdi' && !annualizedCdiRate)) {
+                    if (rateType === 'cdi' && !annualizedCdiRate) alert('Aguarde o carregamento da taxa CDI.');
+                    return;
+                }
+                let effectiveAnnualRate;
+                if (rateType === 'cdi') effectiveAnnualRate = annualizedCdiRate * (userInputRate / 100);
+                else effectiveAnnualRate = userInputRate;
+                const rate = effectiveAnnualRate / 100;
+                const dailyRate = Math.pow(1 + rate, 1/252) - 1;
+                const grossEarnings = amount * (Math.pow(1 + dailyRate, days) - 1);
+                let taxRate = 0;
+                let taxRateDisplay = "Isento";
+                if (investmentType === 'cdb') {
+                    if (days <= 180) taxRate = 0.225;
+                    else if (days <= 360) taxRate = 0.20;
+                    else if (days <= 720) taxRate = 0.175;
+                    else taxRate = 0.15;
+                    taxRateDisplay = `${(taxRate * 100).toFixed(1)}%`;
+                }
+                const tax = grossEarnings * taxRate;
+                const netEarnings = grossEarnings - tax;
+                const netValue = amount + netEarnings;
+                document.getElementById('cdb-gross').textContent = formatCurrency(grossEarnings);
+                document.getElementById('cdb-tax-rate').textContent = taxRateDisplay;
+                document.getElementById('cdb-tax').textContent = formatCurrency(tax);
+                document.getElementById('cdb-net').textContent = formatCurrency(netEarnings);
+                document.getElementById('cdb-final').textContent = formatCurrency(netValue);
+                document.getElementById('cdb-result').style.display = 'block';
+            };
+            document.getElementById('calculate-cdb').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCDB));
+            document.getElementById('clear-cdb-calc').addEventListener('click', () => clearCalculator('cdb-calc'));
+            fetchAndDisplayCDI();
+        };
+
+        const renderCompoundChart = (data) => {
+            const ctx = document.getElementById('compound-chart').getContext('2d');
+            if (compoundChartInstance) compoundChartInstance.destroy();
+            const labels = data.map(d=>`Ano ${d.year}`), isDarkMode=!document.body.classList.contains('light-mode'), gridColor=isDarkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)', labelColor=isDarkMode?'#c9d1d9':'#333';
+            compoundChartInstance = new Chart(ctx, {
+                type:'bar', data: { labels: labels, datasets: [ { label: 'Total Aportado', data: data.map(d=>d.totalInvested), backgroundColor: isDarkMode ? '#007aff' : '#0056b3' }, { label: 'Juros', data: data.map(d=>d.interest), backgroundColor: '#00d180' } ]},
+                options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { labels: { color: labelColor }}}, scales: { x: { stacked:true, ticks:{color:labelColor}, grid:{color:gridColor} }, y: { stacked:true, ticks:{color:labelColor, callback:(v) => `R$${(v/1000).toFixed(0)}k`}, grid:{color:gridColor} } } }
+            });
+        };
+
+        const setupCompoundInterestCalculator = () => {
+            const calcEl = document.getElementById('juros-compostos-calc');
+            if (!calcEl) return;
+            const calculateCompoundInterest = () => {
+                const principal = getMaskedValue('principal');
+                const monthly = getMaskedValue('monthly');
+                const annualRate = getMaskedValue('rate') / 100;
+                const years = getMaskedValue('time');
+
+                if ((principal < 0 && monthly <= 0) || annualRate < 0 || years <= 0) return;
+
+                const months = years * 12;
+                const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+
+                let finalAmount;
+                if (monthlyRate > 0) {
+                    finalAmount = principal * Math.pow(1 + monthlyRate, months) + monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+                } else {
+                    finalAmount = principal + (monthly * months);
+                }
+                
+                const totalContribution = principal + (monthly * months);
+                const totalInterest = finalAmount - totalContribution;
+
+                const dataPoints = [];
+                let currentAmountForChart = principal;
+                for (let i = 1; i <= months; i++) {
+                    currentAmountForChart = currentAmountForChart * (1 + monthlyRate) + monthly;
+                    if (i % 12 === 0 || i === months) {
+                        const totalContributionAtThisPoint = principal + (monthly * i);
+                        dataPoints.push({
+                            year: Math.ceil(i / 12),
+                            totalInvested: totalContributionAtThisPoint,
+                            interest: currentAmountForChart - totalContributionAtThisPoint
+                        });
+                    }
+                }
+
+                document.getElementById('total-invested').textContent = formatCurrency(totalContribution);
+                document.getElementById('total-interest').textContent = formatCurrency(totalInterest);
+                document.getElementById('final-amount').textContent = formatCurrency(finalAmount);
+                document.getElementById('compound-result').style.display = 'block';
+                
+                renderCompoundChart(dataPoints);
+            };
+            document.getElementById('calculate-compound').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCompoundInterest));
+            document.getElementById('clear-compound-calc').addEventListener('click', () => clearCalculator('juros-compostos-calc'));
         };
 
         const setupPriceAverageCalculator = () => {
@@ -647,11 +804,9 @@
                 updateOperationNumbers();
             };
             const removeOperation = (element) => {
-                if (container.children.length > 1) {
-                    element.querySelectorAll('input').forEach(input => { if (masks[input.id]) { masks[input.id].destroy(); delete masks[input.id]; }});
-                    element.remove();
-                    updateOperationNumbers();
-                }
+                element.querySelectorAll('input').forEach(input => { if (masks[input.id]) { masks[input.id].destroy(); delete masks[input.id]; }});
+                element.remove();
+                updateOperationNumbers();
             };
             const updateOperationNumbers = () => Array.from(container.children).forEach((card, i) => card.querySelector('.operation-number').textContent = i + 1);
             const calculateAverage = () => {
@@ -659,11 +814,13 @@
                 let totalInvestment = totalQuantity * getMaskedValue('current-price');
                 document.querySelectorAll('.op-quantity').forEach(qInput => {
                     const pInput = qInput.closest('.operation-card').querySelector('.op-price');
-                    const quantity = getMaskedValue(qInput.id);
-                    const price = getMaskedValue(pInput.id);
-                    if (quantity > 0 && price > 0) {
-                        totalQuantity += quantity;
-                        totalInvestment += quantity * price;
+                    if(qInput.id && pInput.id) {
+                        const quantity = getMaskedValue(qInput.id);
+                        const price = getMaskedValue(pInput.id);
+                        if (quantity > 0 && price > 0) {
+                            totalQuantity += quantity;
+                            totalInvestment += quantity * price;
+                        }
                     }
                 });
                 const averagePrice = totalQuantity > 0 ? totalInvestment / totalQuantity : 0;
@@ -675,12 +832,9 @@
             document.getElementById('add-operation').addEventListener('click', addOperation);
             document.getElementById('calculate-average').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateAverage));
             document.getElementById('clear-average-calc').addEventListener('click', () => {
-                 const opContainer = document.getElementById('operations-container');
-                 opContainer.innerHTML = '';
+                 document.getElementById('operations-container').innerHTML = '';
                  clearCalculator('price-average-calc');
-                 addOperation();
             });
-            addOperation();
         };
 
         const setupAmortizationCalculator = () => {
@@ -690,19 +844,16 @@
                 const amount = getMaskedValue('loan-amount'), annualRate = getMaskedValue('loan-rate') / 100, years = getMaskedValue('loan-term');
                 if (amount <= 0 || annualRate <= 0 || years <= 0) return;
                 const months = years * 12, monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
-                let firstInstallment = 0, totalInterest = 0, balance = amount;
+                let firstInstallment = 0, totalInterest = 0;
                 const type = document.getElementById('loan-type').value;
                 if (type === 'price') {
                     firstInstallment = amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
                     totalInterest = (firstInstallment * months) - amount;
                 } else {
                     const amortization = amount / months;
-                    for (let i = 0; i < months; i++) {
-                        const interestPayment = balance * monthlyRate;
-                        totalInterest += interestPayment;
-                        if (i === 0) firstInstallment = amortization + interestPayment;
-                        balance -= amortization;
-                    }
+                    const interestPayment = amount * monthlyRate;
+                    totalInterest = Array.from({length: months}, (_, i) => (amount - i * amortization) * monthlyRate).reduce((a, b) => a + b, 0);
+                    firstInstallment = amortization + interestPayment;
                 }
                 document.getElementById('monthly-payment').textContent = formatCurrency(firstInstallment || 0);
                 document.getElementById('total-loan-interest').textContent = formatCurrency(totalInterest);
@@ -710,11 +861,28 @@
                 document.getElementById('amortization-result').style.display = 'block';
                 document.getElementById('show-amortization-table').style.display = 'block';
             };
+            const generateAmortizationTable = () => {
+                const amount = getMaskedValue('loan-amount'), annualRate = getMaskedValue('loan-rate')/100, years = getMaskedValue('loan-term'), type = document.getElementById('loan-type').value, months = years * 12;
+                if(amount <= 0 || annualRate <= 0 || years <= 0) return;
+                const monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
+                let balance = amount, tableHTML = `<table class="amortization-table"><thead><tr><th>Mês</th><th>Parcela</th><th>Juros</th><th>Amort.</th><th>Saldo Devedor</th></tr></thead><tbody>`;
+                const priceInstallment = type === 'price' ? amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1) : 0;
+                const sacAmortization = type === 'sac' ? amount / months : 0;
+                for (let i = 1; i <= months; i++) {
+                    const interest = balance * monthlyRate;
+                    const amortization = type === 'price' ? priceInstallment - interest : sacAmortization;
+                    const installment = type === 'price' ? priceInstallment : amortization + interest;
+                    balance -= amortization;
+                    if (balance < 0.01) balance = 0;
+                    tableHTML += `<tr><td>${i}</td><td>${formatCurrency(installment)}</td><td>${formatCurrency(interest)}</td><td>${formatCurrency(amortization)}</td><td>${formatCurrency(balance)}</td></tr>`;
+                }
+                tableHTML += `</tbody></table>`;
+                document.getElementById('amortization-table-container').innerHTML = tableHTML;
+            };
             document.getElementById('show-amortization-table').addEventListener('click', () => {
                  generateAmortizationTable();
-                 const container = document.getElementById('amortization-table-container');
-                 container.style.display = 'block';
-                 container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                 document.getElementById('amortization-table-container').style.display = 'block';
+                 document.getElementById('amortization-table-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             });
             document.getElementById('calculate-amortization').addEventListener('click', (e) => {
                 document.getElementById('amortization-table-container').style.display = 'none';
@@ -722,198 +890,26 @@
             });
             document.getElementById('clear-amortization-calc').addEventListener('click', () => clearCalculator('amortizacao-calc'));
         };
-        const generateAmortizationTable = () => {
-            const amount = getMaskedValue('loan-amount'), annualRate = getMaskedValue('loan-rate')/100, years = getMaskedValue('loan-term'), type = document.getElementById('loan-type').value, months = years * 12;
-            if(amount <= 0 || annualRate <= 0 || years <= 0) return;
-            const monthlyRate = Math.pow(1 + annualRate, 1/12) - 1;
-            let balance = amount, tableHTML = `<table class="amortization-table"><thead><tr><th>Mês</th><th>Parcela</th><th>Juros</th><th>Amort.</th><th>Saldo Devedor</th></tr></thead><tbody>`;
-            const priceInstallment = type === 'price' ? amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1) : 0;
-            const sacAmortization = type === 'sac' ? amount / months : 0;
-            for (let i = 1; i <= months; i++) {
-                const interest = balance * monthlyRate;
-                const amortization = type === 'price' ? priceInstallment - interest : sacAmortization;
-                const installment = type === 'price' ? priceInstallment : amortization + interest;
-                balance -= amortization;
-                if (balance < 0.01) balance = 0;
-                tableHTML += `<tr><td>${i}</td><td>${formatCurrency(installment)}</td><td>${formatCurrency(interest)}</td><td>${formatCurrency(amortization)}</td><td>${formatCurrency(balance)}</td></tr>`;
-            }
-            tableHTML += `</tbody></table>`;
-            document.getElementById('amortization-table-container').innerHTML = tableHTML;
-        };
 
-        // --- NOVA LÓGICA PARA A CALCULADORA DE RENDA FIXA ---
-        
-        // NOVA FUNÇÃO: Busca e exibe o CDI
-        async function fetchAndDisplayCDI() {
-            const infoEl = document.getElementById('cdi-rate-info');
-            const cdbRateTypeSelect = document.getElementById('cdb-rate-type');
-            if(!infoEl || !cdbRateTypeSelect) return;
-
-            try {
-                infoEl.textContent = 'Carregando CDI...';
-                // Usando um proxy CORS para evitar bloqueios em alguns ambientes
-                const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json');
-                if (!response.ok) throw new Error('Falha na resposta da rede.');
-                
-                const data = await response.json();
-                if (!data || data.length === 0) throw new Error('Dados do CDI não encontrados.');
-
-                const lastDailyRate = parseFloat(data[0].valor);
-                // Fórmula para anualizar a taxa CDI
-                annualizedCdiRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100;
-                
-                if (cdbRateTypeSelect.value === 'cdi') {
-                    infoEl.textContent = `CDI Anualizado (projeção): ${annualizedCdiRate.toFixed(2)}% a.a.`;
-                    infoEl.style.display = 'block';
-                }
-                
-            } catch (error) {
-                console.error("Erro ao buscar CDI:", error);
-                // Fallback para uma taxa padrão caso a API falhe
-                annualizedCdiRate = 10.50; 
-                if (cdbRateTypeSelect.value === 'cdi') {
-                    infoEl.textContent = `Falha ao carregar CDI. Usando taxa padrão: ${annualizedCdiRate.toFixed(2)}% a.a.`;
-                    infoEl.style.display = 'block';
-                }
-            }
-        }
-        
-        const setupCdbCalculator = () => {
-            const calcEl = document.getElementById('cdb-calc');
-            if(!calcEl) return;
-
-            const rateTypeSelect = document.getElementById('cdb-rate-type');
-            const cdbRateLabel = calcEl.querySelector('label[for="cdb-rate"]');
-            const cdiInfo = document.getElementById('cdi-rate-info');
-
-            // Event listener para alternar a interface entre CDI e Prefixado
-            rateTypeSelect.addEventListener('change', () => {
-                if (rateTypeSelect.value === 'cdi') {
-                    cdbRateLabel.textContent = 'Taxa (% do CDI):';
-                    cdiInfo.style.display = 'block';
-                    if (annualizedCdiRate) {
-                         cdiInfo.textContent = `CDI Anualizado (projeção): ${annualizedCdiRate.toFixed(2)}% a.a.`;
-                    }
-                } else {
-                    cdbRateLabel.textContent = 'Taxa (% ao ano):';
-                    cdiInfo.style.display = 'none';
-                }
-                saveInputsToLocalStorage();
-            });
-
-            const calculateCDB = () => {
-                const amount = getMaskedValue('cdb-amount');
-                const userInputRate = getMaskedValue('cdb-rate');
-                const days = getMaskedValue('cdb-days');
-                const investmentType = document.getElementById('cdb-type').value; // CDB ou LCI/LCA
-                const rateType = document.getElementById('cdb-rate-type').value; // 'cdi' ou 'prefixado'
-
-                if(amount <= 0 || userInputRate <= 0 || days <= 0 || (rateType === 'cdi' && !annualizedCdiRate)) {
-                    if (rateType === 'cdi' && !annualizedCdiRate) alert('Aguarde o carregamento da taxa CDI ou verifique sua conexão.');
-                    return;
-                }
-
-                let effectiveAnnualRate;
-                if (rateType === 'cdi') {
-                    // Calcula a taxa efetiva baseada na % do CDI
-                    effectiveAnnualRate = annualizedCdiRate * (userInputRate / 100);
-                } else {
-                    // Usa a taxa prefixada diretamente
-                    effectiveAnnualRate = userInputRate;
-                }
-
-                const rate = effectiveAnnualRate / 100;
-                // Converte a taxa anual para diária (considerando dias úteis)
-                const dailyRate = Math.pow(1 + rate, 1/252) - 1;
-                const grossEarnings = amount * (Math.pow(1 + dailyRate, days) - 1);
-                
-                let taxRate = 0;
-                // Aplica imposto de renda se não for isento (LCI/LCA)
-                if (investmentType === 'cdb') {
-                    if (days <= 180) taxRate = 0.225;
-                    else if (days <= 360) taxRate = 0.20;
-                    else if (days <= 720) taxRate = 0.175;
-                    else taxRate = 0.15;
-                }
-
-                const tax = grossEarnings * taxRate;
-                const netEarnings = grossEarnings - tax;
-                const netValue = amount + netEarnings;
-
-                document.getElementById('cdb-gross').textContent = formatCurrency(grossEarnings);
-                document.getElementById('cdb-tax').textContent = formatCurrency(tax);
-                document.getElementById('cdb-net').textContent = formatCurrency(netEarnings);
-                document.getElementById('cdb-final').textContent = formatCurrency(netValue);
-                document.getElementById('cdb-result').style.display = 'block';
-            };
-
-            document.getElementById('calculate-cdb').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCDB));
-            document.getElementById('clear-cdb-calc').addEventListener('click', () => clearCalculator('cdb-calc'));
-            
-            // Chama a função para buscar o CDI ao configurar a calculadora
-            fetchAndDisplayCDI();
-        };
-        // --- FIM DA LÓGICA PARA A CALCULADORA DE RENDA FIXA ---
-
-        const setupCompoundInterestCalculator = () => {
-            const calcEl = document.getElementById('juros-compostos-calc');
-            if(!calcEl) return;
-            const calculateCompoundInterest = () => {
-                const principal=getMaskedValue('principal'), monthly=getMaskedValue('monthly'), annualRate=getMaskedValue('rate')/100, years=getMaskedValue('time');
-                if ((principal < 0 && monthly <= 0) || annualRate <= 0 || years <= 0) return;
-                const dataPoints=[], monthlyRate = Math.pow(1 + annualRate, 1/12)-1, months=years*12;
-                let currentAmount=principal, totalInvested=principal;
-                for (let i=1; i<=months; i++) {
-                    currentAmount*=(1+monthlyRate);
-                    currentAmount+=monthly;
-                    totalInvested+=monthly;
-                    if (i%12===0 || i===months) dataPoints.push({ year: Math.ceil(i/12), totalInvested: totalInvested, interest: currentAmount - totalInvested });
-                }
-                document.getElementById('total-invested').textContent = formatCurrency(totalInvested);
-                document.getElementById('total-interest').textContent = formatCurrency(currentAmount - totalInvested);
-                document.getElementById('final-amount').textContent = formatCurrency(currentAmount);
-                document.getElementById('compound-result').style.display = 'block';
-                renderCompoundChart(dataPoints);
-            };
-            document.getElementById('calculate-compound').addEventListener('click', (e) => handleCalculation(e.currentTarget, calculateCompoundInterest));
-            document.getElementById('clear-compound-calc').addEventListener('click', () => clearCalculator('juros-compostos-calc'));
-        };
-        const renderCompoundChart = (data) => {
-            const ctx = document.getElementById('compound-chart').getContext('2d');
-            if (compoundChartInstance) compoundChartInstance.destroy();
-            const labels = data.map(d=>`Ano ${d.year}`), isDarkMode=!document.body.classList.contains('light-mode'), gridColor=isDarkMode?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)', labelColor=isDarkMode?'#c9d1d9':'#333';
-            compoundChartInstance = new Chart(ctx, {
-                type:'bar', data: { labels: labels, datasets: [ { label: 'Total Investido', data: data.map(d=>d.totalInvested), backgroundColor: isDarkMode ? '#007aff' : '#0056b3' }, { label: 'Juros', data: data.map(d=>d.interest), backgroundColor: '#00d180' } ]},
-                options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { labels: { color: labelColor }}}, scales: { x: { stacked:true, ticks:{color:labelColor}, grid:{color:gridColor} }, y: { stacked:true, ticks:{color:labelColor, callback:(v) => `R$${(v/1000).toFixed(0)}k`}, grid:{color:gridColor} } } }
-            });
-        };
-        
         const setupHP12CModal = () => {
             const modal = document.getElementById('hp12cModal');
             const openBtn = document.getElementById('hp12cButton');
             const closeBtn = document.getElementById('hp12cCloseBtn');
             if(!modal || !openBtn || !closeBtn) return;
-            
-            const openModal = () => { 
-                modal.style.display = 'flex';
-                document.body.classList.add('modal-open'); 
-            };
-            const closeModal = () => { 
-                modal.style.display = 'none'; 
-                document.body.classList.remove('modal-open'); 
-            };
-            
+            const openModal = () => { modal.style.display = 'flex'; document.body.classList.add('modal-open'); };
+            const closeModal = () => { modal.style.display = 'none'; document.body.classList.remove('modal-open'); };
             openBtn.addEventListener('click', openModal);
             closeBtn.addEventListener('click', closeModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
             document.addEventListener('keydown', (e) => { if(e.key === "Escape" && modal.style.display === 'flex') closeModal(); });
         };
-        
+
         const saveInputsToLocalStorage = () => {
             const data = {};
-            document.querySelectorAll('input[type="text"], select').forEach(el => { if(el.id) data[el.id] = el.value; });
+            document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(el => { if(el.id) data[el.id] = el.value; });
             localStorage.setItem(lsKey, JSON.stringify(data));
         };
+
         const loadInputsFromLocalStorage = () => {
             const data = JSON.parse(localStorage.getItem(lsKey));
             if(!data) return;
@@ -922,28 +918,37 @@
                 if(el) { 
                     el.value = data[id]; 
                     if(masks[id]) masks[id].updateValue(); 
-                    if(el.tagName === 'SELECT') {
-                         // Dispara o evento 'change' para garantir que a UI se atualize (ex: label do CDB)
-                         el.dispatchEvent(new Event('change'));
-                    }
+                    if(el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
                 }
             });
         };
 
+        // --- 4. INITIALIZATION ---
         const init = () => {
             setupHP12CModal();
             initMasks();
+            
+            // Setup UI Elements
+            setupCalculatorNav();
+
+            // Setup Calculators
+            setupRetirementCalculator();
+            setupCurrencyConverter();
+            setupInflationCalculator();
+            setupCdbCalculator();
+            setupCompoundInterestCalculator();
             setupPriceAverageCalculator();
             setupAmortizationCalculator();
-            setupCdbCalculator(); // Esta função agora também busca o CDI
-            setupCompoundInterestCalculator();
+            
             loadInputsFromLocalStorage();
             document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', saveInputsToLocalStorage));
+            
             const backToTopButton = document.getElementById('top-btn');
             window.addEventListener('scroll', () => backToTopButton.classList.toggle('visible', window.scrollY > 300));
             backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
             document.getElementById('refresh-btn').addEventListener('click', () => { localStorage.removeItem(lsKey); window.location.reload(); });
-            document.getElementById('home-btn').addEventListener('click', () => window.location.href = '/index.html');
+            document.getElementById('home-btn').addEventListener('click', () => { window.location.href = '/'; });
+            
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = themeToggle.querySelector('i');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -952,7 +957,7 @@
                 themeIcon.className = light ? 'fas fa-sun' : 'fas fa-moon';
                 localStorage.setItem('themePreference', light ? 'light' : 'dark');
                 if (compoundChartInstance) {
-                    const gridColor = !light ? 'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'; const labelColor = !light ? '#c9d1d9' : '#333';
+                    const gridColor = !light ? 'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)', labelColor = !light ? '#c9d1d9' : '#333';
                     compoundChartInstance.options.plugins.legend.labels.color = labelColor;
                     compoundChartInstance.options.scales.x.ticks.color = labelColor;
                     compoundChartInstance.options.scales.y.ticks.color = labelColor;
@@ -965,6 +970,8 @@
             themeToggle.addEventListener('click', () => applyTheme(!document.body.classList.contains('light-mode')));
             applyTheme(localStorage.getItem('themePreference') === 'light' || (localStorage.getItem('themePreference') === null && !prefersDark));
         };
+
+        // --- 5. RUN APP ---
         init();
     });
     </script>
