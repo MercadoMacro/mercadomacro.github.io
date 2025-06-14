@@ -40,7 +40,7 @@
             --shadow-color-soft: rgba(0, 0, 0, 0.2);
             --shadow-color-medium: rgba(0, 0, 0, 0.3);
         }
-        html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+        html { scroll-padding-top: 20px; }
         body { margin: 0; padding: 0; font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%); color: var(--text-color); min-height: 100vh; width: 100%; line-height: 1.7; transition: background var(--transition-speed) ease, color var(--transition-speed) ease; display: flex; flex-direction: column; }
         body.modal-open { overflow: hidden; }
         :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -135,8 +135,21 @@
         body.light-mode .hp12c-close-btn:hover { background: var(--primary-color); color: white; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .new-operation { animation: fadeIn 0.5s; }
-        @media (max-width: 768px) { .button-group { flex-direction: column; } .page-title-header { font-size: 24px; } }
-        @media (max-width: 600px) { body { touch-action: manipulation; } .container { padding-left: 10px; padding-right: 10px; } .hp12c-modal { align-items: flex-start; padding-top: 30px; padding-bottom: 30px; } }
+        
+        /* ***** REGRAS @MEDIA RESTAURADAS E APRIMORADAS ***** */
+        @media (max-width: 768px) {
+            .button-group { flex-direction: column; }
+            .page-title-header { font-size: 2rem; }
+            .nav-btn { font-size: 0.85rem; padding: 7px 15px; }
+        }
+        @media (max-width: 600px) {
+            body { touch-action: manipulation; }
+            .container { padding-left: 10px; padding-right: 10px; }
+            .page-title-header { font-size: 1.8rem; }
+            .calculator { padding: 16px; }
+            .nav-btn { font-size: 0.8rem; padding: 6px 12px; }
+            .hp12c-modal { align-items: flex-start; padding-top: 30px; padding-bottom: 30px; }
+        }
     </style>
 </head>
 <body>
@@ -411,7 +424,7 @@
         // --- 1. GLOBAL STATE & CONFIG ---
         let compoundChartInstance = null;
         const masks = {};
-        const lsKey = 'financialCalculatorsData_v10'; // Version bump
+        const lsKey = 'financialCalculatorsData_v11'; // Version bump
         let annualizedCdiRate = null;
 
         // --- 2. HELPER FUNCTIONS ---
@@ -496,30 +509,25 @@
                 e.preventDefault();
                 const filter = clickedBtn.dataset.filter;
 
-                // Update active button
                 navContainer.querySelector('.nav-btn.active').classList.remove('active');
                 clickedBtn.classList.add('active');
 
-                // Filter sections
-                let firstVisibleSection = null;
                 sections.forEach(section => {
                     const isMatch = section.id === filter;
                     const isAll = filter === 'all';
-
                     if (isAll || isMatch) {
                         section.classList.remove('hidden');
-                        if (!firstVisibleSection) {
-                           firstVisibleSection = section;
-                        }
                     } else {
                         section.classList.add('hidden');
                     }
                 });
 
-                // Scroll to the top of the container after filtering
-                if (firstVisibleSection && filter !== 'all') {
-                    const offsetTop = firstVisibleSection.offsetTop - 20;
-                    window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+                if (filter !== 'all') {
+                    const targetSection = document.getElementById(filter);
+                    if (targetSection) {
+                        const offsetTop = targetSection.offsetTop - 20;
+                        window.scrollTo({ top: offsetTop, behavior: 'auto' }); // Jump for faster feel
+                    }
                 }
             });
         };
