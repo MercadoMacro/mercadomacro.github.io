@@ -312,6 +312,94 @@
         color: var(--text-secondary); padding: 20px 0;
         border-top: 1px solid var(--border-color);
     }
+    
+    /* === INÍCIO: CSS DO BRIEFING === */
+    #briefing-btn {
+        right: 200px; /* Ajuste a posição para não sobrepor os outros */
+        bottom: 20px;
+    }
+
+    .briefing-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        backdrop-filter: blur(5px);
+    }
+    .briefing-modal-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .briefing-modal-content {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        padding: 25px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        width: 90%;
+        max-width: 700px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px var(--shadow-color-medium);
+        position: relative;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .briefing-modal-content h2 {
+        font-family: 'Montserrat', sans-serif;
+        color: var(--primary-color);
+        margin-top: 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 15px;
+    }
+
+    .briefing-modal-content ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .briefing-modal-content li {
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+        padding-left: 20px;
+        position: relative;
+    }
+    .briefing-modal-content li::before {
+        content: '•';
+        color: var(--primary-color);
+        position: absolute;
+        left: 0;
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+
+    .briefing-modal-close {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 24px;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    .briefing-modal-close:hover {
+        color: var(--primary-color);
+    }
+    /* === FIM: CSS DO BRIEFING === */
 
     body.light-mode {
         --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
@@ -353,12 +441,14 @@
         .news-grid-wrapper { grid-template-columns: 1fr; padding-bottom: 80px; }
         .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
         #refresh-btn { right: 15px; } #home-btn { right: 70px; } #top-btn { right: 125px; }
+        #briefing-btn { right: 180px; } /* Ajuste de posição */
         .theme-toggle { left: 15px; }
     }
     @media (max-width: 480px) {
         .page-title-header { font-size: 30px; }
         .floating-btn, .theme-toggle { width: 40px; height: 40px; }
         #refresh-btn { right: 10px; } #home-btn { right: 60px; } #top-btn { right: 110px; }
+        #briefing-btn { right: 160px; } /* Ajuste de posição */
         .theme-toggle { left: 10px; }
     }
     
@@ -550,9 +640,21 @@
 <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
   <i class="fas fa-arrow-up"></i>
 </button>
+<button id="briefing-btn" class="floating-btn" aria-label="Gerar Briefing das Notícias">
+  <i class="fas fa-clipboard-list"></i>
+</button>
 <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
   <i class="fas fa-moon"></i>
 </button>
+
+<div id="briefing-modal" class="briefing-modal-overlay">
+    <div class="briefing-modal-content">
+        <button id="briefing-modal-close-btn" class="briefing-modal-close" aria-label="Fechar">&times;</button>
+        <h2 id="briefing-title">Briefing de Notícias</h2>
+        <ul id="briefing-list">
+            </ul>
+    </div>
+</div>
 
 <script>
   const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
@@ -855,6 +957,54 @@
       if (yearSpan) yearSpan.textContent = new Date().getFullYear();
   }
 
+  // === INÍCIO: JAVASCRIPT DO BRIEFING ===
+  function generateAndShowBriefing() {
+    const briefingList = document.getElementById('briefing-list');
+    const briefingTitle = document.getElementById('briefing-title');
+    const modal = document.getElementById('briefing-modal');
+
+    if (!briefingList || !briefingTitle || !modal) return;
+
+    briefingList.innerHTML = ''; // Limpa a lista anterior
+    const scopeTitle = currentNewsScope === 'local' ? 'Local' : 'Internacional';
+    briefingTitle.textContent = `Briefing de Notícias: ${scopeTitle}`;
+
+    let headlines = [];
+    
+    // Itera sobre os feeds para encontrar os que estão visíveis (no escopo atual)
+    Object.keys(rssFeeds).forEach(feedKey => {
+        const feedConfig = rssFeeds[feedKey];
+        if (feedConfig.scope === currentNewsScope) {
+            const newsListElement = document.getElementById(feedConfig.elementId);
+            if (newsListElement) {
+                // Pega todos os links <a> dentro da lista de notícias
+                const links = newsListElement.querySelectorAll('a');
+                links.forEach(link => {
+                    headlines.push(link.textContent.trim());
+                });
+            }
+        }
+    });
+
+    if (headlines.length === 0) {
+        briefingList.innerHTML = '<li>Nenhuma notícia carregada para gerar o briefing. Por favor, atualize as notícias primeiro.</li>';
+    } else {
+        headlines.forEach(title => {
+            const li = document.createElement('li');
+            li.textContent = title;
+            briefingList.appendChild(li);
+        });
+    }
+
+    modal.classList.add('visible');
+  }
+
+  function closeBriefingModal() {
+    const modal = document.getElementById('briefing-modal');
+    if (modal) modal.classList.remove('visible');
+  }
+  // === FIM: JAVASCRIPT DO BRIEFING ===
+
   document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('themePreference');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -884,6 +1034,24 @@
             if (feedKey) loadNews(feedKey, true);
         });
     });
+    
+    // === INÍCIO: EVENT LISTENERS DO BRIEFING ===
+    const briefingBtn = document.getElementById('briefing-btn');
+    if(briefingBtn) briefingBtn.addEventListener('click', generateAndShowBriefing);
+    
+    const briefingModalCloseBtn = document.getElementById('briefing-modal-close-btn');
+    if(briefingModalCloseBtn) briefingModalCloseBtn.addEventListener('click', closeBriefingModal);
+
+    const briefingModalOverlay = document.getElementById('briefing-modal');
+    if(briefingModalOverlay) {
+        briefingModalOverlay.addEventListener('click', function(event) {
+            // Fecha o modal se o clique for no overlay (fundo), mas não no conteúdo
+            if (event.target === this) {
+                closeBriefingModal();
+            }
+        });
+    }
+    // === FIM: EVENT LISTENERS DO BRIEFING ===
   });
 
   setInterval(() => {
