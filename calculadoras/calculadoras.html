@@ -136,19 +136,36 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .new-operation { animation: fadeIn 0.5s; }
         
-        /* ***** REGRAS @MEDIA RESTAURADAS E APRIMORADAS ***** */
+        /* Bloco @media inserido conforme solicitado */
         @media (max-width: 768px) {
             .button-group { flex-direction: column; }
-            .page-title-header { font-size: 2rem; }
-            .nav-btn { font-size: 0.85rem; padding: 7px 15px; }
+            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; } 
+            .logo { text-align: center; } 
+            .page-title-header { font-size: 24px; } 
+            .logo-divider { margin: 5px auto; } 
+            .banner { max-width: 100%; margin-left: 0; text-align: center; font-size: 13px; } 
+            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; } 
+            .content-box { max-height: 420px; } 
+            .content-box.expanded { max-height: 65vh; } 
+            .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
+            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
+            .settings-panel.visible { transform: translateY(0) scale(1); } 
         }
-        @media (max-width: 600px) {
-            body { touch-action: manipulation; }
-            .container { padding-left: 10px; padding-right: 10px; }
-            .page-title-header { font-size: 1.8rem; }
-            .calculator { padding: 16px; }
-            .nav-btn { font-size: 0.8rem; padding: 6px 12px; }
-            .hp12c-modal { align-items: flex-start; padding-top: 30px; padding-bottom: 30px; }
+
+        @media (max-width: 600px) { 
+            body {
+                zoom: 0.8;
+                touch-action: manipulation;
+            }
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .hp12c-modal {
+                align-items: flex-start;
+                padding-top: 30px;
+                padding-bottom: 30px;
+            }
         }
     </style>
 </head>
@@ -525,8 +542,8 @@
                 if (filter !== 'all') {
                     const targetSection = document.getElementById(filter);
                     if (targetSection) {
-                        const offsetTop = targetSection.offsetTop - 20;
-                        window.scrollTo({ top: offsetTop, behavior: 'auto' }); // Jump for faster feel
+                        const offsetTop = navContainer.offsetTop - 20; // Scroll to top of nav
+                        window.scrollTo({ top: offsetTop, behavior: 'auto' });
                     }
                 }
             });
