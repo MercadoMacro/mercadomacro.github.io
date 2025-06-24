@@ -43,15 +43,14 @@
         .subheader { font-size: 16px; margin-bottom: 25px; color: var(--text-secondary); font-weight: 600; }
         main { flex: 1; display: flex; flex-direction: column; width: 100%; }
         .indicators-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; padding: 8px 0 15px; width: 100%; flex-grow: 1; }
-        .indicator-card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 12px var(--shadow-color-soft); padding: 0; flex: 1 1 280px; max-width: calc(25% - 15px); text-align: center; transition: all 0.3s ease; border: 1px solid var(--border-color); min-height: 190px; display: flex; flex-direction: column; justify-content: center; position: relative; transform-style: preserve-3d; overflow: hidden; perspective: 1000px; cursor: grab; }
-        .indicator-card:active { cursor: grabbing; }
+        .indicator-card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 12px var(--shadow-color-soft); padding: 0; flex: 1 1 280px; max-width: calc(25% - 15px); text-align: center; transition: all 0.3s ease; border: 1px solid var(--border-color); min-height: 190px; display: flex; flex-direction: column; justify-content: center; position: relative; transform-style: preserve-3d; overflow: hidden; perspective: 1000px; }
         .indicator-card.sortable-ghost { opacity: 0.4; }
-        .indicator-card.sortable-chosen { box-shadow: 0 8px 20px var(--shadow-color-medium); transform: scale(1.02); }
+        .indicator-card.sortable-chosen { box-shadow: 0 8px 20px var(--shadow-color-medium); transform: scale(1.02); cursor: grabbing; }
         .indicator-card--with-chart { min-height: 310px; max-width: calc(33.33% - 15px); }
         .indicator-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 8px 20px var(--shadow-color-medium); }
         .up-trend { color: var(--up-trend); }
         .down-trend { color: var(--down-trend); }
-        .indicator-front, .indicator-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 12px 15px; display: flex; flex-direction: column; justify-content: space-around; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .indicator-front, .indicator-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 12px 15px 12px 35px; display: flex; flex-direction: column; justify-content: space-around; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
         .indicator-back { transform: rotateY(180deg); font-size: 13px; color: var(--text-secondary); text-align: left; padding: 15px; overflow-y: auto; cursor: default;}
         .indicator-card.flipped .indicator-front { transform: rotateY(180deg); }
         .indicator-card.flipped .indicator-back { transform: rotateY(0deg); }
@@ -60,9 +59,12 @@
         .indicator-name { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
         .indicator-value { font-size: 16px; font-weight: 700; margin: 5px 0; line-height: 1.3; }
         .indicator-description { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; line-height: 1.3; }
-        .indicator-card--multi-value .indicator-front { padding: 10px 12px; }
+        .indicator-card--multi-value .indicator-front { padding-top: 10px; padding-bottom: 10px; }
         .indicator-card--multi-value .indicator-value { font-size: 15px; }
         .sparkline-chart { min-height: 80px; margin: 8px 0; }
+        .drag-handle { position: absolute; left: 0; top: 0; bottom: 0; width: 30px; display: flex; align-items: center; justify-content: center; color: rgba(139, 148, 158, 0.4); cursor: grab; transition: color 0.2s ease; }
+        .indicator-card:hover .drag-handle { color: rgba(139, 148, 158, 0.7); }
+        .drag-handle:active { cursor: grabbing; }
         .chart-controls { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
         .chart-period-btn { background: rgba(var(--card-bg-val),0.5); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
         .chart-period-btn:hover { background: var(--primary-color); color: var(--dark-bg); }
@@ -130,6 +132,7 @@
             <div class="indicators-container" id="indicators-container">
                  <article class="indicator-card indicator-card--with-chart" id="card-risk" data-id="risk">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div>
                         <div class="indicator-name">RISCO PAÍS (CDS 5 ANOS)</div>
                         <div class="indicator-value" id="risk-value">Carregando...</div>
@@ -144,6 +147,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar" data-id="dolar">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
                         <div class="indicator-name">DÓLAR</div>
                         <div class="indicator-value" id="dolar-buy-value">Carregando...</div>
@@ -165,6 +169,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro" data-id="euro">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div>
                         <div class="indicator-name">EURO</div>
                         <div class="indicator-value" id="euro-buy-value">Carregando...</div>
@@ -186,6 +191,7 @@
                 </article>
                 <article class="indicator-card indicator-card--with-chart" id="card-cdi" data-id="cdi">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
                         <div class="indicator-name">CDI</div>
                         <div class="indicator-value" id="cdi-annual-value">Carregando...</div>
@@ -205,6 +211,7 @@
                 </article>
                 <article class="indicator-card indicator-card--with-chart" id="card-selic" data-id="selic">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-percentage"></i></div>
                         <div class="indicator-name">SELIC</div>
                         <div class="indicator-value" id="selic-meta-value">Carregando...</div>
@@ -224,6 +231,7 @@
                 </article>
                  <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
                         <div class="indicator-name">IPCA</div>
                         <div class="indicator-value" id="ipca-month-value">Carregando...</div>
@@ -231,6 +239,11 @@
                         <div class="indicator-value" id="ipca-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                         <div class="sparkline-chart" id="ipca-chart-container"></div>
+                        <div class="chart-controls" data-indicator-id="ipca">
+                            <button class="chart-period-btn" data-months="3">3M</button>
+                            <button class="chart-period-btn" data-months="6">6M</button>
+                            <button class="chart-period-btn active" data-months="12">1A</button>
+                        </div>
                         <div class="accessible-chart-data" id="ipca-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
@@ -240,6 +253,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc" data-id="inpc">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-wallet"></i></div>
                         <div class="indicator-name">INPC</div>
                         <div class="indicator-value" id="inpc-month-value">Carregando...</div>
@@ -247,6 +261,11 @@
                         <div class="indicator-value" id="inpc-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                         <div class="sparkline-chart" id="inpc-chart-container"></div>
+                        <div class="chart-controls" data-indicator-id="inpc">
+                            <button class="chart-period-btn" data-months="3">3M</button>
+                            <button class="chart-period-btn" data-months="6">6M</button>
+                            <button class="chart-period-btn active" data-months="12">1A</button>
+                        </div>
                         <div class="accessible-chart-data" id="inpc-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
@@ -256,6 +275,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m" data-id="igpm">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
                         <div class="indicator-name">IGP-M</div>
                         <div class="indicator-value" id="igp-m-month-value">Carregando...</div>
@@ -263,6 +283,11 @@
                         <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                         <div class="sparkline-chart" id="igpm-chart-container"></div>
+                        <div class="chart-controls" data-indicator-id="igpm">
+                            <button class="chart-period-btn" data-months="3">3M</button>
+                            <button class="chart-period-btn" data-months="6">6M</button>
+                            <button class="chart-period-btn active" data-months="12">1A</button>
+                        </div>
                         <div class="accessible-chart-data" id="igpm-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
@@ -272,6 +297,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di" data-id="igpdi">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
                         <div class="indicator-name">IGP-DI</div>
                         <div class="indicator-value" id="igp-di-month-value">Carregando...</div>
@@ -279,6 +305,11 @@
                         <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
                         <div class="indicator-description">12 Meses</div>
                         <div class="sparkline-chart" id="igpdi-chart-container"></div>
+                        <div class="chart-controls" data-indicator-id="igpdi">
+                            <button class="chart-period-btn" data-months="3">3M</button>
+                            <button class="chart-period-btn" data-months="6">6M</button>
+                            <button class="chart-period-btn active" data-months="12">1A</button>
+                        </div>
                         <div class="accessible-chart-data" id="igpdi-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
@@ -288,6 +319,7 @@
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca" data-id="poupanca">
                     <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div>
                         <div class="indicator-name">POUPANÇA</div>
                         <div class="indicator-value" id="poupanca-month-value">Carregando...</div>
@@ -295,6 +327,11 @@
                         <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div>
                         <div class="indicator-description">Rendimento Anualizado</div>
                         <div class="sparkline-chart" id="poupanca-chart-container"></div>
+                        <div class="chart-controls" data-indicator-id="poupanca">
+                            <button class="chart-period-btn" data-months="3">3M</button>
+                            <button class="chart-period-btn" data-months="6">6M</button>
+                            <button class="chart-period-btn active" data-months="12">1A</button>
+                        </div>
                         <div class="accessible-chart-data" id="poupanca-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
@@ -304,6 +341,7 @@
                 </article>
                 <article class="indicator-card" id="card-desemprego" data-id="desemprego">
                   <div class="indicator-front">
+                    <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                     <div class="indicator-icon"><i class="fas fa-user-times"></i></div>
                     <div class="indicator-name">DESEMPREGO</div>
                     <div class="indicator-value" id="desemprego-value">Carregando...</div>
@@ -470,7 +508,10 @@
             },
             createAccessibleTable(tableContainerId, seriesData, valueUnit = '') {
                 const container = document.getElementById(tableContainerId);
-                if (!container || !seriesData || seriesData.length === 0) return;
+                if (!container || !seriesData || seriesData.length === 0) {
+                    if(container) container.innerHTML = '';
+                    return;
+                };
 
                 let tableHTML = '<table><caption>Dados do gráfico.</caption><thead><tr><th>Data</th><th>Valor</th></tr></thead><tbody>';
                 seriesData.forEach(item => {
@@ -481,7 +522,12 @@
             },
             createSparklineChart(selector, tableContainerId, seriesData, name = 'Valor Mensal', tooltipUnit = '%', dateFormat = 'mm/yyyy') {
                 const container = document.querySelector(selector);
-                if(container) container.innerHTML = ''; // Clear old chart
+                if(container) container.innerHTML = ''; 
+
+                if (!seriesData || seriesData.length === 0) {
+                    this.createAccessibleTable(tableContainerId, []);
+                    return;
+                }
 
                 const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
                 const options = {
@@ -525,7 +571,6 @@
                 if(container){
                     const chart = new ApexCharts(container, options);
                     chart.render();
-                    // Generate accessible table
                     this.createAccessibleTable(tableContainerId, seriesData, tooltipUnit);
                 }
             }
@@ -557,7 +602,7 @@
                     inpc: apiService.getBCBData(apiCodes.inpc, 12),
                     igpm: apiService.getBCBData(apiCodes.igpm, 12),
                     igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
-                    poupanca: apiService.getBCBDataByDateRange(apiCodes.poupanca, 365),
+                    poupanca: apiService.getBCBData(apiCodes.poupanca, 12),
                     desemprego: apiService.getBCBData(apiCodes.desemprego, 1)
                 };
 
@@ -567,7 +612,7 @@
                     return acc;
                 }, {});
                 
-                this.allData = data; // Store all data including historical
+                this.allData = data; 
                 this.processResults(data);
                 cacheService.set('allIndicators', data);
                 uiController.updateDateTime();
@@ -672,11 +717,11 @@
                 }
             },
             
-            updateChartForPeriod(indicatorId, days) {
+            updateChartForPeriod(indicatorId, period, periodType = 'days') {
                 const fullHistory = this.allData[indicatorId]?.value;
                 if (!fullHistory) return;
                 
-                const filteredData = fullHistory.slice(-days);
+                const filteredData = fullHistory.slice(-period);
 
                 const chartSelector = `#${indicatorId.replace('Meta','').replace('Sell','')}-chart-container`;
                 const tableSelector = `#${indicatorId.replace('Meta','').replace('Sell','')}-chart-data-table`;
@@ -693,6 +738,11 @@
                         uiController.createSparklineChart(chartSelector, tableSelector, annualizedHistory, 'CDI Anualizado', '%', 'dd/mm');
                         return;
                     case 'selicMeta': chartName = 'Meta Selic'; unit = '%'; dateFormat = 'dd/mm'; break;
+                    case 'ipca': chartName = 'IPCA Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'inpc': chartName = 'INPC Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'igpm': chartName = 'IGP-M Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'igpdi': chartName = 'IGP-DI Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'poupanca': chartName = 'Poupança Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
                 }
                 uiController.createSparklineChart(chartSelector, tableSelector, filteredData, chartName, unit, dateFormat);
             },
@@ -707,12 +757,16 @@
             applyCardOrder() {
                 const savedOrder = localStorage.getItem('cardOrder');
                 if (savedOrder) {
-                    const order = JSON.parse(savedOrder);
-                    const container = document.getElementById('indicators-container');
-                    order.forEach(cardId => {
-                        const cardElement = document.querySelector(`[data-id="${cardId}"]`);
-                        if(cardElement) container.appendChild(cardElement);
-                    });
+                    try {
+                        const order = JSON.parse(savedOrder);
+                        const container = document.getElementById('indicators-container');
+                        order.forEach(cardId => {
+                            const cardElement = document.querySelector(`[data-id="${cardId}"]`);
+                            if(cardElement) container.appendChild(cardElement);
+                        });
+                    } catch (e) {
+                        localStorage.removeItem('cardOrder');
+                    }
                 }
             },
 
@@ -753,40 +807,48 @@
                     const isLight = document.body.classList.contains('light-mode');
                     localStorage.setItem('themePreference', isLight ? 'light' : 'dark');
                     document.querySelector('#theme-toggle i').className = isLight ? 'fas fa-sun' : 'fas fa-moon';
-                    // Re-render charts with new theme colors
                     this.processResults(this.allData);
                 };
                 document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
                 const container = document.getElementById('indicators-container');
                 container.addEventListener('click', e => {
+                    // Do not flip card if a button or the drag handle was clicked
+                    if (e.target.closest('.chart-period-btn') || e.target.closest('.drag-handle')) {
+                        return;
+                    }
+
                     const card = e.target.closest('.indicator-card');
-                    if (e.target.closest('.indicator-front') && !e.target.closest('button')) {
+                    if (e.target.closest('.indicator-front')) {
                          card.classList.toggle('flipped');
                     }
                     if (e.target.closest('.indicator-back')) {
                         card.classList.remove('flipped');
                     }
                      if(e.target.classList.contains('chart-period-btn')) {
-                        e.stopPropagation(); // prevent card flip
+                        e.stopPropagation(); 
                         const button = e.target;
                         const controls = button.parentElement;
                         const indicatorId = controls.dataset.indicatorId;
                         const days = button.dataset.days;
+                        const months = button.dataset.months;
                         
                         controls.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
                         button.classList.add('active');
 
-                        this.updateChartForPeriod(indicatorId, days);
+                        if (days) {
+                            this.updateChartForPeriod(indicatorId, days, 'days');
+                        } else if (months) {
+                            this.updateChartForPeriod(indicatorId, months, 'months');
+                        }
                     }
                 });
                 
-                // Init SortableJS for drag and drop
                 new Sortable(container, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
-                    handle: '.indicator-front',
+                    handle: '.drag-handle', // Use the drag handle
                     onEnd: function (evt) {
                         const order = Array.from(evt.to.children).map(el => el.dataset.id);
                         localStorage.setItem('cardOrder', JSON.stringify(order));
