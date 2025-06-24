@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -717,7 +718,7 @@
                 }
             },
             
-            updateChartForPeriod(indicatorId, period, periodType = 'days') {
+            updateChartForPeriod(indicatorId, period) {
                 const fullHistory = this.allData[indicatorId]?.value;
                 if (!fullHistory) return;
                 
@@ -813,19 +814,7 @@
 
                 const container = document.getElementById('indicators-container');
                 container.addEventListener('click', e => {
-                    // Do not flip card if a button or the drag handle was clicked
-                    if (e.target.closest('.chart-period-btn') || e.target.closest('.drag-handle')) {
-                        return;
-                    }
-
-                    const card = e.target.closest('.indicator-card');
-                    if (e.target.closest('.indicator-front')) {
-                         card.classList.toggle('flipped');
-                    }
-                    if (e.target.closest('.indicator-back')) {
-                        card.classList.remove('flipped');
-                    }
-                     if(e.target.classList.contains('chart-period-btn')) {
+                    if (e.target.classList.contains('chart-period-btn')) {
                         e.stopPropagation(); 
                         const button = e.target;
                         const controls = button.parentElement;
@@ -836,10 +825,22 @@
                         controls.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
                         button.classList.add('active');
 
-                        if (days) {
-                            this.updateChartForPeriod(indicatorId, days, 'days');
-                        } else if (months) {
-                            this.updateChartForPeriod(indicatorId, months, 'months');
+                        const period = days || months;
+                        this.updateChartForPeriod(indicatorId, period);
+                        return; 
+                    }
+
+                    if (e.target.closest('.drag-handle')) {
+                        return;
+                    }
+                    
+                    const card = e.target.closest('.indicator-card');
+                    if(card) {
+                        if (e.target.closest('.indicator-front')) {
+                            card.classList.toggle('flipped');
+                        }
+                        if (e.target.closest('.indicator-back')) {
+                            card.classList.remove('flipped');
                         }
                     }
                 });
@@ -848,7 +849,7 @@
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
-                    handle: '.drag-handle', // Use the drag handle
+                    handle: '.drag-handle',
                     onEnd: function (evt) {
                         const order = Array.from(evt.to.children).map(el => el.dataset.id);
                         localStorage.setItem('cardOrder', JSON.stringify(order));
