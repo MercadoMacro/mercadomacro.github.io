@@ -42,6 +42,8 @@
         --scrollbar-thumb-color: rgba(139, 148, 158, 0.3);
         --scrollbar-thumb-hover-color: rgba(139, 148, 158, 0.5);
         --scrollbar-track-color: transparent;
+        /* Acessibilidade: É crucial verificar se as combinações de cores abaixo
+           atendem aos rácios de contraste mínimos da WCAG (AA ou AAA). */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -269,7 +271,6 @@
       margin-right: 10px; /* Espaço para o botão de partilha */
     }
     .news-list a:hover { color: var(--link-hover-color); }
-    /* NOVO: Estilo para notícias lidas */
     .news-list a.is-read { opacity: 0.6; }
 
 
@@ -486,10 +487,14 @@
       font-family: 'Montserrat', sans-serif;
       font-weight: 600;
       float: right;
-      transition: background-color 0.2s ease;
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
     #settings-save-btn:hover {
       background-color: var(--primary-dark);
+    }
+    #settings-save-btn.is-saving {
+        background-color: var(--primary-dark);
+        cursor: default;
     }
     /* === FIM: CSS DO PAINEL DE CONFIGURAÇÕES === */
 
@@ -570,7 +575,7 @@
     }
     .retry-btn:hover { background-color: var(--primary-color); }
 
-    .no-search-results {
+    .no-results-per-widget {
         color: var(--text-secondary);
         font-style: italic;
         padding: 10px;
@@ -580,7 +585,21 @@
         border-left: none;
     }
     
-    /* NOVO: Estilo para destacar palavras-chave */
+    /* NOVO: Mensagem de "Nenhum resultado" global */
+    #global-no-search-results {
+        display: none; /* Escondido por padrão */
+        color: var(--text-secondary);
+        font-style: italic;
+        margin-top: -15px;
+        margin-bottom: 20px;
+        padding: 10px;
+        border-radius: 6px;
+        background-color: rgba(var(--card-bg-val), 0.5);
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
     mark {
       background-color: var(--primary-color);
       color: var(--dark-bg);
@@ -598,8 +617,12 @@
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite linear;
     }
+    .skeleton.w-100 { width: 100%; }
     .skeleton.w-75 { width: 75%; }
     .skeleton.w-50 { width: 50%; }
+    .skeleton-title { height: 1.1rem; margin-bottom: 1.5rem; width: 60%; }
+    .skeleton-list li { margin: 1rem 0; }
+
     @keyframes shimmer {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
@@ -624,7 +647,7 @@
         .floating-btn-container.left { left: 15px; }
         .floating-btn-container.right { right: 15px; }
         .floating-btn { width: 45px; height: 45px; border-radius: 10px; }
-        #settings-feeds-list { columns: 1; } /* Coluna única em telas menores */
+        #settings-feeds-list { columns: 1; }
     }
     @media (max-width: 480px) {
         .page-title-header { font-size: 30px; }
@@ -659,14 +682,47 @@
     <div class="search-container">
         <input type="search" id="search-bar" class="search-bar" placeholder="Buscar em todas as notícias...">
     </div>
+    
+    <div id="global-no-search-results">Nenhum resultado encontrado para a sua busca.</div>
 
     <div class="news-grid-wrapper">
-        </div>
+        <article class="news-widget finance-widget">
+            <div class="skeleton skeleton-title"></div>
+            <ul class="skeleton-list">
+                <li><div class="skeleton w-75"></div></li>
+                <li><div class="skeleton w-50"></div></li>
+                <li><div class="skeleton w-75"></div></li>
+                <li><div class="skeleton w-100"></div></li>
+                <li><div class="skeleton w-50"></div></li>
+            </ul>
+        </article>
+        <article class="news-widget crypto-widget">
+            <div class="skeleton skeleton-title"></div>
+            <ul class="skeleton-list">
+                <li><div class="skeleton w-50"></div></li>
+                <li><div class="skeleton w-75"></div></li>
+                <li><div class="skeleton w-100"></div></li>
+                <li><div class="skeleton w-50"></div></li>
+                <li><div class="skeleton w-75"></div></li>
+            </ul>
+        </article>
+        <article class="news-widget finance-widget">
+            <div class="skeleton skeleton-title"></div>
+            <ul class="skeleton-list">
+                <li><div class="skeleton w-100"></div></li>
+                <li><div class="skeleton w-50"></div></li>
+                <li><div class="skeleton w-75"></div></li>
+                <li><div class="skeleton w-75"></div></li>
+                <li><div class="skeleton w-50"></div></li>
+            </ul>
+        </article>
+    </div>
+
     <footer>© <span id="current-year"></span> Mercado Macro</footer>
 </div>
 
 <div class="floating-btn-container left">
-    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro" aria-pressed="false">
         <i class="fas fa-moon"></i>
     </button>
     <button class="floating-btn" id="notifications-btn" aria-label="Ativar notificações">
@@ -728,17 +784,16 @@
 
 <script>
   // Variáveis Globais
-  const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
+  const CACHE_KEY_PREFIX = 'terminalNewsCacheV6_'; // Versão do cache incrementada
+  const PROXY_MAP_KEY = 'terminalNewsProxyMap_v1';
   const CACHE_TTL = 15 * 60 * 1000;
   const FETCH_TIMEOUT = 15000;
 
-  // CORREÇÃO APLICADA AQUI
   const PROXY_SERVICES = [
     { name: 'allorigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
     { name: 'corsproxy.io', url: (targetUrl) => `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` },
     { name: 'codetabs', url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}` }
   ];
-  let globalLastUsedProxySuccessIndex = 0;
   let wordFrequencyChart = null;
 
   const rssFeeds = {
@@ -756,12 +811,12 @@
     ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think', scope: 'international', icon: 'fa-lightbulb'}
   };
   
-  // NOVO: Objeto para gerenciar o estado da aplicação
   const AppState = {
     _newsScope: 'local',
     _enabledFeeds: Object.keys(rssFeeds),
     _keywords: [],
     _readArticles: new Set(),
+    _proxyMap: {},
     
     init() {
         const savedScope = localStorage.getItem('terminalNewsScope_v1') || 'local';
@@ -775,6 +830,9 @@
         
         const savedReadArticles = localStorage.getItem('terminalReadArticles_v1');
         this._readArticles = new Set(savedReadArticles ? JSON.parse(savedReadArticles) : []);
+
+        const savedProxyMap = localStorage.getItem(PROXY_MAP_KEY);
+        this._proxyMap = savedProxyMap ? JSON.parse(savedProxyMap) : {};
     },
     
     get newsScope() { return this._newsScope; },
@@ -801,19 +859,22 @@
     addReadArticle(url) {
         if (!url || url === '#') return;
         this._readArticles.add(url);
-        // Salva apenas um número limitado de artigos para não sobrecarregar o localStorage
         const articlesArray = Array.from(this._readArticles).slice(-200);
         localStorage.setItem('terminalReadArticles_v1', JSON.stringify(articlesArray));
+    },
+
+    getProxyForFeed(feedKey) { return this._proxyMap[feedKey]; },
+    setProxyForFeed(feedKey, proxyName) {
+        this._proxyMap[feedKey] = proxyName;
+        localStorage.setItem(PROXY_MAP_KEY, JSON.stringify(this._proxyMap));
     }
   };
 
-  // NOVO: Objeto UI para manipulação do DOM
   const UI = {
     _focusTrapHandler: null,
     _elementThatOpenedModal: null,
 
     init() {
-        // Inicializa listeners de UI globais
         document.getElementById('theme-toggle')?.addEventListener('click', this.toggleTheme);
         document.getElementById('search-bar')?.addEventListener('input', this.handleSearch);
         document.getElementById('top-btn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -821,17 +882,19 @@
         document.getElementById('current-year').textContent = new Date().getFullYear();
         document.getElementById('home-btn')?.addEventListener('click', () => window.location.href = 'index.html');
 
-        // Modais
         document.getElementById('briefing-btn')?.addEventListener('click', () => generateAndShowBriefing());
         this.setupModal('briefing-modal', 'briefing-modal-close-btn');
         
-        // NOVO: Modal de Configurações
         document.getElementById('settings-btn')?.addEventListener('click', () => {
             this.populateSettings();
             this.toggleModal('settings-modal', true);
         });
         this.setupModal('settings-modal', 'settings-modal-close-btn');
         document.getElementById('settings-save-btn')?.addEventListener('click', () => this.saveSettings());
+
+        const themeBtn = document.getElementById('theme-toggle');
+        const isLightMode = document.body.classList.contains('light-mode');
+        themeBtn?.setAttribute('aria-pressed', isLightMode ? 'false' : 'true');
     },
 
     toggleModal(modalId, show) {
@@ -886,7 +949,7 @@
 
     renderWidgets() {
         const wrapper = document.querySelector('.news-grid-wrapper');
-        wrapper.innerHTML = ''; // Limpa os widgets existentes
+        wrapper.innerHTML = ''; // Limpa os esqueletos de carregamento inicial
         const fragment = document.createDocumentFragment();
 
         AppState.enabledFeeds.forEach(feedKey => {
@@ -894,7 +957,7 @@
             const widget = document.createElement('article');
             widget.className = `news-widget ${feedConfig.category}-widget`;
             widget.id = `widget-${feedKey}`;
-            widget.style.display = 'none'; // Começa escondido, será mostrado pelo updateWidgetVisibility
+            widget.style.display = 'none'; 
 
             const fabIconClass = feedConfig.icon === 'fa-bitcoin' ? 'fab' : 'fas';
 
@@ -932,13 +995,11 @@
           a.rel = 'noopener noreferrer';
           a.setAttribute('title', item.title);
           
-          // NOVO: Adiciona classe se já foi lido e destaca palavras-chave
           if (AppState.readArticles.has(a.href)) {
               a.classList.add('is-read');
           }
           a.innerHTML = this.highlightKeywords(item.title, AppState.keywords);
 
-          // NOVO: Listener para marcar como lido
           a.addEventListener('click', () => {
               AppState.addReadArticle(a.href);
               a.classList.add('is-read');
@@ -998,6 +1059,9 @@
     },
     
     saveSettings() {
+        const saveBtn = document.getElementById('settings-save-btn');
+        if (saveBtn.classList.contains('is-saving')) return;
+
         const enabledFeeds = [];
         document.querySelectorAll('#settings-feeds-list input[type="checkbox"]').forEach(checkbox => {
             if (checkbox.checked) {
@@ -1009,9 +1073,18 @@
         const keywordsText = document.getElementById('keywords-input').value;
         AppState.keywords = keywordsText.split(',').map(k => k.trim()).filter(Boolean);
 
-        this.toggleModal('settings-modal', false);
-        this.renderWidgets(); // Re-renderiza os widgets com as novas configurações
-        refreshAllFeeds(true); // Atualiza os feeds visíveis
+        // Feedback visual
+        saveBtn.textContent = 'Salvo ✓';
+        saveBtn.classList.add('is-saving');
+        
+        setTimeout(() => {
+            this.toggleModal('settings-modal', false);
+            this.renderWidgets(); 
+            refreshAllFeeds(true);
+            // Reverter botão ao estado original
+            saveBtn.textContent = 'Salvar e Fechar';
+            saveBtn.classList.remove('is-saving');
+        }, 1000);
     },
     
     toggleTheme() {
@@ -1019,10 +1092,14 @@
         const isLightMode = document.body.classList.contains('light-mode');
         localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
         const themeIcon = document.querySelector('#theme-toggle i');
+        const themeBtn = document.getElementById('theme-toggle');
+        
         if(themeIcon){
             themeIcon.classList.toggle('fa-moon', !isLightMode);
             themeIcon.classList.toggle('fa-sun', isLightMode);
         }
+        themeBtn?.setAttribute('aria-pressed', !isLightMode); // Atualiza estado para leitores de tela
+        
         UI.announceToScreenReader(`Tema alterado para modo ${isLightMode ? 'claro' : 'escuro'}.`);
         if (document.getElementById('briefing-modal').classList.contains('visible')) {
             generateWordFrequencyChart();
@@ -1031,33 +1108,52 @@
     
     handleSearch() {
         const searchBar = document.getElementById('search-bar');
-        if (!searchBar) return;
+        const globalNoResults = document.getElementById('global-no-search-results');
+        if (!searchBar || !globalNoResults) return;
+
         const searchTerm = searchBar.value.toLowerCase().trim();
-        document.querySelectorAll('.no-search-results').forEach(el => el.remove());
+        document.querySelectorAll('.no-results-per-widget').forEach(el => el.remove());
+
+        let totalVisibleItems = 0;
 
         document.querySelectorAll('.news-list').forEach(list => {
-            let hasVisibleItems = false;
-            const listItems = list.querySelectorAll('li');
-            listItems.forEach(li => {
-                if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
-                    li.style.display = 'flex';
-                    return;
+            const widget = list.closest('.news-widget');
+            // Só processa a busca para widgets visíveis
+            if (widget && widget.style.display !== 'none') {
+                let hasVisibleItemsInWidget = false;
+                const listItems = list.querySelectorAll('li');
+
+                listItems.forEach(li => {
+                    // Ignora itens de esqueleto, erro ou info da lógica de visibilidade
+                    if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
+                        li.style.display = 'flex';
+                        return;
+                    }
+                    const title = li.textContent.toLowerCase();
+                    if (title.includes(searchTerm)) {
+                        li.style.display = 'flex';
+                        hasVisibleItemsInWidget = true;
+                        totalVisibleItems++;
+                    } else {
+                        li.style.display = 'none';
+                    }
+                });
+
+                if (!hasVisibleItemsInWidget && searchTerm !== '' && listItems.length > 0 && !list.querySelector('.retry-btn')) {
+                    const noResultsLi = document.createElement('li');
+                    noResultsLi.className = 'no-results-per-widget';
+                    noResultsLi.textContent = "Nenhum resultado aqui.";
+                    list.appendChild(noResultsLi);
                 }
-                const title = li.textContent.toLowerCase();
-                if (title.includes(searchTerm)) {
-                    li.style.display = 'flex';
-                    hasVisibleItems = true;
-                } else {
-                    li.style.display = 'none';
-                }
-            });
-            if (!hasVisibleItems && searchTerm !== '' && listItems.length > 0 && !list.querySelector('.retry-btn')) {
-                const noResultsLi = document.createElement('li');
-                noResultsLi.className = 'no-search-results';
-                noResultsLi.textContent = "Nenhum resultado encontrado.";
-                list.appendChild(noResultsLi);
             }
         });
+        
+        // Exibe ou esconde a mensagem global
+        if (searchTerm !== '' && totalVisibleItems === 0) {
+            globalNoResults.style.display = 'block';
+        } else {
+            globalNoResults.style.display = 'none';
+        }
     },
 
     announceToScreenReader(message) {
@@ -1129,11 +1225,19 @@
     
     if (forceRefresh) localStorage.removeItem(cacheKey);
 
-    let success = false;
-    let currentAttemptProxyIndex = globalLastUsedProxySuccessIndex;
+    // NOVO: Lógica de Proxy Aprimorada
+    const preferredProxyName = AppState.getProxyForFeed(feedKey);
+    const sortedProxies = [...PROXY_SERVICES];
+    if (preferredProxyName) {
+        const preferredIndex = sortedProxies.findIndex(p => p.name === preferredProxyName);
+        if (preferredIndex > 0) {
+            const [preferredProxy] = sortedProxies.splice(preferredIndex, 1);
+            sortedProxies.unshift(preferredProxy);
+        }
+    }
 
-    for (let i = 0; i < PROXY_SERVICES.length; i++) {
-        const proxyToTry = PROXY_SERVICES[currentAttemptProxyIndex];
+    let success = false;
+    for (const proxyToTry of sortedProxies) {
         try {
             const proxyUrl = proxyToTry.url(feedConfig.url);
             const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
@@ -1173,11 +1277,10 @@
             }
 
             success = true;
-            globalLastUsedProxySuccessIndex = currentAttemptProxyIndex;
-            break;
+            AppState.setProxyForFeed(feedKey, proxyToTry.name); // Salva o proxy que funcionou
+            break; 
         } catch (error) {
             console.warn(`Falha com proxy ${proxyToTry.name} para ${feedConfig.displayName}:`, error.message);
-            currentAttemptProxyIndex = (currentAttemptProxyIndex + 1) % PROXY_SERVICES.length;
         }
     }
 
@@ -1214,11 +1317,9 @@
         const feedConfig = rssFeeds[feedKey];
         const widgetElement = document.getElementById(`widget-${feedKey}`);
         if (widgetElement) {
-            // Verifica se o feed está habilitado nas configs E se corresponde ao scope (local/intl)
             if (AppState.enabledFeeds.includes(feedKey) && feedConfig.scope === AppState.newsScope) {
                 widgetElement.style.display = '';
                 const listElement = document.getElementById(feedConfig.elementId);
-                // Se o widget está visível mas vazio, carrega as notícias
                 if (listElement && listElement.children.length === 0) {
                     loadNews(feedKey, false);
                 }
@@ -1227,6 +1328,7 @@
             }
         }
     });
+    UI.handleSearch(); // Garante que a visibilidade da busca seja reavaliada
   }
 
   function handleScopeChange() {
@@ -1234,7 +1336,10 @@
     AppState.newsScope = toggle.checked ? 'international' : 'local';
     document.getElementById('scope-label-local').classList.toggle('active-scope', AppState.newsScope === 'local');
     document.getElementById('scope-label-international').classList.toggle('active-scope', AppState.newsScope === 'international');
-    updateWidgetVisibility();
+    
+    const wrapper = document.querySelector('.news-grid-wrapper');
+    wrapper.innerHTML = ''; // Limpa os widgets para forçar o recarregamento
+    UI.renderWidgets();
   }
 
   function initializeScopeToggle() {
@@ -1441,23 +1546,32 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     AppState.init();
-    UI.init();
-
+    
     const savedTheme = localStorage.getItem('themePreference');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if ((savedTheme === 'light') || (!savedTheme && !prefersDark)) {
+    if ((savedTheme === 'dark') || (!savedTheme && prefersDark)) {
+        // Dark é o padrão, então só removemos o light mode
+        document.body.classList.remove('light-mode');
+    } else {
         document.body.classList.add('light-mode');
     }
+    
+    // UI.init deve vir depois da configuração do tema para o aria-pressed funcionar corretamente
+    UI.init();
+
     const themeIcon = document.querySelector('#theme-toggle i');
     const isLightMode = document.body.classList.contains('light-mode');
-    if(themeIcon){ themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
+    if(themeIcon){ 
+        themeIcon.classList.toggle('fa-moon', !isLightMode); 
+        themeIcon.classList.toggle('fa-sun', isLightMode); 
+    }
     
+    // Renderiza os widgets reais, que irão substituir os esqueletos
     UI.renderWidgets();
     initializeScopeToggle();
     setupNotifications(); 
     document.getElementById('refresh-btn')?.addEventListener('click', () => refreshAllFeeds(true));
 
-    // Atualização periódica
     setInterval(() => refreshAllFeeds(false), 5 * 60 * 1000);
   });
 </script>
