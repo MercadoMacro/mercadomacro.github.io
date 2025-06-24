@@ -275,10 +275,28 @@
       flex-shrink: 0;
     }
 
+    /* MUDANÇA (CSS): Botões flutuantes agora são gerenciados por um contêiner flex. */
+    .floating-btn-container {
+        position: fixed;
+        bottom: 20px;
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+    }
+
+    .floating-btn-container.left {
+        left: 20px;
+    }
+
+    .floating-btn-container.right {
+        right: 20px;
+    }
+    
     .floating-btn {
-        position: fixed; width: 50px; height: 50px; border-radius: 12px;
+        width: 50px; height: 50px; border-radius: 12px;
         background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);
-        cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; 
+        display: flex; align-items: center; justify-content: center;
         transition: all 0.2s ease; backdrop-filter: blur(8px); box-shadow: 0 5px 15px var(--shadow-color-soft);
         -webkit-tap-highlight-color: transparent; will-change: transform, background-color;
     }
@@ -286,15 +304,11 @@
     .floating-btn:active { transform: translateY(0) scale(1); }
     .floating-btn i { font-size: 20px; }
 
-    #refresh-btn { right: 20px; bottom: 20px; }
-    #home-btn { right: 80px; bottom: 20px; }
-    #top-btn { right: 140px; bottom: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+    /* MUDANÇA (CSS): Regras individuais de posicionamento removidas. Apenas a lógica de visibilidade do #top-btn permanece. */
+    #top-btn { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
     #top-btn.visible { opacity: 1; visibility: visible; }
-    #briefing-btn { right: 200px; bottom: 20px; }
-    #matrix-mode-btn { right: 260px; bottom: 20px; }
-    .theme-toggle { left: 20px; bottom: 20px; }
     
-    .footer {
+    footer { /* MUDANÇA (CSS): Seletor de .footer para footer */
         font-size: 13px; margin-top: 40px; text-align: center;
         color: var(--text-secondary); padding: 20px 0;
         border-top: 1px solid var(--border-color);
@@ -407,71 +421,6 @@
     }
     /* === FIM: CSS DO BRIEFING === */
 
-    /* === INÍCIO: CSS DO MODO MATRIX === */
-    #matrix-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        z-index: 9998;
-        display: none;
-        color: #00ff41;
-        font-family: 'Courier New', Courier, monospace;
-        overflow: hidden;
-        text-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
-    }
-    #matrix-text-stream {
-        position: absolute;
-        top: 0;
-        left: 2%;
-        right: 2%;
-        bottom: 0;
-        font-size: 1rem;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-    #matrix-exit-btn {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        background: #00ff41;
-        color: #000;
-        border: 1px solid #00ff41;
-        font-family: 'Courier New', Courier, monospace;
-        padding: 10px 15px;
-        cursor: pointer;
-        display: none;
-        box-shadow: 0 0 10px #00ff41;
-    }
-    #matrix-scanline {
-        position: absolute;
-        width: 100%;
-        height: 100px;
-        top: 0;
-        background: linear-gradient(to bottom, rgba(0, 20, 0, 0.5) 0%, rgba(0, 255, 65, 0.4) 50%, rgba(0, 20, 0, 0.5) 100%);
-        opacity: 0.2;
-        animation: scan 7s linear infinite;
-    }
-    @keyframes scan {
-        0% { top: -100px; }
-        100% { top: 100vh; }
-    }
-    @keyframes text-glitch {
-        0% { opacity: 0.9; }
-        25% { opacity: 1; transform: translate(1px, -1px); }
-        50% { opacity: 0.8; }
-        75% { opacity: 0.9; transform: translate(-1px, 1px); }
-        100% { opacity: 1; }
-    }
-    .matrix-glitch {
-        animation: text-glitch 0.2s linear infinite alternate;
-    }
-    /* === FIM: CSS DO MODO MATRIX === */
-
     body.light-mode {
         --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
         --dark-bg: #ffffff; --darker-bg: #f0f2f5;
@@ -550,6 +499,17 @@
     }
     .retry-btn:hover { background-color: var(--primary-color); }
 
+    /* MUDANÇA (CSS): Estilo para a mensagem de "nenhum resultado" da busca */
+    .no-search-results {
+        color: var(--text-secondary);
+        font-style: italic;
+        padding: 10px;
+        text-align: center;
+        width: 100%;
+        display: block;
+        border-left: none;
+    }
+
     .skeleton {
         height: 1em;
         border-radius: 4px;
@@ -578,19 +538,20 @@
         .container { padding: 20px 15px; }
         .page-title-header { font-size: 36px; }
         .news-grid-wrapper { grid-template-columns: 1fr; padding-bottom: 80px; }
-        .floating-btn, .theme-toggle { width: 45px; height: 45px; bottom: 15px; border-radius: 10px; }
-        #refresh-btn { right: 15px; } #home-btn { right: 70px; } #top-btn { right: 125px; }
-        #briefing-btn { right: 180px; }
-        #matrix-mode-btn { right: 235px; }
-        .theme-toggle { left: 15px; }
+        /* MUDANÇA (CSS): Media query simplificada para os botões */
+        .floating-btn-container {
+            gap: 8px;
+        }
+        .floating-btn-container.left { left: 15px; }
+        .floating-btn-container.right { right: 15px; }
+        .floating-btn { width: 45px; height: 45px; border-radius: 10px; }
     }
     @media (max-width: 480px) {
         .page-title-header { font-size: 30px; }
-        .floating-btn, .theme-toggle { width: 40px; height: 40px; }
-        #refresh-btn { right: 10px; } #home-btn { right: 60px; } #top-btn { right: 110px; }
-        #briefing-btn { right: 160px; }
-        #matrix-mode-btn { right: 210px; }
-        .theme-toggle { left: 10px; }
+        /* MUDANÇA (CSS): Media query simplificada para os botões */
+        .floating-btn-container.left { left: 10px; }
+        .floating-btn-container.right { right: 10px; }
+        .floating-btn { width: 40px; height: 40px; }
     }
   </style>
 </head>
@@ -599,11 +560,13 @@
 <div id="aria-live-announcer" class="visually-hidden" role="status" aria-live="polite"></div>
 
 <div class="container">
-    <div class="logo">
-        <div class="page-title-header">Terminal de Notícias</div>
-        <div class="logo-divider"></div>
-    </div>
-    <div class="subheader">Fontes de Notícias sobre Criptomoedas e Finanças Globais</div>
+    <header>
+        <div class="logo">
+            <h1 class="page-title-header">Terminal de Notícias</h1>
+            <div class="logo-divider"></div>
+        </div>
+        <p class="subheader">Fontes de Notícias sobre Criptomoedas e Finanças Globais</p>
+    </header>
 
     <div class="scope-toggle-container">
         <span id="scope-label-international">Internacional</span>
@@ -619,138 +582,135 @@
     </div>
 
     <div class="news-grid-wrapper">
-        <div class="news-widget crypto-widget">
+        <article class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="guiadobitcoin" aria-label="Atualizar Zero Hedge">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-newspaper"></i> Zero Hedge</h3>
           <ul class="news-list" id="zerohedge-news"></ul>
           <div class="timestamp" id="zerohedge-timestamp"></div>
-        </div>
-        <div class="news-widget crypto-widget">
+        </article>
+        <article class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="noticiabrasil" aria-label="Atualizar Notícia Brasil">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-globe-americas"></i> Notícia Brasil</h3>
           <ul class="news-list" id="noticiabrasil-news"></ul>
           <div class="timestamp" id="noticiabrasil-timestamp"></div>
-        </div>
-        <div class="news-widget crypto-widget">
+        </article>
+        <article class="news-widget crypto-widget">
           <button class="refresh-widget" data-feedkey="cointelegraph" aria-label="Atualizar Cointelegraph">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fab fa-bitcoin"></i> Cointelegraph BR</h3>
           <ul class="news-list" id="cointelegraph-news"></ul>
           <div class="timestamp" id="cointelegraph-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="advfn" aria-label="Atualizar ADVFN">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-newspaper"></i> ADVFN BR</h3>
           <ul class="news-list" id="advfn-news"></ul>
           <div class="timestamp" id="advfn-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="investing" aria-label="Atualizar Investing">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-chart-line"></i> Investing.com BR</h3>
           <ul class="news-list" id="investing-news"></ul>
           <div class="timestamp" id="investing-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="infomoney" aria-label="Atualizar InfoMoney">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
           <ul class="news-list" id="infomoney-news"></ul>
           <div class="timestamp" id="infomoney-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="valor" aria-label="Atualizar Valor Econômico">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-landmark"></i> Valor Econômico</h3>
           <ul class="news-list" id="valor-news"></ul>
           <div class="timestamp" id="valor-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="dukascopy" aria-label="Atualizar Dukascopy">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-globe-europe"></i> Dukascopy</h3>
           <ul class="news-list" id="dukascopy-news"></ul>
           <div class="timestamp" id="dukascopy-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="forexlive" aria-label="Atualizar ForexLive">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-dollar-sign"></i> ForexLive</h3>
           <ul class="news-list" id="forexlive-news"></ul>
           <div class="timestamp" id="forexlive-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="fxmarkets" aria-label="Atualizar FX Markets">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-exchange-alt"></i> FX Markets</h3>
           <ul class="news-list" id="fxmarkets-news"></ul>
           <div class="timestamp" id="fxmarkets-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="fxstreet" aria-label="Atualizar FXStreet">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-road"></i> FXStreet</h3>
           <ul class="news-list" id="fxstreet-news"></ul>
           <div class="timestamp" id="fxstreet-timestamp"></div>
-        </div>
-        <div class="news-widget finance-widget">
+        </article>
+        <article class="news-widget finance-widget">
           <button class="refresh-widget" data-feedkey="ing" aria-label="Atualizar ING Think">
             <i class="fas fa-sync-alt"></i>
           </button>
           <h3><i class="fas fa-lightbulb"></i> ING Think</h3>
           <ul class="news-list" id="ing-news"></ul>
           <div class="timestamp" id="ing-timestamp"></div>
-        </div>
+        </article>
     </div>
-    <div class="footer">© <span id="current-year"></span> Mercado Macro</div>
+    <footer>© <span id="current-year"></span> Mercado Macro</footer>
 </div>
 
-<button id="refresh-btn" class="floating-btn" aria-label="Atualizar tudo">
-  <i class="fas fa-sync-alt"></i>
-</button>
-<button id="home-btn" class="floating-btn" aria-label="Página inicial">
-  <i class="fas fa-home"></i>
-</button>
-<button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
-  <i class="fas fa-arrow-up"></i>
-</button>
-<button id="briefing-btn" class="floating-btn" aria-label="Gerar Briefing das Notícias">
-  <i class="fas fa-clipboard-list"></i>
-</button>
-<button id="matrix-mode-btn" class="floating-btn" aria-label="Ativar Modo Matrix">
-  <i class="fas fa-terminal"></i>
-</button>
-<button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
-  <i class="fas fa-moon"></i>
-</button>
+<div class="floating-btn-container left">
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+        <i class="fas fa-moon"></i>
+    </button>
+</div>
 
-<div id="briefing-modal" class="briefing-modal-overlay">
+<div class="floating-btn-container right">
+    <button id="briefing-btn" class="floating-btn" aria-label="Gerar Briefing das Notícias">
+        <i class="fas fa-clipboard-list"></i>
+    </button>
+    <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    <button id="home-btn" class="floating-btn" aria-label="Página inicial">
+        <i class="fas fa-home"></i>
+    </button>
+    <button id="refresh-btn" class="floating-btn" aria-label="Atualizar tudo">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+</div>
+
+
+<div id="briefing-modal" class="briefing-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="briefing-title">
     <div class="briefing-modal-content">
         <button id="briefing-modal-close-btn" class="briefing-modal-close" aria-label="Fechar">&times;</button>
         <h2 id="briefing-title">Briefing de Notícias</h2>
         <ul id="briefing-list">
         </ul>
     </div>
-</div>
-
-<div id="matrix-overlay">
-    <div id="matrix-scanline"></div>
-    <div id="matrix-text-stream"></div>
-    <button id="matrix-exit-btn">Sair do Modo Matrix [ESC]</button>
 </div>
 
 <script>
@@ -811,17 +771,20 @@
       listElement.innerHTML = skeletonHTML;
   }
 
+  // MUDANÇA (JS): Função renderNews agora usa DocumentFragment para melhor performance.
   function renderNews(listElement, timestampId, items, feedName, updateTime) {
     listElement.innerHTML = '';
     const itemsToShow = items.slice(0, 6);
     const supportsShare = 'share' in navigator;
+    const fragment = document.createDocumentFragment();
 
     if (itemsToShow.length === 0) {
-      listElement.innerHTML = `<li><i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.</li>`;
+      const li = document.createElement('li');
+      li.innerHTML = `<i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.`;
+      fragment.appendChild(li);
     } else {
       itemsToShow.forEach(item => {
         const li = document.createElement('li');
-        
         const a = document.createElement('a');
         a.href = item.link || '#';
         a.target = '_blank';
@@ -833,7 +796,6 @@
         wrapper.style.display = 'flex';
         wrapper.style.alignItems = 'center';
         wrapper.style.width = '100%';
-        
         wrapper.appendChild(a);
 
         if (supportsShare) {
@@ -857,13 +819,14 @@
         }
 
         li.appendChild(wrapper);
-        listElement.appendChild(li);
+        fragment.appendChild(li);
       });
     }
+
+    listElement.appendChild(fragment); // Adiciona ao DOM de uma só vez.
     const timestampEl = document.getElementById(timestampId);
     if (timestampEl) timestampEl.textContent = `Atualizado ${formatTimeSince(updateTime)}`;
     
-    // Re-aplica o filtro de busca atual, se houver
     handleSearch();
   }
 
@@ -1005,7 +968,6 @@
             if (feedConfig.scope === currentNewsScope) {
                 widgetElement.style.display = '';
                 const listElement = document.getElementById(feedConfig.elementId);
-                // Carrega se a lista estiver vazia (estado inicial com skeleton)
                 if (listElement && listElement.children.length === 0) {
                     loadNews(feedKey, false);
                 }
@@ -1066,6 +1028,8 @@
     if(refreshBtnGlobal && force) {
       refreshBtnGlobal.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       refreshBtnGlobal.disabled = true;
+      // MUDANÇA (JS/A11y): Anuncia o início da atualização.
+      announceToScreenReader("Atualizando notícias...");
     }
 
     if (force) {
@@ -1124,12 +1088,54 @@
       if (yearSpan) yearSpan.textContent = new Date().getFullYear();
   }
 
+  // MUDANÇA (JS/A11y): Variáveis e funções para o Focus Trap do modal.
+  let focusTrapHandler = null;
+  let elementThatOpenedModal = null;
+
+  function setupFocusTrap(modalElement) {
+      const focusableElements = modalElement.querySelectorAll(
+          'a[href], button:not([disabled]), textarea, input, select'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      focusTrapHandler = function(e) {
+          if (e.key !== 'Tab') return;
+
+          if (e.shiftKey) { // Shift + Tab
+              if (document.activeElement === firstElement) {
+                  lastElement.focus();
+                  e.preventDefault();
+              }
+          } else { // Tab
+              if (document.activeElement === lastElement) {
+                  firstElement.focus();
+                  e.preventDefault();
+              }
+          }
+      };
+      
+      modalElement.addEventListener('keydown', focusTrapHandler);
+      if(firstElement) firstElement.focus();
+  }
+  
+  function removeFocusTrap(modalElement) {
+      modalElement.removeEventListener('keydown', focusTrapHandler);
+      if(elementThatOpenedModal) {
+          elementThatOpenedModal.focus();
+      }
+  }
+
+
   function generateAndShowBriefing() {
     const briefingList = document.getElementById('briefing-list');
     const briefingTitle = document.getElementById('briefing-title');
     const modal = document.getElementById('briefing-modal');
 
     if (!briefingList || !briefingTitle || !modal) return;
+    
+    // MUDANÇA (JS/A11y): Guarda o elemento que abriu o modal.
+    elementThatOpenedModal = document.activeElement;
 
     briefingList.innerHTML = '';
     const scopeTitle = currentNewsScope === 'local' ? 'Local' : 'Internacional';
@@ -1188,103 +1194,60 @@
     }
     modal.classList.add('visible');
     announceToScreenReader("Briefing de notícias aberto.");
+    // MUDANÇA (JS/A11y): Ativa o focus trap.
+    setupFocusTrap(modal);
   }
 
   function closeBriefingModal() {
     const modal = document.getElementById('briefing-modal');
-    if (modal) modal.classList.remove('visible');
-  }
-  
-  // === INÍCIO: JAVASCRIPT DO MODO MATRIX ===
-  let matrixInterval;
-
-  function startMatrixMode() {
-    const overlay = document.getElementById('matrix-overlay');
-    const textStream = document.getElementById('matrix-text-stream');
-    const exitBtn = document.getElementById('matrix-exit-btn');
-    const mainContainer = document.querySelector('.container');
-    const floatingButtons = document.querySelectorAll('.floating-btn');
-
-    mainContainer.style.display = 'none';
-    floatingButtons.forEach(btn => btn.style.display = 'none');
-    overlay.style.display = 'block';
-    exitBtn.style.display = 'block';
-
-    let allHeadlines = [];
-    Object.keys(rssFeeds).forEach(feedKey => {
-        const cacheKey = `${CACHE_KEY_PREFIX}${rssFeeds[feedKey].elementId}`;
-        const cachedEntry = localStorage.getItem(cacheKey);
-        if (cachedEntry) {
-            try {
-                const { items } = JSON.parse(cachedEntry);
-                if (items && items.length > 0) {
-                    items.forEach(item => allHeadlines.push(`> ${rssFeeds[feedKey].displayName}: ${item.title}`));
-                }
-            } catch (e) { /* ignora erros de cache */ }
-        }
-    });
-
-    if (allHeadlines.length === 0) {
-        allHeadlines.push("> Nenhuma notícia em cache. Execute o sistema principal primeiro.");
+    if (modal) {
+        modal.classList.remove('visible');
+        // MUDANÇA (JS/A11y): Desativa o focus trap e devolve o foco.
+        removeFocusTrap(modal);
     }
-    
-    allHeadlines.sort(() => Math.random() - 0.5);
-    textStream.innerHTML = '';
-    let lineIndex = 0;
-
-    matrixInterval = setInterval(() => {
-        if (lineIndex < allHeadlines.length) {
-            const line = document.createElement('div');
-            if (Math.random() > 0.9) {
-                line.className = 'matrix-glitch';
-            }
-            line.textContent = allHeadlines[lineIndex];
-            textStream.appendChild(line);
-            textStream.scrollTop = textStream.scrollHeight;
-            lineIndex++;
-        } else {
-            lineIndex = 0;
-            textStream.innerHTML += '<div>> REINICIANDO FLUXO DE DADOS...</div>';
-            allHeadlines.sort(() => Math.random() - 0.5);
-        }
-    }, 200);
   }
-
-  function stopMatrixMode() {
-    const overlay = document.getElementById('matrix-overlay');
-    const exitBtn = document.getElementById('matrix-exit-btn');
-    const mainContainer = document.querySelector('.container');
-    const floatingButtons = document.querySelectorAll('.floating-btn');
-
-    clearInterval(matrixInterval);
-    overlay.style.display = 'none';
-    exitBtn.style.display = 'none';
-    
-    mainContainer.style.display = 'flex';
-    floatingButtons.forEach(btn => btn.style.display = 'flex');
-  }
-  // === FIM: JAVASCRIPT DO MODO MATRIX ===
   
+  // MUDANÇA (JS): Função de busca aprimorada para mostrar mensagem de "nenhum resultado".
   function handleSearch() {
     const searchBar = document.getElementById('search-bar');
     if (!searchBar) return;
-    const searchTerm = searchBar.value.toLowerCase();
+    const searchTerm = searchBar.value.toLowerCase().trim();
     
-    document.querySelectorAll('.news-list li').forEach(li => {
-        // Ignorar li de skeleton ou de erro/info para não esconder indevidamente
-        if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
-            li.style.display = 'flex';
-            return;
-        }
+    // Remove mensagens de "sem resultados" anteriores
+    document.querySelectorAll('.no-search-results').forEach(el => el.remove());
 
-        const title = li.textContent.toLowerCase();
-        if (title.includes(searchTerm)) {
-            li.style.display = 'flex';
-        } else {
-            li.style.display = 'none';
+    const allNewsLists = document.querySelectorAll('.news-list');
+
+    allNewsLists.forEach(list => {
+        let hasVisibleItems = false;
+        const listItems = list.querySelectorAll('li');
+
+        listItems.forEach(li => {
+            // Ignorar li de skeleton, erro, info, etc.
+            if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
+                li.style.display = 'flex';
+                return;
+            }
+
+            const title = li.textContent.toLowerCase();
+            if (title.includes(searchTerm)) {
+                li.style.display = 'flex';
+                hasVisibleItems = true;
+            } else {
+                li.style.display = 'none';
+            }
+        });
+
+        // Adiciona mensagem se a busca não retornou nada e a lista não estiver vazia de notícias
+        if (!hasVisibleItems && searchTerm !== '' && listItems.length > 0 && !list.querySelector('.retry-btn')) {
+            const noResultsLi = document.createElement('li');
+            noResultsLi.className = 'no-search-results';
+            noResultsLi.textContent = "Nenhum resultado encontrado.";
+            list.appendChild(noResultsLi);
         }
     });
   }
+
 
   document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('themePreference');
@@ -1316,16 +1279,6 @@
         });
     }
 
-    const matrixBtn = document.getElementById('matrix-mode-btn');
-    if (matrixBtn) matrixBtn.addEventListener('click', startMatrixMode);
-    const matrixExitBtn = document.getElementById('matrix-exit-btn');
-    if (matrixExitBtn) matrixExitBtn.addEventListener('click', stopMatrixMode);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.getElementById('matrix-overlay').style.display === 'block') {
-            stopMatrixMode();
-        }
-    });
-
     const searchBar = document.getElementById('search-bar');
     if (searchBar) {
         searchBar.addEventListener('input', handleSearch);
@@ -1339,6 +1292,13 @@
             const feedKey = this.dataset.feedkey;
             if (feedKey) loadNews(feedKey, true);
         });
+    });
+
+    // Adiciona listener para fechar o modal com a tecla 'Escape'
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('briefing-modal').classList.contains('visible')) {
+            closeBriefingModal();
+        }
     });
   });
 
