@@ -263,12 +263,15 @@
       text-decoration: none;
       color: var(--link-color);
       display: inline-block;
-      transition: color 0.2s;
+      transition: color 0.2s, opacity 0.3s;
       overflow-wrap: break-word;
       word-break: break-word;
       margin-right: 10px; /* Espaço para o botão de partilha */
     }
     .news-list a:hover { color: var(--link-hover-color); }
+    /* NOVO: Estilo para notícias lidas */
+    .news-list a.is-read { opacity: 0.6; }
+
 
     .timestamp {
       font-size: 0.75rem; color: var(--text-secondary);
@@ -276,7 +279,6 @@
       flex-shrink: 0;
     }
 
-    /* MUDANÇA (CSS): Botões flutuantes agora são gerenciados por um contêiner flex. */
     .floating-btn-container {
         position: fixed;
         bottom: 20px;
@@ -305,18 +307,17 @@
     .floating-btn:active { transform: translateY(0) scale(1); }
     .floating-btn i { font-size: 20px; }
 
-    /* MUDANÇA (CSS): Regras individuais de posicionamento removidas. Apenas a lógica de visibilidade do #top-btn permanece. */
     #top-btn { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
     #top-btn.visible { opacity: 1; visibility: visible; }
     
-    footer { /* MUDANÇA (CSS): Seletor de .footer para footer */
+    footer { 
         font-size: 13px; margin-top: 40px; text-align: center;
         color: var(--text-secondary); padding: 20px 0;
         border-top: 1px solid var(--border-color);
     }
     
-    /* === INÍCIO: CSS DO BRIEFING === */
-    .briefing-modal-overlay {
+    /* === INÍCIO: CSS GERAL DE MODAL === */
+    .modal-overlay {
         position: fixed;
         top: 0;
         left: 0;
@@ -332,11 +333,11 @@
         transition: opacity 0.3s ease, visibility 0.3s ease;
         backdrop-filter: blur(5px);
     }
-    .briefing-modal-overlay.visible {
+    .modal-overlay.visible {
         opacity: 1;
         visibility: visible;
     }
-    .briefing-modal-content {
+    .modal-content {
         background-color: var(--card-bg);
         color: var(--text-color);
         padding: 25px;
@@ -350,7 +351,7 @@
         position: relative;
         font-family: 'Courier New', Courier, monospace;
     }
-    .briefing-modal-content h2 {
+    .modal-content h2 {
         font-family: 'Montserrat', sans-serif;
         color: var(--primary-color);
         margin-top: 0;
@@ -358,12 +359,12 @@
         border-bottom: 1px solid var(--border-color);
         padding-bottom: 15px;
     }
-    .briefing-modal-content ul {
+    .modal-content ul {
         list-style: none;
         padding: 0;
         text-align: left;
     }
-    .briefing-modal-close {
+    .modal-close {
         position: absolute;
         top: 15px;
         right: 20px;
@@ -374,17 +375,20 @@
         cursor: pointer;
         transition: color 0.2s ease;
     }
-    .briefing-modal-close:hover {
+    .modal-close:hover {
         color: var(--primary-color);
     }
-    .briefing-modal-content li {
+    .modal-content li {
         margin-bottom: 20px;
         padding-left: 0;
         list-style-type: none;
     }
-    .briefing-modal-content li::before {
+    .modal-content li::before {
         content: none;
     }
+    /* === FIM: CSS GERAL DE MODAL === */
+
+    /* === INÍCIO: CSS DO BRIEFING (adaptado para o modal geral) === */
     .briefing-source-title {
         font-family: 'Montserrat', sans-serif;
         color: var(--primary-light);
@@ -394,16 +398,16 @@
         padding-bottom: 5px;
         border-bottom: 2px solid var(--primary-dark);
     }
-    .briefing-modal-content ul > h3:first-of-type {
+    #briefing-list > h3:first-of-type {
         margin-top: 5px;
     }
-    .briefing-modal-content li a {
+    #briefing-list li a {
         font-size: 1rem;
         font-weight: bold;
         color: var(--link-color);
         text-decoration: none;
     }
-    .briefing-modal-content li a:hover {
+    #briefing-list li a:hover {
         color: var(--link-hover-color);
         text-decoration: underline;
     }
@@ -421,7 +425,6 @@
         opacity: 0.8;
     }
     
-    /* NOVO: Estilo para o container do gráfico */
     #chart-container {
         margin-top: 30px;
         padding-top: 20px;
@@ -433,8 +436,62 @@
         font-size: 1.2rem;
         margin-bottom: 15px;
     }
-
     /* === FIM: CSS DO BRIEFING === */
+    
+    /* === INÍCIO: CSS DO PAINEL DE CONFIGURAÇÕES === */
+    .settings-section {
+      margin-bottom: 25px;
+      text-align: left;
+    }
+    .settings-section h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.1rem;
+      color: var(--primary-light);
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+    #settings-feeds-list {
+      columns: 2;
+      gap: 10px;
+    }
+    #settings-feeds-list li {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .settings-feed-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    #keywords-input {
+      width: 100%;
+      background-color: var(--dark-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: 'Courier New', Courier, monospace;
+      margin-bottom: 10px;
+    }
+    #settings-save-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      float: right;
+      transition: background-color 0.2s ease;
+    }
+    #settings-save-btn:hover {
+      background-color: var(--primary-dark);
+    }
+    /* === FIM: CSS DO PAINEL DE CONFIGURAÇÕES === */
 
     body.light-mode {
         --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
@@ -469,7 +526,6 @@
     body.light-mode .news-list li i.fa-exclamation-triangle, body.light-mode .news-list li i.fa-info-circle { color: var(--text-secondary); }
     body.light-mode .news-list li i.fa-exclamation-triangle { color: var(--error-color); }
     
-    /* === INÍCIO: CÓDIGO ADICIONADO PARA MELHORIAS === */
     .search-container {
         margin-bottom: 25px;
         padding: 0 10px;
@@ -514,7 +570,6 @@
     }
     .retry-btn:hover { background-color: var(--primary-color); }
 
-    /* MUDANÇA (CSS): Estilo para a mensagem de "nenhum resultado" da busca */
     .no-search-results {
         color: var(--text-secondary);
         font-style: italic;
@@ -523,6 +578,17 @@
         width: 100%;
         display: block;
         border-left: none;
+    }
+    
+    /* NOVO: Estilo para destacar palavras-chave */
+    mark {
+      background-color: var(--primary-color);
+      color: var(--dark-bg);
+      padding: 2px;
+      border-radius: 3px;
+    }
+    body.light-mode mark {
+        color: white;
     }
 
     .skeleton {
@@ -547,23 +613,21 @@
       clip: rect(0, 0, 0, 0);
       border: 0;
     }
-    /* === FIM: CÓDIGO ADICIONADO PARA MELHORIAS === */
 
     @media (max-width: 768px) {
         .container { padding: 20px 15px; }
         .page-title-header { font-size: 36px; }
         .news-grid-wrapper { grid-template-columns: 1fr; padding-bottom: 80px; }
-        /* MUDANÇA (CSS): Media query simplificada para os botões */
         .floating-btn-container {
             gap: 8px;
         }
         .floating-btn-container.left { left: 15px; }
         .floating-btn-container.right { right: 15px; }
         .floating-btn { width: 45px; height: 45px; border-radius: 10px; }
+        #settings-feeds-list { columns: 1; } /* Coluna única em telas menores */
     }
     @media (max-width: 480px) {
         .page-title-header { font-size: 30px; }
-        /* MUDANÇA (CSS): Media query simplificada para os botões */
         .floating-btn-container.left { left: 10px; }
         .floating-btn-container.right { right: 10px; }
         .floating-btn { width: 40px; height: 40px; }
@@ -597,103 +661,7 @@
     </div>
 
     <div class="news-grid-wrapper">
-        <article class="news-widget crypto-widget">
-          <button class="refresh-widget" data-feedkey="guiadobitcoin" aria-label="Atualizar Zero Hedge">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-newspaper"></i> Zero Hedge</h3>
-          <ul class="news-list" id="zerohedge-news"></ul>
-          <div class="timestamp" id="zerohedge-timestamp"></div>
-        </article>
-        <article class="news-widget crypto-widget">
-          <button class="refresh-widget" data-feedkey="noticiabrasil" aria-label="Atualizar Notícia Brasil">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-globe-americas"></i> Notícia Brasil</h3>
-          <ul class="news-list" id="noticiabrasil-news"></ul>
-          <div class="timestamp" id="noticiabrasil-timestamp"></div>
-        </article>
-        <article class="news-widget crypto-widget">
-          <button class="refresh-widget" data-feedkey="cointelegraph" aria-label="Atualizar Cointelegraph">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fab fa-bitcoin"></i> Cointelegraph BR</h3>
-          <ul class="news-list" id="cointelegraph-news"></ul>
-          <div class="timestamp" id="cointelegraph-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="advfn" aria-label="Atualizar ADVFN">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-newspaper"></i> ADVFN BR</h3>
-          <ul class="news-list" id="advfn-news"></ul>
-          <div class="timestamp" id="advfn-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="investing" aria-label="Atualizar Investing">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-chart-line"></i> Investing.com BR</h3>
-          <ul class="news-list" id="investing-news"></ul>
-          <div class="timestamp" id="investing-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="infomoney" aria-label="Atualizar InfoMoney">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-money-bill-wave"></i> InfoMoney</h3>
-          <ul class="news-list" id="infomoney-news"></ul>
-          <div class="timestamp" id="infomoney-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="valor" aria-label="Atualizar Valor Econômico">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-landmark"></i> Valor Econômico</h3>
-          <ul class="news-list" id="valor-news"></ul>
-          <div class="timestamp" id="valor-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="dukascopy" aria-label="Atualizar Dukascopy">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-globe-europe"></i> Dukascopy</h3>
-          <ul class="news-list" id="dukascopy-news"></ul>
-          <div class="timestamp" id="dukascopy-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="forexlive" aria-label="Atualizar ForexLive">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-dollar-sign"></i> ForexLive</h3>
-          <ul class="news-list" id="forexlive-news"></ul>
-          <div class="timestamp" id="forexlive-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="fxmarkets" aria-label="Atualizar FX Markets">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-exchange-alt"></i> FX Markets</h3>
-          <ul class="news-list" id="fxmarkets-news"></ul>
-          <div class="timestamp" id="fxmarkets-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="fxstreet" aria-label="Atualizar FXStreet">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-road"></i> FXStreet</h3>
-          <ul class="news-list" id="fxstreet-news"></ul>
-          <div class="timestamp" id="fxstreet-timestamp"></div>
-        </article>
-        <article class="news-widget finance-widget">
-          <button class="refresh-widget" data-feedkey="ing" aria-label="Atualizar ING Think">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <h3><i class="fas fa-lightbulb"></i> ING Think</h3>
-          <ul class="news-list" id="ing-news"></ul>
-          <div class="timestamp" id="ing-timestamp"></div>
-        </article>
-    </div>
+        </div>
     <footer>© <span id="current-year"></span> Mercado Macro</footer>
 </div>
 
@@ -707,6 +675,9 @@
 </div>
 
 <div class="floating-btn-container right">
+    <button id="settings-btn" class="floating-btn" aria-label="Abrir Configurações">
+        <i class="fas fa-cog"></i>
+    </button>
     <button id="briefing-btn" class="floating-btn" aria-label="Gerar Briefing das Notícias">
         <i class="fas fa-clipboard-list"></i>
     </button>
@@ -721,12 +692,11 @@
     </button>
 </div>
 
-<div id="briefing-modal" class="briefing-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="briefing-title">
-    <div class="briefing-modal-content">
-        <button id="briefing-modal-close-btn" class="briefing-modal-close" aria-label="Fechar">&times;</button>
+<div id="briefing-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="briefing-title">
+    <div class="modal-content">
+        <button id="briefing-modal-close-btn" class="modal-close" aria-label="Fechar">&times;</button>
         <h2 id="briefing-title">Briefing de Notícias</h2>
-        <ul id="briefing-list">
-        </ul>
+        <ul id="briefing-list"></ul>
         <div id="chart-container" style="display: none;">
             <h3>Termos Frequentes nas Manchetes</h3>
             <canvas id="word-frequency-chart"></canvas>
@@ -734,45 +704,377 @@
     </div>
 </div>
 
+<div id="settings-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-content">
+        <button id="settings-modal-close-btn" class="modal-close" aria-label="Fechar">&times;</button>
+        <h2 id="settings-title">Configurações</h2>
+        
+        <div class="settings-section">
+            <h3>Fontes de Notícias Visíveis</h3>
+            <ul id="settings-feeds-list">
+                </ul>
+        </div>
+
+        <div class="settings-section">
+            <h3>Destaque de Palavras-chave</h3>
+            <p class="briefing-item-description">Digite palavras ou frases separadas por vírgula. Elas serão destacadas nos títulos das notícias.</p>
+            <textarea id="keywords-input" rows="3" placeholder="Ex: bitcoin, juros, IBC-Br, ..."></textarea>
+        </div>
+
+        <button id="settings-save-btn">Salvar e Fechar</button>
+    </div>
+</div>
+
+
 <script>
   // Variáveis Globais
   const CACHE_KEY_PREFIX = 'terminalNewsCacheV5_';
   const CACHE_TTL = 15 * 60 * 1000;
   const FETCH_TIMEOUT = 15000;
 
+  // CORREÇÃO APLICADA AQUI
   const PROXY_SERVICES = [
     { name: 'allorigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
+    { name: 'corsproxy.io', url: (targetUrl) => `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` },
     { name: 'codetabs', url: (targetUrl) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}` }
   ];
   let globalLastUsedProxySuccessIndex = 0;
-
-  const NEWS_SCOPE_KEY = 'terminalNewsScope_v1';
-  let currentNewsScope = 'local';
-
-  // NOVO: Variável para controlar o gráfico
   let wordFrequencyChart = null;
 
   const rssFeeds = {
-    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge', scope: 'international'},
-    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil', scope: 'local'},
-    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph BR', scope: 'local'},
-    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN BR', scope: 'local'},
-    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com BR', scope: 'local'},
-    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney', scope: 'local'},
-    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico', scope: 'local'},
-    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy', scope: 'international'},
-    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive', scope: 'international'},
-    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets', scope: 'international'},
-    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet', scope: 'international'},
-    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think', scope: 'international'}
+    guiadobitcoin: { url: 'https://cms.zerohedge.com/fullrss2.xml', elementId: 'zerohedge-news', timestampId: 'zerohedge-timestamp', category: 'crypto', displayName: 'Zero Hedge', scope: 'international', icon: 'fa-newspaper'},
+    noticiabrasil: { url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', elementId: 'noticiabrasil-news', timestampId: 'noticiabrasil-timestamp', category: 'crypto', displayName: 'Notícia Brasil', scope: 'local', icon: 'fa-globe-americas'},
+    cointelegraph: { url: 'https://br.cointelegraph.com/rss/tag/bitcoin', elementId: 'cointelegraph-news', timestampId: 'cointelegraph-timestamp', category: 'crypto', displayName: 'Cointelegraph BR', scope: 'local', icon: 'fa-bitcoin'},
+    advfn: { url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', elementId: 'advfn-news', timestampId: 'advfn-timestamp', category: 'finance', displayName: 'ADVFN BR', scope: 'local', icon: 'fa-newspaper'},
+    investing: { url: 'https://br.investing.com/rss/news.rss', elementId: 'investing-news', timestampId: 'investing-timestamp', category: 'finance', displayName: 'Investing.com BR', scope: 'local', icon: 'fa-chart-line'},
+    infomoney: { url: 'https://www.infomoney.com.br/feed/', elementId: 'infomoney-news', timestampId: 'infomoney-timestamp', category: 'finance', displayName: 'InfoMoney', scope: 'local', icon: 'fa-money-bill-wave'},
+    valor: { url: 'https://www.valor.com.br/rss', elementId: 'valor-news', timestampId: 'valor-timestamp', category: 'finance', displayName: 'Valor Econômico', scope: 'local', icon: 'fa-landmark'},
+    dukascopy: { url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', elementId: 'dukascopy-news', timestampId: 'dukascopy-timestamp', category: 'finance', displayName: 'Dukascopy', scope: 'international', icon: 'fa-globe-europe'},
+    forexlive: { url: 'https://www.forexlive.com/feed', elementId: 'forexlive-news', timestampId: 'forexlive-timestamp', category: 'finance', displayName: 'ForexLive', scope: 'international', icon: 'fa-dollar-sign'},
+    fxmarkets: { url: 'https://www.fx-markets.com/feeds/rss', elementId: 'fxmarkets-news', timestampId: 'fxmarkets-timestamp', category: 'finance', displayName: 'FX Markets', scope: 'international', icon: 'fa-exchange-alt'},
+    fxstreet: { url: 'https://www.fxstreet.com/rss/news', elementId: 'fxstreet-news', timestampId: 'fxstreet-timestamp', category: 'finance', displayName: 'FXStreet', scope: 'international', icon: 'fa-road'},
+    ing: { url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', elementId: 'ing-news', timestampId: 'ing-timestamp', category: 'finance', displayName: 'ING Think', scope: 'international', icon: 'fa-lightbulb'}
   };
   
-  function announceToScreenReader(message) {
-    const announcer = document.getElementById('aria-live-announcer');
-    if (announcer) {
-        announcer.textContent = message;
+  // NOVO: Objeto para gerenciar o estado da aplicação
+  const AppState = {
+    _newsScope: 'local',
+    _enabledFeeds: Object.keys(rssFeeds),
+    _keywords: [],
+    _readArticles: new Set(),
+    
+    init() {
+        const savedScope = localStorage.getItem('terminalNewsScope_v1') || 'local';
+        this.newsScope = savedScope;
+
+        const savedFeeds = localStorage.getItem('terminalEnabledFeeds_v1');
+        this._enabledFeeds = savedFeeds ? JSON.parse(savedFeeds) : Object.keys(rssFeeds);
+        
+        const savedKeywords = localStorage.getItem('terminalKeywords_v1');
+        this.keywords = savedKeywords ? JSON.parse(savedKeywords) : [];
+        
+        const savedReadArticles = localStorage.getItem('terminalReadArticles_v1');
+        this._readArticles = new Set(savedReadArticles ? JSON.parse(savedReadArticles) : []);
+    },
+    
+    get newsScope() { return this._newsScope; },
+    set newsScope(scope) {
+        this._newsScope = scope;
+        localStorage.setItem('terminalNewsScope_v1', scope);
+    },
+    
+    get enabledFeeds() {
+        return this._enabledFeeds.filter(key => rssFeeds[key]);
+    },
+    set enabledFeeds(feedKeys) {
+        this._enabledFeeds = feedKeys;
+        localStorage.setItem('terminalEnabledFeeds_v1', JSON.stringify(feedKeys));
+    },
+    
+    get keywords() { return this._keywords; },
+    set keywords(keys) {
+        this._keywords = keys;
+        localStorage.setItem('terminalKeywords_v1', JSON.stringify(keys));
+    },
+
+    get readArticles() { return this._readArticles; },
+    addReadArticle(url) {
+        if (!url || url === '#') return;
+        this._readArticles.add(url);
+        // Salva apenas um número limitado de artigos para não sobrecarregar o localStorage
+        const articlesArray = Array.from(this._readArticles).slice(-200);
+        localStorage.setItem('terminalReadArticles_v1', JSON.stringify(articlesArray));
     }
-  }
+  };
+
+  // NOVO: Objeto UI para manipulação do DOM
+  const UI = {
+    _focusTrapHandler: null,
+    _elementThatOpenedModal: null,
+
+    init() {
+        // Inicializa listeners de UI globais
+        document.getElementById('theme-toggle')?.addEventListener('click', this.toggleTheme);
+        document.getElementById('search-bar')?.addEventListener('input', this.handleSearch);
+        document.getElementById('top-btn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        window.addEventListener('scroll', () => document.getElementById('top-btn')?.classList.toggle('visible', window.pageYOffset > 300));
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        document.getElementById('home-btn')?.addEventListener('click', () => window.location.href = 'index.html');
+
+        // Modais
+        document.getElementById('briefing-btn')?.addEventListener('click', () => generateAndShowBriefing());
+        this.setupModal('briefing-modal', 'briefing-modal-close-btn');
+        
+        // NOVO: Modal de Configurações
+        document.getElementById('settings-btn')?.addEventListener('click', () => {
+            this.populateSettings();
+            this.toggleModal('settings-modal', true);
+        });
+        this.setupModal('settings-modal', 'settings-modal-close-btn');
+        document.getElementById('settings-save-btn')?.addEventListener('click', () => this.saveSettings());
+    },
+
+    toggleModal(modalId, show) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        if (show) {
+            this._elementThatOpenedModal = document.activeElement;
+            modal.classList.add('visible');
+            this.announceToScreenReader(`${modal.querySelector('h2').textContent} aberto.`);
+            this.setupFocusTrap(modal);
+        } else {
+            modal.classList.remove('visible');
+            this.removeFocusTrap(modal);
+            this.announceToScreenReader(`${modal.querySelector('h2').textContent} fechado.`);
+        }
+    },
+    
+    setupModal(modalId, closeBtnId) {
+        const modal = document.getElementById(modalId);
+        document.getElementById(closeBtnId)?.addEventListener('click', () => this.toggleModal(modalId, false));
+        modal?.addEventListener('click', (event) => { if (event.target === modal) this.toggleModal(modalId, false); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('visible')) {
+                this.toggleModal(modalId, false);
+            }
+        });
+    },
+
+    setupFocusTrap(modalElement) {
+        const focusableElements = modalElement.querySelectorAll('a[href], button:not([disabled]), textarea, input, select');
+        if (focusableElements.length === 0) return;
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        
+        this._focusTrapHandler = (e) => {
+            if (e.key !== 'Tab') return;
+            if (e.shiftKey) { 
+                if (document.activeElement === firstElement) { lastElement.focus(); e.preventDefault(); }
+            } else { 
+                if (document.activeElement === lastElement) { firstElement.focus(); e.preventDefault(); }
+            }
+        };
+        modalElement.addEventListener('keydown', this._focusTrapHandler);
+        firstElement.focus();
+    },
+  
+    removeFocusTrap(modalElement) {
+        modalElement.removeEventListener('keydown', this._focusTrapHandler);
+        if (this._elementThatOpenedModal) this._elementThatOpenedModal.focus();
+    },
+
+    renderWidgets() {
+        const wrapper = document.querySelector('.news-grid-wrapper');
+        wrapper.innerHTML = ''; // Limpa os widgets existentes
+        const fragment = document.createDocumentFragment();
+
+        AppState.enabledFeeds.forEach(feedKey => {
+            const feedConfig = rssFeeds[feedKey];
+            const widget = document.createElement('article');
+            widget.className = `news-widget ${feedConfig.category}-widget`;
+            widget.id = `widget-${feedKey}`;
+            widget.style.display = 'none'; // Começa escondido, será mostrado pelo updateWidgetVisibility
+
+            const fabIconClass = feedConfig.icon === 'fa-bitcoin' ? 'fab' : 'fas';
+
+            widget.innerHTML = `
+                <button class="refresh-widget" data-feedkey="${feedKey}" aria-label="Atualizar ${feedConfig.displayName}">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <h3><i class="${fabIconClass} ${feedConfig.icon}"></i> ${feedConfig.displayName}</h3>
+                <ul class="news-list" id="${feedConfig.elementId}"></ul>
+                <div class="timestamp" id="${feedConfig.timestampId}"></div>
+            `;
+            widget.querySelector('.refresh-widget').addEventListener('click', function() { loadNews(this.dataset.feedkey, true); });
+            fragment.appendChild(widget);
+        });
+        wrapper.appendChild(fragment);
+        updateWidgetVisibility();
+    },
+
+    renderNews(listElement, timestampId, items, feedName, updateTime) {
+      listElement.innerHTML = '';
+      const itemsToShow = items.slice(0, 6);
+      const supportsShare = 'share' in navigator;
+      const fragment = document.createDocumentFragment();
+
+      if (itemsToShow.length === 0) {
+        const li = document.createElement('li');
+        li.innerHTML = `<i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.`;
+        fragment.appendChild(li);
+      } else {
+        itemsToShow.forEach(item => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = item.link || '#';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.setAttribute('title', item.title);
+          
+          // NOVO: Adiciona classe se já foi lido e destaca palavras-chave
+          if (AppState.readArticles.has(a.href)) {
+              a.classList.add('is-read');
+          }
+          a.innerHTML = this.highlightKeywords(item.title, AppState.keywords);
+
+          // NOVO: Listener para marcar como lido
+          a.addEventListener('click', () => {
+              AppState.addReadArticle(a.href);
+              a.classList.add('is-read');
+          });
+          
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'display: flex; align-items: center; width: 100%;';
+          wrapper.appendChild(a);
+
+          if (supportsShare) {
+              const shareBtn = document.createElement('button');
+              shareBtn.className = 'share-btn';
+              shareBtn.setAttribute('aria-label', `Partilhar notícia: ${item.title}`);
+              shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+              shareBtn.addEventListener('click', async (e) => {
+                  e.preventDefault();
+                  try {
+                      await navigator.share({ title: item.title, text: `Notícia de ${feedName}: ${item.title}`, url: item.link });
+                  } catch (err) { console.error('Erro ao partilhar:', err); }
+              });
+              wrapper.appendChild(shareBtn);
+          }
+
+          li.appendChild(wrapper);
+          fragment.appendChild(li);
+        });
+      }
+
+      listElement.appendChild(fragment); 
+      const timestampEl = document.getElementById(timestampId);
+      if (timestampEl) timestampEl.textContent = `Atualizado ${formatTimeSince(updateTime)}`;
+      
+      this.handleSearch();
+    },
+
+    highlightKeywords(text, keywords) {
+        if (!keywords || keywords.length === 0) return text;
+        const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    },
+
+    populateSettings() {
+        const feedsList = document.getElementById('settings-feeds-list');
+        feedsList.innerHTML = '';
+        Object.keys(rssFeeds).forEach(key => {
+            const feed = rssFeeds[key];
+            const li = document.createElement('li');
+            const isChecked = AppState.enabledFeeds.includes(key);
+            li.innerHTML = `
+                <input type="checkbox" id="feed-toggle-${key}" data-feedkey="${key}" ${isChecked ? 'checked' : ''}>
+                <label for="feed-toggle-${key}" class="settings-feed-label">${feed.displayName}</label>
+            `;
+            feedsList.appendChild(li);
+        });
+        
+        document.getElementById('keywords-input').value = AppState.keywords.join(', ');
+    },
+    
+    saveSettings() {
+        const enabledFeeds = [];
+        document.querySelectorAll('#settings-feeds-list input[type="checkbox"]').forEach(checkbox => {
+            if (checkbox.checked) {
+                enabledFeeds.push(checkbox.dataset.feedkey);
+            }
+        });
+        AppState.enabledFeeds = enabledFeeds;
+
+        const keywordsText = document.getElementById('keywords-input').value;
+        AppState.keywords = keywordsText.split(',').map(k => k.trim()).filter(Boolean);
+
+        this.toggleModal('settings-modal', false);
+        this.renderWidgets(); // Re-renderiza os widgets com as novas configurações
+        refreshAllFeeds(true); // Atualiza os feeds visíveis
+    },
+    
+    toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        const isLightMode = document.body.classList.contains('light-mode');
+        localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+        const themeIcon = document.querySelector('#theme-toggle i');
+        if(themeIcon){
+            themeIcon.classList.toggle('fa-moon', !isLightMode);
+            themeIcon.classList.toggle('fa-sun', isLightMode);
+        }
+        UI.announceToScreenReader(`Tema alterado para modo ${isLightMode ? 'claro' : 'escuro'}.`);
+        if (document.getElementById('briefing-modal').classList.contains('visible')) {
+            generateWordFrequencyChart();
+        }
+    },
+    
+    handleSearch() {
+        const searchBar = document.getElementById('search-bar');
+        if (!searchBar) return;
+        const searchTerm = searchBar.value.toLowerCase().trim();
+        document.querySelectorAll('.no-search-results').forEach(el => el.remove());
+
+        document.querySelectorAll('.news-list').forEach(list => {
+            let hasVisibleItems = false;
+            const listItems = list.querySelectorAll('li');
+            listItems.forEach(li => {
+                if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
+                    li.style.display = 'flex';
+                    return;
+                }
+                const title = li.textContent.toLowerCase();
+                if (title.includes(searchTerm)) {
+                    li.style.display = 'flex';
+                    hasVisibleItems = true;
+                } else {
+                    li.style.display = 'none';
+                }
+            });
+            if (!hasVisibleItems && searchTerm !== '' && listItems.length > 0 && !list.querySelector('.retry-btn')) {
+                const noResultsLi = document.createElement('li');
+                noResultsLi.className = 'no-search-results';
+                noResultsLi.textContent = "Nenhum resultado encontrado.";
+                list.appendChild(noResultsLi);
+            }
+        });
+    },
+
+    announceToScreenReader(message) {
+      const announcer = document.getElementById('aria-live-announcer');
+      if (announcer) announcer.textContent = message;
+    },
+
+    showSkeleton(listElement) {
+        if (!listElement) return;
+        let skeletonHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const widthClass = i % 2 === 0 ? 'w-75' : 'w-50';
+            skeletonHTML += `<li><div class="skeleton ${widthClass}"></div></li>`;
+        }
+        listElement.innerHTML = skeletonHTML;
+    }
+  };
 
   function formatTimeSince(timestamp) {
     if (!timestamp) return 'desconhecido';
@@ -785,98 +1087,24 @@
     const date = new Date(timestamp);
     return `em ${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
   }
-
-  function showSkeleton(listElement) {
-      if (!listElement) return;
-      let skeletonHTML = '';
-      for (let i = 0; i < 5; i++) {
-          const widthClass = i % 2 === 0 ? 'w-75' : 'w-50';
-          skeletonHTML += `<li><div class="skeleton ${widthClass}"></div></li>`;
-      }
-      listElement.innerHTML = skeletonHTML;
-  }
   
-  function renderNews(listElement, timestampId, items, feedName, updateTime) {
-    listElement.innerHTML = '';
-    const itemsToShow = items.slice(0, 6);
-    const supportsShare = 'share' in navigator;
-    const fragment = document.createDocumentFragment();
-
-    if (itemsToShow.length === 0) {
-      const li = document.createElement('li');
-      li.innerHTML = `<i class="fas fa-exclamation-circle"></i> Nenhuma notícia encontrada em ${feedName || 'esta fonte'}.`;
-      fragment.appendChild(li);
-    } else {
-      itemsToShow.forEach(item => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.href = item.link || '#';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.setAttribute('title', item.title);
-        a.textContent = item.title;
-        
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.alignItems = 'center';
-        wrapper.style.width = '100%';
-        wrapper.appendChild(a);
-
-        if (supportsShare) {
-            const shareBtn = document.createElement('button');
-            shareBtn.className = 'share-btn';
-            shareBtn.setAttribute('aria-label', `Partilhar notícia: ${item.title}`);
-            shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
-            shareBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                try {
-                    await navigator.share({
-                        title: item.title,
-                        text: `Notícia de ${feedName}: ${item.title}`,
-                        url: item.link
-                    });
-                } catch (err) {
-                    console.error('Erro ao partilhar:', err);
-                }
-            });
-            wrapper.appendChild(shareBtn);
-        }
-
-        li.appendChild(wrapper);
-        fragment.appendChild(li);
-      });
-    }
-
-    listElement.appendChild(fragment); 
-    const timestampEl = document.getElementById(timestampId);
-    if (timestampEl) timestampEl.textContent = `Atualizado ${formatTimeSince(updateTime)}`;
-    
-    handleSearch();
-  }
-  
-  // NOVO: Função para exibir notificação no desktop
   function showDesktopNotification(title, options) {
     if ('Notification' in window && Notification.permission === 'granted') {
-        // Para garantir que a notificação possa ser clicada, mesmo em service workers no futuro
         const notification = new Notification(title, options);
-        notification.onclick = () => {
-             window.open(options.data.url, '_blank');
-        };
+        notification.onclick = () => { window.open(options.data.url, '_blank'); };
     }
   }
 
   async function loadNews(feedKey, forceRefresh = false) {
     const feedConfig = rssFeeds[feedKey];
-    if (!feedConfig) {
-      console.error(`Config do feed '${feedKey}' não encontrada.`);
-      return;
-    }
+    if (!feedConfig) return;
+    
     const list = document.getElementById(feedConfig.elementId);
     const timestampEl = document.getElementById(feedConfig.timestampId);
     const widgetElement = list?.closest('.news-widget');
 
     if (list && widgetElement && widgetElement.style.display !== 'none') {
-        showSkeleton(list);
+        UI.showSkeleton(list);
     }
 
     const cacheKey = `${CACHE_KEY_PREFIX}${feedConfig.elementId}`;
@@ -887,27 +1115,19 @@
         const { items, timestamp } = JSON.parse(cachedEntry);
         if ((Date.now() - timestamp) < CACHE_TTL) {
           if (list && timestampEl && widgetElement && widgetElement.style.display !== 'none') {
-               renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
+               UI.renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
           }
           return;
         }
-      } catch (e) {
-        console.warn("Cache inválido para " + feedKey, e);
-        localStorage.removeItem(cacheKey);
-      }
+      } catch (e) { localStorage.removeItem(cacheKey); }
     }
     
-    // MUDANÇA (JS): Guarda o título da notícia mais recente do cache antigo
     let latestOldTitle = null;
     if (cachedEntry) {
-        try {
-            latestOldTitle = JSON.parse(cachedEntry).items[0]?.title;
-        } catch (e) { /* ignora erro de cache antigo */ }
+        try { latestOldTitle = JSON.parse(cachedEntry).items[0]?.title; } catch (e) {}
     }
     
-    if (forceRefresh) {
-      localStorage.removeItem(cacheKey);
-    }
+    if (forceRefresh) localStorage.removeItem(cacheKey);
 
     let success = false;
     let currentAttemptProxyIndex = globalLastUsedProxySuccessIndex;
@@ -940,18 +1160,14 @@
             localStorage.setItem(cacheKey, JSON.stringify({ items: fetchedItems, timestamp: updateTime }));
 
             if (list && timestampEl && widgetElement && widgetElement.style.display !== 'none') {
-                renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
+                UI.renderNews(list, feedConfig.timestampId, fetchedItems, feedConfig.displayName, updateTime);
             }
-
-            // MUDANÇA (JS): Lógica para disparar a notificação
+            
             if (fetchedItems.length > 0 && fetchedItems[0].title !== latestOldTitle) {
-                // Exemplo simples: notifica se o título contém "urgente" ou "alerta"
                 const titleLower = fetchedItems[0].title.toLowerCase();
                 if (titleLower.includes('urgente') || titleLower.includes('alerta')) {
                     showDesktopNotification(`Alerta de ${feedConfig.displayName}!`, {
-                        body: fetchedItems[0].title,
-                        icon: './favicon.ico', // Opcional: adicione um ícone
-                        data: { url: fetchedItems[0].link }
+                        body: fetchedItems[0].title, icon: './favicon.ico', data: { url: fetchedItems[0].link }
                     });
                 }
             }
@@ -972,7 +1188,7 @@
             try {
                 const { items, timestamp } = JSON.parse(cachedEntry);
                 if (list && timestampEl && widgetElement && widgetElement.style.display !== 'none') {
-                    renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
+                    UI.renderNews(list, feedConfig.timestampId, items, feedConfig.displayName, timestamp);
                     const warningMsg = document.createElement('li');
                     warningMsg.style.cssText = 'font-size:0.8em; opacity:0.8; margin-top:5px;';
                     warningMsg.innerHTML = `<i class="fas fa-info-circle"></i> Dados do cache (falha ao atualizar).`;
@@ -996,11 +1212,13 @@
   function updateWidgetVisibility() {
     Object.keys(rssFeeds).forEach(feedKey => {
         const feedConfig = rssFeeds[feedKey];
-        const widgetElement = document.getElementById(feedConfig.elementId)?.closest('.news-widget');
+        const widgetElement = document.getElementById(`widget-${feedKey}`);
         if (widgetElement) {
-            if (feedConfig.scope === currentNewsScope) {
+            // Verifica se o feed está habilitado nas configs E se corresponde ao scope (local/intl)
+            if (AppState.enabledFeeds.includes(feedKey) && feedConfig.scope === AppState.newsScope) {
                 widgetElement.style.display = '';
                 const listElement = document.getElementById(feedConfig.elementId);
+                // Se o widget está visível mas vazio, carrega as notícias
                 if (listElement && listElement.children.length === 0) {
                     loadNews(feedKey, false);
                 }
@@ -1013,29 +1231,24 @@
 
   function handleScopeChange() {
     const toggle = document.getElementById('news-scope-toggle');
-    currentNewsScope = toggle.checked ? 'international' : 'local';
-    localStorage.setItem(NEWS_SCOPE_KEY, currentNewsScope);
-    document.getElementById('scope-label-local').classList.toggle('active-scope', currentNewsScope === 'local');
-    document.getElementById('scope-label-international').classList.toggle('active-scope', currentNewsScope === 'international');
+    AppState.newsScope = toggle.checked ? 'international' : 'local';
+    document.getElementById('scope-label-local').classList.toggle('active-scope', AppState.newsScope === 'local');
+    document.getElementById('scope-label-international').classList.toggle('active-scope', AppState.newsScope === 'international');
     updateWidgetVisibility();
   }
 
   function initializeScopeToggle() {
-    const savedScope = localStorage.getItem(NEWS_SCOPE_KEY);
     const toggle = document.getElementById('news-scope-toggle');
     const localLabel = document.getElementById('scope-label-local');
     const internationalLabel = document.getElementById('scope-label-international');
-    currentNewsScope = (savedScope === 'international') ? 'international' : 'local';
-    localStorage.setItem(NEWS_SCOPE_KEY, currentNewsScope);
-
-    toggle.checked = (currentNewsScope === 'international');
-    localLabel.classList.toggle('active-scope', currentNewsScope === 'local');
-    internationalLabel.classList.toggle('active-scope', currentNewsScope === 'international');
-    updateWidgetVisibility();
+    
+    toggle.checked = (AppState.newsScope === 'international');
+    localLabel.classList.toggle('active-scope', AppState.newsScope === 'local');
+    internationalLabel.classList.toggle('active-scope', AppState.newsScope === 'international');
 
     toggle.addEventListener('change', handleScopeChange);
-    localLabel.addEventListener('click', () => { if (currentNewsScope !== 'local') { toggle.checked = false; handleScopeChange(); } });
-    internationalLabel.addEventListener('click', () => { if (currentNewsScope !== 'international') { toggle.checked = true; handleScopeChange(); } });
+    localLabel.addEventListener('click', () => { if (AppState.newsScope !== 'local') { toggle.checked = false; handleScopeChange(); } });
+    internationalLabel.addEventListener('click', () => { if (AppState.newsScope !== 'international') { toggle.checked = true; handleScopeChange(); } });
   }
 
   function refreshAllFeeds(force = true) {
@@ -1043,98 +1256,47 @@
     if(refreshBtnGlobal && force) {
       refreshBtnGlobal.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       refreshBtnGlobal.disabled = true;
-      announceToScreenReader("Atualizando notícias...");
+      UI.announceToScreenReader("Atualizando notícias...");
     }
+    
+    const feedsToLoad = AppState.enabledFeeds.filter(feedKey => rssFeeds[feedKey].scope === AppState.newsScope);
+
     if (force) {
-        Object.keys(rssFeeds).forEach(feedKey => {
-            if (rssFeeds[feedKey].scope === currentNewsScope) {
-                localStorage.removeItem(`${CACHE_KEY_PREFIX}${rssFeeds[feedKey].elementId}`);
-            }
+        feedsToLoad.forEach(feedKey => {
+            localStorage.removeItem(`${CACHE_KEY_PREFIX}${rssFeeds[feedKey].elementId}`);
         });
     }
-    const feedsToLoad = Object.keys(rssFeeds).filter(feedKey => rssFeeds[feedKey].scope === currentNewsScope);
+
     feedsToLoad.forEach(feedKey => {
         const list = document.getElementById(rssFeeds[feedKey].elementId);
         const widgetElement = list?.closest('.news-widget');
-        if (list && widgetElement && widgetElement.style.display !== 'none') showSkeleton(list);
+        if (list && widgetElement && widgetElement.style.display !== 'none') UI.showSkeleton(list);
     });
+
     const promises = feedsToLoad.map(feedKey => loadNews(feedKey, force));
+
     Promise.allSettled(promises).finally(() => {
       if(refreshBtnGlobal && force) {
-        setTimeout(() => { refreshBtnGlobal.innerHTML = '<i class="fas fa-sync-alt"></i>'; refreshBtnGlobal.disabled = false; announceToScreenReader("Notícias atualizadas."); }, 1000);
+        setTimeout(() => { refreshBtnGlobal.innerHTML = '<i class="fas fa-sync-alt"></i>'; refreshBtnGlobal.disabled = false; UI.announceToScreenReader("Notícias atualizadas."); }, 1000);
       }
     });
   }
-
-  function toggleTheme() {
-    document.body.classList.toggle('light-mode');
-    const isLightMode = document.body.classList.contains('light-mode');
-    localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
-    const themeIcon = document.querySelector('#theme-toggle i');
-    if(themeIcon){
-        themeIcon.classList.toggle('fa-moon', !isLightMode);
-        themeIcon.classList.toggle('fa-sun', isLightMode);
-    }
-    announceToScreenReader(`Tema alterado para modo ${isLightMode ? 'claro' : 'escuro'}.`);
-    // MUDANÇA: recria o gráfico se estiver visível, para se adaptar ao novo tema
-    if (document.getElementById('briefing-modal').classList.contains('visible')) {
-        generateWordFrequencyChart();
-    }
-  }
-
-  function setupBackToTop() {
-    const backToTopButton = document.getElementById('top-btn');
-    if (!backToTopButton) return;
-    window.addEventListener('scroll', () => backToTopButton.classList.toggle('visible', window.pageYOffset > 300));
-    backToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-  }
-
-  function updateFooterYear() {
-      const yearSpan = document.getElementById('current-year');
-      if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-  }
-
-  let focusTrapHandler = null;
-  let elementThatOpenedModal = null;
-
-  function setupFocusTrap(modalElement) {
-      const focusableElements = modalElement.querySelectorAll('a[href], button:not([disabled]), textarea, input, select');
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-      focusTrapHandler = function(e) {
-          if (e.key !== 'Tab') return;
-          if (e.shiftKey) { if (document.activeElement === firstElement) { lastElement.focus(); e.preventDefault(); } } 
-          else { if (document.activeElement === lastElement) { firstElement.focus(); e.preventDefault(); } }
-      };
-      modalElement.addEventListener('keydown', focusTrapHandler);
-      if(firstElement) firstElement.focus();
-  }
   
-  function removeFocusTrap(modalElement) {
-      modalElement.removeEventListener('keydown', focusTrapHandler);
-      if(elementThatOpenedModal) elementThatOpenedModal.focus();
-  }
-  
-  // NOVO: Função que retorna palavras comuns a serem ignoradas no gráfico.
   function getStopWords() {
-      // Lista de palavras comuns em português e inglês para serem ignoradas.
-      return new Set(['de', 'a', 'o', 'que', 'e', 'do', 'da', 'em', 'um', 'para', 'é', 'com', 'não', 'uma', 'os', 'no', 'na', 'por', 'mais', 'as', 'dos', 'como', 'mas', 'foi', 'ao', 'ele', 'das', 'tem', 'à', 'seu', 'sua', 'ou', 'ser', 'quando', 'muito', 'há', 'nos', 'já', 'está', 'eu', 'também', 'só', 'pelo', 'pela', 'até', 'isso', 'ela', 'entre', 'depois', 'sem', 'mesmo', 'aos', 'ter', 'seus', 'quem', 'nas', 'me', 'esse', 'eles', 'estão', 'você', 'tinha', 'foram', 'essa', 'num', 'nem', 'suas', 'meu', 'às', 'minha', 'numa', 'pelos', 'elas', 'havia', 'seja', 'qual', 'será', 'nós', 'tenho', 'lhe', 'deles', 'essas', 'esses', 'pelas', 'este', 'fosse', 'dele', 'tu', 'te', 'vocês', 'vos', 'lhes', 'meus', 'minhas', 'teu', 'tua', 'teus', 'tuas', 'nosso', 'nossa', 'nossos', 'nossas', 'dela', 'delas', 'esta', 'estes', 'aquele', 'aquela', 'aqueles', 'aquelas', 'isto', 'aquilo', 'estou', 'está', 'estamos', 'estão', 'estive', 'esteve', 'estivemos', 'estiveram', 'estava', 'estávamos', 'estavam', 'estivera', 'estivéramos', 'esteja', 'estejamos', 'estejam', 'estivesse', 'estivéssemos', 'estivessem', 'estiver', 'estivermos', 'estiverem', 'the', 'a', 'an', 'to', 'in', 'for', 'of', 'on', 'with', 'at', 'by', 'is', 'and', 'it', 'that', 'as', 'from', 'be']);
+    return new Set(['de', 'a', 'o', 'que', 'e', 'do', 'da', 'em', 'um', 'para', 'é', 'com', 'não', 'uma', 'os', 'no', 'na', 'por', 'mais', 'as', 'dos', 'como', 'mas', 'foi', 'ao', 'ele', 'das', 'tem', 'à', 'seu', 'sua', 'ou', 'ser', 'quando', 'muito', 'há', 'nos', 'já', 'está', 'eu', 'também', 'só', 'pelo', 'pela', 'até', 'isso', 'ela', 'entre', 'depois', 'sem', 'mesmo', 'aos', 'ter', 'seus', 'quem', 'nas', 'me', 'esse', 'eles', 'estão', 'você', 'tinha', 'foram', 'essa', 'num', 'nem', 'suas', 'meu', 'às', 'minha', 'numa', 'pelos', 'elas', 'havia', 'seja', 'qual', 'será', 'nós', 'tenho', 'lhe', 'deles', 'essas', 'esses', 'pelas', 'este', 'fosse', 'dele', 'tu', 'te', 'vocês', 'vos', 'lhes', 'meus', 'minhas', 'teu', 'tua', 'teus', 'tuas', 'nosso', 'nossa', 'nossos', 'nossas', 'dela', 'delas', 'esta', 'estes', 'aquele', 'aquela', 'aqueles', 'aquelas', 'isto', 'aquilo', 'estou', 'está', 'estamos', 'estão', 'estive', 'esteve', 'estivemos', 'estiveram', 'estava', 'estávamos', 'estavam', 'estivera', 'estivéramos', 'esteja', 'estejamos', 'estejam', 'estivesse', 'estivéssemos', 'estivessem', 'estiver', 'estivermos', 'estiverem', 'the', 'a', 'an', 'to', 'in', 'for', 'of', 'on', 'with', 'at', 'by', 'is', 'and', 'it', 'that', 'as', 'from', 'be']);
   }
-
-  // NOVO: Função para gerar o gráfico de frequência de palavras.
+  
   function generateWordFrequencyChart() {
     const allTitles = [];
-    Object.keys(rssFeeds).forEach(feedKey => {
-        if (rssFeeds[feedKey].scope === currentNewsScope) {
+    AppState.enabledFeeds.forEach(feedKey => {
+        if (rssFeeds[feedKey].scope === AppState.newsScope) {
             const cacheKey = `${CACHE_KEY_PREFIX}${rssFeeds[feedKey].elementId}`;
             const cachedEntry = localStorage.getItem(cacheKey);
             if (cachedEntry) {
                 try {
                     const { items } = JSON.parse(cachedEntry);
-                    if (items && items.length > 0) {
-                        items.forEach(item => allTitles.push(item.title));
-                    }
-                } catch(e) { /* ignora */ }
+                    if (items && items.length > 0) items.forEach(item => allTitles.push(item.title));
+                } catch(e) {}
             }
         }
     });
@@ -1149,10 +1311,9 @@
     const wordCounts = {};
     
     allTitles.forEach(title => {
-        // Limpa e divide o título em palavras
         const words = title.toLowerCase().replace(/[^a-z0-9áéíóúâêîôûãõçü\s-]/g, '').split(/\s+/);
         words.forEach(word => {
-            if (word.length > 3 && !stopWords.has(word) && isNaN(word)) { // Ignora números e palavras curtas
+            if (word.length > 3 && !stopWords.has(word) && isNaN(word)) {
                 wordCounts[word] = (wordCounts[word] || 0) + 1;
             }
         });
@@ -1160,7 +1321,7 @@
 
     const sortedWords = Object.entries(wordCounts).sort(([,a],[,b]) => b - a).slice(0, 10);
 
-    if (sortedWords.length < 3) { // Não mostra o gráfico se houver poucos dados
+    if (sortedWords.length < 3) {
         chartContainer.style.display = 'none';
         return;
     } else {
@@ -1168,10 +1329,7 @@
     }
 
     const ctx = document.getElementById('word-frequency-chart').getContext('2d');
-    
-    if (wordFrequencyChart) {
-        wordFrequencyChart.destroy(); // Destrói o gráfico anterior para evitar conflitos
-    }
+    if (wordFrequencyChart) wordFrequencyChart.destroy();
     
     const isLight = document.body.classList.contains('light-mode');
     const gridColor = isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
@@ -1182,55 +1340,34 @@
         data: {
             labels: sortedWords.map(item => item[0]),
             datasets: [{
-                label: 'Ocorrências',
-                data: sortedWords.map(item => item[1]),
-                backgroundColor: 'rgba(0, 209, 128, 0.7)',
-                borderColor: 'rgba(0, 209, 128, 1)',
-                borderWidth: 1
+                label: 'Ocorrências', data: sortedWords.map(item => item[1]),
+                backgroundColor: 'rgba(0, 209, 128, 0.7)', borderColor: 'rgba(0, 209, 128, 1)', borderWidth: 1
             }]
         },
         options: {
-            responsive: true,
-            indexAxis: 'y', // Gráfico de barras horizontais
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(13, 17, 23, 0.8)'
-                }
-            },
+            responsive: true, indexAxis: 'y',
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(13, 17, 23, 0.8)' } },
             scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: { color: textColor, stepSize: 1 },
-                    grid: { color: gridColor }
-                },
-                y: {
-                    ticks: { color: textColor },
-                    grid: { color: 'transparent' }
-                }
+                x: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor }, grid: { color: 'transparent' } }
             }
         }
     });
   }
 
-
   function generateAndShowBriefing() {
     const briefingList = document.getElementById('briefing-list');
     const briefingTitle = document.getElementById('briefing-title');
-    const modal = document.getElementById('briefing-modal');
-
-    if (!briefingList || !briefingTitle || !modal) return;
+    if (!briefingList || !briefingTitle) return;
     
-    elementThatOpenedModal = document.activeElement;
-
     briefingList.innerHTML = '';
-    const scopeTitle = currentNewsScope === 'local' ? 'Local' : 'Internacional';
+    const scopeTitle = AppState.newsScope === 'local' ? 'Local' : 'Internacional';
     briefingTitle.textContent = `Briefing de Notícias: ${scopeTitle}`;
     let hasContent = false;
 
-    Object.keys(rssFeeds).forEach(feedKey => {
+    AppState.enabledFeeds.forEach(feedKey => {
         const feedConfig = rssFeeds[feedKey];
-        if (feedConfig.scope === currentNewsScope) {
+        if (feedConfig.scope === AppState.newsScope) {
             const cachedEntry = localStorage.getItem(`${CACHE_KEY_PREFIX}${feedConfig.elementId}`);
             if (cachedEntry) {
                 try {
@@ -1259,60 +1396,14 @@
         briefingList.innerHTML = '<li>Nenhuma notícia carregada para gerar o briefing.</li>';
     }
     
-    // MUDANÇA: Gera o gráfico de frequência ao abrir o briefing
     generateWordFrequencyChart();
-    
-    modal.classList.add('visible');
-    announceToScreenReader("Briefing de notícias aberto.");
-    setupFocusTrap(modal);
-  }
-
-  function closeBriefingModal() {
-    const modal = document.getElementById('briefing-modal');
-    if (modal) {
-        modal.classList.remove('visible');
-        removeFocusTrap(modal);
-    }
+    UI.toggleModal('briefing-modal', true);
   }
   
-  function handleSearch() {
-    const searchBar = document.getElementById('search-bar');
-    if (!searchBar) return;
-    const searchTerm = searchBar.value.toLowerCase().trim();
-    document.querySelectorAll('.no-search-results').forEach(el => el.remove());
-
-    document.querySelectorAll('.news-list').forEach(list => {
-        let hasVisibleItems = false;
-        const listItems = list.querySelectorAll('li');
-        listItems.forEach(li => {
-            if (li.querySelector('.skeleton') || li.querySelector('.retry-btn') || li.querySelector('.fa-exclamation-circle')) {
-                li.style.display = 'flex';
-                return;
-            }
-            const title = li.textContent.toLowerCase();
-            if (title.includes(searchTerm)) {
-                li.style.display = 'flex';
-                hasVisibleItems = true;
-            } else {
-                li.style.display = 'none';
-            }
-        });
-        if (!hasVisibleItems && searchTerm !== '' && listItems.length > 0 && !list.querySelector('.retry-btn')) {
-            const noResultsLi = document.createElement('li');
-            noResultsLi.className = 'no-search-results';
-            noResultsLi.textContent = "Nenhum resultado encontrado.";
-            list.appendChild(noResultsLi);
-        }
-    });
-  }
-
-  // NOVO: Função para configurar as notificações
   function setupNotifications() {
       const notificationsBtn = document.getElementById('notifications-btn');
-      if (!notificationsBtn) return;
-      
-      if (!('Notification' in window)) {
-          notificationsBtn.style.display = 'none'; // Esconde o botão se a API não for suportada
+      if (!notificationsBtn || !('Notification' in window)) {
+          if (notificationsBtn) notificationsBtn.style.display = 'none';
           return;
       }
       
@@ -1332,63 +1423,43 @@
 
       notificationsBtn.addEventListener('click', () => {
           if (Notification.permission === 'granted' || Notification.permission === 'denied') {
-              announceToScreenReader('O estado das notificações só pode ser alterado nas configurações do navegador.');
+              UI.announceToScreenReader('O estado das notificações só pode ser alterado nas configurações do navegador.');
               return;
           }
           Notification.requestPermission().then(permission => {
               if (permission === 'granted') {
-                  announceToScreenReader('Notificações ativadas.');
+                  UI.announceToScreenReader('Notificações ativadas.');
                   showDesktopNotification('Terminal de Notícias', { body: 'Você receberá alertas de notícias importantes!' });
               } else {
-                  announceToScreenReader('Permissão para notificações não concedida.');
+                  UI.announceToScreenReader('Permissão para notificações não concedida.');
               }
               updateButtonState();
           });
       });
-      
       updateButtonState();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    AppState.init();
+    UI.init();
+
     const savedTheme = localStorage.getItem('themePreference');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    let isLightMode = (savedTheme === 'light') || (!savedTheme && !prefersDark);
-    if (isLightMode) document.body.classList.add('light-mode');
-    else document.body.classList.remove('light-mode');
+    if ((savedTheme === 'light') || (!savedTheme && !prefersDark)) {
+        document.body.classList.add('light-mode');
+    }
     const themeIcon = document.querySelector('#theme-toggle i');
+    const isLightMode = document.body.classList.contains('light-mode');
     if(themeIcon){ themeIcon.classList.toggle('fa-moon', !isLightMode); themeIcon.classList.toggle('fa-sun', isLightMode); }
-
-    initializeScopeToggle();
     
-    // MUDANÇA (JS): Inicializa a funcionalidade de notificação
+    UI.renderWidgets();
+    initializeScopeToggle();
     setupNotifications(); 
-
     document.getElementById('refresh-btn')?.addEventListener('click', () => refreshAllFeeds(true));
-    document.getElementById('home-btn')?.addEventListener('click', () => window.location.href = 'index.html');
-    document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
-    document.getElementById('briefing-btn')?.addEventListener('click', generateAndShowBriefing);
-    document.getElementById('briefing-modal-close-btn')?.addEventListener('click', closeBriefingModal);
-    document.getElementById('briefing-modal')?.addEventListener('click', function(event) { if (event.target === this) closeBriefingModal(); });
-    document.getElementById('search-bar')?.addEventListener('input', handleSearch);
 
-    setupBackToTop();
-    updateFooterYear();
-
-    document.querySelectorAll('.refresh-widget').forEach(button => {
-        button.addEventListener('click', function() { loadNews(this.dataset.feedkey, true); });
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.getElementById('briefing-modal').classList.contains('visible')) {
-            closeBriefingModal();
-        }
-    });
+    // Atualização periódica
+    setInterval(() => refreshAllFeeds(false), 5 * 60 * 1000);
   });
-
-  setInterval(() => {
-      console.log("Atualização periódica de feeds para o escopo: " + currentNewsScope);
-      refreshAllFeeds(false)
-    }, 5 * 60 * 1000);
 </script>
 
 </body>
