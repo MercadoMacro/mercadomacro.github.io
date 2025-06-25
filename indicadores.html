@@ -409,9 +409,12 @@
                 if (isLoading) {
                     this.updateText(config.selectors.updateTime, 'Atualizando dados...');
                     const container = document.querySelector(containerSelector);
-                    if(container) {
+                    if (container) {
                         container.querySelectorAll('.indicator-value').forEach(el => el.textContent = config.loadingText);
-                        container.querySelectorAll('.indicator-description').forEach(el => el.textContent = '...');
+                        // CORREÇÃO APLICADA AQUI:
+                        // Seleciona apenas os .indicator-description que possuem um 'id'.
+                        // Isso impede que as descrições estáticas (sem id) sejam apagadas.
+                        container.querySelectorAll('.indicator-description[id]').forEach(el => el.textContent = '...');
                     }
                 }
             },
@@ -559,8 +562,8 @@
                     uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)}%`);
                     uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy');
                 } else {
-                    uiController.updateText(monthElem, config.errorText);
-                    uiController.updateText(yearElem, config.errorText);
+                    uiController.updateText(monthElem, errorText);
+                    uiController.updateText(yearElem, errorText);
                 }
             },
             processUnemployment(promiseResult) {
@@ -570,7 +573,7 @@
                     uiController.updateText(config.selectors.desemprego, `${lastValue}%`);
                     uiController.createSparklineChart('#desemprego-chart-container', data, 'Taxa de Desocupação', '%', 'mm/yyyy');
                 } else {
-                    uiController.updateText(config.selectors.desemprego, config.errorText);
+                    uiController.updateText(config.selectors.desemprego, errorText);
                 }
             },
             processCurrency(promiseResult, chartSelector, chartName) {
@@ -591,7 +594,7 @@
                     }));
                     uiController.createSparklineChart('#cdi-chart-container', annualizedHistory, 'CDI Anualizado', '%', 'dd/mm');
                 } else {
-                    uiController.updateText(config.selectors.cdiAnnual, config.errorText);
+                    uiController.updateText(config.selectors.cdiAnnual, errorText);
                 }
             },
             processSelic(promiseResult) {
@@ -600,7 +603,7 @@
                     uiController.updateText(config.selectors.selicMeta, `${parseFloat(data[data.length - 1].valor).toFixed(2)}% a.a.`);
                     uiController.createSparklineChart('#selic-chart-container', data, 'Meta Selic', '%', 'dd/mm');
                 } else {
-                    uiController.updateText(config.selectors.selicMeta, config.errorText);
+                    uiController.updateText(config.selectors.selicMeta, errorText);
                 }
             },
             processPoupanca(promiseResult) {
@@ -612,8 +615,8 @@
                     uiController.updateText(config.selectors.poupancaAnnualized, `${annualizedRate.toFixed(2)}%`);
                     uiController.createSparklineChart('#poupanca-chart-container', data, 'Poupança Mensal', '%', 'mm/yyyy');
                 } else {
-                    uiController.updateText(config.selectors.poupancaMonth, config.errorText);
-                    uiController.updateText(config.selectors.poupancaAnnualized, config.errorText);
+                    uiController.updateText(config.selectors.poupancaMonth, errorText);
+                    uiController.updateText(config.selectors.poupancaAnnualized, errorText);
                 }
             },
             updateNationalChartForPeriod(indicatorId, period) {
@@ -784,7 +787,6 @@
                 }
             },
 
-            // --- VERSÃO MODIFICADA ---
             updateInternationalChartForPeriod(indicatorId, periodValue, periodUnit) {
                 const cfg = config.fredIndicatorsConfig[indicatorId];
                 let fullHistory;
@@ -832,8 +834,6 @@
                 }
             },
             
-            // --- NOVA VERSÃO ---
-            // Atualiza a visualização de um card com toggle (CPI/CoreCPI)
             updateCpiCardView(indicatorId) {
                 const seriesData = this.internationalData.series[indicatorId];
                 if (!seriesData || !seriesData.yoy || !seriesData.mom || !seriesData.raw) return;
