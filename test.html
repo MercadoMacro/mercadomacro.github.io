@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Indicadores Econômicos Globais</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f8f8f8; }
+    h1 { color: #2c3e50; }
+    .indicador { background: white; margin: 10px 0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .nome { font-weight: bold; }
+    .valor { color: green; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h1>🌎 Indicadores Econômicos dos EUA (FRED)</h1>
+
+  <div id="indicadores"></div>
+
+  <script>
+    const apiKey = "fa2a8abda0c82b9b6bf1d4667e8a3a42";
+
+    const indicadores = [
+      { id: "CPIAUCSL", nome: "Inflação (CPI - Mensal)" },
+      { id: "FEDFUNDS", nome: "Taxa de Juros - Fed Funds" },
+      { id: "PCE", nome: "PCE - Gastos Pessoais" },
+      { id: "UNRATE", nome: "Taxa de Desemprego" },
+      { id: "T10Y2Y", nome: "Curva de Juros (10Y - 2Y)" },
+      { id: "GDPC1", nome: "PIB Real (Trimestral)" },
+      { id: "PAYEMS", nome: "Criação de Empregos (Payrolls)" },
+    ];
+
+    async function carregarIndicadores() {
+      const container = document.getElementById("indicadores");
+
+      for (const indicador of indicadores) {
+        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${indicador.id}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
+        
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          const ultimoValor = data.observations[0]?.value ?? "N/D";
+          const dataRef = data.observations[0]?.date ?? "";
+
+          const html = `
+            <div class="indicador">
+              <div class="nome">${indicador.nome}</div>
+              <div class="valor">${ultimoValor}</div>
+              <div style="color: #999;">Ref: ${dataRef}</div>
+            </div>
+          `;
+
+          container.innerHTML += html;
+        } catch (err) {
+          container.innerHTML += `<div class="indicador">Erro ao carregar ${indicador.nome}</div>`;
+        }
+      }
+    }
+
+    carregarIndicadores();
+  </script>
+</body>
+</html>
