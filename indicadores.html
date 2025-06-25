@@ -84,7 +84,6 @@
         .profile-btn { position: fixed; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--primary-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; box-shadow: 0 5px 15px var(--shadow-color-soft); }
         .profile-btn i { font-size: 18px; }
         .profile-btn:hover { background: var(--primary-color); color: var(--dark-bg); transform: translateY(-2px) scale(1.05); }
-        /* Switch styles */
         .switch-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; gap: 12px; font-weight: 600; font-size: 14px; color: var(--text-secondary); }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -95,6 +94,15 @@
         input:checked + .slider:before { transform: translateX(22px); }
         .switch-label { transition: color .3s ease; }
         .switch-label.active { color: var(--text-color); }
+
+        /* --- INÍCIO: CSS para o novo Switch do Card --- */
+        .card-switch-container { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; margin: 4px 0 8px; color: var(--text-secondary); font-weight: 600; }
+        .card-switch-container .switch { width: 40px; height: 22px; }
+        .card-switch-container .slider:before { height: 16px; width: 16px; }
+        .card-switch-container input:checked + .slider:before { transform: translateX(18px); }
+        .card-switch-label { transition: color .3s ease; }
+        .card-switch-label.active { color: var(--text-color); }
+        /* --- FIM: CSS para o novo Switch do Card --- */
 
         body.light-mode { --primary-color: #007bff; --primary-light: #53a6ff; --primary-dark: #0056b3; --dark-bg: #f8f9fa; --darker-bg: #e9ecef; --text-color: #212529; --text-secondary: #495057; --card-bg-val: 255, 255, 255; --card-bg: #ffffff; --border-color: #dee2e6; --shadow-color-soft: rgba(0,0,0,0.07); --shadow-color-medium: rgba(0,0,0,0.1); background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%); }
         body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -150,235 +158,7 @@
         
         <main>
             <div class="indicators-container" id="national-indicators-container">
-                 <article class="indicator-card indicator-card--with-chart" id="card-risk" data-id="risk">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div>
-                        <div class="indicator-name">Risco País (CDS 5 Anos)</div>
-                        <div class="indicator-value" id="risk-value">Carregando...</div>
-                        <div class="indicator-description">CDS (pontos-base)</div>
-                        <div class="sparkline-chart" id="risk-chart-container"></div>
-                        <div class="accessible-chart-data" id="risk-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o CDS?</strong>
-                        O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar" data-id="dolar">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="indicator-name">Dólar</div>
-                        <div class="indicator-value" id="dolar-buy-value">Carregando...</div>
-                        <div class="indicator-description">Compra</div>
-                        <div class="indicator-value" id="dolar-sell-value">Carregando...</div>
-                        <div class="indicator-description">Venda</div>
-                        <div class="sparkline-chart" id="dolar-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="dolarSell">
-                            <button class="chart-period-btn" data-days="30">30D</button>
-                            <button class="chart-period-btn" data-days="90">90D</button>
-                            <button class="chart-period-btn active" data-days="365">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="dolar-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é a PTAX?</strong>
-                        A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro" data-id="euro">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div>
-                        <div class="indicator-name">Euro</div>
-                        <div class="indicator-value" id="euro-buy-value">Carregando...</div>
-                        <div class="indicator-description">Compra</div>
-                        <div class="indicator-value" id="euro-sell-value">Carregando...</div>
-                        <div class="indicator-description">Venda</div>
-                        <div class="sparkline-chart" id="euro-chart-container"></div>
-                         <div class="chart-controls" data-indicator-id="euroSell">
-                            <button class="chart-period-btn" data-days="30">30D</button>
-                            <button class="chart-period-btn" data-days="90">90D</button>
-                            <button class="chart-period-btn active" data-days="365">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="euro-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>Cotação do Euro</strong>
-                        A cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro, com base nas negociações do mercado.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" id="card-cdi" data-id="cdi">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
-                        <div class="indicator-name">CDI</div>
-                        <div class="indicator-value" id="cdi-annual-value">Carregando...</div>
-                        <div class="indicator-description">Taxa Anual (a.a.)</div>
-                        <div class="sparkline-chart" id="cdi-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="cdi">
-                            <button class="chart-period-btn" data-days="30">30D</button>
-                            <button class="chart-period-btn" data-days="90">90D</button>
-                            <button class="chart-period-btn active" data-days="365">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="cdi-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o CDI?</strong>
-                        É a taxa de juros dos empréstimos entre bancos. Serve de referência para a maioria dos investimentos de renda fixa. A taxa anual é uma projeção baseada na composição da taxa diária.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" id="card-selic" data-id="selic">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-percentage"></i></div>
-                        <div class="indicator-name">Selic</div>
-                        <div class="indicator-value" id="selic-meta-value">Carregando...</div>
-                        <div class="indicator-description">Meta ao Ano</div>
-                        <div class="sparkline-chart" id="selic-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="selicMeta">
-                            <button class="chart-period-btn" data-days="30">30D</button>
-                            <button class="chart-period-btn" data-days="90">90D</button>
-                            <button class="chart-period-btn active" data-days="365">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="selic-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é a Selic?</strong>
-                        A Taxa Selic é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.
-                    </div>
-                </article>
-                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
-                        <div class="indicator-name">IPCA</div>
-                        <div class="indicator-value" id="ipca-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="ipca-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                        <div class="sparkline-chart" id="ipca-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="ipca">
-                            <button class="chart-period-btn" data-months="3">3M</button>
-                            <button class="chart-period-btn" data-months="6">6M</button>
-                            <button class="chart-period-btn active" data-months="12">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="ipca-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o IPCA?</strong>
-                        O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc" data-id="inpc">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-wallet"></i></div>
-                        <div class="indicator-name">INPC</div>
-                        <div class="indicator-value" id="inpc-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="inpc-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                        <div class="sparkline-chart" id="inpc-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="inpc">
-                            <button class="chart-period-btn" data-months="3">3M</button>
-                            <button class="chart-period-btn" data-months="6">6M</button>
-                            <button class="chart-period-btn active" data-months="12">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="inpc-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o INPC?</strong>
-                        O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m" data-id="igpm">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-chart-area"></i></div>
-                        <div class="indicator-name">IGP-M</div>
-                        <div class="indicator-value" id="igp-m-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="igp-m-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                        <div class="sparkline-chart" id="igpm-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="igpm">
-                            <button class="chart-period-btn" data-months="3">3M</button>
-                            <button class="chart-period-btn" data-months="6">6M</button>
-                            <button class="chart-period-btn active" data-months="12">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="igpm-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o IGP-M?</strong>
-                        O IGP-M é um importante indicador de inflação, conhecido como a "inflação do aluguel" por ser muito usado para reajustar contratos de locação.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di" data-id="igpdi">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div>
-                        <div class="indicator-name">IGP-DI</div>
-                        <div class="indicator-value" id="igp-di-month-value">Carregando...</div>
-                        <div class="indicator-description">Mês</div>
-                        <div class="indicator-value" id="igp-di-12m-value">Carregando...</div>
-                        <div class="indicator-description">12 Meses</div>
-                        <div class="sparkline-chart" id="igpdi-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="igpdi">
-                            <button class="chart-period-btn" data-months="3">3M</button>
-                            <button class="chart-period-btn" data-months="6">6M</button>
-                            <button class="chart-period-btn active" data-months="12">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="igpdi-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>O que é o IGP-DI?</strong>
-                        O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca" data-id="poupanca">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div>
-                        <div class="indicator-name">Poupança</div>
-                        <div class="indicator-value" id="poupanca-month-value">Carregando...</div>
-                        <div class="indicator-description">Rendimento no Mês</div>
-                        <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div>
-                        <div class="indicator-description">Rendimento Anualizado</div>
-                        <div class="sparkline-chart" id="poupanca-chart-container"></div>
-                        <div class="chart-controls" data-indicator-id="poupanca">
-                            <button class="chart-period-btn" data-months="3">3M</button>
-                            <button class="chart-period-btn" data-months="6">6M</button>
-                            <button class="chart-period-btn active" data-months="12">1A</button>
-                        </div>
-                        <div class="accessible-chart-data" id="poupanca-chart-data-table"></div>
-                    </div>
-                    <div class="indicator-back">
-                        <strong>Como funciona a Poupança?</strong>
-                        A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta Selic estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta Selic + TR.
-                    </div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" id="card-desemprego" data-id="desemprego">
-                  <div class="indicator-front">
-                    <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                    <div class="indicator-icon"><i class="fas fa-user-times"></i></div>
-                    <div class="indicator-name">Desemprego</div>
-                    <div class="indicator-value" id="desemprego-value">Carregando...</div>
-                    <div class="indicator-description">Taxa de Desocupação</div>
-                    <div class="sparkline-chart" id="desemprego-chart-container"></div>
-                    <div class="chart-controls" data-indicator-id="desemprego">
-                        <button class="chart-period-btn" data-months="3">3M</button>
-                        <button class="chart-period-btn" data-months="6">6M</button>
-                        <button class="chart-period-btn active" data-months="12">1A</button>
-                    </div>
-                    <div class="accessible-chart-data" id="desemprego-chart-data-table"></div>
-                  </div>
-                  <div class="indicator-back">
-                    <strong>O que é a Taxa de Desemprego?</strong>
-                    Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.
-                  </div>
-                </article>
+                <article class="indicator-card indicator-card--with-chart" id="card-risk" data-id="risk"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div> <div class="indicator-name">Risco País (CDS 5 Anos)</div> <div class="indicator-value" id="risk-value">Carregando...</div> <div class="indicator-description">CDS (pontos-base)</div> <div class="sparkline-chart" id="risk-chart-container"></div> <div class="accessible-chart-data" id="risk-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDS?</strong> O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar" data-id="dolar"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div> <div class="indicator-name">Dólar</div> <div class="indicator-value" id="dolar-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="dolar-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="dolar-chart-container"></div> <div class="chart-controls" data-indicator-id="dolarSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="dolar-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a PTAX?</strong> A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro" data-id="euro"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div> <div class="indicator-name">Euro</div> <div class="indicator-value" id="euro-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="euro-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="euro-chart-container"></div> <div class="chart-controls" data-indicator-id="euroSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="euro-chart-data-table"></div> </div> <div class="indicator-back"><strong>Cotação do Euro</strong> A cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro, com base nas negociações do mercado.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-cdi" data-id="cdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-line"></i></div> <div class="indicator-name">CDI</div> <div class="indicator-value" id="cdi-annual-value">Carregando...</div> <div class="indicator-description">Taxa Anual (a.a.)</div> <div class="sparkline-chart" id="cdi-chart-container"></div> <div class="chart-controls" data-indicator-id="cdi"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="cdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDI?</strong> É a taxa de juros dos empréstimos entre bancos. Serve de referência para a maioria dos investimentos de renda fixa. A taxa anual é uma projeção baseada na composição da taxa diária.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-selic" data-id="selic"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-percentage"></i></div> <div class="indicator-name">Selic</div> <div class="indicator-value" id="selic-meta-value">Carregando...</div> <div class="indicator-description">Meta ao Ano</div> <div class="sparkline-chart" id="selic-chart-container"></div> <div class="chart-controls" data-indicator-id="selicMeta"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="selic-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Selic?</strong> A Taxa Selic é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div> <div class="indicator-name">IPCA</div> <div class="indicator-value" id="ipca-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="ipca-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="ipca-chart-container"></div> <div class="chart-controls" data-indicator-id="ipca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="ipca-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IPCA?</strong> O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc" data-id="inpc"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-wallet"></i></div> <div class="indicator-name">INPC</div> <div class="indicator-value" id="inpc-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="inpc-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="inpc-chart-container"></div> <div class="chart-controls" data-indicator-id="inpc"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="inpc-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o INPC?</strong> O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m" data-id="igpm"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-area"></i></div> <div class="indicator-name">IGP-M</div> <div class="indicator-value" id="igp-m-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-m-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpm-chart-container"></div> <div class="chart-controls" data-indicator-id="igpm"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpm-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-M?</strong> O IGP-M é um importante indicador de inflação, conhecido como a "inflação do aluguel" por ser muito usado para reajustar contratos de locação.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di" data-id="igpdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div> <div class="indicator-name">IGP-DI</div> <div class="indicator-value" id="igp-di-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-di-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpdi-chart-container"></div> <div class="chart-controls" data-indicator-id="igpdi"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-DI?</strong> O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca" data-id="poupanca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div> <div class="indicator-name">Poupança</div> <div class="indicator-value" id="poupanca-month-value">Carregando...</div> <div class="indicator-description">Rendimento no Mês</div> <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div> <div class="indicator-description">Rendimento Anualizado</div> <div class="sparkline-chart" id="poupanca-chart-container"></div> <div class="chart-controls" data-indicator-id="poupanca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="poupanca-chart-data-table"></div> </div> <div class="indicator-back"><strong>Como funciona a Poupança?</strong> A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta Selic estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta Selic + TR.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-desemprego" data-id="desemprego"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-user-times"></i></div> <div class="indicator-name">Desemprego</div> <div class="indicator-value" id="desemprego-value">Carregando...</div> <div class="indicator-description">Taxa de Desocupação</div> <div class="sparkline-chart" id="desemprego-chart-container"></div> <div class="chart-controls" data-indicator-id="desemprego"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="desemprego-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Taxa de Desemprego?</strong> Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.</div> </article>
             </div>
             
             <div class="indicators-container" id="international-indicators-container" style="display: none;">
@@ -387,170 +167,50 @@
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-shopping-basket"></i></div>
                         <div class="indicator-name">CPI (EUA)</div>
+                        <div class="card-switch-container">
+                            <span class="card-switch-label active" data-type="anual">Anual</span>
+                            <label class="switch">
+                                <input type="checkbox" id="cpi-toggle-switch">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="card-switch-label" data-type="mensal">Mensal</span>
+                        </div>
                         <div class="indicator-value" id="cpi-value">...</div>
                         <div class="indicator-description" id="cpi-date">...</div>
                         <div class="sparkline-chart" id="cpi-chart"></div>
+                        <div class="chart-controls" data-indicator-id="cpi">
+                            <button class="chart-period-btn" data-years="1">1A</button>
+                            <button class="chart-period-btn active" data-years="5">5A</button>
+                            <button class="chart-period-btn" data-years="max">Máx</button>
+                        </div>
                     </div>
-                    <div class="indicator-back"><strong>CPI (Consumer Price Index)</strong>Mede a variação de preços de uma cesta de consumo. Principal indicador de inflação ao consumidor dos EUA.<br><i>Série: CPIAUCSL (Anual)</i></div>
+                    <div class="indicator-back"><strong>CPI (Consumer Price Index)</strong>Mede a variação de preços de uma cesta de consumo. Principal indicador de inflação ao consumidor dos EUA.<br><i>Série: CPIAUCSL</i></div>
                 </article>
                 <article class="indicator-card indicator-card--with-chart" data-id="core-cpi">
                     <div class="indicator-front">
                          <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-filter"></i></div>
                         <div class="indicator-name">Core CPI (Núcleo)</div>
+                         <div class="card-switch-container">
+                            <span class="card-switch-label active" data-type="anual">Anual</span>
+                            <label class="switch">
+                                <input type="checkbox" id="core-cpi-toggle-switch">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="card-switch-label" data-type="mensal">Mensal</span>
+                        </div>
                         <div class="indicator-value" id="core-cpi-value">...</div>
                         <div class="indicator-description" id="core-cpi-date">...</div>
                         <div class="sparkline-chart" id="core-cpi-chart"></div>
+                        <div class="chart-controls" data-indicator-id="coreCpi">
+                            <button class="chart-period-btn" data-years="1">1A</button>
+                            <button class="chart-period-btn active" data-years="5">5A</button>
+                            <button class="chart-period-btn" data-years="max">Máx</button>
+                        </div>
                     </div>
-                    <div class="indicator-back"><strong>Core CPI</strong>Exclui os preços voláteis de alimentos e energia para medir a tendência da inflação.<br><i>Série: CPILFESL (Anual)</i></div>
+                    <div class="indicator-back"><strong>Core CPI</strong>Exclui os preços voláteis de alimentos e energia para medir a tendência da inflação.<br><i>Série: CPILFESL</i></div>
                 </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="pce">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-money-bill-wave"></i></div>
-                        <div class="indicator-name">PCE (EUA)</div>
-                        <div class="indicator-value" id="pce-value">...</div>
-                        <div class="indicator-description" id="pce-date">...</div>
-                        <div class="sparkline-chart" id="pce-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>PCE (Personal Consumption Expenditures)</strong>Mede a inflação de todos os gastos de consumo. É o indicador preferido pelo Fed.<br><i>Série: PCE (Anual)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="core-pce">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-gem"></i></div>
-                        <div class="indicator-name">Core PCE (Núcleo)</div>
-                        <div class="indicator-value" id="core-pce-value">...</div>
-                        <div class="indicator-description" id="core-pce-date">...</div>
-                        <div class="sparkline-chart" id="core-pce-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Core PCE</strong>Exclui alimentos e energia do PCE. Usado pelo Fed para avaliar a política monetária.<br><i>Série: PCEPILFE (Anual)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="fedfunds">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-landmark"></i></div>
-                        <div class="indicator-name">Fed Funds Rate</div>
-                        <div class="indicator-value" id="fedfunds-value">...</div>
-                        <div class="indicator-description" id="fedfunds-date">...</div>
-                        <div class="sparkline-chart" id="fedfunds-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Fed Funds Rate</strong>A taxa de juros básica da economia dos EUA, definida pelo Federal Reserve (Fed).<br><i>Série: FEDFUNDS (Diária)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value" data-id="fedtarget">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-bullseye"></i></div>
-                        <div class="indicator-name">Fed Target Range</div>
-                        <div class="indicator-value" id="fedtarget-upper-value">...</div>
-                        <div class="indicator-description">Teto da Meta</div>
-                        <div class="indicator-value" id="fedtarget-lower-value">...</div>
-                        <div class="indicator-description">Piso da Meta</div>
-                    </div>
-                     <div class="indicator-back"><strong>Meta da Fed Funds Rate</strong>O intervalo (piso e teto) que o Fed estabelece como meta para a taxa de juros básica.<br><i>Séries: DFEDTARU, DFEDTARL</i></div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value" data-id="treasuries">
-                    <div class="indicator-front">
-                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                        <div class="indicator-name">Treasury Yields</div>
-                        <div class="indicator-value" id="treasury-2y-value">...</div>
-                        <div class="indicator-description">2 Anos</div>
-                        <div class="indicator-value" id="treasury-10y-value">...</div>
-                        <div class="indicator-description">10 Anos</div>
-                         <div class="indicator-value" id="treasury-30y-value">...</div>
-                        <div class="indicator-description">30 Anos</div>
-                    </div>
-                     <div class="indicator-back"><strong>Treasury Yields</strong>Rendimento dos títulos do tesouro dos EUA. São referência para o custo do dinheiro no mundo.<br><i>Séries: DGS2, DGS10, DGS30</i></div>
-                </article>
-                 <article class="indicator-card indicator-card--with-chart" data-id="inflation-exp">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-eye"></i></div>
-                        <div class="indicator-name">Expectativa de Inflação</div>
-                        <div class="indicator-value" id="inflation-exp-value">...</div>
-                        <div class="indicator-description" id="inflation-exp-date">5 Anos (Breakeven)</div>
-                        <div class="sparkline-chart" id="inflation-exp-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>5-Year Breakeven Inflation</strong>Mede a expectativa de inflação do mercado para os próximos 5 anos.<br><i>Série: T5YIE (Diária)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="yield-curve">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-wave-square"></i></div>
-                        <div class="indicator-name">Curva de Juros</div>
-                        <div class="indicator-value" id="yield-curve-value">...</div>
-                        <div class="indicator-description" id="yield-curve-date">Spread 10Y-2Y (p.p.)</div>
-                        <div class="sparkline-chart" id="yield-curve-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Yield Curve (10Y-2Y)</strong>Diferença (spread) entre os rendimentos dos títulos de 10 e 2 anos. Uma inversão (valor negativo) é um forte indicador de recessão.<br><i>Série: T10Y2Y</i></div>
-                </article>
-                 <article class="indicator-card indicator-card--with-chart" data-id="gdp-real">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-chart-line"></i></div>
-                        <div class="indicator-name">PIB Real (EUA)</div>
-                        <div class="indicator-value" id="gdp-real-value">...</div>
-                        <div class="indicator-description" id="gdp-real-date">Variação Anual</div>
-                        <div class="sparkline-chart" id="gdp-real-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>PIB Real (Real GDP)</strong>Mede o valor de todos os bens e serviços produzidos, ajustado pela inflação. Principal medida de crescimento econômico.<br><i>Série: GDPC1 (Trimestral)</i></div>
-                </article>
-                 <article class="indicator-card indicator-card--with-chart" data-id="gdp-nominal">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="indicator-name">PIB Nominal (EUA)</div>
-                        <div class="indicator-value" id="gdp-nominal-value">...</div>
-                        <div class="indicator-description" id="gdp-nominal-date">Total em Dólares</div>
-                        <div class="sparkline-chart" id="gdp-nominal-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>PIB Nominal (Nominal GDP)</strong>Mede o valor de todos os bens e serviços produzidos a preços correntes, sem ajustar pela inflação.<br><i>Série: GDP (Trimestral)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="unemployment">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-user-slash"></i></div>
-                        <div class="indicator-name">Taxa de Desemprego</div>
-                        <div class="indicator-value" id="unemployment-value">...</div>
-                        <div class="indicator-description" id="unemployment-date">...</div>
-                        <div class="sparkline-chart" id="unemployment-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Taxa de Desemprego (EUA)</strong>Percentual da força de trabalho que está desempregada e procurando por emprego.<br><i>Série: UNRATE (Mensal)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="payrolls">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-users"></i></div>
-                        <div class="indicator-name">Nonfarm Payrolls</div>
-                        <div class="indicator-value" id="payrolls-value">...</div>
-                        <div class="indicator-description" id="payrolls-date">Criação de Vagas</div>
-                        <div class="sparkline-chart" id="payrolls-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Payrolls (Total Nonfarm)</strong>Mede a criação (ou destruição) de postos de trabalho não-agrícolas. É um dos indicadores mais importantes do mercado de trabalho.<br><i>Série: PAYEMS (Mensal)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="indpro">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-industry"></i></div>
-                        <div class="indicator-name">Produção Industrial</div>
-                        <div class="indicator-value" id="indpro-value">...</div>
-                        <div class="indicator-description" id="indpro-date">Variação Anual</div>
-                        <div class="sparkline-chart" id="indpro-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>Produção Industrial</strong>Mede a produção das fábricas, minas e serviços de utilidade pública. Um indicador da saúde do setor industrial.<br><i>Série: INDPRO (Mensal)</i></div>
-                </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="sentiment">
-                    <div class="indicator-front">
-                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                        <div class="indicator-icon"><i class="fas fa-smile-beam"></i></div>
-                        <div class="indicator-name">Confiança do Consumidor</div>
-                        <div class="indicator-value" id="sentiment-value">...</div>
-                        <div class="indicator-description" id="sentiment-date">Índice (U. Michigan)</div>
-                        <div class="sparkline-chart" id="sentiment-chart"></div>
-                    </div>
-                    <div class="indicator-back"><strong>U. of Michigan: Consumer Sentiment</strong>Mede o nível de confiança dos consumidores na economia. Um indicador antecedente dos gastos de consumo.<br><i>Série: UMCSENT (Mensal)</i></div>
-                </article>
+                <article class="indicator-card indicator-card--with-chart" data-id="pce"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-money-bill-wave"></i></div> <div class="indicator-name">PCE (EUA)</div> <div class="indicator-value" id="pce-value">...</div> <div class="indicator-description" id="pce-date">...</div> <div class="sparkline-chart" id="pce-chart"></div> <div class="chart-controls" data-indicator-id="pce"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>PCE (Personal Consumption Expenditures)</strong>Mede a inflação de todos os gastos de consumo. É o indicador preferido pelo Fed.<br><i>Série: PCE (Anual)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="core-pce"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-gem"></i></div> <div class="indicator-name">Core PCE (Núcleo)</div> <div class="indicator-value" id="core-pce-value">...</div> <div class="indicator-description" id="core-pce-date">...</div> <div class="sparkline-chart" id="core-pce-chart"></div> <div class="chart-controls" data-indicator-id="corePce"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Core PCE</strong>Exclui alimentos e energia do PCE. Usado pelo Fed para avaliar a política monetária.<br><i>Série: PCEPILFE (Anual)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="fedfunds"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-landmark"></i></div> <div class="indicator-name">Fed Funds Rate</div> <div class="indicator-value" id="fedfunds-value">...</div> <div class="indicator-description" id="fedfunds-date">...</div> <div class="sparkline-chart" id="fedfunds-chart"></div> <div class="chart-controls" data-indicator-id="fedfunds"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Fed Funds Rate</strong>A taxa de juros básica da economia dos EUA, definida pelo Federal Reserve (Fed).<br><i>Série: FEDFUNDS (Diária)</i></div> </article> <article class="indicator-card indicator-card--multi-value" data-id="fedtarget"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-bullseye"></i></div> <div class="indicator-name">Fed Target Range</div> <div class="indicator-value" id="fedtarget-upper-value">...</div> <div class="indicator-description">Teto da Meta</div> <div class="indicator-value" id="fedtarget-lower-value">...</div> <div class="indicator-description">Piso da Meta</div> </div> <div class="indicator-back"><strong>Meta da Fed Funds Rate</strong>O intervalo (piso e teto) que o Fed estabelece como meta para a taxa de juros básica.<br><i>Séries: DFEDTARU, DFEDTARL</i></div> </article> <article class="indicator-card indicator-card--multi-value" data-id="treasuries"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-file-invoice-dollar"></i></div> <div class="indicator-name">Treasury Yields</div> <div class="indicator-value" id="treasury-2y-value">...</div> <div class="indicator-description">2 Anos</div> <div class="indicator-value" id="treasury-10y-value">...</div> <div class="indicator-description">10 Anos</div> <div class="indicator-value" id="treasury-30y-value">...</div> <div class="indicator-description">30 Anos</div> </div> <div class="indicator-back"><strong>Treasury Yields</strong>Rendimento dos títulos do tesouro dos EUA. São referência para o custo do dinheiro no mundo.<br><i>Séries: DGS2, DGS10, DGS30</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="inflation-exp"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-eye"></i></div> <div class="indicator-name">Expectativa de Inflação</div> <div class="indicator-value" id="inflation-exp-value">...</div> <div class="indicator-description" id="inflation-exp-date">5 Anos (Breakeven)</div> <div class="sparkline-chart" id="inflation-exp-chart"></div> <div class="chart-controls" data-indicator-id="inflationExp"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>5-Year Breakeven Inflation</strong>Mede a expectativa de inflação do mercado para os próximos 5 anos.<br><i>Série: T5YIE (Diária)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="yield-curve"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-wave-square"></i></div> <div class="indicator-name">Curva de Juros</div> <div class="indicator-value" id="yield-curve-value">...</div> <div class="indicator-description" id="yield-curve-date">Spread 10Y-2Y (p.p.)</div> <div class="sparkline-chart" id="yield-curve-chart"></div> <div class="chart-controls" data-indicator-id="yieldCurve"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Yield Curve (10Y-2Y)</strong>Diferença (spread) entre os rendimentos dos títulos de 10 e 2 anos. Uma inversão (valor negativo) é um forte indicador de recessão.<br><i>Série: T10Y2Y</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="gdp-real"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-line"></i></div> <div class="indicator-name">PIB Real (EUA)</div> <div class="indicator-value" id="gdp-real-value">...</div> <div class="indicator-description" id="gdp-real-date">Variação Anual</div> <div class="sparkline-chart" id="gdp-real-chart"></div> <div class="chart-controls" data-indicator-id="gdpReal"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>PIB Real (Real GDP)</strong>Mede o valor de todos os bens e serviços produzidos, ajustado pela inflação. Principal medida de crescimento econômico.<br><i>Série: GDPC1 (Trimestral)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="gdp-nominal"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div> <div class="indicator-name">PIB Nominal (EUA)</div> <div class="indicator-value" id="gdp-nominal-value">...</div> <div class="indicator-description" id="gdp-nominal-date">Total em Dólares</div> <div class="sparkline-chart" id="gdp-nominal-chart"></div> <div class="chart-controls" data-indicator-id="gdpNominal"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>PIB Nominal (Nominal GDP)</strong>Mede o valor de todos os bens e serviços produzidos a preços correntes, sem ajustar pela inflação.<br><i>Série: GDP (Trimestral)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="unemployment"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-user-slash"></i></div> <div class="indicator-name">Taxa de Desemprego</div> <div class="indicator-value" id="unemployment-value">...</div> <div class="indicator-description" id="unemployment-date">...</div> <div class="sparkline-chart" id="unemployment-chart"></div> <div class="chart-controls" data-indicator-id="unemployment"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Taxa de Desemprego (EUA)</strong>Percentual da força de trabalho que está desempregada e procurando por emprego.<br><i>Série: UNRATE (Mensal)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="payrolls"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-users"></i></div> <div class="indicator-name">Nonfarm Payrolls</div> <div class="indicator-value" id="payrolls-value">...</div> <div class="indicator-description" id="payrolls-date">Criação de Vagas</div> <div class="sparkline-chart" id="payrolls-chart"></div> <div class="chart-controls" data-indicator-id="payrolls"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Payrolls (Total Nonfarm)</strong>Mede a criação (ou destruição) de postos de trabalho não-agrícolas. É um dos indicadores mais importantes do mercado de trabalho.<br><i>Série: PAYEMS (Mensal)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="indpro"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-industry"></i></div> <div class="indicator-name">Produção Industrial</div> <div class="indicator-value" id="indpro-value">...</div> <div class="indicator-description" id="indpro-date">Variação Anual</div> <div class="sparkline-chart" id="indpro-chart"></div> <div class="chart-controls" data-indicator-id="indpro"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Produção Industrial</strong>Mede a produção das fábricas, minas e serviços de utilidade pública. Um indicador da saúde do setor industrial.<br><i>Série: INDPRO (Mensal)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="sentiment"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-smile-beam"></i></div> <div class="indicator-name">Confiança do Consumidor</div> <div class="indicator-value" id="sentiment-value">...</div> <div class="indicator-description" id="sentiment-date">Índice (U. Michigan)</div> <div class="sparkline-chart" id="sentiment-chart"></div> <div class="chart-controls" data-indicator-id="sentiment"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>U. of Michigan: Consumer Sentiment</strong>Mede o nível de confiança dos consumidores na economia. Um indicador antecedente dos gastos de consumo.<br><i>Série: UMCSENT (Mensal)</i></div> </article>
             </div>
         </main>
         
@@ -567,7 +227,7 @@
     <script>
         // --- 0. CACHE SERVICE ---
         const cacheService = {
-            CACHE_TTL: 15 * 60 * 1000, // 15 minutos
+            CACHE_TTL: 15 * 60 * 1000, 
             get(key) {
                 const itemStr = localStorage.getItem(key);
                 if (!itemStr) return null;
@@ -596,39 +256,22 @@
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
             cdsApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
             fredApiBaseUrl: 'https://api.stlouisfed.org/fred/series/observations',
-            fredApiKey: 'fa2a8abda0c82b9b6bf1d4667e8a3a42',
+            fredApiKey: 'fa2a8abda0c82b9b6bf1d4667e8a3a42', 
             errorText: 'Erro',
             loadingText: 'Carregando...',
-            // National Selectors
             selectors: {
-                updateTime: '#data-atual',
-                footer: '#footer',
-                riskValue: '#risk-value',
-                dolarBuy: '#dolar-buy-value',
-                dolarSell: '#dolar-sell-value',
-                euroBuy: '#euro-buy-value',
-                euroSell: '#euro-sell-value',
-                cdiAnnual: '#cdi-annual-value',
-                selicMeta: '#selic-meta-value',
-                ipcaMonth: '#ipca-month-value',
-                ipca12m: '#ipca-12m-value',
-                inpcMonth: '#inpc-month-value',
-                inpc12m: '#inpc-12m-value',
-                igpmMonth: '#igp-m-month-value',
-                igpm12m: '#igp-m-12m-value',
-                igpdiMonth: '#igp-di-month-value',
-                igpdi12m: '#igp-di-12m-value',
-                poupancaMonth: '#poupanca-month-value',
-                poupancaAnnualized: '#poupanca-annualized-value',
+                updateTime: '#data-atual', footer: '#footer', riskValue: '#risk-value', dolarBuy: '#dolar-buy-value',
+                dolarSell: '#dolar-sell-value', euroBuy: '#euro-buy-value', euroSell: '#euro-sell-value',
+                cdiAnnual: '#cdi-annual-value', selicMeta: '#selic-meta-value', ipcaMonth: '#ipca-month-value',
+                ipca12m: '#ipca-12m-value', inpcMonth: '#inpc-month-value', inpc12m: '#inpc-12m-value',
+                igpmMonth: '#igp-m-month-value', igpm12m: '#igp-m-12m-value', igpdiMonth: '#igp-di-month-value',
+                igpdi12m: '#igp-di-12m-value', poupancaMonth: '#poupanca-month-value', poupancaAnnualized: '#poupanca-annualized-value',
                 desemprego: '#desemprego-value',
             },
             apiCodes: {
-                dolarBuy: 1, dolarSell: 10813, euroBuy: 21619,
-                euroSell: 21620, cdi: 12, selicMeta: 432, 
-                ipca: 433, inpc: 188, igpm: 189, igpdi: 190, 
-                poupanca: 195, desemprego: 24369
+                dolarBuy: 1, dolarSell: 10813, euroBuy: 21619, euroSell: 21620, cdi: 12, selicMeta: 432, 
+                ipca: 433, inpc: 188, igpm: 189, igpdi: 190, poupanca: 195, desemprego: 24369
             },
-            // International Selectors & Codes
             fredApiCodes: {
                 cpi: 'CPIAUCSL', coreCpi: 'CPILFESL', pce: 'PCE', corePce: 'PCEPILFE',
                 fedfunds: 'FEDFUNDS', fedTargetUpper: 'DFEDTARU', fedTargetLower: 'DFEDTARL',
@@ -637,6 +280,26 @@
                 gdpReal: 'GDPC1', gdpNominal: 'GDP',
                 unemployment: 'UNRATE', payrolls: 'PAYEMS',
                 indpro: 'INDPRO', sentiment: 'UMCSENT'
+            },
+            fredIndicatorsConfig: {
+                 // --- ALTERAÇÃO --- 
+                // Para CPI e CoreCPI, vamos buscar os dados brutos ('lin') para calcular as variações (anual e mensal) no código.
+                // Adicionamos 'hasToggle: true' para identificar esses cards especiais.
+                cpi: { name: 'CPI', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
+                coreCpi: { name: 'Core CPI', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
+                
+                // Configuração dos outros indicadores permanece a mesma
+                pce: { name: 'PCE (Variação Anual)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'm' }, descriptionText: 'Variação Anual' },
+                corePce: { name: 'Core PCE (Variação Anual)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'm' }, descriptionText: 'Variação Anual' },
+                fedfunds: { name: 'Fed Funds Rate', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, descriptionText: '' },
+                inflationExp: { name: 'Expectativa Inflação 5A', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, descriptionText: '5 Anos (Breakeven)' },
+                yieldCurve: { name: 'Curva de Juros 10A-2A', unit: 'p.p.', unitPos: 'after', chartUnit: 'p.p.', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, descriptionText: 'Spread 10Y-2Y (p.p.)' },
+                gdpReal: { name: 'PIB Real (Variação Anual)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'a' }, descriptionText: 'Variação Anual' },
+                gdpNominal: { name: 'PIB Nominal (Trimestral)', unit: ' trilhões USD', unitPos: 'after', chartUnit: '$', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'q' }, specialProcessing: (val) => (parseFloat(val) / 1000).toFixed(2), descriptionText: 'Total em Dólares' },
+                unemployment: { name: 'Desemprego (EUA)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin' }, descriptionText: '' },
+                payrolls: { name: 'Nonfarm Payrolls', unit: 'K', unitPos: 'after', chartUnit: 'K', dateFormat: 'mm/yyyy', apiParams: { units: 'chg', frequency: 'm' }, specialProcessing: (val) => parseFloat(val).toFixed(0), descriptionText: 'Criação de Vagas' },
+                indpro: { name: 'Produção Industrial', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'm' }, descriptionText: 'Variação Anual' },
+                sentiment: { name: 'Confiança do Consumidor', unit: '', unitPos: 'after', chartUnit: '', dateFormat: 'mm/yyyy', apiParams: {}, descriptionText: 'Índice (U. Michigan)' }
             }
         };
 
@@ -683,36 +346,28 @@
                     throw error;
                 }
             },
-            async getFREDData(seriesId, units = 'lin', frequency = null, aggregation_method = 'avg', limit = 60, sort_order = 'desc') {
+            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') {
+                const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options;
                 let fredUrl = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`;
                 
-                if (units) {
-                    fredUrl += `&units=${units}`;
-                }
-                
-                if (frequency) {
-                    fredUrl += `&frequency=${frequency}`;
-                    if (aggregation_method) {
-                        fredUrl += `&aggregation_method=${aggregation_method}`;
-                    }
-                }
+                if (units) fredUrl += `&units=${units}`;
+                if (frequency) fredUrl += `&frequency=${frequency}`;
+                if (aggregation_method) fredUrl += `&aggregation_method=${aggregation_method}`;
 
                 const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(fredUrl);
-
                 try {
                     const response = await fetch(proxyUrl);
-                    if (!response.ok) {
-                        throw new Error(`FRED API Error for series ${seriesId} via proxy: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`FRED API Error for series ${seriesId} via proxy: ${response.status}`);
                     const data = await response.json();
                     if (data.error_message) throw new Error(`FRED API Error for series ${seriesId}: ${data.error_message}`);
                     
-                    const mappedData = data.observations.filter(obs => obs.value !== '.').map(obs => ({
-                        data: obs.date.split('-').reverse().join('/'),
-                        valor: obs.value
-                    }));
-                    return mappedData.reverse();
-
+                    return data.observations
+                        .filter(obs => obs.value !== '.')
+                        .map(obs => {
+                            const parts = obs.date.split('-');
+                            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                            return { date: date, valor: parseFloat(obs.value) };
+                        }).reverse();
                 } catch (error) {
                     console.error(`Failed to fetch ${seriesId}:`, error);
                     throw error;
@@ -765,36 +420,41 @@
                 if(container) container.innerHTML = ''; 
 
                 if (!seriesData || seriesData.length === 0) {
-                    return;
+                    if(container) container.textContent = "Dados insuficientes para gerar gráfico.";
+                    return null;
                 }
                 
                 const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
                 const options = {
-                    series: [{
-                        name: name,
-                        data: seriesData.map(item => parseFloat(item.valor))
-                    }],
                     chart: { type: 'area', height: 80, sparkline: { enabled: true }, animations: { enabled: true, speed: 800 }},
                     stroke: { curve: 'smooth', width: 2 },
                     fill: { opacity: 0.3 },
                     colors: [primaryColor],
+                    series: [{ name: name, data: seriesData.map(item => ({ x: item.date.getTime(), y: item.valor })) }],
                     tooltip: {
                         theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
                         style: { fontSize: '12px', fontFamily: 'Montserrat' },
                         x: {
                             formatter: (val, opts) => {
                                 if (!seriesData[opts.dataPointIndex]) return '';
-                                const dateParts = seriesData[opts.dataPointIndex].data.split('/');
-                                if (dateFormat === 'yyyy') return dateParts[2];
-                                return dateFormat === 'dd/mm' ? `${dateParts[0]}/${dateParts[1]}` : `${dateParts[1]}/${dateParts[2]}`;
+                                const date = seriesData[opts.dataPointIndex].date;
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+
+                                if (dateFormat === 'yyyy') return year;
+                                if (dateFormat === 'dd/mm') return `${day}/${month}`;
+                                return `${month}/${year}`;
                             }
                         },
                         y: {
                             formatter: (value) => {
-                                const formattedValue = value ? value.toFixed(2).replace('.', ',') : '0,00';
-                                return tooltipUnit === '$' ? `${tooltipUnit}${formattedValue}` : `${formattedValue}${tooltipUnit}`;
+                               const formattedValue = value ? value.toFixed(2).replace('.', ',') : '0,00';
+                               const unitSymbol = (tooltipUnit === '$' || tooltipUnit === 'R$') ? tooltipUnit : '';
+                               const unitText = (tooltipUnit === '$' || tooltipUnit === 'R$') ? '' : tooltipUnit;
+                               return `${unitSymbol}${formattedValue}${unitText}`;
                             },
-                            title: { formatter: () => '' }
+                            title: { formatter: (seriesName) => seriesName || '' }
                         },
                         marker: { show: false }
                     }
@@ -803,17 +463,22 @@
                 if(container){
                     const chart = new ApexCharts(container, options);
                     chart.render();
+                    return chart;
                 }
+                return null;
             }
         };
         
         // --- 4. MAIN APPLICATION ---
         const app = {
             nationalData: {},
-            internationalData: {},
+            internationalData: {
+                series: {}, 
+                charts: {}  
+            },
             isInternationalView: false,
 
-            // NATIONAL INDICATORS
+            // --- FUNÇÕES NACIONAIS (sem alterações) ---
             async fetchAllNationalIndicators() {
                 const cachedData = cacheService.get('allNationalIndicators');
                 if (cachedData) {
@@ -878,19 +543,19 @@
             },
              processCDSChart() {
                 const cdsHistoryData = [
-                    { data: '01/01/2017', valor: '160.50' }, { data: '01/01/2018', valor: '207.70' },
-                    { data: '01/01/2019', valor: '99.10' },  { data: '01/01/2020', valor: '142.30' },
-                    { data: '01/01/2021', valor: '203.10' }, { data: '01/01/2022', valor: '250.26' },
-                    { data: '01/01/2023', valor: '132.49' }, { data: '01/01/2024', valor: '205.02' },
-                    { data: '01/01/2025', valor: '156.55' }
+                    { date: new Date('2017-01-01'), valor: 160.50 }, { date: new Date('2018-01-01'), valor: 207.70 },
+                    { date: new Date('2019-01-01'), valor: 99.10 },  { date: new Date('2020-01-01'), valor: 142.30 },
+                    { date: new Date('2021-01-01'), valor: 203.10 }, { date: new Date('2022-01-01'), valor: 250.26 },
+                    { date: new Date('2023-01-01'), valor: 132.49 }, { date: new Date('2024-01-01'), valor: 205.02 },
+                    { date: new Date('2025-01-01'), valor: 156.55 }
                 ];
                 uiController.createSparklineChart('#risk-chart-container', cdsHistoryData, 'CDS Anual', ' pts', 'yyyy');
             },
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    const data = promiseResult.value;
+                    const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     uiController.updateText(monthElem, `${parseFloat(data[data.length - 1].valor).toFixed(2)}%`);
-                    const yearValue = data.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
+                    const yearValue = data.slice(-12).reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
                     uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)}%`);
                     uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy');
                 } else {
@@ -900,7 +565,7 @@
             },
             processUnemployment(promiseResult) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    const data = promiseResult.value;
+                    const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     const lastValue = parseFloat(data[data.length - 1].valor).toFixed(2);
                     uiController.updateText(config.selectors.desemprego, `${lastValue}%`);
                     uiController.createSparklineChart('#desemprego-chart-container', data, 'Taxa de Desocupação', '%', 'mm/yyyy');
@@ -910,7 +575,8 @@
             },
             processCurrency(promiseResult, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    uiController.createSparklineChart(chartSelector, promiseResult.value, chartName, 'R$', 'dd/mm');
+                    const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
+                    uiController.createSparklineChart(chartSelector, data, chartName, 'R$', 'dd/mm');
                 }
             },
             processCDI(promiseResult) {
@@ -920,8 +586,8 @@
                     const lastAnnualRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100;
                     uiController.updateText(config.selectors.cdiAnnual, `${lastAnnualRate.toFixed(2)}% a.a.`);
                     const annualizedHistory = data.map(item => ({
-                        data: item.data,
-                        valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100).toFixed(2)
+                        date: new Date(item.data.split('/').reverse().join('-')),
+                        valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100)
                     }));
                     uiController.createSparklineChart('#cdi-chart-container', annualizedHistory, 'CDI Anualizado', '%', 'dd/mm');
                 } else {
@@ -930,7 +596,7 @@
             },
             processSelic(promiseResult) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    const data = promiseResult.value;
+                    const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     uiController.updateText(config.selectors.selicMeta, `${parseFloat(data[data.length - 1].valor).toFixed(2)}% a.a.`);
                     uiController.createSparklineChart('#selic-chart-container', data, 'Meta Selic', '%', 'dd/mm');
                 } else {
@@ -939,7 +605,7 @@
             },
             processPoupanca(promiseResult) {
                  if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    const data = promiseResult.value;
+                    const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     const lastMonthRate = parseFloat(data[data.length - 1].valor);
                     uiController.updateText(config.selectors.poupancaMonth, `${lastMonthRate.toFixed(2)}%`);
                     const annualizedRate = (Math.pow(1 + (lastMonthRate / 100), 12) - 1) * 100;
@@ -951,170 +617,274 @@
                 }
             },
             updateNationalChartForPeriod(indicatorId, period) {
-                const fullHistory = this.nationalData[indicatorId]?.value;
-                if (!fullHistory) return;
-                
+                const rawData = this.nationalData[indicatorId]?.value;
+                if (!rawData) return;
+
+                const fullHistory = rawData.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}))
+
                 const filteredData = fullHistory.slice(-period);
                 const chartSelector = `#${indicatorId.replace('Meta','').replace('Sell','')}-chart-container`;
                 let chartName, unit, dateFormat;
 
                 switch(indicatorId) {
-                    case 'dolarSell': chartName = 'Dólar Venda'; unit = 'R$'; dateFormat = 'dd/mm'; break;
-                    case 'euroSell': chartName = 'Euro Venda'; unit = 'R$'; dateFormat = 'dd/mm'; break;
+                    case 'dolarSell': chartName = 'Dólar Venda'; unit = 'R$'; dateFormat = 'dd/mm'; uiController.createSparklineChart(chartSelector, filteredData, chartName, unit, dateFormat); break;
+                    case 'euroSell': chartName = 'Euro Venda'; unit = 'R$'; dateFormat = 'dd/mm'; uiController.createSparklineChart(chartSelector, filteredData, chartName, unit, dateFormat); break;
                     case 'cdi': 
                         const annualizedHistory = filteredData.map(item => ({
-                            data: item.data,
-                            valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100).toFixed(2)
+                            date: item.date,
+                            valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100)
                         }));
                         uiController.createSparklineChart(chartSelector, annualizedHistory, 'CDI Anualizado', '%', 'dd/mm');
                         return;
-                    case 'selicMeta': chartName = 'Meta Selic'; unit = '%'; dateFormat = 'dd/mm'; break;
-                    case 'ipca': chartName = 'IPCA Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
-                    case 'inpc': chartName = 'INPC Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
-                    case 'igpm': chartName = 'IGP-M Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
-                    case 'igpdi': chartName = 'IGP-DI Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
-                    case 'poupanca': chartName = 'Poupança Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
-                    case 'desemprego': chartName = 'Taxa de Desocupação'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'selicMeta': chartName = 'Meta Selic'; unit = '%'; dateFormat = 'dd/mm'; uiController.createSparklineChart(chartSelector, filteredData, chartName, unit, dateFormat); break;
+                    case 'ipca': case 'inpc': case 'igpm': case 'igpdi': case 'poupanca': case 'desemprego':
+                        const names = {ipca: 'IPCA Mensal', inpc: 'INPC Mensal', igpm: 'IGP-M Mensal', igpdi: 'IGP-DI Mensal', poupanca: 'Poupança Mensal', desemprego: 'Taxa de Desocupação'};
+                        uiController.createSparklineChart(chartSelector, filteredData, names[indicatorId], '%', 'mm/yyyy'); break;
                 }
-                uiController.createSparklineChart(chartSelector, filteredData, chartName, unit, dateFormat);
             },
-            async fetchAllInternationalIndicators() {
-                const cachedData = cacheService.get('allInternationalIndicators');
-                if (cachedData) {
-                    this.processInternationalResults(cachedData);
-                    uiController.updateText(config.selectors.updateTime, 'Exibindo dados do cache...');
-                } else {
-                    uiController.setLoadingState(true, '#international-indicators-container');
-                }
+            
+            // --- FUNÇÕES INTERNACIONAIS (Com Alterações) ---
+            
+            // --- NOVA FUNÇÃO ---
+            // Calcula as variações anuais e mensais a partir de uma série de dados brutos (índice).
+            calculateVariations(rawData) {
+                const dataYoY = []; // Year-over-Year (Anual)
+                const dataMoM = []; // Month-over-Month (Mensal)
 
-                const { fredApiCodes } = config;
-                const promises = {
-                    cpi: apiService.getFREDData(fredApiCodes.cpi, 'pc1', 'a'), 
-                    coreCpi: apiService.getFREDData(fredApiCodes.coreCpi, 'pc1', 'a'),
-                    pce: apiService.getFREDData(fredApiCodes.pce, 'pc1', 'a'),
-                    corePce: apiService.getFREDData(fredApiCodes.corePce, 'pc1', 'a'),
-                    fedfunds: apiService.getFREDData(fredApiCodes.fedfunds, 'lin'),
-                    fedTargetUpper: apiService.getFREDData(fredApiCodes.fedTargetUpper, 'lin', null, null, 1),
-                    fedTargetLower: apiService.getFREDData(fredApiCodes.fedTargetLower, 'lin', null, null, 1),
-                    treasury2Y: apiService.getFREDData(fredApiCodes.treasury2Y, 'lin', null, null, 1),
-                    treasury10Y: apiService.getFREDData(fredApiCodes.treasury10Y, 'lin', null, null, 1),
-                    treasury30Y: apiService.getFREDData(fredApiCodes.treasury30Y, 'lin', null, null, 1),
-                    inflationExp: apiService.getFREDData(fredApiCodes.inflationExp, 'lin'),
-                    yieldCurve: apiService.getFREDData(fredApiCodes.yieldCurve, 'lin'),
-                    gdpReal: apiService.getFREDData(fredApiCodes.gdpReal, 'pc1', 'a'),
-                    gdpNominal: apiService.getFREDData(fredApiCodes.gdpNominal, 'lin', 'q'),
-                    unemployment: apiService.getFREDData(fredApiCodes.unemployment, 'lin'),
-                    payrolls: apiService.getFREDData(fredApiCodes.payrolls, 'chg', 'm'),
-                    indpro: apiService.getFREDData(fredApiCodes.indpro, 'pc1', 'a'),
-                    sentiment: apiService.getFREDData(fredApiCodes.sentiment, null),
-                };
+                for (let i = 0; i < rawData.length; i++) {
+                    const current = rawData[i];
+                    
+                    // Cálculo da variação Mensal (MoM)
+                    if (i > 0) {
+                        const previous = rawData[i-1];
+                        const momValue = ((current.valor / previous.valor) - 1) * 100;
+                        dataMoM.push({ date: current.date, valor: momValue });
+                    }
+
+                    // Cálculo da variação Anual (YoY)
+                    if (i >= 12) {
+                        const previousYear = rawData[i-12];
+                        const yoyValue = ((current.valor / previousYear.valor) - 1) * 100;
+                        dataYoY.push({ date: current.date, valor: yoyValue });
+                    }
+                }
+                return { yoy: dataYoY, mom: dataMoM };
+            },
+
+            async fetchAllInternationalIndicators() {
+                const cacheKey = 'allInternationalIndicators_v5'; // Versão do cache atualizada
+                const cachedData = cacheService.get(cacheKey);
+                if (cachedData) {
+                    this.internationalData.series = Object.entries(cachedData).reduce((acc, [key, value]) => {
+                        if(value?.raw) { // Se for um objeto com raw, yoy, mom
+                             acc[key] = {
+                                raw: value.raw.map(item => ({...item, date: new Date(item.date)})),
+                                yoy: value.yoy.map(item => ({...item, date: new Date(item.date)})),
+                                mom: value.mom.map(item => ({...item, date: new Date(item.date)}))
+                            };
+                        } else if(value) { // Para os outros indicadores
+                            acc[key] = value.map(item => ({...item, date: new Date(item.date)}));
+                        }
+                        return acc;
+                    }, {});
+                    this.processInternationalResults();
+                    uiController.updateText(config.selectors.updateTime, 'Exibindo dados do cache...');
+                    return;
+                }
+                
+                uiController.setLoadingState(true, '#international-indicators-container');
+
+                const { fredApiCodes, fredIndicatorsConfig } = config;
+                const promises = {};
+                
+                for (const key in fredIndicatorsConfig) {
+                    promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, fredIndicatorsConfig[key].hasToggle ? 300 : 1000);
+                }
+                promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1);
+                promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1);
+                promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {}, 1);
+                promises.treasury10Y = apiService.getFREDData(fredApiCodes.treasury10Y, {}, 1);
+                promises.treasury30Y = apiService.getFREDData(fredApiCodes.treasury30Y, {}, 1);
 
                 const results = await Promise.allSettled(Object.values(promises));
-                const data = Object.keys(promises).reduce((acc, key, index) => {
-                    acc[key] = results[index];
+                let data = Object.keys(promises).reduce((acc, key, index) => {
+                    if (results[index].status === 'fulfilled') {
+                        acc[key] = results[index].value;
+                    } else {
+                        acc[key] = null;
+                    }
                     return acc;
                 }, {});
 
-                this.internationalData = data;
-                this.processInternationalResults(data);
-                cacheService.set('allInternationalIndicators', data);
-                 if (this.isInternationalView) {
+                // --- ALTERAÇÃO ---
+                // Processa os dados brutos de CPI e CoreCPI para calcular as variações
+                for (const key in data) {
+                    const cfg = fredIndicatorsConfig[key];
+                    if (cfg && cfg.hasToggle && data[key]) {
+                        const variations = this.calculateVariations(data[key]);
+                        data[key] = { raw: data[key], ...variations };
+                    }
+                }
+
+                this.internationalData.series = data;
+                this.processInternationalResults();
+                cacheService.set(cacheKey, data);
+                if (this.isInternationalView) {
                     uiController.updateDateTime('FRED St. Louis Fed');
                 }
             },
-            processInternationalResults(data) {
-                this.internationalData = data;
-                const { errorText } = config;
+
+            processInternationalResults() {
+                const { fredIndicatorsConfig, errorText } = config;
                 
-                const processCard = (key, valueSelector, dateSelector, chartSelector, options = {}) => {
-                    if (!data[key]) return; 
-                    const { unit = '%', unitPosition = 'before', chartUnit = unit, name = key, dateFormat = 'mm/yyyy' } = options;
-                    if (data[key].status === 'fulfilled' && data[key].value?.length > 0) {
-                        const series = data[key].value;
-                        const latestValue = series[series.length - 1];
-                        uiController.updateText(valueSelector, parseFloat(latestValue.valor).toFixed(2), { unit, unitPosition });
-                        if (dateSelector) {
-                            uiController.updateText(dateSelector, '', { isDate: true, data: latestValue.data });
+                for (const key in fredIndicatorsConfig) {
+                    const cfg = fredIndicatorsConfig[key];
+                    const seriesData = this.internationalData.series[key];
+                    
+                    const valueSelector = `#${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-value`;
+                    const dateSelector = `#${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-date`;
+
+                    if (cfg.hasToggle) {
+                        // Lógica específica para cards com toggle (CPI e CoreCPI)
+                        this.updateCpiCardView(key); // Apenas atualiza a view com os dados já processados
+                    } else if (seriesData && seriesData.length > 0) {
+                        // Lógica para os outros cards
+                        const latestValue = seriesData[seriesData.length - 1];
+                        let displayValue = latestValue.valor;
+                        if (cfg.specialProcessing) displayValue = cfg.specialProcessing(latestValue.valor);
+                        uiController.updateText(valueSelector, displayValue.toString(), { unit: cfg.unit, unitPosition: cfg.unitPos });
+                        
+                        const dateElement = document.querySelector(dateSelector);
+                        if(dateElement) {
+                            const dateString = latestValue.date.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                            const finalDateText = cfg.descriptionText ? `${dateString} - ${cfg.descriptionText}` : dateString;
+                            uiController.updateText(dateSelector, '', { isDate: true, data: finalDateText });
                         }
-                        if(chartSelector) uiController.createSparklineChart(chartSelector, series, name, chartUnit, dateFormat);
+                        this.updateInternationalChartForPeriod(key, 5, 'years'); // Periodo padrão
                     } else {
+                        // Lógica de erro
                         uiController.updateText(valueSelector, errorText);
-                        if(dateSelector) uiController.updateText(dateSelector, '', { isDate: true, data: 'N/D' });
+                        const dateElement = document.querySelector(dateSelector);
+                        if(dateElement) uiController.updateText(dateSelector, '', { isDate: true, data: 'N/D' });
                     }
+                }
+                
+                const simpleCards = {
+                    fedTargetUpper: '#fedtarget-upper-value', fedTargetLower: '#fedtarget-lower-value',
+                    treasury2Y: '#treasury-2y-value', treasury10Y: '#treasury-10y-value', treasury30Y: '#treasury-30y-value',
                 };
-                
-                const optsAfter = { unitPosition: 'after' };
-
-                // Inflation
-                processCard('cpi', '#cpi-value', '#cpi-date', '#cpi-chart', { ...optsAfter, name: 'CPI (Anual)' });
-                processCard('coreCpi', '#core-cpi-value', '#core-cpi-date', '#core-cpi-chart', { ...optsAfter, name: 'Core CPI (Anual)' });
-                processCard('pce', '#pce-value', '#pce-date', '#pce-chart', { ...optsAfter, name: 'PCE (Anual)' });
-                processCard('corePce', '#core-pce-value', '#core-pce-date', '#core-pce-chart', { ...optsAfter, name: 'Core PCE (Anual)' });
-
-                // Interest Rates
-                processCard('fedfunds', '#fedfunds-value', '#fedfunds-date', '#fedfunds-chart', { ...optsAfter, name: 'Fed Funds Rate', dateFormat: 'dd/mm' });
-                processCard('fedTargetUpper', '#fedtarget-upper-value', null, null, optsAfter);
-                processCard('fedTargetLower', '#fedtarget-lower-value', null, null, optsAfter);
-                
-                // Treasuries
-                 if (data.treasury2Y.status === 'fulfilled' && data.treasury2Y.value?.length > 0) {
-                    const latest = data.treasury2Y.value[data.treasury2Y.value.length - 1];
-                    uiController.updateText('#treasury-2y-value', parseFloat(latest.valor).toFixed(2), {unit: '%', unitPosition: 'after'});
-                 } else { uiController.updateText('#treasury-2y-value', errorText); }
-
-                 if (data.treasury10Y.status === 'fulfilled' && data.treasury10Y.value?.length > 0) {
-                     const latest = data.treasury10Y.value[data.treasury10Y.value.length - 1];
-                    uiController.updateText('#treasury-10y-value', parseFloat(latest.valor).toFixed(2), {unit: '%', unitPosition: 'after'});
-                 } else { uiController.updateText('#treasury-10y-value', errorText); }
-
-                 if (data.treasury30Y.status === 'fulfilled' && data.treasury30Y.value?.length > 0) {
-                     const latest = data.treasury30Y.value[data.treasury30Y.value.length - 1];
-                    uiController.updateText('#treasury-30y-value', parseFloat(latest.valor).toFixed(2), {unit: '%', unitPosition: 'after'});
-                 } else { uiController.updateText('#treasury-30y-value', errorText); }
-
-                // Expectations
-                processCard('inflationExp', '#inflation-exp-value', '#inflation-exp-date', '#inflation-exp-chart', { ...optsAfter, name: 'Expectativa Inflação 5A', dateFormat: 'dd/mm' });
-                processCard('yieldCurve', '#yield-curve-value', '#yield-curve-date', '#yield-curve-chart', { ...optsAfter, name: 'Curva de Juros 10A-2A', dateFormat: 'dd/mm' });
-
-                // Growth
-                processCard('gdpReal', '#gdp-real-value', '#gdp-real-date', '#gdp-real-chart', { ...optsAfter, name: 'PIB Real (Anual)' });
-                if (data.gdpNominal.status === 'fulfilled' && data.gdpNominal.value?.length > 0) {
-                    const series = data.gdpNominal.value;
-                    const latestValue = series[series.length - 1];
-                    const gdpValue = (parseFloat(latestValue.valor) / 1000).toFixed(2);
-                    uiController.updateText('#gdp-nominal-value', gdpValue, { unit: ' trilhões USD', unitPosition: 'after' });
-                    uiController.updateText('#gdp-nominal-date', '', { isDate: true, data: latestValue.data });
-                    uiController.createSparklineChart('#gdp-nominal-chart', series, 'PIB Nominal (Tri)', '$', 'mm/yyyy');
-                } else {
-                    uiController.updateText('#gdp-nominal-value', errorText);
-                    uiController.updateText('#gdp-nominal-date', '', { isDate: true, data: 'N/D' });
+                for (const key in simpleCards) {
+                    const series = this.internationalData.series[key];
+                    const selector = simpleCards[key];
+                    if(series && series.length > 0){
+                        uiController.updateText(selector, series[0].valor.toFixed(2), { unit: '%', unitPosition: 'after' });
+                    } else {
+                        uiController.updateText(selector, errorText);
+                    }
                 }
-                
-                // Employment
-                processCard('unemployment', '#unemployment-value', '#unemployment-date', '#unemployment-chart', { ...optsAfter, name: 'Desemprego (EUA)' });
-                if (data.payrolls.status === 'fulfilled' && data.payrolls.value?.length > 0) {
-                    const series = data.payrolls.value;
-                    const latestValue = series[series.length - 1];
-                    const payrollsValue = (parseFloat(latestValue.valor)).toFixed(0); 
-                    uiController.updateText('#payrolls-value', payrollsValue, { unit: 'K', unitPosition: 'after' });
-                    uiController.updateText('#payrolls-date', '', { isDate: true, data: latestValue.data });
-                    uiController.createSparklineChart('#payrolls-chart', series, 'Criação de Vagas (Mil)', 'K', 'mm/yyyy');
+            },
+
+            // --- VERSÃO MODIFICADA ---
+            updateInternationalChartForPeriod(indicatorId, periodValue, periodUnit) {
+                const cfg = config.fredIndicatorsConfig[indicatorId];
+                let fullHistory;
+                let chartUnit = cfg.chartUnit; // Unidade padrão
+
+                // Para cards com toggle, seleciona a série de dados correta (YoY ou Raw)
+                if (cfg.hasToggle) {
+                    const cardIdPrefix = indicatorId.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    const isMonthly = document.getElementById(`${cardIdPrefix}-toggle-switch`).checked;
+                    if (isMonthly) {
+                        fullHistory = this.internationalData.series[indicatorId]?.raw;
+                        chartUnit = ''; // Gráfico do índice bruto não tem unidade
+                    } else {
+                        fullHistory = this.internationalData.series[indicatorId]?.yoy;
+                        chartUnit = '%'; // Gráfico de variação anual é em %
+                    }
                 } else {
-                    uiController.updateText('#payrolls-value', errorText);
+                    fullHistory = this.internationalData.series[indicatorId];
                 }
 
-                // Production & Sentiment
-                processCard('indpro', '#indpro-value', '#indpro-date', '#indpro-chart', { ...optsAfter, name: 'Produção Industrial (Anual)' });
-                processCard('sentiment', '#sentiment-value', '#sentiment-date', '#sentiment-chart', { unit: '', name: 'Confiança do Consumidor' });
+                if (!fullHistory) return;
 
+                let filteredData;
+                if (periodUnit === 'max') {
+                    filteredData = fullHistory;
+                } else {
+                    const cutoffDate = new Date();
+                    cutoffDate.setFullYear(cutoffDate.getFullYear() - periodValue);
+                    filteredData = fullHistory.filter(item => item.date >= cutoffDate);
+                }
+                
+                const chartSelector = `#${indicatorId.replace(/([A-Z])/g, '-$1').toLowerCase()}-chart`;
+                
+                if(this.internationalData.charts[indicatorId]) {
+                    this.internationalData.charts[indicatorId].destroy();
+                }
+
+                // Utiliza a unidade do gráfico (chartUnit) que foi definida dinamicamente
+                const chartInstance = uiController.createSparklineChart(
+                    chartSelector, filteredData, cfg.name, chartUnit, cfg.dateFormat
+                );
+                
+                if (chartInstance) {
+                    this.internationalData.charts[indicatorId] = chartInstance;
+                }
             },
             
-            // GENERAL
+            // --- NOVA VERSÃO ---
+            // Atualiza a visualização de um card com toggle (CPI/CoreCPI)
+            updateCpiCardView(indicatorId) {
+                const seriesData = this.internationalData.series[indicatorId];
+                if (!seriesData || !seriesData.yoy || !seriesData.mom || !seriesData.raw) return;
+
+                const cardIdPrefix = indicatorId.replace(/([A-Z])/g, '-$1').toLowerCase();
+                const isMonthly = document.getElementById(`${cardIdPrefix}-toggle-switch`).checked;
+                
+                let dataToShow;
+                let descriptionText;
+                let valueUnit;
+
+                if (isMonthly) {
+                    // MENSAL: Mostra o índice bruto.
+                    dataToShow = seriesData.raw;
+                    descriptionText = "Índice Mensal";
+                    valueUnit = ''; // O índice não tem unidade.
+                } else {
+                    // ANUAL: Mostra a variação percentual (YoY).
+                    dataToShow = seriesData.yoy;
+                    descriptionText = "Variação Anual";
+                    valueUnit = '%';
+                }
+                
+                // Atualiza labels do switch
+                const cardElement = document.getElementById(`card-${cardIdPrefix}`);
+                if (cardElement) {
+                    cardElement.querySelector('.card-switch-label[data-type="anual"]').classList.toggle('active', !isMonthly);
+                    cardElement.querySelector('.card-switch-label[data-type="mensal"]').classList.toggle('active', isMonthly);
+                }
+
+                if (dataToShow.length > 0) {
+                    const latestValue = dataToShow[dataToShow.length - 1];
+                    uiController.updateText(`#${cardIdPrefix}-value`, latestValue.valor.toFixed(2), { unit: valueUnit, unitPosition: 'after' });
+                    const dateString = latestValue.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    uiController.updateText(`#${cardIdPrefix}-date`, '', { isDate: true, data: `${dateString} - ${descriptionText}` });
+                } else {
+                    uiController.updateText(`#${cardIdPrefix}-value`, config.errorText);
+                    uiController.updateText(`#${cardIdPrefix}-date`, '', { isDate: true, data: 'N/D' });
+                }
+                
+                const defaultPeriodBtn = document.querySelector(`.chart-controls[data-indicator-id="${indicatorId}"] .chart-period-btn.active`);
+                const defaultYears = defaultPeriodBtn ? (defaultPeriodBtn.dataset.years === 'max' ? 'max' : parseInt(defaultPeriodBtn.dataset.years, 10)) : 5;
+                const defaultUnit = defaultYears === 'max' ? 'max' : 'years';
+                this.updateInternationalChartForPeriod(indicatorId, defaultYears, defaultUnit);
+            },
+
             init() {
                 this.setupEventListeners();
                 this.setupTheme();
                 this.applyCardOrder();
-                this.fetchAllNationalIndicators(); // Load national by default
+                this.fetchAllNationalIndicators();
             },
             applyCardOrder() {
                 const apply = (storageKey, containerId) => {
@@ -1127,9 +897,7 @@
                                 const cardElement = container.querySelector(`[data-id="${cardId}"]`);
                                 if (cardElement) container.appendChild(cardElement);
                             });
-                        } catch (e) {
-                            localStorage.removeItem(storageKey);
-                        }
+                        } catch (e) { localStorage.removeItem(storageKey); }
                     }
                 };
                 apply('cardOrder', 'national-indicators-container');
@@ -1139,7 +907,6 @@
                 const savedTheme = localStorage.getItem('themePreference');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 const themeToggleIcon = document.querySelector('#theme-toggle i');
-
                 if (savedTheme === 'light' || (savedTheme !== 'dark' && !prefersDark)) {
                     document.body.classList.add('light-mode');
                     themeToggleIcon.className = 'fas fa-sun';
@@ -1147,12 +914,13 @@
                     themeToggleIcon.className = 'fas fa-moon';
                 }
             },
+            
             setupEventListeners() {
                 document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
                 
                 document.getElementById('refresh-btn').addEventListener('click', () => {
                     if (this.isInternationalView) {
-                         localStorage.removeItem('allInternationalIndicators');
+                         localStorage.removeItem('allInternationalIndicators_v5'); // Atualiza a chave do cache
                         this.fetchAllInternationalIndicators();
                     } else {
                         localStorage.removeItem('allNationalIndicators');
@@ -1177,8 +945,7 @@
                     const isLight = document.body.classList.contains('light-mode');
                     localStorage.setItem('themePreference', isLight ? 'light' : 'dark');
                     document.querySelector('#theme-toggle i').className = isLight ? 'fas fa-sun' : 'fas fa-moon';
-                    // Re-render charts with the new theme
-                    if(this.isInternationalView) this.processInternationalResults(this.internationalData);
+                    if(this.isInternationalView) this.processInternationalResults();
                     else this.processNationalResults(this.nationalData);
                 });
 
@@ -1193,8 +960,7 @@
                     if (this.isInternationalView) {
                         nationalContainer.style.display = 'none';
                         internationalContainer.style.display = 'flex';
-                        // Fetch data only if it's not already loaded/cached
-                        if (!this.internationalData || Object.keys(this.internationalData).length === 0) {
+                        if (!this.internationalData.series || Object.keys(this.internationalData.series).length === 0) {
                             this.fetchAllInternationalIndicators();
                         } else {
                              uiController.updateDateTime('FRED St. Louis Fed');
@@ -1208,16 +974,31 @@
 
                 const setupCardFlipping = (container) => {
                     container.addEventListener('click', e => {
-                        if (e.target.classList.contains('chart-period-btn')) {
+                        // --- ALTERAÇÃO ---
+                        // Impede a propagação do clique se for no switch
+                        if (e.target.closest('.card-switch-container')) {
+                            e.stopPropagation();
+                            return;
+                        }
+
+                        const button = e.target.closest('.chart-period-btn');
+                        if (button) {
                             e.stopPropagation(); 
-                            const button = e.target;
                             const controls = button.parentElement;
                             const indicatorId = controls.dataset.indicatorId;
-                            const period = button.dataset.days || button.dataset.months;
+                            
+                            if (container.id === 'national-indicators-container') {
+                                const period = button.dataset.days || button.dataset.months;
+                                this.updateNationalChartForPeriod(indicatorId, period);
+                            }
+                            else if (container.id === 'international-indicators-container') {
+                                const periodValue = button.dataset.years === 'max' ? 'max' : parseInt(button.dataset.years, 10);
+                                const periodUnit = button.dataset.years === 'max' ? 'max' : 'years';
+                                this.updateInternationalChartForPeriod(indicatorId, periodValue, periodUnit);
+                            }
                             
                             controls.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
                             button.classList.add('active');
-                            this.updateNationalChartForPeriod(indicatorId, period);
                             return; 
                         }
                         if (e.target.closest('.drag-handle')) return;
@@ -1229,7 +1010,11 @@
                 setupCardFlipping(document.getElementById('national-indicators-container'));
                 setupCardFlipping(document.getElementById('international-indicators-container'));
 
-                
+                // --- NOVO EVENT LISTENER ---
+                // Adiciona os listeners para os switches do CPI e CoreCPI
+                document.getElementById('cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('cpi'));
+                document.getElementById('core-cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('coreCpi'));
+
                 const setupSortable = (containerId, storageKey) => {
                      new Sortable(document.getElementById(containerId), {
                         animation: 150,
