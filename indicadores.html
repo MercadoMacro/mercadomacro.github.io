@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -80,7 +79,7 @@
         #back-btn { right: 20px; bottom: 20px; }
         #refresh-btn { right: 80px; bottom: 20px; }
         #fullscreen-btn { right: 140px; bottom: 20px; }
-        #fullscreen-exit-btn { right: 140px; bottom: 20px; display: none; }
+        #fullscreen-exit-btn { right: 140px, bottom: 20px; display: none; }
         .theme-toggle { left: 20px; bottom: 20px; }
         .profile-btn { position: fixed; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--primary-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; box-shadow: 0 5px 15px var(--shadow-color-soft); }
         .profile-btn i { font-size: 18px; }
@@ -135,7 +134,7 @@
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div>
-                        <div class="indicator-name">RISCO PAÍS (CDS 5 ANOS)</div>
+                        <div class="indicator-name">Risco País (CDS 5 Anos)</div>
                         <div class="indicator-value" id="risk-value">Carregando...</div>
                         <div class="indicator-description">CDS (pontos-base)</div>
                         <div class="sparkline-chart" id="risk-chart-container"></div>
@@ -150,7 +149,7 @@
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="indicator-name">DÓLAR</div>
+                        <div class="indicator-name">Dólar</div>
                         <div class="indicator-value" id="dolar-buy-value">Carregando...</div>
                         <div class="indicator-description">Compra</div>
                         <div class="indicator-value" id="dolar-sell-value">Carregando...</div>
@@ -172,7 +171,7 @@
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div>
-                        <div class="indicator-name">EURO</div>
+                        <div class="indicator-name">Euro</div>
                         <div class="indicator-value" id="euro-buy-value">Carregando...</div>
                         <div class="indicator-description">Compra</div>
                         <div class="indicator-value" id="euro-sell-value">Carregando...</div>
@@ -214,7 +213,7 @@
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-percentage"></i></div>
-                        <div class="indicator-name">SELIC</div>
+                        <div class="indicator-name">Selic</div>
                         <div class="indicator-value" id="selic-meta-value">Carregando...</div>
                         <div class="indicator-description">Meta ao Ano</div>
                         <div class="sparkline-chart" id="selic-chart-container"></div>
@@ -226,8 +225,8 @@
                         <div class="accessible-chart-data" id="selic-chart-data-table"></div>
                     </div>
                     <div class="indicator-back">
-                        <strong>O que é a SELIC?</strong>
-                        A Taxa SELIC é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.
+                        <strong>O que é a Selic?</strong>
+                        A Taxa Selic é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.
                     </div>
                 </article>
                  <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca">
@@ -322,7 +321,7 @@
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                         <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div>
-                        <div class="indicator-name">POUPANÇA</div>
+                        <div class="indicator-name">Poupança</div>
                         <div class="indicator-value" id="poupanca-month-value">Carregando...</div>
                         <div class="indicator-description">Rendimento no Mês</div>
                         <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div>
@@ -337,16 +336,23 @@
                     </div>
                     <div class="indicator-back">
                         <strong>Como funciona a Poupança?</strong>
-                        A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta SELIC estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta SELIC + TR.
+                        A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta Selic estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta Selic + TR.
                     </div>
                 </article>
-                <article class="indicator-card" id="card-desemprego" data-id="desemprego">
+                <article class="indicator-card indicator-card--with-chart" id="card-desemprego" data-id="desemprego">
                   <div class="indicator-front">
                     <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
                     <div class="indicator-icon"><i class="fas fa-user-times"></i></div>
-                    <div class="indicator-name">DESEMPREGO</div>
+                    <div class="indicator-name">Desemprego</div>
                     <div class="indicator-value" id="desemprego-value">Carregando...</div>
                     <div class="indicator-description">Taxa de Desocupação</div>
+                    <div class="sparkline-chart" id="desemprego-chart-container"></div>
+                    <div class="chart-controls" data-indicator-id="desemprego">
+                        <button class="chart-period-btn" data-months="3">3M</button>
+                        <button class="chart-period-btn" data-months="6">6M</button>
+                        <button class="chart-period-btn active" data-months="12">1A</button>
+                    </div>
+                    <div class="accessible-chart-data" id="desemprego-chart-data-table"></div>
                   </div>
                   <div class="indicator-back">
                     <strong>O que é a Taxa de Desemprego?</strong>
@@ -604,7 +610,7 @@
                     igpm: apiService.getBCBData(apiCodes.igpm, 12),
                     igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
                     poupanca: apiService.getBCBData(apiCodes.poupanca, 12),
-                    desemprego: apiService.getBCBData(apiCodes.desemprego, 1)
+                    desemprego: apiService.getBCBData(apiCodes.desemprego, 12)
                 };
 
                 const results = await Promise.allSettled(Object.values(promises));
@@ -654,8 +660,7 @@
                 this.processInflationIndex(data.igpdi, selectors.igpdiMonth, selectors.igpdi12m, '#igpdi-chart-container', 'igpdi-chart-data-table', 'IGP-DI Mensal');
                 
                 this.processPoupanca(data.poupanca);
-                const desempregoValue = data.desemprego.status === 'fulfilled' ? `${parseFloat(data.desemprego.value?.[0]?.valor).toFixed(2)}%` : errorText;
-                uiController.updateText(selectors.desemprego, desempregoValue);
+                this.processUnemployment(data.desemprego);
             },
             
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, tableContainerId, chartName) {
@@ -668,6 +673,18 @@
                 } else {
                     uiController.updateText(monthElem, config.errorText);
                     uiController.updateText(yearElem, config.errorText);
+                }
+            },
+            
+            processUnemployment(promiseResult) {
+                const { selectors, errorText } = config;
+                if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    const data = promiseResult.value;
+                    const lastValue = parseFloat(data[data.length - 1].valor).toFixed(2);
+                    uiController.updateText(selectors.desemprego, `${lastValue}%`);
+                    uiController.createSparklineChart('#desemprego-chart-container', 'desemprego-chart-data-table', data, 'Taxa de Desocupação', '%', 'mm/yyyy');
+                } else {
+                    uiController.updateText(selectors.desemprego, errorText);
                 }
             },
 
@@ -744,6 +761,7 @@
                     case 'igpm': chartName = 'IGP-M Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
                     case 'igpdi': chartName = 'IGP-DI Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
                     case 'poupanca': chartName = 'Poupança Mensal'; unit = '%'; dateFormat = 'mm/yyyy'; break;
+                    case 'desemprego': chartName = 'Taxa de Desocupação'; unit = '%'; dateFormat = 'mm/yyyy'; break;
                 }
                 uiController.createSparklineChart(chartSelector, tableSelector, filteredData, chartName, unit, dateFormat);
             },
