@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <meta name="description" content="Indicadores atualizados do mercado financeiro do Brasil e EUA, incluindo CDS, SELIC, Dólar, Inflação, Fed Funds e PIB.">
-    <meta name="keywords" content="indicadores financeiros, cds, selic, ipca, ipca-15, pib brasil, dolar, pib, fed funds, cpi, pce, fred api, bcb api">
+    <meta name="keywords" content="indicadores financeiros, cds, selic, ipca, ipca-15, pib brasil, dolar, pib, fed funds, cpi, pce, fred api, bcb api, tesouro direto">
     <meta name="author" content="Anderson">
     <meta property="og:title" content="Indicadores de Mercado Financeiro - Mercado Macro">
     <meta property="og:description" content="Acompanhe os principais indicadores do mercado financeiro do Brasil e dos EUA em tempo real">
@@ -61,6 +61,9 @@
         .indicator-description { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; line-height: 1.3; }
         .indicator-card--multi-value .indicator-front { padding-top: 10px; padding-bottom: 10px; }
         .indicator-card--multi-value .indicator-value { font-size: 15px; }
+        #tesouro-card .indicator-front { justify-content: center; }
+        #tesouro-bond-selector { width: 90%; background: var(--darker-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 5px; padding: 6px; margin: 8px 0; font-family: 'Montserrat', sans-serif; font-weight: 600; cursor: pointer; }
+        #tesouro-bond-selector:focus { outline: 1px solid var(--primary-color); }
         .sparkline-chart { min-height: 80px; margin: 8px 0; }
         .drag-handle { position: absolute; left: 0; top: 0; bottom: 0; width: 30px; display: flex; align-items: center; justify-content: center; color: rgba(139, 148, 158, 0.4); cursor: grab; transition: color 0.2s ease; }
         .indicator-card:hover .drag-handle { color: rgba(139, 148, 158, 0.7); }
@@ -117,6 +120,7 @@
         body.light-mode .profile-btn:hover { background-color: var(--primary-color); color: white; }
         body.light-mode .yield-btn:hover { background: var(--primary-color); color: white; }
         body.light-mode .yield-btn.active { background: var(--primary-dark); border-color: var(--primary-dark); }
+        body.light-mode #tesouro-bond-selector { background-color: #f8f9fa; color: #212529; border-color: #dee2e6;}
         @media (max-width: 1200px) { 
             .indicator-card { max-width: calc(33.33% - 15px); } 
             .indicator-card--with-chart { max-width: calc(50% - 15px); }
@@ -163,8 +167,34 @@
         
         <main>
             <div class="indicators-container" id="national-indicators-container">
-                <article class="indicator-card indicator-card--with-chart" id="card-risk" data-id="risk"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div> <div class="indicator-name">Risco País (CDS 5 Anos)</div> <div class="indicator-value" id="risk-value">Carregando...</div> <div class="indicator-description">CDS (pontos-base)</div> <div class="sparkline-chart" id="risk-chart-container"></div> <div class="accessible-chart-data" id="risk-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDS?</strong> O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar" data-id="dolar"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div> <div class="indicator-name">Dólar</div> <div class="indicator-value" id="dolar-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="dolar-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="dolar-chart-container"></div> <div class="chart-controls" data-indicator-id="dolarSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="dolar-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a PTAX?</strong> A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro" data-id="euro"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div> <div class="indicator-name">Euro</div> <div class="indicator-value" id="euro-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="euro-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="euro-chart-container"></div> <div class="chart-controls" data-indicator-id="euroSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="euro-chart-data-table"></div> </div> <div class="indicator-back"><strong>Cotação do Euro</strong> A cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro, com base nas negociações do mercado.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-cdi" data-id="cdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-line"></i></div> <div class="indicator-name">CDI</div> <div class="indicator-value" id="cdi-annual-value">Carregando...</div> <div class="indicator-description">Taxa Anual (a.a.)</div> <div class="sparkline-chart" id="cdi-chart-container"></div> <div class="chart-controls" data-indicator-id="cdi"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="cdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDI?</strong> É a taxa de juros dos empréstimos entre bancos. Serve de referência para a maioria dos investimentos de renda fixa. A taxa anual é uma projeção baseada na composição da taxa diária.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-selic" data-id="selic"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-percentage"></i></div> <div class="indicator-name">Selic</div> <div class="indicator-value" id="selic-meta-value">Carregando...</div> <div class="indicator-description">Meta ao Ano</div> <div class="sparkline-chart" id="selic-chart-container"></div> <div class="chart-controls" data-indicator-id="selicMeta"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="selic-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Selic?</strong> A Taxa Selic é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div> <div class="indicator-name">IPCA</div> <div class="indicator-value" id="ipca-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="ipca-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="ipca-chart-container"></div> <div class="chart-controls" data-indicator-id="ipca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="ipca-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IPCA?</strong> O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca15" data-id="ipca15"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-tasks"></i></div> <div class="indicator-name">IPCA-15</div> <div class="indicator-value" id="ipca15-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="ipca15-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="ipca15-chart-container"></div> <div class="chart-controls" data-indicator-id="ipca15"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="ipca15-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IPCA-15?</strong> É uma prévia da inflação oficial (IPCA). A diferença está no período de coleta, que vai do dia 16 do mês anterior até o dia 15 do mês de referência, funcionando como um termômetro da tendência dos preços.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc" data-id="inpc"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-wallet"></i></div> <div class="indicator-name">INPC</div> <div class="indicator-value" id="inpc-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="inpc-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="inpc-chart-container"></div> <div class="chart-controls" data-indicator-id="inpc"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="inpc-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o INPC?</strong> O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m" data-id="igpm"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-area"></i></div> <div class="indicator-name">IGP-M</div> <div class="indicator-value" id="igp-m-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-m-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpm-chart-container"></div> <div class="chart-controls" data-indicator-id="igpm"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpm-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-M?</strong> O IGP-M é um importante indicador de inflação, conhecido como a "inflação do aluguel" por ser muito usado para reajustar contratos de locação.</div> </article> <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di" data-id="igpdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div> <div class="indicator-name">IGP-DI</div> <div class="indicator-value" id="igp-di-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-di-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpdi-chart-container"></div> <div class="chart-controls" data-indicator-id="igpdi"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-DI?</strong> O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.</div> </article> 
-                
+                <article class="indicator-card indicator-card--with-chart" id="card-risk" data-id="risk"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-shield-alt"></i></div> <div class="indicator-name">Risco País (CDS 5 Anos)</div> <div class="indicator-value" id="risk-value">Carregando...</div> <div class="indicator-description">CDS (pontos-base)</div> <div class="sparkline-chart" id="risk-chart-container"></div> <div class="accessible-chart-data" id="risk-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDS?</strong> O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.</div> </article>
+                <article class="indicator-card indicator-card--multi-value" id="tesouro-card" data-id="tesouro">
+                    <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="indicator-icon"><i class="fas fa-landmark"></i></div>
+                        <div class="indicator-name">Taxas Tesouro Direto</div>
+                        <select id="tesouro-bond-selector" aria-label="Selecione um título do Tesouro Direto">
+                            <option>Carregando títulos...</option>
+                        </select>
+                        <div class="indicator-value" id="tesouro-rate-value">...</div>
+                        <div class="indicator-description">Rendimento Anual</div>
+                        <div class="indicator-value" id="tesouro-price-value">...</div>
+                        <div class="indicator-description">Preço Unitário</div>
+                    </div>
+                    <div class="indicator-back">
+                        <strong>O que é o Tesouro Direto?</strong>
+                        É um programa do Tesouro Nacional do Brasil para venda de títulos públicos federais para pessoas físicas, de forma 100% online. É considerado um dos investimentos de menor risco na economia. Este card mostra as taxas de rendimento e os preços no momento da compra.
+                    </div>
+                </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-dolar" data-id="dolar"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-dollar-sign"></i></div> <div class="indicator-name">Dólar</div> <div class="indicator-value" id="dolar-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="dolar-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="dolar-chart-container"></div> <div class="chart-controls" data-indicator-id="dolarSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="dolar-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a PTAX?</strong> A PTAX é a taxa de câmbio de referência oficial do Brasil, calculada diariamente pelo Banco Central. Ela representa a média das taxas de negociação de Dólar no mercado interbancário.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-euro" data-id="euro"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-euro-sign"></i></div> <div class="indicator-name">Euro</div> <div class="indicator-value" id="euro-buy-value">Carregando...</div> <div class="indicator-description">Compra</div> <div class="indicator-value" id="euro-sell-value">Carregando...</div> <div class="indicator-description">Venda</div> <div class="sparkline-chart" id="euro-chart-container"></div> <div class="chart-controls" data-indicator-id="euroSell"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="euro-chart-data-table"></div> </div> <div class="indicator-back"><strong>Cotação do Euro</strong> A cotação do Euro contra o Real é apurada pelo Banco Central. O valor representa quantos Reais são necessários para comprar um Euro, com base nas negociações do mercado.</div> </article>
+                <article class="indicator-card indicator-card--with-chart" id="card-cdi" data-id="cdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-line"></i></div> <div class="indicator-name">CDI</div> <div class="indicator-value" id="cdi-annual-value">Carregando...</div> <div class="indicator-description">Taxa Anual (a.a.)</div> <div class="sparkline-chart" id="cdi-chart-container"></div> <div class="chart-controls" data-indicator-id="cdi"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="cdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o CDI?</strong> É a taxa de juros dos empréstimos entre bancos. Serve de referência para a maioria dos investimentos de renda fixa. A taxa anual é uma projeção baseada na composição da taxa diária.</div> </article>
+                <article class="indicator-card indicator-card--with-chart" id="card-selic" data-id="selic"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-percentage"></i></div> <div class="indicator-name">Selic</div> <div class="indicator-value" id="selic-meta-value">Carregando...</div> <div class="indicator-description">Meta ao Ano</div> <div class="sparkline-chart" id="selic-chart-container"></div> <div class="chart-controls" data-indicator-id="selicMeta"> <button class="chart-period-btn" data-days="30">30D</button> <button class="chart-period-btn" data-days="90">90D</button> <button class="chart-period-btn active" data-days="365">1A</button> </div> <div class="accessible-chart-data" id="selic-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Selic?</strong> A Taxa Selic é a taxa básica de juros da economia brasileira, definida pelo COPOM. Ela influencia todas as outras taxas de juros do país.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca" data-id="ipca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div> <div class="indicator-name">IPCA</div> <div class="indicator-value" id="ipca-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="ipca-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="ipca-chart-container"></div> <div class="chart-controls" data-indicator-id="ipca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="ipca-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IPCA?</strong> O IPCA é o principal indicador de inflação do Brasil, medindo a variação de preços para o consumidor final. É a meta de inflação oficial.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-ipca15" data-id="ipca15"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-tasks"></i></div> <div class="indicator-name">IPCA-15</div> <div class="indicator-value" id="ipca15-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="ipca15-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="ipca15-chart-container"></div> <div class="chart-controls" data-indicator-id="ipca15"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="ipca15-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IPCA-15?</strong> É uma prévia da inflação oficial (IPCA). A diferença está no período de coleta, que vai do dia 16 do mês anterior até o dia 15 do mês de referência, funcionando como um termômetro da tendência dos preços.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-inpc" data-id="inpc"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-wallet"></i></div> <div class="indicator-name">INPC</div> <div class="indicator-value" id="inpc-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="inpc-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="inpc-chart-container"></div> <div class="chart-controls" data-indicator-id="inpc"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="inpc-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o INPC?</strong> O Índice Nacional de Preços ao Consumidor mede a inflação para famílias de menor renda (1 a 5 salários mínimos). É muito usado em reajustes salariais.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-m" data-id="igpm"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-area"></i></div> <div class="indicator-name">IGP-M</div> <div class="indicator-value" id="igp-m-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-m-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpm-chart-container"></div> <div class="chart-controls" data-indicator-id="igpm"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpm-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-M?</strong> O IGP-M é um importante indicador de inflação, conhecido como a "inflação do aluguel" por ser muito usado para reajustar contratos de locação.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-igp-di" data-id="igpdi"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-chart-bar"></i></div> <div class="indicator-name">IGP-DI</div> <div class="indicator-value" id="igp-di-month-value">Carregando...</div> <div class="indicator-description">Mês</div> <div class="indicator-value" id="igp-di-12m-value">Carregando...</div> <div class="indicator-description">12 Meses</div> <div class="sparkline-chart" id="igpdi-chart-container"></div> <div class="chart-controls" data-indicator-id="igpdi"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="igpdi-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é o IGP-DI?</strong> O Índice Geral de Preços - Disponibilidade Interna (IGP-DI) mede a variação de preços desde matérias-primas agrícolas e industriais até bens e serviços finais.</div> </article> 
                 <article class="indicator-card indicator-card--with-chart" id="card-pib-br" data-id="pib-br">
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
@@ -186,8 +216,8 @@
                         <br><strong>Fonte:</strong> BCB (Série SGS 1208).
                     </div>
                 </article>
-
-                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca" data-id="poupanca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div> <div class="indicator-name">Poupança</div> <div class="indicator-value" id="poupanca-month-value">Carregando...</div> <div class="indicator-description">Rendimento no Mês</div> <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div> <div class="indicator-description">Rendimento Anualizado</div> <div class="sparkline-chart" id="poupanca-chart-container"></div> <div class="chart-controls" data-indicator-id="poupanca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="poupanca-chart-data-table"></div> </div> <div class="indicator-back"><strong>Como funciona a Poupança?</strong> A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta Selic estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta Selic + TR.</div> </article> <article class="indicator-card indicator-card--with-chart" id="card-desemprego" data-id="desemprego"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-user-times"></i></div> <div class="indicator-name">Desemprego</div> <div class="indicator-value" id="desemprego-value">Carregando...</div> <div class="indicator-description">Taxa de Desocupação</div> <div class="sparkline-chart" id="desemprego-chart-container"></div> <div class="chart-controls" data-indicator-id="desemprego"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="desemprego-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Taxa de Desemprego?</strong> Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.</div> </article>
+                <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" id="card-poupanca" data-id="poupanca"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-piggy-bank"></i></div> <div class="indicator-name">Poupança</div> <div class="indicator-value" id="poupanca-month-value">Carregando...</div> <div class="indicator-description">Rendimento no Mês</div> <div class="indicator-value" id="poupanca-annualized-value">Carregando...</div> <div class="indicator-description">Rendimento Anualizado</div> <div class="sparkline-chart" id="poupanca-chart-container"></div> <div class="chart-controls" data-indicator-id="poupanca"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="poupanca-chart-data-table"></div> </div> <div class="indicator-back"><strong>Como funciona a Poupança?</strong> A remuneração, isenta de Imposto de Renda para pessoas físicas, é composta pela Taxa Referencial (TR) mais um rendimento adicional. Para depósitos feitos a partir de 04/05/2012, a regra é: se a meta Selic estiver acima de 8,5% ao ano, o rendimento é de 0,5% ao mês + TR. Se estiver igual ou abaixo de 8,5%, o rendimento é de 70% da meta Selic + TR.</div> </article>
+                <article class="indicator-card indicator-card--with-chart" id="card-desemprego" data-id="desemprego"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-user-times"></i></div> <div class="indicator-name">Desemprego</div> <div class="indicator-value" id="desemprego-value">Carregando...</div> <div class="indicator-description">Taxa de Desocupação</div> <div class="sparkline-chart" id="desemprego-chart-container"></div> <div class="chart-controls" data-indicator-id="desemprego"> <button class="chart-period-btn" data-months="3">3M</button> <button class="chart-period-btn" data-months="6">6M</button> <button class="chart-period-btn active" data-months="12">1A</button> </div> <div class="accessible-chart-data" id="desemprego-chart-data-table"></div> </div> <div class="indicator-back"><strong>O que é a Taxa de Desemprego?</strong> Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.</div> </article>
             </div>
             
             <div class="indicators-container" id="international-indicators-container" style="display: none;">
@@ -340,6 +370,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
             cdsApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
+            tesouroApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json'),
             fredApiBaseUrl: 'https://api.stlouisfed.org/fred/series/observations',
             fredApiKey: 'fa2a8abda0c82b9b6bf1d4667e8a3a42', 
             errorText: 'Erro',
@@ -353,6 +384,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 igpmMonth: '#igp-m-month-value', igpm12m: '#igp-m-12m-value', igpdiMonth: '#igp-di-month-value',
                 igpdi12m: '#igp-di-12m-value', poupancaMonth: '#poupanca-month-value', poupancaAnnualized: '#poupanca-annualized-value',
                 desemprego: '#desemprego-value',
+                tesouroSelector: '#tesouro-bond-selector', tesouroRate: '#tesouro-rate-value', tesouroPrice: '#tesouro-price-value'
             },
             apiCodes: {
                 dolarBuy: 1, dolarSell: 10813, euroBuy: 21619, euroSell: 21620, cdi: 12, selicMeta: 432, 
@@ -446,6 +478,17 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     throw error;
                 }
             },
+            async getTesouroDiretoData() {
+                try {
+                    const response = await fetch(config.tesouroApiUrl);
+                    if (!response.ok) throw new Error(`Tesouro Direto API Error: ${response.statusText}`);
+                    const data = await response.json();
+                    return data.response.TrsrBdTradgList;
+                } catch (error) {
+                    console.error("Erro ao buscar dados do Tesouro Direto:", error.message);
+                    throw error;
+                }
+            },
             async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') {
                 const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options;
                 let fredUrl = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`;
@@ -503,7 +546,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 const now = new Date();
                 const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
                 this.updateText(config.selectors.updateTime, `Atualizado em ${now.toLocaleDateString('pt-BR', options)}`);
-                document.querySelector(config.selectors.footer).textContent = `Fontes: ${source} • © ${now.getFullYear()} Mercado Macro`;
+                document.querySelector(config.selectors.footer).textContent = `Fontes: ${source}, Tesouro Direto • © ${new Date().getFullYear()} Mercado Macro`;
             },
             setLoadingState(isLoading, containerSelector) {
                 if (isLoading) {
@@ -592,6 +635,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 const { apiCodes } = config;
                 const promises = {
                     cds: apiService.getCDSData(),
+                    tesouro: apiService.getTesouroDiretoData(),
                     dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
                     dolarSell: apiService.getBCBDataByDateRange(apiCodes.dolarSell, 365),
                     euroBuy: apiService.getBCBData(apiCodes.euroBuy, 1),
@@ -618,7 +662,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 this.processNationalResults(data);
                 cacheService.set('allNationalIndicators', data);
                 if (!this.isInternationalView) {
-                    uiController.updateDateTime();
+                    uiController.updateDateTime('BCB, Investing.com');
                 }
             },
              processNationalResults(data) {
@@ -628,6 +672,8 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 uiController.updateText(selectors.riskValue, data.cds.status === 'fulfilled' ? data.cds.value : errorText);
                 this.processCDSChart();
                 
+                this.processTesouroDireto(data.tesouro);
+
                 uiController.updateText(selectors.dolarBuy, data.dolarBuy.status === 'fulfilled' ? parseFloat(data.dolarBuy.value?.[0]?.valor).toFixed(2) : errorText, {unit:'R$ '});
                 uiController.updateText(selectors.dolarSell, data.dolarSell.status === 'fulfilled' && data.dolarSell.value.length > 0 ? parseFloat(data.dolarSell.value?.[data.dolarSell.value.length - 1]?.valor).toFixed(2) : errorText, {unit:'R$ '});
                 uiController.updateText(selectors.euroBuy, data.euroBuy.status === 'fulfilled' ? parseFloat(data.euroBuy.value?.[0]?.valor).toFixed(2) : errorText, {unit:'R$ '});
@@ -656,6 +702,73 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 ];
                 uiController.createSparklineChart('#risk-chart-container', cdsHistoryData, 'CDS Anual', ' pts', 'yyyy');
             },
+processTesouroDireto(promiseResult) {
+    const { selectors, errorText } = config;
+    const selectorEl = document.querySelector(selectors.tesouroSelector);
+    const rateEl = document.querySelector(selectors.tesouroRate);
+    const priceEl = document.querySelector(selectors.tesouroPrice);
+
+    if (!selectorEl || !rateEl || !priceEl) return;
+
+    if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+        const bonds = promiseResult.value.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0);
+
+        const updateTesouroCard = (bond) => {
+            const bondName = bond.TrsrBd.nm;
+            const rate = bond.TrsrBd.anulInvstmtRate;
+            const price = bond.TrsrBd.untrInvstmtVal;
+
+            let formattedRate = '';
+            let decimalRate, percentageRate;
+
+            if (bondName.includes('Selic')) {
+                // Spread decimal — precisa multiplicar por 100
+                decimalRate = rate.toFixed(4).replace('.', ',');
+                percentageRate = (rate * 100).toFixed(2).replace('.', ',');
+                formattedRate = `Selic: ${decimalRate}%`;
+            } else if (bondName.includes('IPCA')) {
+        // IPCA já está em percentual
+        decimalRate = rate.toFixed(4).replace('.', ',');
+        percentageRate = rate.toFixed(2).replace('.', ',');
+                formattedRate = `IPCA + ${percentageRate}%`;
+            } else {
+                // Prefixado — já vem em percentual
+                decimalRate = rate.toFixed(4).replace('.', ',');
+                percentageRate = rate.toFixed(2).replace('.', ',');
+                formattedRate = `${percentageRate}%`;
+            }
+
+            rateEl.textContent = formattedRate;
+            priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        };
+
+        selectorEl.innerHTML = ''; // Limpa a opção "Carregando..."
+        bonds.forEach((bondData, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = bondData.TrsrBd.nm;
+            selectorEl.appendChild(option);
+        });
+
+        selectorEl.addEventListener('change', (e) => {
+            const selectedBond = bonds[e.target.value];
+            updateTesouroCard(selectedBond);
+        });
+
+        // Carga inicial com o primeiro título da lista
+        if (bonds.length > 0) {
+            updateTesouroCard(bonds[0]);
+        }
+
+    } else {
+        selectorEl.innerHTML = '<option>Erro ao carregar</option>';
+        rateEl.textContent = errorText;
+        priceEl.textContent = errorText;
+    }
+},
+
+			
+			
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
@@ -1208,7 +1321,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                             return;
                         }
 
-                        if (e.target.closest('.card-switch-container') || e.target.closest('.drag-handle')) {
+                        if (e.target.closest('.card-switch-container') || e.target.closest('.drag-handle') || e.target.closest('#tesouro-bond-selector')) {
                             e.stopPropagation();
                             return;
                         }
