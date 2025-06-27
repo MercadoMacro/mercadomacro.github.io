@@ -1,0 +1,34 @@
+[
+    {
+        "id": 1,
+        "title": "Panorama Semanal do Mercado: Junho de 2025",
+        "date": "2025-06-23",
+        "summary": "Análise detalhada dos principais acontecimentos no mercado financeiro global e brasileiro na última semana, com foco em juros, inflação e movimentações de ações e commodities. Perspectivas para a próxima semana.",
+        "link": "reports/panorama_semanal_junho_2025.pdf",
+        "tags": ["panorama", "semanal", "macro", "juros", "inflacao", "acoes", "commodities"]
+    },
+    {
+        "id": 2,
+        "title": "Estudo sobre o Impacto da IA no Setor Financeiro",
+        "date": "2025-06-15",
+        "summary": "Um estudo aprofundado sobre como a inteligência artificial está transformando a análise de dados, o trading algorítmico e a gestão de riscos no mercado financeiro.",
+        "link": "reports/impacto_ia_financas.pdf",
+        "tags": ["IA", "inteligencia artificial", "tecnologia", "financas", "trading", "gestao de riscos"]
+    },
+    {
+        "id": 3,
+        "title": "Guia para Iniciantes em Investimentos: Renda Fixa",
+        "date": "2025-06-08",
+        "summary": "Um guia prático para quem está começando a investir, explicando os conceitos básicos da renda fixa, seus tipos e como escolher as melhores opções para seu perfil.",
+        "link": "reports/guia_renda_fixa.pdf",
+        "tags": ["guia", "iniciantes", "investimentos", "renda fixa", "CDB", "LCI", "LCA", "tesouro direto"]
+    },
+    {
+        "id": 4,
+        "title": "Relatório Trimestral: Setor de Energia no Brasil",
+        "date": "2025-05-30",
+        "summary": "Análise do desempenho das principais empresas do setor de energia elétrica no Brasil no último trimestre, com projeções de crescimento e fatores de risco.",
+        "link": "reports/relatorio_energia_trimestral.pdf",
+        "tags": ["energia", "setorial", "brasil", "investimento", "eletricidade"]
+    }
+]
