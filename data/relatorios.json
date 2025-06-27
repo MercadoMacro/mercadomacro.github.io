@@ -1,56 +1,92 @@
 [
     {
         "id": 1,
-        "title": "Panorama Semanal do Mercado: 22-28 de Junho de 2025",
-        "date": "2025-06-28",
-        "summary": "Análise aprofundada dos eventos econômicos e políticos que impactaram o mercado financeiro global e brasileiro na última semana. Destaques para decisões de bancos centrais, dados de inflação e o desempenho de setores chave. Inclui perspectivas para a próxima semana e recomendações estratégicas.",
-        "link": "reports/panorama_semanal_junho_2025.pdf",
+        "title": "Panorama Semanal do Mercado: 24-30 de Junho de 2025",
+        "date": "2025-06-30",
+        "summary": "Análise aprofundada dos eventos econômicos e políticos que impactaram o mercado financeiro global e brasileiro na última semana. Destaques para decisões de bancos centrais, dados de inflação e o desempenho de setores chave. Inclui perspectivas para a próxima semana e recomendações estratégicas para o investidor moderno.",
+        "link": "reports/panorama_semanal_junho_2025_v2.pdf",
         "image": "assets/img/report_cover_macro.jpg",
-        "tags": ["panorama", "semanal", "macroeconomia", "juros", "inflacao", "acoes", "mercado"]
+        "tags": ["panorama", "semanal", "macroeconomia", "juros", "inflacao", "acoes", "mercado", "estrategia"]
     },
     {
         "id": 2,
-        "title": "O Futuro das Fintechs: Inovação e Regulação no Brasil",
-        "date": "2025-06-20",
-        "summary": "Um estudo exclusivo sobre o ecossistema de fintechs no Brasil, explorando as últimas tendências em pagamentos, crédito e investimentos. Analisamos o cenário regulatório e o potencial de disrupção dessas empresas no mercado tradicional.",
-        "link": "reports/futuro_fintechs_brasil.pdf",
-        "image": "assets/img/report_cover_fintech.jpg",
-        "tags": ["fintech", "inovacao", "tecnologia", "regulacao", "mercado", "educacao"]
+        "title": "A Ascensão do Investimento Sustentável (ESG) no Brasil",
+        "date": "2025-06-25",
+        "summary": "Um estudo exclusivo sobre o crescimento e a relevância dos investimentos ESG no cenário brasileiro. Exploramos as tendências, desafios e oportunidades para empresas e investidores que buscam impacto positivo e retornos financeiros alinhados à sustentabilidade. Inclui casos de sucesso e perspectivas futuras.",
+        "link": "reports/investimento_sustentavel_esg_v2.pdf",
+        "image": "assets/img/report_cover_esg.jpg",
+        "tags": ["ESG", "sustentabilidade", "investimentos", "responsabilidade social", "mercado", "futuro"]
     },
     {
         "id": 3,
-        "title": "Decifrando a Renda Fixa: O Guia Completo para Iniciantes",
-        "date": "2025-06-12",
-        "summary": "Um guia didático e completo para quem deseja começar a investir em renda fixa. Abordamos desde os conceitos básicos, tipos de títulos (CDB, LCI, LCA, Tesouro Direto), até estratégias para construir uma carteira sólida e segura.",
-        "link": "reports/guia_renda_fixa_iniciantes.pdf",
-        "image": "assets/img/report_cover_rendafixa.jpg",
-        "tags": ["educacao", "investimentos", "renda fixa", "iniciantes", "poupança", "tesouro direto"]
+        "title": "O Impacto da Inteligência Artificial na Análise de Ações",
+        "date": "2025-06-18",
+        "summary": "Mergulhe na interseção entre IA e o mercado de ações. Este relatório detalha como algoritmos de aprendizado de máquina estão revolucionando a análise de dados financeiros, a identificação de tendências e a tomada de decisões de investimento, oferecendo uma nova fronteira para investidores e analistas.",
+        "link": "reports/ia_analise_acoes_v2.pdf",
+        "image": "assets/img/report_cover_ia.jpg",
+        "tags": ["IA", "inteligencia artificial", "acoes", "analise", "tecnologia", "investimentos"]
     },
     {
         "id": 4,
-        "title": "Análise Setorial: Agronegócio e Commodities no Cenário Global",
-        "date": "2025-06-05",
-        "summary": "Um panorama aprofundado do agronegócio e do mercado de commodities, com foco nas tendências de preços, demanda global e o impacto de fatores climáticos e geopolíticos. Inclui a performance das principais empresas do setor.",
-        "link": "reports/analise_agronegocio_commodities.pdf",
-        "image": "assets/img/report_cover_agro.jpg",
-        "tags": ["agronegocio", "commodities", "setorial", "mercado", "global", "investimento"]
+        "title": "Guia Prático: Diversificação de Carteira para Proteger seu Capital",
+        "date": "2025-06-10",
+        "summary": "Um guia essencial para construir uma carteira de investimentos resiliente. Abordamos os princípios da diversificação, como alocar ativos em diferentes classes (renda fixa, ações, multimercado, alternativos) e estratégias para mitigar riscos e otimizar retornos em diferentes cenários de mercado.",
+        "link": "reports/guia_diversificacao_carteira_v2.pdf",
+        "image": "assets/img/report_cover_diversificacao.jpg",
+        "tags": ["guia", "investimentos", "carteira", "diversificacao", "risco", "estrategia", "educacao"]
     },
     {
         "id": 5,
-        "title": "Entendendo a Inflação: Impactos no seu Bolso e Investimentos",
-        "date": "2025-05-28",
-        "summary": "Este estudo desmistifica o conceito de inflação, explica suas causas e consequências para a economia e para a vida financeira pessoal. Apresentamos estratégias de proteção e investimento em cenários inflacionários.",
-        "link": "reports/entendendo_inflacao.pdf",
-        "image": "assets/img/report_cover_inflacao.jpg",
-        "tags": ["inflacao", "economia", "educacao", "investimentos", "macroeconomia"]
+        "title": "Blockchain e Criptoativos: Além da Especulação Financeira",
+        "date": "2025-06-03",
+        "summary": "Este estudo aprofundado vai além do hype dos criptoativos para explorar a tecnologia blockchain e seu potencial disruptivo em diversos setores, incluindo finanças, logística e governança. Entenda o valor fundamental por trás dessa inovação e suas aplicações reais no futuro da economia.",
+        "link": "reports/blockchain_criptoativos_v2.pdf",
+        "image": "assets/img/report_cover_blockchain.jpg",
+        "tags": ["blockchain", "criptoativos", "tecnologia", "futuro", "financas", "inovacao"]
     },
     {
         "id": 6,
-        "title": "Relatório Especial: O Crescimento do Mercado de Carbono",
+        "title": "O Setor Imobiliário em 2025: Tendências e Oportunidades",
+        "date": "2025-05-28",
+        "summary": "Uma análise abrangente do mercado imobiliário, abordando as principais tendências de preço, demanda, financiamento e o impacto de fatores macroeconômicos e demográficos. Identificamos oportunidades de investimento em diferentes segmentos e regiões.",
+        "link": "reports/setor_imobiliario_2025_v2.pdf",
+        "image": "assets/img/report_cover_imobiliario.jpg",
+        "tags": ["imobiliario", "investimentos", "mercado", "tendencias", "setorial"]
+    },
+    {
+        "id": 7,
+        "title": "Relatório Anual: Performance das Small Caps Brasileiras",
         "date": "2025-05-20",
-        "summary": "Exploramos o emergente mercado de carbono, seu funcionamento, oportunidades de investimento e o papel na transição para uma economia mais sustentável. Um guia para entender e atuar nesse novo ativo.",
-        "link": "reports/mercado_carbono.pdf",
-        "image": "assets/img/report_cover_carbon.jpg",
-        "tags": ["sustentabilidade", "carbono", "investimento", "mercado", "ESG", "futuro"]
+        "summary": "Um balanço detalhado do desempenho das small caps na Bolsa de Valores brasileira. Avaliamos os fatores que impulsionaram ou contiveram o crescimento dessas empresas, e exploramos o potencial de valorização para o próximo ciclo de mercado.",
+        "link": "reports/small_caps_brasileiras_v2.pdf",
+        "image": "assets/img/report_cover_smallcaps.jpg",
+        "tags": ["acoes", "small caps", "investimentos", "brasil", "mercado"]
+    },
+    {
+        "id": 8,
+        "title": "Finanças Comportamentais: Como a Psicologia Afeta Seus Investimentos",
+        "date": "2025-05-12",
+        "summary": "Explore a ciência por trás das decisões financeiras. Este estudo revela como vieses cognitivos e emoções podem influenciar suas escolhas de investimento, e oferece estratégias para tomar decisões mais racionais e eficazes no mercado.",
+        "link": "reports/financas_comportamentais_v2.pdf",
+        "image": "assets/img/report_cover_psicologia.jpg",
+        "tags": ["psicologia", "financas", "educacao", "comportamental", "investimentos"]
+    },
+    {
+        "id": 9,
+        "title": "Entendendo o Mercado de Câmbio: Dólar, Euro e Suas Flutuações",
+        "date": "2025-05-05",
+        "summary": "Um guia completo sobre o funcionamento do mercado de câmbio, os fatores que influenciam a cotação das moedas e como as flutuações impactam a economia e seus investimentos. Essencial para quem opera ou acompanha o mercado internacional.",
+        "link": "reports/mercado_cambio_v2.pdf",
+        "image": "assets/img/report_cover_cambio.jpg",
+        "tags": ["cambio", "dolar", "euro", "moedas", "mercado", "macroeconomia"]
+    },
+    {
+        "id": 10,
+        "title": "Guia de Planejamento Financeiro Pessoal: Construindo Seu Futuro",
+        "date": "2025-04-28",
+        "summary": "Comece a construir um futuro financeiro sólido com este guia prático. Aborda desde a organização do orçamento e o controle de dívidas, até a definição de metas e a escolha dos primeiros investimentos, com foco na liberdade financeira.",
+        "link": "reports/planejamento_financeiro_pessoal_v2.pdf",
+        "image": "assets/img/report_cover_planejamento.jpg",
+        "tags": ["planejamento", "financeiro pessoal", "educacao", "orcamento", "futuro"]
     }
 ]
