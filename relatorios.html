@@ -49,7 +49,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 400px;
+            min-height: 400px; /* Altura mínima para o hero */
         }
 
         .hero-section::before {
@@ -111,9 +111,9 @@
         /* Search and Filter Area */
         .search-filter-area {
             position: relative;
-            z-index: 2;
+            z-index: 2; /* Para sobrepor o hero-section e dar mais destaque */
             max-width: 1100px;
-            margin: -80px auto 60px auto;
+            margin: -80px auto 60px auto; /* Para sobrepor bem o hero-section */
             background-color: var(--card-bg);
             padding: 30px;
             border-radius: 16px;
@@ -138,7 +138,7 @@
             font-size: 17px;
             transition: all 0.3s ease;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-            -webkit-appearance: none;
+            -webkit-appearance: none; /* Remove estilos padrão de input em iOS */
         }
 
         #report-search-input::placeholder {
@@ -166,7 +166,7 @@
             max-height: 250px;
             overflow-y: auto;
             z-index: 100;
-            display: none;
+            display: none; /* Controlado via JS */
         }
 
         .autocomplete-item {
@@ -208,7 +208,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             position: relative;
             overflow: hidden;
-            transform: translateZ(0);
+            transform: translateZ(0); /* Força aceleração de hardware */
         }
 
         .filter-tag-btn::before {
@@ -247,12 +247,12 @@
         }
 
         .filter-tag-btn.active::before {
-            width: 0;
+            width: 0; /* Desativa o efeito hover quando ativo */
             height: 0;
         }
         
         .filter-tag-btn span {
-            position: relative;
+            position: relative; /* Para manter o texto acima do pseudo-elemento */
             z-index: 1;
         }
 
@@ -1253,26 +1253,7 @@
 
     <script>
         // =============================================
-        // CONFIGURAÇÕES GLOBAIS E ESTADO DO APP
-        // =============================================
-        const REPORTS_PER_PAGE = 8; // Quantidade de relatórios a carregar por vez na grade principal
-        const FAVORITES_KEY = 'mercadoMacroReportsFavorites_v1';
-        const READ_HISTORY_KEY = 'mercadoMacroReportsReadHistory_v1';
-        const MAX_SUGGESTIONS = 3;
-
-        let allReports = [];
-        let uniqueTags = new Set();
-        let appState = {
-            searchTerm: '',
-            activeTags: new Set(),
-            currentPage: 0,
-            loading: false,
-            featuredReportId: null, // O ID do relatório em destaque, se houver
-            activeModalReport: null // O relatório atualmente visível no modal
-        };
-
-        // =============================================
-        // FUNÇÕES AUXILIARES GERAIS
+        // FUNÇÕES AUXILIARES GERAIS (DEFINIDAS GLOBALMENTE PARA ACESSIBILIDADE)
         // =============================================
         function debounce(func, wait, immediate) {
             let timeout;
@@ -1315,6 +1296,18 @@
             }
         }
 
+        // Função para alternar o tema
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (themeIcon) {
+                themeIcon.classList.toggle('fa-moon', !isLightMode);
+                themeIcon.classList.toggle('fa-sun', isLightMode);
+            }
+        }
+
         function updateFooterDateTime() {
             const now = new Date();
             const formattedDate = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -1337,6 +1330,25 @@
             audio.volume = 0.3; // Volume mais baixo para sons de UI
             audio.play().catch(e => console.warn("Erro ao tocar som:", e));
         }
+
+        // =============================================
+        // CONFIGURAÇÕES GLOBAIS E ESTADO DO APP
+        // =============================================
+        const REPORTS_PER_PAGE = 8; // Quantidade de relatórios a carregar por vez na grade principal
+        const FAVORITES_KEY = 'mercadoMacroReportsFavorites_v1';
+        const READ_HISTORY_KEY = 'mercadoMacroReportsReadHistory_v1';
+        const MAX_SUGGESTIONS = 3;
+
+        let allReports = [];
+        let uniqueTags = new Set();
+        let appState = {
+            searchTerm: '',
+            activeTags: new Set(),
+            currentPage: 0,
+            loading: false,
+            featuredReportId: null, // O ID do relatório em destaque, se houver
+            activeModalReport: null // O relatório atualmente visível no modal
+        };
 
         // =============================================
         // FUNÇÕES DE CARREGAMENTO DE DADOS
@@ -1400,8 +1412,8 @@
 
         function renderReportCard(report, isFeatured = false, isSuggested = false) {
             const cardElement = document.createElement('div');
-            cardElement.classList.add(isFeatured ? 'featured-report-card' : (isSuggested ? 'report-card' : 'report-card')); // Reutiliza report-card para sugestões
-            cardElement.dataset.id = report.id; // Adiciona ID para Observer
+            cardElement.classList.add(isFeatured ? 'featured-report-card' : (isSuggested ? 'report-card' : 'report-card'));
+            cardElement.dataset.id = report.id;
 
             const iconClass = getIconForReport(report);
             const imageHtml = report.image ? `<img src="${report.image}" alt="${report.title}" loading="lazy">` : `<i class="${iconClass}"></i>`;
@@ -1410,7 +1422,7 @@
 
             const isFavorited = getFavorites().includes(report.id);
             const favoriteBtnClass = isFavorited ? 'favorited' : '';
-            const favoriteIconClass = isFavorited ? 'fas fa-heart' : 'far fa-heart'; // far para não preenchido
+            const favoriteIconClass = isFavorited ? 'fas fa-heart' : 'far fa-heart';
 
             let actionsHtml = '';
             if (isFeatured) {
@@ -1454,18 +1466,16 @@
                 </div>
             `;
 
-            // Adiciona evento para o botão "Ver Resumo" se não for o destaque
             if (!isFeatured) {
                 const viewSummaryBtn = cardElement.querySelector('.view-summary-btn');
                 if (viewSummaryBtn) {
                     viewSummaryBtn.addEventListener('click', () => {
-                        playSound('click'); // Som ao abrir modal
+                        playSound('click');
                         openQuickViewModal(report.id);
                     });
                 }
             }
 
-            // Adiciona evento para o botão de Favoritar
             const favoriteBtn = cardElement.querySelector('.favorite-btn');
             if (favoriteBtn) {
                 favoriteBtn.addEventListener('click', (event) => toggleFavorite(event, report.id));
@@ -1478,7 +1488,7 @@
             const reportListContainer = document.getElementById('report-list');
             if (!reportListContainer) return;
 
-            reportListContainer.innerHTML = ''; // Limpa a grade antes de renderizar
+            reportListContainer.innerHTML = '';
 
             if (reports.length === 0) {
                 reportListContainer.innerHTML = '<p class="no-results">Nenhum estudo ou relatório encontrado para sua busca e filtros.</p>';
@@ -1488,7 +1498,6 @@
             reports.forEach((report, index) => {
                 const card = renderReportCard(report);
                 reportListContainer.appendChild(card);
-                // Adiciona a animação de scroll reveal com um pequeno delay
                 scrollRevealObserver.observe(card);
             });
 
@@ -1522,40 +1531,39 @@
                 }
             });
 
-            filterTagsContainer.innerHTML = ''; // Limpa tags existentes
+            filterTagsContainer.innerHTML = '';
 
-            // Adiciona um botão "Todos"
             const allButton = document.createElement('button');
             allButton.classList.add('filter-tag-btn');
             allButton.innerHTML = `<span>Todos</span>`;
             allButton.dataset.tag = 'all';
             allButton.addEventListener('click', () => {
-                playSound('pop'); // Som ao clicar no filtro
+                playSound('pop');
                 appState.activeTags.clear();
                 filterTagsContainer.querySelectorAll('.filter-tag-btn').forEach(btn => btn.classList.remove('active'));
                 allButton.classList.add('active');
                 applyFiltersAndRender();
             });
             filterTagsContainer.appendChild(allButton);
-            allButton.classList.add('active'); // Ativa por padrão
+            allButton.classList.add('active');
 
             Array.from(uniqueTags).sort().forEach(tag => {
                 const button = document.createElement('button');
                 button.classList.add('filter-tag-btn');
-                button.innerHTML = `<span>${tag.charAt(0).toUpperCase() + tag.slice(1)}</span>`; // Capitaliza
+                button.innerHTML = `<span>${tag.charAt(0).toUpperCase() + tag.slice(1)}</span>`;
                 button.dataset.tag = tag;
                 button.addEventListener('click', () => {
-                    playSound('pop'); // Som ao clicar no filtro
+                    playSound('pop');
                     if (appState.activeTags.has(tag)) {
                         appState.activeTags.delete(tag);
                         button.classList.remove('active');
                     } else {
                         appState.activeTags.add(tag);
                         button.classList.add('active');
-                        allButton.classList.remove('active'); // Desativa o "Todos"
+                        allButton.classList.remove('active');
                     }
                     if (appState.activeTags.size === 0) {
-                        allButton.classList.add('active'); // Se nenhuma tag ativa, ativa "Todos"
+                        allButton.classList.add('active');
                     }
                     applyFiltersAndRender();
                 });
@@ -1590,11 +1598,6 @@
             const favorites = getFavorites();
             const readHistory = getReadHistory();
 
-            // Lógica de sugestão:
-            // 1. Relatórios favoritos não lidos (se houver)
-            // 2. Relatórios com tags semelhantes aos favoritos/lidos recentemente (mais complexo, vamos simplificar)
-            // 3. Relatórios recentes que ainda não foram lidos/favoritados
-
             let potentialSuggestions = [];
 
             // 1. Relatórios favoritos (exclui o destaque e já lidos)
@@ -1618,10 +1621,10 @@
             });
             const sortedInteractedTags = Object.entries(interactedTags).sort(([,a],[,b]) => b - a).map(([tag]) => tag);
             
-            const relevantTags = sortedInteractedTags.slice(0, 3); // Pega as 3 tags mais interagidas
+            const relevantTags = sortedInteractedTags.slice(0, 3);
             
             const taggedSuggestions = allReports.filter(report => 
-                !allInteractedReports.has(report.id) && // Não foi interagido ainda
+                !allInteractedReports.has(report.id) &&
                 report.id !== appState.featuredReportId &&
                 report.tags && report.tags.some(tag => relevantTags.includes(tag.toLowerCase()))
             );
@@ -1632,13 +1635,12 @@
                 !favorites.includes(report.id) &&
                 !readHistory.includes(report.id) &&
                 report.id !== appState.featuredReportId &&
-                !potentialSuggestions.some(s => s.id === report.id) // Evita duplicatas
-            ).slice(0, MAX_SUGGESTIONS * 2); // Pega um pouco mais para garantir que teremos o suficiente
+                !potentialSuggestions.some(s => s.id === report.id)
+            ).slice(0, MAX_SUGGESTIONS * 2);
 
             potentialSuggestions.push(...recentSuggestions);
 
 
-            // Remove duplicatas e pega os TOP MAX_SUGGESTIONS
             const finalSuggestions = [];
             const seenIds = new Set();
             for (const report of potentialSuggestions) {
@@ -1652,9 +1654,9 @@
             if (finalSuggestions.length > 0) {
                 suggestionsSection.style.display = 'block';
                 finalSuggestions.forEach(report => {
-                    const card = renderReportCard(report, false, true); // isFeatured=false, isSuggested=true
+                    const card = renderReportCard(report, false, true);
                     suggestedReportsContainer.appendChild(card);
-                    scrollRevealObserver.observe(card); // Animação de scroll reveal
+                    scrollRevealObserver.observe(card);
                 });
                 scrollRevealObserver.observe(suggestionsSection);
             } else {
@@ -1668,7 +1670,6 @@
         // =============================================
         function getFilteredReports(getAll = false) {
             let filtered = allReports.filter(report => {
-                // Exclui o relatório em destaque da lista principal
                 if (report.id === appState.featuredReportId) {
                     return false;
                 }
@@ -1687,23 +1688,21 @@
                 return matchesSearch && matchesTags;
             });
 
-            // Se 'getAll' for true, retorna todos os relatórios filtrados sem paginação
             if (getAll) {
                 return filtered;
             }
 
-            // Caso contrário, retorna a fatia da página atual
             const startIndex = 0;
             const endIndex = appState.currentPage * REPORTS_PER_PAGE;
             return filtered.slice(startIndex, endIndex);
         }
 
         function applyFiltersAndRender() {
-            appState.currentPage = 1; // Reseta a página para 1 ao aplicar novos filtros/busca
+            appState.currentPage = 1;
             const reportsToDisplay = getFilteredReports();
             renderReportGrid(reportsToDisplay);
             renderFeaturedReport();
-            renderSuggestedReports(); // Re-renderiza sugestões ao filtrar/buscar
+            renderSuggestedReports();
         }
 
         // =============================================
@@ -1752,7 +1751,7 @@
                     appState.searchTerm = item.toLowerCase();
                     autocompleteResults.style.display = 'none';
                     applyFiltersAndRender();
-                    playSound('select'); // Som ao selecionar autocomplete
+                    playSound('select');
                 });
                 autocompleteResults.appendChild(div);
             });
@@ -1786,13 +1785,11 @@
                 return;
             }
 
-            // Atualiza histórico de leitura
             addToReadHistory(reportId);
 
-            // Limpa o conteúdo anterior
             modalImageContainer.innerHTML = '';
             modalContent.innerHTML = '';
-            modalProgressBar.style.width = '0%'; // Reseta barra de progresso
+            modalProgressBar.style.width = '0%';
 
             const report = appState.activeModalReport;
             const iconClass = getIconForReport(report);
@@ -1817,48 +1814,43 @@
             `;
             modalDownloadBtn.href = report.link;
 
-            // Atualiza estado do botão de favorito no modal
             const isFavorited = getFavorites().includes(report.id);
             modalFavoriteBtn.classList.toggle('favorited', isFavorited);
             modalFavoriteBtn.querySelector('i').className = isFavorited ? 'fas fa-heart' : 'far fa-heart';
             modalFavoriteBtn.setAttribute('aria-label', isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
 
-            // Remove listeners antigos do modalFavoriteBtn antes de adicionar um novo para evitar múltiplos
-            const oldModalFavoriteBtn = modalFavoriteBtn.cloneNode(true);
-            modalFavoriteBtn.parentNode.replaceChild(oldModalFavoriteBtn, modalFavoriteBtn);
-            appState.currentModalFavoriteBtn = oldModalFavoriteBtn; // Guarda a referência atualizada
+            const newModalFavoriteBtn = modalFavoriteBtn.cloneNode(true);
+            modalFavoriteBtn.parentNode.replaceChild(newModalFavoriteBtn, modalFavoriteBtn);
+            appState.currentModalFavoriteBtn = newModalFavoriteBtn;
 
             appState.currentModalFavoriteBtn.addEventListener('click', () => {
-                toggleFavorite(null, report.id); // 'null' para o evento, pois o evento já foi tratado no card
+                toggleFavorite(null, report.id);
                 const currentIsFavorited = getFavorites().includes(report.id);
                 appState.currentModalFavoriteBtn.classList.toggle('favorited', currentIsFavorited);
                 appState.currentModalFavoriteBtn.querySelector('i').className = currentIsFavorited ? 'fas fa-heart' : 'far fa-heart';
                 appState.currentModalFavoriteBtn.setAttribute('aria-label', currentIsFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
             });
 
-            // Reseta o modo leitura e adiciona listener
-            modalOverlay.classList.remove('reading-mode'); // Garante que começa desligado
+            modalOverlay.classList.remove('reading-mode');
             readingModeToggleBtn.classList.remove('active');
-            // Remove listener antigo para evitar múltiplos
             const newReadingModeToggleBtn = readingModeToggleBtn.cloneNode(true);
             readingModeToggleBtn.parentNode.replaceChild(newReadingModeToggleBtn, readingModeToggleBtn);
-            appState.currentReadingModeToggleBtn = newReadingModeToggleBtn; // Guarda a referência atualizada
+            appState.currentReadingModeToggleBtn = newReadingModeToggleBtn;
 
             appState.currentReadingModeToggleBtn.addEventListener('click', toggleReadingMode);
             
-            // Listener para a barra de progresso de leitura no modal
             modalContent.onscroll = throttle(() => {
                 const contentHeight = modalContent.scrollHeight - modalContent.clientHeight;
                 if (contentHeight > 0) {
                     const scrollPercent = (modalContent.scrollTop / contentHeight) * 100;
                     modalProgressBar.style.width = `${scrollPercent}%`;
                 }
-            }, 50); // A cada 50ms
+            }, 50);
 
 
             modalOverlay.classList.add('active');
             document.body.classList.add('body-modal-open');
-            modalContent.scrollTop = 0; // Garante que o scroll comece no topo
+            modalContent.scrollTop = 0;
         }
 
         function closeQuickViewModal() {
@@ -1867,11 +1859,11 @@
                 modalOverlay.classList.remove('active');
                 document.body.classList.remove('body-modal-open');
                 appState.activeModalReport = null;
-                modalOverlay.classList.remove('reading-mode'); // Desativa modo leitura ao fechar
+                modalOverlay.classList.remove('reading-mode');
                 if (appState.currentReadingModeToggleBtn) {
                      appState.currentReadingModeToggleBtn.classList.remove('active');
                 }
-                playSound('close'); // Som ao fechar modal
+                playSound('close');
             }
         }
 
@@ -1882,7 +1874,7 @@
             if (modalContentEl && readingModeToggleBtn) {
                 const isActive = modalContentEl.classList.toggle('reading-mode');
                 readingModeToggleBtn.classList.toggle('active', isActive);
-                playSound('toggle'); // Som ao alternar modo
+                playSound('toggle');
             }
         }
 
@@ -1907,28 +1899,27 @@
         }
 
         function toggleFavorite(event, reportId) {
-            if (event) event.stopPropagation(); // Previne que o clique no card dispare o modal se o botão estiver no card
+            if (event) event.stopPropagation();
             
             let favorites = getFavorites();
             const index = favorites.indexOf(reportId);
 
             if (index === -1) {
                 favorites.push(reportId);
-                playSound('favorite'); // Som ao favoritar
+                playSound('favorite');
             } else {
                 favorites.splice(index, 1);
-                playSound('unfavorite'); // Som ao desfavoritar
+                playSound('unfavorite');
             }
             saveFavorites(favorites);
 
-            // Atualiza os ícones de favorito em todos os cards visíveis
             document.querySelectorAll(`.favorite-btn[data-report-id="${reportId}"]`).forEach(btn => {
                 const isFavorited = favorites.includes(reportId);
                 btn.classList.toggle('favorited', isFavorited);
                 btn.querySelector('i').className = isFavorited ? 'fas fa-heart' : 'far fa-heart';
                 btn.setAttribute('aria-label', isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
             });
-            renderSuggestedReports(); // Atualiza sugestões, pois favoritos mudaram
+            renderSuggestedReports();
         }
 
         function getReadHistory() {
@@ -1942,11 +1933,9 @@
 
         function addToReadHistory(reportId) {
             let history = getReadHistory();
-            // Remove se já existir para colocar no topo
             history = history.filter(id => id !== reportId);
-            history.unshift(reportId); // Adiciona no início (mais recente)
-            // Limita o histórico para não ficar muito grande
-            if (history.length > 20) { // Guarda os últimos 20 lidos
+            history.unshift(reportId);
+            if (history.length > 20) {
                 history = history.slice(0, 20);
             }
             try {
@@ -1954,7 +1943,7 @@
             } catch (e) {
                 console.error("Erro ao salvar histórico de leitura:", e);
             }
-            renderSuggestedReports(); // Atualiza sugestões, pois histórico mudou
+            renderSuggestedReports();
         }
 
         // =============================================
@@ -1970,7 +1959,7 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target); // Para a observação após a animação
+                    observer.unobserve(entry.target);
                 }
             });
         }, scrollRevealOptions);
@@ -2027,7 +2016,6 @@
                 searchInput.addEventListener('focus', () => showAutocompleteResults(appState.searchTerm));
                 searchInput.addEventListener('blur', hideAutocompleteResults);
                 searchInput.addEventListener('keydown', (e) => {
-                    // Navegação com setas no autocomplete
                     const results = document.querySelectorAll('.autocomplete-item');
                     if (results.length === 0) return;
 
@@ -2043,19 +2031,18 @@
                         activeIndex = (activeIndex + 1) % results.length;
                         results.forEach(item => item.classList.remove('active'));
                         results[activeIndex].classList.add('active');
-                        searchInput.value = results[activeIndex].textContent; // Atualiza input com a seleção
+                        searchInput.value = results[activeIndex].textContent;
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
                         activeIndex = (activeIndex - 1 + results.length) % results.length;
                         results.forEach(item => item.classList.remove('active'));
                         results[activeIndex].classList.add('active');
-                        searchInput.value = results[activeIndex].textContent; // Atualiza input com a seleção
+                        searchInput.value = results[activeIndex].textContent;
                     } else if (e.key === 'Enter') {
                         e.preventDefault();
                         if (activeIndex !== -1) {
-                            results[activeIndex].click(); // Simula clique
+                            results[activeIndex].click();
                         } else {
-                            // Se nenhum item ativo, apenas aplica o filtro da busca atual
                             appState.searchTerm = searchInput.value.toLowerCase();
                             applyFiltersAndRender();
                             hideAutocompleteResults();
@@ -2070,24 +2057,23 @@
             const loadMoreBtn = document.getElementById('load-more-btn');
             if (loadMoreBtn) {
                 loadMoreBtn.addEventListener('click', () => {
-                    playSound('load-more'); // Som ao carregar mais
+                    playSound('load-more');
                     if (appState.loading) return;
                     appState.loading = true;
                     loadMoreBtn.disabled = true;
                     loadMoreBtn.querySelector('i').style.display = 'inline-block';
                     loadMoreBtn.lastChild.textContent = 'Carregando...';
 
-                    setTimeout(() => { // Simula um atraso de rede
+                    setTimeout(() => {
                         appState.currentPage++;
                         const allFilteredAndPaged = getFilteredReports(true);
                         const reportsToAppend = allFilteredAndPaged.slice((appState.currentPage - 1) * REPORTS_PER_PAGE, appState.currentPage * REPORTS_PER_PAGE);
                         
-                        // Adiciona ao DOM, não recria a grade inteira
                         const reportListContainer = document.getElementById('report-list');
                         reportsToAppend.forEach(report => {
                             const card = renderReportCard(report);
                             reportListContainer.appendChild(card);
-                            scrollRevealObserver.observe(card); // Adiciona animação de scroll reveal
+                            scrollRevealObserver.observe(card);
                         });
 
                         appState.loading = false;
