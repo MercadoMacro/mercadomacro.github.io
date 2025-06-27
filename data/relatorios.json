@@ -1,34 +1,92 @@
 [
     {
         "id": 1,
-        "title": "Panorama Semanal do Mercado: Junho de 2025",
-        "date": "2025-06-23",
-        "summary": "Análise detalhada dos principais acontecimentos no mercado financeiro global e brasileiro na última semana, com foco em juros, inflação e movimentações de ações e commodities. Perspectivas para a próxima semana.",
-        "link": "reports/panorama_semanal_junho_2025.pdf",
-        "tags": ["panorama", "semanal", "macro", "juros", "inflacao", "acoes", "commodities"]
+        "title": "Panorama Semanal do Mercado: 24-30 de Junho de 2025",
+        "date": "2025-06-30",
+        "summary": "Análise aprofundada dos eventos econômicos e políticos que impactaram o mercado financeiro global e brasileiro na última semana. Destaques para decisões de bancos centrais, dados de inflação e o desempenho de setores chave. Inclui perspectivas para a próxima semana e recomendações estratégicas para o investidor moderno.",
+        "link": "reports/panorama_semanal_junho_2025_v2.pdf",
+        "image": "assets/img/report_cover_macro.jpg",
+        "tags": ["panorama", "semanal", "macroeconomia", "juros", "inflacao", "acoes", "mercado", "estrategia"]
     },
     {
         "id": 2,
-        "title": "Estudo sobre o Impacto da IA no Setor Financeiro",
-        "date": "2025-06-15",
-        "summary": "Um estudo aprofundado sobre como a inteligência artificial está transformando a análise de dados, o trading algorítmico e a gestão de riscos no mercado financeiro.",
-        "link": "reports/impacto_ia_financas.pdf",
-        "tags": ["IA", "inteligencia artificial", "tecnologia", "financas", "trading", "gestao de riscos"]
+        "title": "A Ascensão do Investimento Sustentável (ESG) no Brasil",
+        "date": "2025-06-25",
+        "summary": "Um estudo exclusivo sobre o crescimento e a relevância dos investimentos ESG no cenário brasileiro. Exploramos as tendências, desafios e oportunidades para empresas e investidores que buscam impacto positivo e retornos financeiros alinhados à sustentabilidade. Inclui casos de sucesso e perspectivas futuras.",
+        "link": "reports/investimento_sustentavel_esg_v2.pdf",
+        "image": "assets/img/report_cover_esg.jpg",
+        "tags": ["ESG", "sustentabilidade", "investimentos", "responsabilidade social", "mercado", "futuro"]
     },
     {
         "id": 3,
-        "title": "Guia para Iniciantes em Investimentos: Renda Fixa",
-        "date": "2025-06-08",
-        "summary": "Um guia prático para quem está começando a investir, explicando os conceitos básicos da renda fixa, seus tipos e como escolher as melhores opções para seu perfil.",
-        "link": "reports/guia_renda_fixa.pdf",
-        "tags": ["guia", "iniciantes", "investimentos", "renda fixa", "CDB", "LCI", "LCA", "tesouro direto"]
+        "title": "O Impacto da Inteligência Artificial na Análise de Ações",
+        "date": "2025-06-18",
+        "summary": "Mergulhe na interseção entre IA e o mercado de ações. Este relatório detalha como algoritmos de aprendizado de máquina estão revolucionando a análise de dados financeiros, a identificação de tendências e a tomada de decisões de investimento, oferecendo uma nova fronteira para investidores e analistas.",
+        "link": "reports/ia_analise_acoes_v2.pdf",
+        "image": "assets/img/report_cover_ia.jpg",
+        "tags": ["IA", "inteligencia artificial", "acoes", "analise", "tecnologia", "investimentos"]
     },
     {
         "id": 4,
-        "title": "Relatório Trimestral: Setor de Energia no Brasil",
-        "date": "2025-05-30",
-        "summary": "Análise do desempenho das principais empresas do setor de energia elétrica no Brasil no último trimestre, com projeções de crescimento e fatores de risco.",
-        "link": "reports/relatorio_energia_trimestral.pdf",
-        "tags": ["energia", "setorial", "brasil", "investimento", "eletricidade"]
+        "title": "Guia Prático: Diversificação de Carteira para Proteger seu Capital",
+        "date": "2025-06-10",
+        "summary": "Um guia essencial para construir uma carteira de investimentos resiliente. Abordamos os princípios da diversificação, como alocar ativos em diferentes classes (renda fixa, ações, multimercado, alternativos) e estratégias para mitigar riscos e otimizar retornos em diferentes cenários de mercado.",
+        "link": "reports/guia_diversificacao_carteira_v2.pdf",
+        "image": "assets/img/report_cover_diversificacao.jpg",
+        "tags": ["guia", "investimentos", "carteira", "diversificacao", "risco", "estrategia", "educacao"]
+    },
+    {
+        "id": 5,
+        "title": "Blockchain e Criptoativos: Além da Especulação Financeira",
+        "date": "2025-06-03",
+        "summary": "Este estudo aprofundado vai além do hype dos criptoativos para explorar a tecnologia blockchain e seu potencial disruptivo em diversos setores, incluindo finanças, logística e governança. Entenda o valor fundamental por trás dessa inovação e suas aplicações reais no futuro da economia.",
+        "link": "reports/blockchain_criptoativos_v2.pdf",
+        "image": "assets/img/report_cover_blockchain.jpg",
+        "tags": ["blockchain", "criptoativos", "tecnologia", "futuro", "financas", "inovacao"]
+    },
+    {
+        "id": 6,
+        "title": "O Setor Imobiliário em 2025: Tendências e Oportunidades",
+        "date": "2025-05-28",
+        "summary": "Uma análise abrangente do mercado imobiliário, abordando as principais tendências de preço, demanda, financiamento e o impacto de fatores macroeconômicos e demográficos. Identificamos oportunidades de investimento em diferentes segmentos e regiões.",
+        "link": "reports/setor_imobiliario_2025_v2.pdf",
+        "image": "assets/img/report_cover_imobiliario.jpg",
+        "tags": ["imobiliario", "investimentos", "mercado", "tendencias", "setorial"]
+    },
+    {
+        "id": 7,
+        "title": "Relatório Anual: Performance das Small Caps Brasileiras",
+        "date": "2025-05-20",
+        "summary": "Um balanço detalhado do desempenho das small caps na Bolsa de Valores brasileira. Avaliamos os fatores que impulsionaram ou contiveram o crescimento dessas empresas, e exploramos o potencial de valorização para o próximo ciclo de mercado.",
+        "link": "reports/small_caps_brasileiras_v2.pdf",
+        "image": "assets/img/report_cover_smallcaps.jpg",
+        "tags": ["acoes", "small caps", "investimentos", "brasil", "mercado"]
+    },
+    {
+        "id": 8,
+        "title": "Finanças Comportamentais: Como a Psicologia Afeta Seus Investimentos",
+        "date": "2025-05-12",
+        "summary": "Explore a ciência por trás das decisões financeiras. Este estudo revela como vieses cognitivos e emoções podem influenciar suas escolhas de investimento, e oferece estratégias para tomar decisões mais racionais e eficazes no mercado.",
+        "link": "reports/financas_comportamentais_v2.pdf",
+        "image": "assets/img/report_cover_psicologia.jpg",
+        "tags": ["psicologia", "financas", "educacao", "comportamental", "investimentos"]
+    },
+    {
+        "id": 9,
+        "title": "Entendendo o Mercado de Câmbio: Dólar, Euro e Suas Flutuações",
+        "date": "2025-05-05",
+        "summary": "Um guia completo sobre o funcionamento do mercado de câmbio, os fatores que influenciam a cotação das moedas e como as flutuações impactam a economia e seus investimentos. Essencial para quem opera ou acompanha o mercado internacional.",
+        "link": "reports/mercado_cambio_v2.pdf",
+        "image": "assets/img/report_cover_cambio.jpg",
+        "tags": ["cambio", "dolar", "euro", "moedas", "mercado", "macroeconomia"]
+    },
+    {
+        "id": 10,
+        "title": "Guia de Planejamento Financeiro Pessoal: Construindo Seu Futuro",
+        "date": "2025-04-28",
+        "summary": "Comece a construir um futuro financeiro sólido com este guia prático. Aborda desde a organização do orçamento e o controle de dívidas, até a definição de metas e a escolha dos primeiros investimentos, com foco na liberdade financeira.",
+        "link": "reports/planejamento_financeiro_pessoal_v2.pdf",
+        "image": "assets/img/report_cover_planejamento.jpg",
+        "tags": ["planejamento", "financeiro pessoal", "educacao", "orcamento", "futuro"]
     }
 ]
