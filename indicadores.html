@@ -277,8 +277,56 @@
                     </div>
                     <div class="indicator-back"><strong>Core CPI</strong>Exclui os preços voláteis de alimentos e energia para medir a tendência da inflação.<br><i>Série: CPILFESL</i></div>
                 </article>
-                <article class="indicator-card indicator-card--with-chart" data-id="pce"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-money-bill-wave"></i></div> <div class="indicator-name">PCE (EUA)</div> <div class="indicator-value" id="pce-value">...</div> <div class="indicator-description" id="pce-date">...</div> <div class="sparkline-chart" id="pce-chart"></div> <div class="chart-controls" data-indicator-id="pce"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>PCE (Personal Consumption Expenditures)</strong>Mede a inflação de todos os gastos de consumo. É o indicador preferido pelo Fed.<br><i>Série: PCE (Anual)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="core-pce"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-gem"></i></div> <div class="indicator-name">Core PCE (Núcleo)</div> <div class="indicator-value" id="core-pce-value">...</div> <div class="indicator-description" id="core-pce-date">...</div> <div class="sparkline-chart" id="core-pce-chart"></div> <div class="chart-controls" data-indicator-id="corePce"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Core PCE</strong>Exclui alimentos e energia do PCE. Usado pelo Fed para avaliar a política monetária.<br><i>Série: PCEPILFE (Anual)</i></div> </article> <article class="indicator-card indicator-card--with-chart" data-id="fedfunds"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-landmark"></i></div> <div class="indicator-name">Fed Funds Rate</div> <div class="indicator-value" id="fedfunds-value">...</div> <div class="indicator-description" id="fedfunds-date">...</div> <div class="sparkline-chart" id="fedfunds-chart"></div> <div class="chart-controls" data-indicator-id="fedfunds"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Fed Funds Rate</strong>A taxa de juros básica da economia dos EUA, definida pelo Federal Reserve (Fed).<br><i>Série: FEDFUNDS (Diária)</i></div> </article> 
                 
+                <article class="indicator-card indicator-card--with-chart" data-id="pce">
+                    <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="indicator-icon"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="indicator-name">PCE (EUA)</div>
+                        <div class="card-switch-container">
+                            <span class="card-switch-label active" data-type="anual">Anual</span>
+                            <label class="switch">
+                                <input type="checkbox" id="pce-toggle-switch">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="card-switch-label" data-type="mensal">Mensal</span>
+                        </div>
+                        <div class="indicator-value" id="pce-value">...</div>
+                        <div class="indicator-description" id="pce-date">...</div>
+                        <div class="sparkline-chart" id="pce-chart"></div>
+                        <div class="chart-controls" data-indicator-id="pce">
+                            <button class="chart-period-btn" data-years="1">1A</button>
+                            <button class="chart-period-btn active" data-years="5">5A</button>
+                            <button class="chart-period-btn" data-years="max">Máx</button>
+                        </div>
+                    </div>
+                    <div class="indicator-back"><strong>PCE (Personal Consumption Expenditures)</strong>Mede a inflação de todos os gastos de consumo. É o indicador preferido pelo Fed.<br><i>Série: PCEPI</i></div>
+                </article>
+                <article class="indicator-card indicator-card--with-chart" data-id="core-pce">
+                    <div class="indicator-front">
+                        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="indicator-icon"><i class="fas fa-gem"></i></div>
+                        <div class="indicator-name">Core PCE (Núcleo)</div>
+                        <div class="card-switch-container">
+                            <span class="card-switch-label active" data-type="anual">Anual</span>
+                            <label class="switch">
+                                <input type="checkbox" id="core-pce-toggle-switch">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="card-switch-label" data-type="mensal">Mensal</span>
+                        </div>
+                        <div class="indicator-value" id="core-pce-value">...</div>
+                        <div class="indicator-description" id="core-pce-date">...</div>
+                        <div class="sparkline-chart" id="core-pce-chart"></div>
+                        <div class="chart-controls" data-indicator-id="corePce">
+                            <button class="chart-period-btn" data-years="1">1A</button>
+                            <button class="chart-period-btn active" data-years="5">5A</button>
+                            <button class="chart-period-btn" data-years="max">Máx</button>
+                        </div>
+                    </div>
+                    <div class="indicator-back"><strong>Core PCE</strong>Exclui alimentos e energia do PCE. Usado pelo Fed para avaliar a política monetária.<br><i>Série: PCEPILFE</i></div>
+                </article>
+                <article class="indicator-card indicator-card--with-chart" data-id="fedfunds"> <div class="indicator-front"> <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div> <div class="indicator-icon"><i class="fas fa-landmark"></i></div> <div class="indicator-name">Fed Funds Rate</div> <div class="indicator-value" id="fedfunds-value">...</div> <div class="indicator-description" id="fedfunds-date">...</div> <div class="sparkline-chart" id="fedfunds-chart"></div> <div class="chart-controls" data-indicator-id="fedfunds"> <button class="chart-period-btn" data-years="1">1A</button> <button class="chart-period-btn active" data-years="5">5A</button> <button class="chart-period-btn" data-years="max">Máx</button> </div> </div> <div class="indicator-back"><strong>Fed Funds Rate</strong>A taxa de juros básica da economia dos EUA, definida pelo Federal Reserve (Fed).<br><i>Série: FEDFUNDS (Diária)</i></div> </article> 
                 <article class="indicator-card indicator-card--with-chart" data-id="fedtarget">
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
@@ -307,7 +355,6 @@
                         <br><i>Séries: DFEDTARU (Teto), DFEDTARL (Piso)</i>
                     </div>
                 </article>
-
                 <article class="indicator-card indicator-card--with-chart" data-id="treasuries">
                     <div class="indicator-front">
                         <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
@@ -401,19 +448,30 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 poupanca: 195, desemprego: 24369
             },
             fredApiCodes: {
-                cpi: 'CPIAUCSL', coreCpi: 'CPILFESL', pce: 'PCE', corePce: 'PCEPILFE',
-                fedfunds: 'FEDFUNDS', fedTargetUpper: 'DFEDTARU', fedTargetLower: 'DFEDTARL',
-                treasury2Y: 'DGS2', treasury10Y: 'DGS10', treasury30Y: 'DGS30',
-                inflationExp: 'T5YIE', yieldCurve: 'T10Y2Y',
-                gdpReal: 'GDPC1', gdpNominal: 'GDP',
-                unemployment: 'UNRATE', payrolls: 'PAYEMS',
-                indpro: 'INDPRO', sentiment: 'UMCSENT'
+                cpi: 'CPIAUCSL', 
+                coreCpi: 'CPILFESL', 
+                pce: 'PCEPI', // CORRIGIDO
+                corePce: 'PCEPILFE',
+                fedfunds: 'FEDFUNDS', 
+                fedTargetUpper: 'DFEDTARU', 
+                fedTargetLower: 'DFEDTARL',
+                treasury2Y: 'DGS2', 
+                treasury10Y: 'DGS10', 
+                treasury30Y: 'DGS30',
+                inflationExp: 'T5YIE', 
+                yieldCurve: 'T10Y2Y',
+                gdpReal: 'GDPC1', 
+                gdpNominal: 'GDP',
+                unemployment: 'UNRATE', 
+                payrolls: 'PAYEMS',
+                indpro: 'INDPRO', 
+                sentiment: 'UMCSENT'
             },
             fredIndicatorsConfig: {
                 cpi: { name: 'CPI', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
                 coreCpi: { name: 'Core CPI', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
-                pce: { name: 'PCE (Variação Anual)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'm' }, descriptionText: 'Variação Anual' },
-                corePce: { name: 'Core PCE (Variação Anual)', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'pc1', frequency: 'm' }, descriptionText: 'Variação Anual' },
+                pce: { name: 'PCE', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
+                corePce: { name: 'Core PCE', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'mm/yyyy', apiParams: { units: 'lin', frequency: 'm' }, descriptionText: '', hasToggle: true },
                 fedtarget: { name: 'Fed Target', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, hasToggle: true },
                 fedfunds: { name: 'Fed Funds Rate', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, descriptionText: '' },
                 inflationExp: { name: 'Expectativa Inflação 5A', unit: '%', unitPos: 'after', chartUnit: '%', dateFormat: 'dd/mm', apiParams: { units: 'lin' }, descriptionText: '5 Anos (Breakeven)' },
@@ -710,9 +768,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 ];
                 uiController.createSparklineChart('#risk-chart-container', cdsHistoryData, 'CDS Anual', ' pts', 'yyyy');
             },
-            // ===================================================================
-            // AQUI ESTÁ A FUNÇÃO CORRIGIDA
-            // ===================================================================
             processTesouroDireto(promiseResult) {
                 const { selectors, errorText } = config;
                 const selectorEl = document.querySelector(selectors.tesouroSelector);
@@ -721,7 +776,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
 
                 if (!selectorEl || !rateEl || !priceEl) return;
 
-                // Defensivamente verifica se o resultado da promise existe e foi bem-sucedido.
                 if (promiseResult && promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const bonds = promiseResult.value.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0);
 
@@ -746,7 +800,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                         priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     };
 
-                    selectorEl.innerHTML = ''; // Limpa as opções anteriores
+                    selectorEl.innerHTML = ''; 
                     bonds.forEach((bondData, index) => {
                         const option = document.createElement('option');
                         option.value = index;
@@ -754,7 +808,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                         selectorEl.appendChild(option);
                     });
 
-                    // Para evitar adicionar múltiplos listeners em novas renderizações, clona e substitui o elemento.
                     const newSelectorEl = selectorEl.cloneNode(true);
                     selectorEl.parentNode.replaceChild(newSelectorEl, selectorEl);
                     
@@ -765,19 +818,15 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
 
                     if (bonds.length > 0) {
                         updateTesouroCard(bonds[0]);
-                        newSelectorEl.value = "0"; // Garante que o primeiro item esteja selecionado
+                        newSelectorEl.value = "0"; 
                     }
 
                 } else {
-                    // Trata o estado de erro
                     selectorEl.innerHTML = '<option>Erro ao carregar</option>';
                     rateEl.textContent = errorText;
                     priceEl.textContent = errorText;
                 }
             },
-            // ===================================================================
-            // FIM DA CORREÇÃO
-            // ===================================================================
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
@@ -895,7 +944,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 let fullHistory;
 
                 if (indicatorId === 'pibBr') {
-                    // Para o PIB, a data já está em formato de objeto Date
                     fullHistory = rawData.map(d => ({...d, date: new Date(d.data.split('/')[2], 0, 1)}));
                 } else {
                     fullHistory = rawData.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}))
@@ -925,7 +973,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 }
             },
             
-            // --- FUNÇÕES INTERNACIONAIS ---
+// --- INÍCIO DA FUNÇÃO CORRIGIDA ---
             async fetchAllInternationalIndicators() {
                 const cacheKey = 'allInternationalIndicators_v6_treasury';
                 const cachedData = cacheService.get(cacheKey);
@@ -953,14 +1001,18 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 const promises = {};
                 
                 for (const key in fredIndicatorsConfig) {
+                    // Lógica corrigida para pular 'treasury' E 'fedtarget'
                     if (key === 'treasury' || key === 'fedtarget') {
                         continue;
                     }
-                    promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, fredIndicatorsConfig[key].hasToggle ? 300 : 1000);
+                    promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, 1000);
                 }
 
+                // Lógica restaurada para buscar as séries do Fed Target separadamente
                 promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1000);
                 promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1000);
+                
+                // Lógica para buscar as séries do Tesouro Americano
                 promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {});
                 promises.treasury10Y = apiService.getFREDData(fredApiCodes.treasury10Y, {});
                 promises.treasury30Y = apiService.getFREDData(fredApiCodes.treasury30Y, {});
@@ -978,6 +1030,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
 
                 for (const key in data) {
                     const cfg = fredIndicatorsConfig[key];
+                    // A lógica de cálculo manual para indicadores com 'hasToggle' permanece
                     if (cfg && cfg.hasToggle && data[key] && key !== 'fedtarget') {
                         const variations = this.calculateVariations(data[key]);
                         data[key] = { raw: data[key], ...variations };
@@ -991,6 +1044,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     uiController.updateDateTime('FRED St. Louis Fed');
                 }
             },
+            // --- FIM DA FUNÇÃO CORRIGIDA ---
 
             processInternationalResults() {
                 const { fredIndicatorsConfig, errorText } = config;
@@ -1074,8 +1128,8 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                         } else { 
                             const cardIdPrefix = indicatorId.replace(/([A-Z])/g, '-$1').toLowerCase();
                             const isMonthly = document.getElementById(`${cardIdPrefix}-toggle-switch`).checked;
-                            fullHistory = isMonthly ? this.internationalData.series[indicatorId]?.raw : this.internationalData.series[indicatorId]?.yoy;
-                            cfg.chartUnit = isMonthly ? '' : '%';
+                            fullHistory = isMonthly ? this.internationalData.series[indicatorId]?.mom : this.internationalData.series[indicatorId]?.yoy;
+                            cfg.chartUnit = '%';
                         }
                     } else {
                         fullHistory = this.internationalData.series[indicatorId];
@@ -1117,16 +1171,16 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 let dataToShow, descriptionText, valueUnit;
 
                 if (isMonthly) {
-                    dataToShow = seriesData.raw;
-                    descriptionText = "Índice Mensal";
-                    valueUnit = '';
+                    dataToShow = seriesData.mom;
+                    descriptionText = "Variação Mensal";
+                    valueUnit = '%';
                 } else {
                     dataToShow = seriesData.yoy;
                     descriptionText = "Variação Anual";
                     valueUnit = '%';
                 }
                 
-                const cardElement = document.getElementById(`card-${cardIdPrefix}`);
+                const cardElement = document.getElementById(`card-${cardIdPrefix}`) || document.querySelector(`[data-id="${cardIdPrefix}"]`);
                 if (cardElement) {
                     cardElement.querySelector('.card-switch-label[data-type="anual"]').classList.toggle('active', !isMonthly);
                     cardElement.querySelector('.card-switch-label[data-type="mensal"]').classList.toggle('active', isMonthly);
@@ -1348,6 +1402,10 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 document.getElementById('fedtarget-toggle-switch').addEventListener('change', () => this.updateFedTargetView());
                 document.getElementById('cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('cpi'));
                 document.getElementById('core-cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('coreCpi'));
+                
+                // --- LINHAS ADICIONADAS ---
+                document.getElementById('pce-toggle-switch').addEventListener('change', () => this.updateCpiCardView('pce'));
+                document.getElementById('core-pce-toggle-switch').addEventListener('change', () => this.updateCpiCardView('corePce'));
 
                 const setupSortable = (containerId, storageKey) => {
                      new Sortable(document.getElementById(containerId), {
