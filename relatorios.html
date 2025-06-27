@@ -22,12 +22,20 @@
             --report-card-border-opacity: 0.2;
             --report-card-hover-scale: 1.02;
             --report-card-hover-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            --modal-bg-dark: #010409; /* Mais escuro para o modal */
+            --modal-text-color: #e6edf3;
+            --modal-light-bg: #f5f5f5;
+            --modal-light-text: #333;
         }
 
         body.light-mode {
             --report-card-bg-opacity: 0.05;
             --report-card-border-opacity: 0.1;
             --report-card-hover-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            --modal-bg-dark: #f8f9fa;
+            --modal-text-color: #212529;
+            --modal-light-bg: #ffffff;
+            --modal-light-text: #000;
         }
 
         /* Hero Section */
@@ -41,7 +49,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 400px; /* Altura mínima para o hero */
+            min-height: 400px;
         }
 
         .hero-section::before {
@@ -103,9 +111,9 @@
         /* Search and Filter Area */
         .search-filter-area {
             position: relative;
-            z-index: 2; /* Para sobrepor o hero-section e dar mais destaque */
+            z-index: 2;
             max-width: 1100px;
-            margin: -80px auto 60px auto; /* Para sobrepor bem o hero-section */
+            margin: -80px auto 60px auto;
             background-color: var(--card-bg);
             padding: 30px;
             border-radius: 16px;
@@ -130,7 +138,7 @@
             font-size: 17px;
             transition: all 0.3s ease;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-            -webkit-appearance: none; /* Remove estilos padrão de input em iOS */
+            -webkit-appearance: none;
         }
 
         #report-search-input::placeholder {
@@ -158,7 +166,7 @@
             max-height: 250px;
             overflow-y: auto;
             z-index: 100;
-            display: none; /* Controlado via JS */
+            display: none;
         }
 
         .autocomplete-item {
@@ -200,7 +208,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             position: relative;
             overflow: hidden;
-            transform: translateZ(0); /* Força aceleração de hardware */
+            transform: translateZ(0);
         }
 
         .filter-tag-btn::before {
@@ -239,12 +247,12 @@
         }
 
         .filter-tag-btn.active::before {
-            width: 0; /* Desativa o efeito hover quando ativo */
+            width: 0;
             height: 0;
         }
         
         .filter-tag-btn span {
-            position: relative; /* Para manter o texto acima do pseudo-elemento */
+            position: relative;
             z-index: 1;
         }
 
@@ -253,9 +261,13 @@
             max-width: 1200px;
             margin: 80px auto;
             padding: 0 20px;
-            animation: fadeIn 1s ease-out forwards;
-            animation-delay: 0.3s;
-            opacity: 0;
+            opacity: 0; /* Controlado por Scroll Reveal */
+            transform: translateY(20px); /* Controlado por Scroll Reveal */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .featured-report-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .featured-report-section h2 {
@@ -295,7 +307,7 @@
 
         .featured-report-image {
             flex: 1;
-            min-width: 40%; /* Ajuste para controlar o tamanho da imagem */
+            min-width: 40%;
             background-color: rgba(var(--primary-color-val-rgb), 0.1);
             display: flex;
             align-items: center;
@@ -370,7 +382,7 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            align-self: flex-start; /* Alinha o botão à esquerda */
+            align-self: flex-start;
         }
 
         .featured-report-content .read-more-btn:hover {
@@ -391,21 +403,24 @@
             max-width: 1200px;
             margin: 0 auto 50px auto;
             padding: 0 20px;
-            animation: fadeIn 1s ease-out forwards;
-            animation-delay: 0.5s;
-            opacity: 0;
-            min-height: 300px; /* Evita 'saltos' ao carregar */
+            min-height: 300px;
         }
-
+        
         .report-card {
             background: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.8s ease-out, transform 0.8s ease-out;
             display: flex;
             flex-direction: column;
-            border: 1px solid rgba(var(--primary-color-val-rgb), var(--report-card-border-opacity)); /* Borda sutil de destaque */
+            border: 1px solid rgba(var(--primary-color-val-rgb), var(--report-card-border-opacity));
+            opacity: 0; /* Controlado por Scroll Reveal */
+            transform: translateY(20px); /* Controlado por Scroll Reveal */
+        }
+        .report-card.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .report-card:hover {
@@ -416,7 +431,7 @@
         .report-card-image {
             width: 100%;
             height: 220px;
-            background-color: rgba(var(--primary-color-val-rgb), var(--report-card-bg-opacity)); /* Placeholder visual */
+            background-color: rgba(var(--primary-color-val-rgb), var(--report-card-bg-opacity));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -470,10 +485,10 @@
             line-height: 1.6;
             margin-bottom: 20px;
             flex-grow: 1;
-            overflow: hidden; /* Garante que o resumo não vaze */
-            text-overflow: ellipsis; /* Adiciona '...' se o texto for muito longo */
+            overflow: hidden;
+            text-overflow: ellipsis;
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* Limita o resumo a 3 linhas */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
         }
 
@@ -499,7 +514,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: auto; /* Empurra para o final do card */
+            margin-top: auto;
             padding-top: 15px;
             border-top: 1px solid rgba(var(--card-bg-val), 0.1);
         }
@@ -516,13 +531,13 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 2px 8px rgba(var(--primary-color-val-rgb), 0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .report-card .read-more-btn:hover {
             background-color: var(--primary-light);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(var(--primary-color-val-rgb), 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .view-summary-btn {
@@ -543,6 +558,24 @@
             background-color: var(--primary-color);
             color: var(--dark-bg);
             transform: translateY(-2px);
+        }
+
+        .favorite-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.2s ease;
+            padding: 5px;
+        }
+        .favorite-btn:hover {
+            color: var(--primary-light);
+            transform: scale(1.1);
+        }
+        .favorite-btn.favorited {
+            color: #FFC107; /* Cor de estrela/favorito */
+            transform: scale(1.1);
         }
 
         .load-more-container {
@@ -589,8 +622,61 @@
             color: var(--text-secondary);
             font-size: 1.2em;
             padding: 80px 20px;
-            grid-column: 1 / -1; /* Ocupa toda a largura da grid */
+            grid-column: 1 / -1;
         }
+
+        /* Suggestions Section */
+        .suggestions-section {
+            max-width: 1200px;
+            margin: 80px auto;
+            padding: 0 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .suggestions-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .suggestions-section h2 {
+            font-size: 2.2em;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .suggestions-section h2::after {
+            content: '';
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(to right, transparent, var(--primary-color), transparent);
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .suggested-reports-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        .suggested-reports-container .report-card { /* Reutiliza o estilo de card */
+            box-shadow: 0 3px 15px rgba(0,0,0,0.15); /* Sombra mais suave */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .suggested-reports-container .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        }
+        .suggested-reports-container .report-card-image { height: 180px; }
+        .suggested-reports-container .report-card-content h3 { font-size: 1.2em; }
+        .suggested-reports-container .report-card-content p { font-size: 0.9em; -webkit-line-clamp: 2; }
+        .suggested-reports-container .report-card .read-more-btn { font-size: 13px; padding: 8px 15px; }
+        .suggested-reports-container .view-summary-btn { font-size: 12px; padding: 8px 12px; }
 
         /* Modal de Visualização Rápida */
         .quick-view-modal-overlay {
@@ -617,10 +703,10 @@
         }
 
         .quick-view-modal-content {
-            background-color: var(--darker-bg);
+            background-color: var(--modal-bg-dark);
             border-radius: 16px;
             padding: 30px;
-            max-width: 700px;
+            max-width: 800px; /* Maior para melhor leitura */
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -629,6 +715,7 @@
             border: 1px solid var(--border-color);
             transform: scale(0.9);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--modal-text-color);
         }
 
         .quick-view-modal-overlay.active .quick-view-modal-content {
@@ -701,14 +788,77 @@
 
         .modal-report-content p {
             font-size: 1.1em;
-            color: var(--text-color);
             line-height: 1.8;
             margin-bottom: 30px;
+        }
+        
+        .modal-reading-options {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(var(--card-bg-val), 0.1);
+        }
+        .modal-reading-options button {
+            background: none;
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+        .modal-reading-options button:hover {
+            background-color: rgba(var(--primary-color-val-rgb), 0.1);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        .modal-reading-options button.active {
+            background-color: var(--primary-color);
+            color: var(--dark-bg);
+            border-color: var(--primary-color);
+        }
+
+        /* Reading Mode specific styles */
+        .quick-view-modal-content.reading-mode {
+            background-color: var(--modal-light-bg);
+            color: var(--modal-light-text);
+            border-color: rgba(0,0,0,0.1); /* Soft border for light mode reading */
+        }
+        body.light-mode .quick-view-modal-content.reading-mode {
+            background-color: var(--modal-light-bg);
+            color: var(--modal-light-text);
+            border-color: rgba(0,0,0,0.1);
+        }
+        .quick-view-modal-content.reading-mode h3,
+        .quick-view-modal-content.reading-mode .report-date,
+        .quick-view-modal-content.reading-mode .report-card-tag {
+            color: var(--modal-light-text); /* Garante que o texto fique legível no modo leitura */
+        }
+        .quick-view-modal-content.reading-mode .report-card-tag {
+            background-color: rgba(var(--primary-color-val-rgb), 0.15); /* Mantém destaque da tag */
+        }
+        .quick-view-modal-content.reading-mode .modal-report-image i {
+            color: var(--modal-light-text);
+            opacity: 0.08;
+        }
+
+        .modal-reading-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 5px;
+            background-color: var(--primary-color);
+            width: 0%;
+            border-radius: 0 0 5px 5px;
+            transition: width 0.1s linear;
         }
 
         .modal-report-actions {
             display: flex;
-            justify-content: flex-end; /* Alinha o botão de download à direita */
+            justify-content: flex-end;
             gap: 15px;
             border-top: 1px solid rgba(var(--card-bg-val), 0.15);
             padding-top: 20px;
@@ -871,6 +1021,10 @@
             background-color: var(--primary-color);
             color: white;
         }
+        body.light-mode .favorite-btn.favorited {
+            color: #FFC107;
+        }
+
 
         body.light-mode #load-more-btn {
             background-color: var(--card-bg);
@@ -911,14 +1065,21 @@
             opacity: 0.1;
         }
 
-        body.light-mode .modal-report-content h3 {
-            color: var(--primary-color);
-        }
-
         body.light-mode .modal-report-actions {
             border-top-color: rgba(0,0,0,0.08);
         }
 
+        body.light-mode .modal-reading-options button:hover {
+            background-color: rgba(var(--primary-color-val-rgb), 0.1);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        body.light-mode .modal-reading-options button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
         /* Responsividade Avançada */
         @media (max-width: 1024px) {
             .hero-content h1 { font-size: 3.2em; }
@@ -932,13 +1093,13 @@
         }
 
         @media (max-width: 768px) {
-            body { zoom: 0.9; } /* Ajuste de zoom para mobile, se necessário */
+            body { zoom: 0.9; }
             .hero-section { padding: 80px 15px; min-height: 350px; }
             .hero-content h1 { font-size: 2.8em; }
             .hero-content p { font-size: 1em; margin-bottom: 30px; }
             .search-filter-area { margin-top: -50px; padding: 20px; border-radius: 12px; gap: 20px; }
             #report-search-input { padding: 12px 18px; font-size: 16px; }
-            .filter-tags-area { justify-content: flex-start; } /* Alinha tags à esquerda */
+            .filter-tags-area { justify-content: flex-start; }
             .filter-tag-btn { padding: 8px 15px; font-size: 14px; }
             .featured-report-section { margin: 40px auto; }
             .featured-report-card { flex-direction: column; }
@@ -955,6 +1116,7 @@
             .report-card-content p { font-size: 0.95em; }
             .report-card .read-more-btn { padding: 9px 18px; font-size: 14px; }
             .view-summary-btn { padding: 9px 14px; font-size: 13px; }
+            .favorite-btn { font-size: 1em; }
             #load-more-btn { padding: 12px 25px; font-size: 16px; }
             .quick-view-modal-content { width: 95%; padding: 25px; }
             .modal-report-image { height: 200px; margin-bottom: 20px; }
@@ -962,6 +1124,11 @@
             .modal-report-content p { font-size: 1em; margin-bottom: 25px; }
             .modal-report-actions { flex-direction: column; gap: 10px; align-items: center; }
             .modal-report-actions .read-more-btn { width: 100%; text-align: center; }
+            .suggestions-section { margin: 40px auto; }
+            .suggested-reports-container { grid-template-columns: 1fr; gap: 20px; }
+            .suggested-reports-container .report-card-image { height: 160px; }
+            .suggested-reports-container .report-card-content h3 { font-size: 1.1em; }
+            .suggested-reports-container .report-card-content p { font-size: 0.85em; }
         }
 
         @media (max-width: 480px) {
@@ -1001,7 +1168,7 @@
                     <div class="logo-divider"></div>
                 </a>
             </div>
-            </div>
+        </div>
     </header>
 
     <main>
@@ -1025,6 +1192,13 @@
             <h2>Relatório em Destaque</h2>
             <div id="featured-report-card-container">
                 <p class="no-results" id="loading-featured-message">Carregando relatório em destaque...</p>
+            </div>
+        </section>
+
+        <section class="suggestions-section" id="suggestions-section" style="display: none;">
+            <h2>Sugestões para Você</h2>
+            <div class="suggested-reports-container" id="suggested-reports-container">
+                <p class="no-results">Carregando sugestões...</p>
             </div>
         </section>
 
@@ -1058,12 +1232,20 @@
     <div class="quick-view-modal-overlay" id="quick-view-modal-overlay">
         <div class="quick-view-modal-content" id="quick-view-modal-content">
             <button class="modal-close-btn" id="modal-close-btn" aria-label="Fechar visualização rápida"><i class="fas fa-times"></i></button>
+            <div class="modal-reading-progress-bar" id="modal-reading-progress-bar"></div>
+            
             <div class="modal-report-image" id="modal-report-image"></div>
+            
+            <div class="modal-reading-options">
+                <button id="reading-mode-toggle-btn" aria-label="Alternar modo leitura"><i class="fas fa-book-open"></i> Modo Leitura</button>
+                <button id="modal-favorite-btn" aria-label="Adicionar/Remover dos favoritos"><i class="fas fa-heart"></i> Favoritar</button>
+            </div>
+
             <div class="modal-report-content" id="modal-report-content">
                 </div>
             <div class="modal-report-actions">
                 <a href="#" target="_blank" rel="noopener noreferrer" class="read-more-btn" id="modal-download-btn">
-                    <i class="fas fa-download"></i> Baixar Relatório
+                    <i class="fas fa-download"></i> Baixar Relatório Completo
                 </a>
             </div>
         </div>
@@ -1073,16 +1255,20 @@
         // =============================================
         // CONFIGURAÇÕES GLOBAIS E ESTADO DO APP
         // =============================================
-        const REPORTS_PER_PAGE = 8; // Quantidade de relatórios a carregar por vez
+        const REPORTS_PER_PAGE = 8; // Quantidade de relatórios a carregar por vez na grade principal
+        const FAVORITES_KEY = 'mercadoMacroReportsFavorites_v1';
+        const READ_HISTORY_KEY = 'mercadoMacroReportsReadHistory_v1';
+        const MAX_SUGGESTIONS = 3;
+
         let allReports = [];
-        let displayedReports = [];
         let uniqueTags = new Set();
         let appState = {
             searchTerm: '',
             activeTags: new Set(),
             currentPage: 0,
             loading: false,
-            featuredReportId: null // O ID do relatório em destaque, se houver
+            featuredReportId: null, // O ID do relatório em destaque, se houver
+            activeModalReport: null // O relatório atualmente visível no modal
         };
 
         // =============================================
@@ -1103,6 +1289,19 @@
             };
         }
 
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            }
+        }
+
         function formatDate(dateString) {
             if (!dateString) return '';
             try {
@@ -1113,18 +1312,6 @@
             } catch (e) {
                 console.error("Erro ao formatar data:", dateString, e);
                 return '';
-            }
-        }
-
-        // Função para alternar o tema (reutilizada do main.js)
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isLightMode = document.body.classList.contains('light-mode');
-            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
-            const themeIcon = document.querySelector('#theme-toggle i');
-            if (themeIcon) {
-                themeIcon.classList.toggle('fa-moon', !isLightMode);
-                themeIcon.classList.toggle('fa-sun', isLightMode);
             }
         }
 
@@ -1140,11 +1327,16 @@
         const debouncedUpdateScrollProgressBar = debounce(function() {
             const progressBar = document.getElementById('scroll-progress-bar');
             if (!progressBar) return;
-            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-            const scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight) - document.documentElement.clientHeight;
-            if (scrollHeight > 0) progressBar.style.width = `${(scrollTop / scrollHeight) * 100}%`;
-            else progressBar.style.width = '0%';
+            const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercent = (window.scrollY / docHeight) * 100;
+            progressBar.style.width = `${scrollPercent}%`;
         }, 10);
+
+        function playSound(file) {
+            const audio = new Audio(`assets/sounds/${file}.mp3`); // Supondo uma pasta 'assets/sounds'
+            audio.volume = 0.3; // Volume mais baixo para sons de UI
+            audio.play().catch(e => console.warn("Erro ao tocar som:", e));
+        }
 
         // =============================================
         // FUNÇÕES DE CARREGAMENTO DE DADOS
@@ -1166,6 +1358,7 @@
 
                 populateFilterTags();
                 applyFiltersAndRender();
+                renderSuggestedReports(); // Renderiza sugestões após carregar tudo
             } catch (error) {
                 console.error('Erro ao carregar relatórios:', error);
                 const reportListContainer = document.getElementById('report-list');
@@ -1175,6 +1368,10 @@
                 const featuredReportContainer = document.getElementById('featured-report-card-container');
                  if (featuredReportContainer) {
                     featuredReportContainer.innerHTML = '<p class="no-results">Erro ao carregar o relatório em destaque.</p>';
+                }
+                const suggestedReportsContainer = document.getElementById('suggested-reports-container');
+                if (suggestedReportsContainer) {
+                    suggestedReportsContainer.innerHTML = '<p class="no-results">Erro ao carregar sugestões.</p>';
                 }
             } finally {
                 const loadingMessage = document.getElementById('loading-reports-message');
@@ -1189,7 +1386,6 @@
         // =============================================
 
         function getIconForReport(report) {
-            // Lógica para determinar o ícone baseado no tipo de relatório ou tags
             const tags = report.tags ? report.tags.map(t => t.toLowerCase()) : [];
             if (tags.includes('macroeconomia') || tags.includes('mercado')) return 'fas fa-chart-area';
             if (tags.includes('investimentos') || tags.includes('acoes')) return 'fas fa-chart-line';
@@ -1202,14 +1398,19 @@
             return 'fas fa-file-alt'; // Ícone padrão
         }
 
-        function renderReportCard(report, isFeatured = false) {
+        function renderReportCard(report, isFeatured = false, isSuggested = false) {
             const cardElement = document.createElement('div');
-            cardElement.classList.add(isFeatured ? 'featured-report-card' : 'report-card');
-            
+            cardElement.classList.add(isFeatured ? 'featured-report-card' : (isSuggested ? 'report-card' : 'report-card')); // Reutiliza report-card para sugestões
+            cardElement.dataset.id = report.id; // Adiciona ID para Observer
+
             const iconClass = getIconForReport(report);
             const imageHtml = report.image ? `<img src="${report.image}" alt="${report.title}" loading="lazy">` : `<i class="${iconClass}"></i>`;
 
             const tagsHtml = report.tags ? report.tags.map(tag => `<span class="report-card-tag">${tag}</span>`).join('') : '';
+
+            const isFavorited = getFavorites().includes(report.id);
+            const favoriteBtnClass = isFavorited ? 'favorited' : '';
+            const favoriteIconClass = isFavorited ? 'fas fa-heart' : 'far fa-heart'; // far para não preenchido
 
             let actionsHtml = '';
             if (isFeatured) {
@@ -1217,6 +1418,9 @@
                     <a href="${report.link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
                         <i class="fas fa-download"></i> Baixar Relatório Completo
                     </a>
+                    <button class="favorite-btn ${favoriteBtnClass}" data-report-id="${report.id}" aria-label="${isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">
+                        <i class="${favoriteIconClass}"></i>
+                    </button>
                 `;
             } else {
                 actionsHtml = `
@@ -1226,6 +1430,9 @@
                     <a href="${report.link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
                         <i class="fas fa-download"></i> Baixar
                     </a>
+                    <button class="favorite-btn ${favoriteBtnClass}" data-report-id="${report.id}" aria-label="${isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">
+                        <i class="${favoriteIconClass}"></i>
+                    </button>
                 `;
             }
 
@@ -1251,9 +1458,19 @@
             if (!isFeatured) {
                 const viewSummaryBtn = cardElement.querySelector('.view-summary-btn');
                 if (viewSummaryBtn) {
-                    viewSummaryBtn.addEventListener('click', () => openQuickViewModal(report.id));
+                    viewSummaryBtn.addEventListener('click', () => {
+                        playSound('click'); // Som ao abrir modal
+                        openQuickViewModal(report.id);
+                    });
                 }
             }
+
+            // Adiciona evento para o botão de Favoritar
+            const favoriteBtn = cardElement.querySelector('.favorite-btn');
+            if (favoriteBtn) {
+                favoriteBtn.addEventListener('click', (event) => toggleFavorite(event, report.id));
+            }
+
             return cardElement;
         }
 
@@ -1268,9 +1485,11 @@
                 return;
             }
 
-            reports.forEach(report => {
+            reports.forEach((report, index) => {
                 const card = renderReportCard(report);
                 reportListContainer.appendChild(card);
+                // Adiciona a animação de scroll reveal com um pequeno delay
+                scrollRevealObserver.observe(card);
             });
 
             updateLoadMoreButton();
@@ -1286,6 +1505,7 @@
             if (featuredReport) {
                 const card = renderReportCard(featuredReport, true);
                 featuredReportContainer.appendChild(card);
+                scrollRevealObserver.observe(document.getElementById('featured-report-section'));
             } else {
                 featuredReportContainer.innerHTML = '<p class="no-results">Nenhum relatório em destaque disponível.</p>';
             }
@@ -1310,6 +1530,7 @@
             allButton.innerHTML = `<span>Todos</span>`;
             allButton.dataset.tag = 'all';
             allButton.addEventListener('click', () => {
+                playSound('pop'); // Som ao clicar no filtro
                 appState.activeTags.clear();
                 filterTagsContainer.querySelectorAll('.filter-tag-btn').forEach(btn => btn.classList.remove('active'));
                 allButton.classList.add('active');
@@ -1324,6 +1545,7 @@
                 button.innerHTML = `<span>${tag.charAt(0).toUpperCase() + tag.slice(1)}</span>`; // Capitaliza
                 button.dataset.tag = tag;
                 button.addEventListener('click', () => {
+                    playSound('pop'); // Som ao clicar no filtro
                     if (appState.activeTags.has(tag)) {
                         appState.activeTags.delete(tag);
                         button.classList.remove('active');
@@ -1345,18 +1567,101 @@
             const loadMoreBtn = document.getElementById('load-more-btn');
             if (!loadMoreBtn) return;
 
-            const totalFiltered = getFilteredReports(true).length; // Passa true para pegar todos os filtrados
+            const totalFiltered = getFilteredReports(true).length;
             const currentlyDisplayed = appState.currentPage * REPORTS_PER_PAGE;
 
             if (currentlyDisplayed < totalFiltered) {
-                loadMoreBtn.style.display = 'inline-flex'; // Mostra o botão
+                loadMoreBtn.style.display = 'inline-flex';
                 loadMoreBtn.disabled = appState.loading;
                 loadMoreBtn.querySelector('i').style.display = appState.loading ? 'inline-block' : 'none';
                 loadMoreBtn.lastChild.textContent = appState.loading ? 'Carregando...' : 'Carregar Mais Relatórios';
             } else {
-                loadMoreBtn.style.display = 'none'; // Esconde o botão
+                loadMoreBtn.style.display = 'none';
             }
         }
+
+        function renderSuggestedReports() {
+            const suggestionsSection = document.getElementById('suggestions-section');
+            const suggestedReportsContainer = document.getElementById('suggested-reports-container');
+            if (!suggestionsSection || !suggestedReportsContainer) return;
+
+            suggestedReportsContainer.innerHTML = '';
+
+            const favorites = getFavorites();
+            const readHistory = getReadHistory();
+
+            // Lógica de sugestão:
+            // 1. Relatórios favoritos não lidos (se houver)
+            // 2. Relatórios com tags semelhantes aos favoritos/lidos recentemente (mais complexo, vamos simplificar)
+            // 3. Relatórios recentes que ainda não foram lidos/favoritados
+
+            let potentialSuggestions = [];
+
+            // 1. Relatórios favoritos (exclui o destaque e já lidos)
+            const favReports = allReports.filter(report => 
+                favorites.includes(report.id) && 
+                report.id !== appState.featuredReportId &&
+                !readHistory.includes(report.id)
+            );
+            potentialSuggestions.push(...favReports);
+
+            // 2. Relatórios com tags semelhantes aos últimos lidos/favoritados (exemplo simplificado: top 3 tags mais interagidas)
+            const allInteractedReports = new Set([...favorites, ...readHistory]);
+            const interactedTags = {};
+            allInteractedReports.forEach(id => {
+                const report = allReports.find(r => r.id === id);
+                if (report && report.tags) {
+                    report.tags.forEach(tag => {
+                        interactedTags[tag] = (interactedTags[tag] || 0) + 1;
+                    });
+                }
+            });
+            const sortedInteractedTags = Object.entries(interactedTags).sort(([,a],[,b]) => b - a).map(([tag]) => tag);
+            
+            const relevantTags = sortedInteractedTags.slice(0, 3); // Pega as 3 tags mais interagidas
+            
+            const taggedSuggestions = allReports.filter(report => 
+                !allInteractedReports.has(report.id) && // Não foi interagido ainda
+                report.id !== appState.featuredReportId &&
+                report.tags && report.tags.some(tag => relevantTags.includes(tag.toLowerCase()))
+            );
+            potentialSuggestions.push(...taggedSuggestions);
+
+            // 3. Relatórios mais recentes (que não sejam favoritos, lidos ou o destaque)
+            const recentSuggestions = allReports.filter(report => 
+                !favorites.includes(report.id) &&
+                !readHistory.includes(report.id) &&
+                report.id !== appState.featuredReportId &&
+                !potentialSuggestions.some(s => s.id === report.id) // Evita duplicatas
+            ).slice(0, MAX_SUGGESTIONS * 2); // Pega um pouco mais para garantir que teremos o suficiente
+
+            potentialSuggestions.push(...recentSuggestions);
+
+
+            // Remove duplicatas e pega os TOP MAX_SUGGESTIONS
+            const finalSuggestions = [];
+            const seenIds = new Set();
+            for (const report of potentialSuggestions) {
+                if (!seenIds.has(report.id)) {
+                    finalSuggestions.push(report);
+                    seenIds.add(report.id);
+                }
+                if (finalSuggestions.length >= MAX_SUGGESTIONS) break;
+            }
+
+            if (finalSuggestions.length > 0) {
+                suggestionsSection.style.display = 'block';
+                finalSuggestions.forEach(report => {
+                    const card = renderReportCard(report, false, true); // isFeatured=false, isSuggested=true
+                    suggestedReportsContainer.appendChild(card);
+                    scrollRevealObserver.observe(card); // Animação de scroll reveal
+                });
+                scrollRevealObserver.observe(suggestionsSection);
+            } else {
+                suggestionsSection.style.display = 'none';
+            }
+        }
+
 
         // =============================================
         // LÓGICA DE FILTRAGEM E PESQUISA
@@ -1388,17 +1693,17 @@
             }
 
             // Caso contrário, retorna a fatia da página atual
-            const startIndex = 0; // Sempre começa do 0 para a re-renderização completa
+            const startIndex = 0;
             const endIndex = appState.currentPage * REPORTS_PER_PAGE;
             return filtered.slice(startIndex, endIndex);
         }
 
         function applyFiltersAndRender() {
             appState.currentPage = 1; // Reseta a página para 1 ao aplicar novos filtros/busca
-            displayedReports = getFilteredReports();
-            renderReportGrid(displayedReports);
-            renderFeaturedReport(); // Garante que o destaque seja sempre renderizado
-            updateLoadMoreButton();
+            const reportsToDisplay = getFilteredReports();
+            renderReportGrid(reportsToDisplay);
+            renderFeaturedReport();
+            renderSuggestedReports(); // Re-renderiza sugestões ao filtrar/buscar
         }
 
         // =============================================
@@ -1409,7 +1714,7 @@
             if (!autocompleteResults) return;
 
             autocompleteResults.innerHTML = '';
-            if (query.length < 2) { // Mínimo de 2 caracteres para ativar o autocomplete
+            if (query.length < 2) {
                 autocompleteResults.style.display = 'none';
                 return;
             }
@@ -1438,15 +1743,16 @@
                 return;
             }
 
-            results.slice(0, 5).forEach(item => { // Limita a 5 sugestões
+            results.slice(0, 5).forEach(item => {
                 const div = document.createElement('div');
                 div.classList.add('autocomplete-item');
                 div.textContent = item;
                 div.addEventListener('click', () => {
-                    searchInput.value = item;
+                    document.getElementById('report-search-input').value = item;
                     appState.searchTerm = item.toLowerCase();
                     autocompleteResults.style.display = 'none';
                     applyFiltersAndRender();
+                    playSound('select'); // Som ao selecionar autocomplete
                 });
                 autocompleteResults.appendChild(div);
             });
@@ -1455,32 +1761,40 @@
         }
 
         function hideAutocompleteResults() {
-            setTimeout(() => { // Pequeno delay para permitir o clique
+            setTimeout(() => {
                 const autocompleteResults = document.getElementById('autocomplete-results');
                 if (autocompleteResults) autocompleteResults.style.display = 'none';
             }, 100);
         }
 
         // =============================================
-        // MODAL DE VISUALIZAÇÃO RÁPIDA
+        // MODAL DE VISUALIZAÇÃO RÁPIDA (COM MODO LEITURA E FAVORITOS)
         // =============================================
         function openQuickViewModal(reportId) {
             const modalOverlay = document.getElementById('quick-view-modal-overlay');
             const modalImageContainer = document.getElementById('modal-report-image');
             const modalContent = document.getElementById('modal-report-content');
             const modalDownloadBtn = document.getElementById('modal-download-btn');
+            const modalFavoriteBtn = document.getElementById('modal-favorite-btn');
+            const modalProgressBar = document.getElementById('modal-reading-progress-bar');
+            const readingModeToggleBtn = document.getElementById('reading-mode-toggle-btn');
             
-            const report = allReports.find(r => r.id === reportId);
+            appState.activeModalReport = allReports.find(r => r.id === reportId);
 
-            if (!report || !modalOverlay || !modalImageContainer || !modalContent || !modalDownloadBtn) {
-                console.error('Erro: Elementos do modal ou relatório não encontrados.', {reportId, report});
+            if (!appState.activeModalReport || !modalOverlay || !modalImageContainer || !modalContent || !modalDownloadBtn || !modalFavoriteBtn || !modalProgressBar || !readingModeToggleBtn) {
+                console.error('Erro: Elementos do modal ou relatório não encontrados.', {reportId, report: appState.activeModalReport});
                 return;
             }
+
+            // Atualiza histórico de leitura
+            addToReadHistory(reportId);
 
             // Limpa o conteúdo anterior
             modalImageContainer.innerHTML = '';
             modalContent.innerHTML = '';
+            modalProgressBar.style.width = '0%'; // Reseta barra de progresso
 
+            const report = appState.activeModalReport;
             const iconClass = getIconForReport(report);
             if (report.image) {
                 const img = document.createElement('img');
@@ -1503,8 +1817,48 @@
             `;
             modalDownloadBtn.href = report.link;
 
+            // Atualiza estado do botão de favorito no modal
+            const isFavorited = getFavorites().includes(report.id);
+            modalFavoriteBtn.classList.toggle('favorited', isFavorited);
+            modalFavoriteBtn.querySelector('i').className = isFavorited ? 'fas fa-heart' : 'far fa-heart';
+            modalFavoriteBtn.setAttribute('aria-label', isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+
+            // Remove listeners antigos do modalFavoriteBtn antes de adicionar um novo para evitar múltiplos
+            const oldModalFavoriteBtn = modalFavoriteBtn.cloneNode(true);
+            modalFavoriteBtn.parentNode.replaceChild(oldModalFavoriteBtn, modalFavoriteBtn);
+            appState.currentModalFavoriteBtn = oldModalFavoriteBtn; // Guarda a referência atualizada
+
+            appState.currentModalFavoriteBtn.addEventListener('click', () => {
+                toggleFavorite(null, report.id); // 'null' para o evento, pois o evento já foi tratado no card
+                const currentIsFavorited = getFavorites().includes(report.id);
+                appState.currentModalFavoriteBtn.classList.toggle('favorited', currentIsFavorited);
+                appState.currentModalFavoriteBtn.querySelector('i').className = currentIsFavorited ? 'fas fa-heart' : 'far fa-heart';
+                appState.currentModalFavoriteBtn.setAttribute('aria-label', currentIsFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+            });
+
+            // Reseta o modo leitura e adiciona listener
+            modalOverlay.classList.remove('reading-mode'); // Garante que começa desligado
+            readingModeToggleBtn.classList.remove('active');
+            // Remove listener antigo para evitar múltiplos
+            const newReadingModeToggleBtn = readingModeToggleBtn.cloneNode(true);
+            readingModeToggleBtn.parentNode.replaceChild(newReadingModeToggleBtn, readingModeToggleBtn);
+            appState.currentReadingModeToggleBtn = newReadingModeToggleBtn; // Guarda a referência atualizada
+
+            appState.currentReadingModeToggleBtn.addEventListener('click', toggleReadingMode);
+            
+            // Listener para a barra de progresso de leitura no modal
+            modalContent.onscroll = throttle(() => {
+                const contentHeight = modalContent.scrollHeight - modalContent.clientHeight;
+                if (contentHeight > 0) {
+                    const scrollPercent = (modalContent.scrollTop / contentHeight) * 100;
+                    modalProgressBar.style.width = `${scrollPercent}%`;
+                }
+            }, 50); // A cada 50ms
+
+
             modalOverlay.classList.add('active');
-            document.body.classList.add('body-modal-open'); // Bloqueia o scroll do body
+            document.body.classList.add('body-modal-open');
+            modalContent.scrollTop = 0; // Garante que o scroll comece no topo
         }
 
         function closeQuickViewModal() {
@@ -1512,8 +1866,114 @@
             if (modalOverlay) {
                 modalOverlay.classList.remove('active');
                 document.body.classList.remove('body-modal-open');
+                appState.activeModalReport = null;
+                modalOverlay.classList.remove('reading-mode'); // Desativa modo leitura ao fechar
+                if (appState.currentReadingModeToggleBtn) {
+                     appState.currentReadingModeToggleBtn.classList.remove('active');
+                }
+                playSound('close'); // Som ao fechar modal
             }
         }
+
+        function toggleReadingMode() {
+            const modalContentEl = document.getElementById('quick-view-modal-content');
+            const readingModeToggleBtn = document.getElementById('reading-mode-toggle-btn');
+            
+            if (modalContentEl && readingModeToggleBtn) {
+                const isActive = modalContentEl.classList.toggle('reading-mode');
+                readingModeToggleBtn.classList.toggle('active', isActive);
+                playSound('toggle'); // Som ao alternar modo
+            }
+        }
+
+        // =============================================
+        // FAVORITOS E HISTÓRICO DE LEITURA
+        // =============================================
+        function getFavorites() {
+            try {
+                return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+            } catch (e) {
+                console.error("Erro ao carregar favoritos:", e);
+                return [];
+            }
+        }
+
+        function saveFavorites(favorites) {
+            try {
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            } catch (e) {
+                console.error("Erro ao salvar favoritos:", e);
+            }
+        }
+
+        function toggleFavorite(event, reportId) {
+            if (event) event.stopPropagation(); // Previne que o clique no card dispare o modal se o botão estiver no card
+            
+            let favorites = getFavorites();
+            const index = favorites.indexOf(reportId);
+
+            if (index === -1) {
+                favorites.push(reportId);
+                playSound('favorite'); // Som ao favoritar
+            } else {
+                favorites.splice(index, 1);
+                playSound('unfavorite'); // Som ao desfavoritar
+            }
+            saveFavorites(favorites);
+
+            // Atualiza os ícones de favorito em todos os cards visíveis
+            document.querySelectorAll(`.favorite-btn[data-report-id="${reportId}"]`).forEach(btn => {
+                const isFavorited = favorites.includes(reportId);
+                btn.classList.toggle('favorited', isFavorited);
+                btn.querySelector('i').className = isFavorited ? 'fas fa-heart' : 'far fa-heart';
+                btn.setAttribute('aria-label', isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+            });
+            renderSuggestedReports(); // Atualiza sugestões, pois favoritos mudaram
+        }
+
+        function getReadHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(READ_HISTORY_KEY)) || [];
+            } catch (e) {
+                console.error("Erro ao carregar histórico de leitura:", e);
+                return [];
+            }
+        }
+
+        function addToReadHistory(reportId) {
+            let history = getReadHistory();
+            // Remove se já existir para colocar no topo
+            history = history.filter(id => id !== reportId);
+            history.unshift(reportId); // Adiciona no início (mais recente)
+            // Limita o histórico para não ficar muito grande
+            if (history.length > 20) { // Guarda os últimos 20 lidos
+                history = history.slice(0, 20);
+            }
+            try {
+                localStorage.setItem(READ_HISTORY_KEY, JSON.stringify(history));
+            } catch (e) {
+                console.error("Erro ao salvar histórico de leitura:", e);
+            }
+            renderSuggestedReports(); // Atualiza sugestões, pois histórico mudou
+        }
+
+        // =============================================
+        // SCROLL REVEAL (Animação de entrada ao rolar)
+        // =============================================
+        const scrollRevealOptions = {
+            root: null, // viewport
+            rootMargin: '0px',
+            threshold: 0.1 // 10% do elemento visível para disparar
+        };
+
+        const scrollRevealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target); // Para a observação após a animação
+                }
+            });
+        }, scrollRevealOptions);
 
 
         // =============================================
@@ -1566,6 +2026,42 @@
                 });
                 searchInput.addEventListener('focus', () => showAutocompleteResults(appState.searchTerm));
                 searchInput.addEventListener('blur', hideAutocompleteResults);
+                searchInput.addEventListener('keydown', (e) => {
+                    // Navegação com setas no autocomplete
+                    const results = document.querySelectorAll('.autocomplete-item');
+                    if (results.length === 0) return;
+
+                    let activeIndex = -1;
+                    results.forEach((item, index) => {
+                        if (item.classList.contains('active')) {
+                            activeIndex = index;
+                        }
+                    });
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        activeIndex = (activeIndex + 1) % results.length;
+                        results.forEach(item => item.classList.remove('active'));
+                        results[activeIndex].classList.add('active');
+                        searchInput.value = results[activeIndex].textContent; // Atualiza input com a seleção
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        activeIndex = (activeIndex - 1 + results.length) % results.length;
+                        results.forEach(item => item.classList.remove('active'));
+                        results[activeIndex].classList.add('active');
+                        searchInput.value = results[activeIndex].textContent; // Atualiza input com a seleção
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (activeIndex !== -1) {
+                            results[activeIndex].click(); // Simula clique
+                        } else {
+                            // Se nenhum item ativo, apenas aplica o filtro da busca atual
+                            appState.searchTerm = searchInput.value.toLowerCase();
+                            applyFiltersAndRender();
+                            hideAutocompleteResults();
+                        }
+                    }
+                });
             }
 
             const debouncedShowAutocomplete = debounce(showAutocompleteResults, 200);
@@ -1574,6 +2070,7 @@
             const loadMoreBtn = document.getElementById('load-more-btn');
             if (loadMoreBtn) {
                 loadMoreBtn.addEventListener('click', () => {
+                    playSound('load-more'); // Som ao carregar mais
                     if (appState.loading) return;
                     appState.loading = true;
                     loadMoreBtn.disabled = true;
@@ -1582,14 +2079,16 @@
 
                     setTimeout(() => { // Simula um atraso de rede
                         appState.currentPage++;
-                        const reportsToAdd = getFilteredReports(); // Pega a nova fatia
+                        const allFilteredAndPaged = getFilteredReports(true);
+                        const reportsToAppend = allFilteredAndPaged.slice((appState.currentPage - 1) * REPORTS_PER_PAGE, appState.currentPage * REPORTS_PER_PAGE);
                         
-                        // Limpa a lista antes de adicionar novos para re-renderização completa da grid
+                        // Adiciona ao DOM, não recria a grade inteira
                         const reportListContainer = document.getElementById('report-list');
-                        if (reportListContainer) reportListContainer.innerHTML = '';
-                        
-                        // Renderiza todos os relatórios até a página atual
-                        renderReportGrid(reportsToAdd);
+                        reportsToAppend.forEach(report => {
+                            const card = renderReportCard(report);
+                            reportListContainer.appendChild(card);
+                            scrollRevealObserver.observe(card); // Adiciona animação de scroll reveal
+                        });
 
                         appState.loading = false;
                         updateLoadMoreButton();
@@ -1599,9 +2098,9 @@
 
             // Atualiza data e hora no rodapé
             updateFooterDateTime();
-            setInterval(updateFooterDateTime, 60 * 1000); // Atualiza a cada minuto
+            setInterval(updateFooterDateTime, 60 * 1000);
 
-            // Barra de progresso de scroll
+            // Barra de progresso de scroll da página
             window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
             debouncedUpdateScrollProgressBar();
 
