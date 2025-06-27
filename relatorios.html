@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Macro - Estudos e Relatórios</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css"> <style>
+        /* Estilos específicos para a página de relatórios */
+        .reports-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 5px 15px var(--shadow-color-soft);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .reports-header h1 {
+            font-size: 28px;
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #report-search-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: rgba(var(--card-bg-val), 0.3);
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        #report-search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        #report-search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: var(--dark-bg);
+        }
+
+        .report-list {
+            display: grid;
+            gap: 25px;
+        }
+
+        .report-item {
+            background-color: rgba(var(--card-bg-val), 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .report-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        .report-item h2 {
+            font-size: 20px;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .report-item .report-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .report-item p {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+            margin-bottom: 20px;
+        }
+
+        .report-item .read-more-btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: var(--dark-bg);
+            padding: 8px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .report-item .read-more-btn:hover {
+            background-color: var(--primary-light);
+        }
+        
+        .no-results {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 16px;
+            padding: 50px 0;
+        }
+
+        /* Estilos para o modo claro na página de relatórios */
+        body.light-mode .reports-container {
+            background-color: var(--card-bg);
+            border-left-color: var(--primary-color);
+            box-shadow: 0 4px 12px var(--shadow-color-soft);
+        }
+
+        body.light-mode .reports-header h1 {
+            color: var(--primary-color);
+        }
+
+        body.light-mode #report-search-input {
+            background-color: rgba(0,0,0,0.03);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        body.light-mode #report-search-input:focus {
+            background-color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        body.light-mode .report-item {
+            background-color: rgba(0,0,0,0.02);
+            border-left-color: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        body.light-mode .report-item:hover {
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        body.light-mode .report-item h2 {
+            color: var(--primary-color);
+        }
+
+        body.light-mode .report-item p {
+            color: var(--text-color);
+        }
+
+        body.light-mode .report-item .read-more-btn {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        body.light-mode .report-item .read-more-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        @media (max-width: 768px) {
+            .reports-container {
+                margin: 20px auto;
+                padding: 15px;
+            }
+            .reports-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .reports-header h1 {
+                font-size: 24px;
+            }
+            .search-container {
+                width: 100%;
+            }
+            #report-search-input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="scroll-progress-bar"></div>
+
+    <header class="header">
+        <div class="logo-container">
+            <div class="logo">
+                <div class="page-title-header">Mercado Macro</div> <div class="logo-divider"></div>
+            </div>
+            </div>
+    </header>
+
+    <div class="container">
+        <div class="reports-container">
+            <div class="reports-header">
+                <h1>Estudos e Relatórios</h1>
+                <div class="search-container">
+                    <input type="text" id="report-search-input" placeholder="Pesquisar relatórios...">
+                </div>
+            </div>
+            <div class="report-list" id="report-list">
+                <p class="no-results" id="loading-reports-message">Carregando relatórios...</p>
+            </div>
+        </div>
+
+        <a href="index.html" class="contact-button-main" style="max-width: 250px; margin-top: 40px;">
+            <i class="fas fa-arrow-left"></i> Voltar para o Painel
+        </a>
+        
+        <div class="legal-links" style="margin: 20px auto 40px auto; text-align: center; font-size: 13px; opacity: 0.65;">
+          <a href="termo/sobre.html" style="margin: 0 15px; color: var(--text-color); text-decoration: none;">Sobre</a>
+          <a href="termo/politica.html" style="margin: 0 15px; color: var(--text-color); text-decoration: none;">Política de Privacidade</a>
+          <a href="termo/termos.html" style="margin: 0 15px; color: var(--text-color); text-decoration: none;">Termos de Uso</a>
+        </div>
+        <div class="footer" id="footer">Fonte: Dados em atualização... • By Anderson Danilo </div>
+    </div>
+
+    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
+
+    <script>
+        // Função para alternar o tema (copiada do main.js para reutilização)
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (themeIcon) {
+                themeIcon.classList.toggle('fa-moon', !isLightMode);
+                themeIcon.classList.toggle('fa-sun', isLightMode);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Aplica o tema salvo ao carregar a página
+            let currentTheme = 'dark';
+            const savedTheme = localStorage.getItem('themePreference');
+            const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+            if (savedTheme === 'light' || (!savedTheme && prefersLight)) {
+                currentTheme = 'light';
+                document.body.classList.add('light-mode');
+            } else {
+                document.body.classList.remove('light-mode');
+            }
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (themeIcon) {
+                themeIcon.classList.toggle('fa-moon', currentTheme === 'dark');
+                themeIcon.classList.toggle('fa-sun', currentTheme === 'light');
+            }
+
+            // Adiciona listener para o botão de tema
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', toggleTheme);
+            }
+
+            // Script para carregar e exibir os relatórios
+            const reportListContainer = document.getElementById('report-list');
+            const searchInput = document.getElementById('report-search-input');
+            const loadingMessage = document.getElementById('loading-reports-message');
+            let allReports = [];
+
+            async function fetchReports() {
+                try {
+                    const response = await fetch('data/relatorios.json');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    allReports = data.sort((a, b) => new Date(b.date) - new Date(a.date)); // Ordena por data mais recente
+                    displayReports(allReports);
+                } catch (error) {
+                    console.error('Erro ao carregar relatórios:', error);
+                    if (reportListContainer) {
+                        reportListContainer.innerHTML = '<p class="no-results">Erro ao carregar os relatórios. Por favor, tente novamente mais tarde.</p>';
+                    }
+                } finally {
+                    if (loadingMessage) {
+                        loadingMessage.style.display = 'none'; // Esconde a mensagem de carregamento
+                    }
+                }
+            }
+
+            function displayReports(reports) {
+                if (!reportListContainer) return;
+
+                reportListContainer.innerHTML = ''; // Limpa a lista atual
+
+                if (reports.length === 0) {
+                    reportListContainer.innerHTML = '<p class="no-results">Nenhum relatório encontrado para sua pesquisa.</p>';
+                    return;
+                }
+
+                reports.forEach(report => {
+                    const reportItem = document.createElement('div');
+                    reportItem.classList.add('report-item');
+                    reportItem.innerHTML = `
+                        <h2>${report.title}</h2>
+                        <span class="report-date">${formatDate(report.date)}</span>
+                        <p>${report.summary}</p>
+                        <a href="${report.link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
+                            <i class="fas fa-file-pdf"></i> Acessar Relatório
+                        </a>
+                    `;
+                    reportListContainer.appendChild(reportItem);
+                });
+            }
+
+            function filterReports() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const filtered = allReports.filter(report =>
+                    report.title.toLowerCase().includes(searchTerm) ||
+                    report.summary.toLowerCase().includes(searchTerm) ||
+                    (report.tags && report.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+                );
+                displayReports(filtered);
+            }
+
+            function formatDate(dateString) {
+                try {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) return dateString; // Retorna original se inválido
+                    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                    return date.toLocaleDateString('pt-BR', options);
+                } catch (e) {
+                    console.error("Erro ao formatar data:", dateString, e);
+                    return dateString;
+                }
+            }
+
+            // Event listener para pesquisa com debounce
+            let searchTimeout;
+            if (searchInput) {
+                searchInput.addEventListener('keyup', () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(filterReports, 300); // Filtra após 300ms de inatividade
+                });
+            }
+
+            // Carrega os relatórios quando a página for carregada
+            fetchReports();
+
+            // Código da barra de progresso de scroll (copiado do main.js)
+            const debouncedUpdateScrollProgressBar = (() => {
+                let timeout;
+                return function() {
+                    const progressBar = document.getElementById('scroll-progress-bar');
+                    if (!progressBar) return;
+                    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                    const scrollHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.body.clientHeight, document.documentElement.clientHeight) - document.documentElement.clientHeight;
+                    if (scrollHeight > 0)
+                        progressBar.style.width = `${(scrollTop / scrollHeight) * 100}%`;
+                    else
+                        progressBar.style.width = '0%';
+                };
+            })();
+            window.addEventListener('scroll', debouncedUpdateScrollProgressBar);
+            debouncedUpdateScrollProgressBar(); // Chama uma vez ao carregar
+        });
+    </script>
+</body>
+</html>
