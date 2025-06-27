@@ -146,6 +146,14 @@
             .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); } 
             .profile-btn { top: max(15px, env(safe-area-inset-top)); right: max(15px, env(safe-area-inset-right)); } 
         }
+		
+		/* Adicione este bloco para customizar o card do Tesouro */
+#tesouro-card {
+    width: 300px;      /* Defina a largura desejada */
+    height: 250px;     /* Defina a altura desejada */
+    flex: none;        /* Remove o comportamento flexível para este card específico */
+}
+
     </style>
 </head>
 <body>
@@ -665,7 +673,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     uiController.updateDateTime('BCB, Investing.com');
                 }
             },
-             processNationalResults(data) {
+            processNationalResults(data) {
                 const { selectors, errorText } = config;
                 this.nationalData = data;
                 
@@ -692,7 +700,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 this.processPoupanca(data.poupanca);
                 this.processUnemployment(data.desemprego);
             },
-             processCDSChart() {
+            processCDSChart() {
                 const cdsHistoryData = [
                     { date: new Date('2017-01-01'), valor: 160.50 }, { date: new Date('2018-01-01'), valor: 207.70 },
                     { date: new Date('2019-01-01'), valor: 99.10 },  { date: new Date('2020-01-01'), valor: 142.30 },
@@ -702,73 +710,74 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 ];
                 uiController.createSparklineChart('#risk-chart-container', cdsHistoryData, 'CDS Anual', ' pts', 'yyyy');
             },
-processTesouroDireto(promiseResult) {
-    const { selectors, errorText } = config;
-    const selectorEl = document.querySelector(selectors.tesouroSelector);
-    const rateEl = document.querySelector(selectors.tesouroRate);
-    const priceEl = document.querySelector(selectors.tesouroPrice);
+            // ===================================================================
+            // AQUI ESTÁ A FUNÇÃO CORRIGIDA
+            // ===================================================================
+            processTesouroDireto(promiseResult) {
+                const { selectors, errorText } = config;
+                const selectorEl = document.querySelector(selectors.tesouroSelector);
+                const rateEl = document.querySelector(selectors.tesouroRate);
+                const priceEl = document.querySelector(selectors.tesouroPrice);
 
-    if (!selectorEl || !rateEl || !priceEl) return;
+                if (!selectorEl || !rateEl || !priceEl) return;
 
-    if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-        const bonds = promiseResult.value.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0);
+                // Defensivamente verifica se o resultado da promise existe e foi bem-sucedido.
+                if (promiseResult && promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
+                    const bonds = promiseResult.value.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0);
 
-        const updateTesouroCard = (bond) => {
-            const bondName = bond.TrsrBd.nm;
-            const rate = bond.TrsrBd.anulInvstmtRate;
-            const price = bond.TrsrBd.untrInvstmtVal;
+                    const updateTesouroCard = (bond) => {
+                        const bondName = bond.TrsrBd.nm;
+                        const rate = bond.TrsrBd.anulInvstmtRate;
+                        const price = bond.TrsrBd.untrInvstmtVal;
+                        let formattedRate = '';
 
-            let formattedRate = '';
-            let decimalRate, percentageRate;
+                        if (bondName.includes('Selic')) {
+                            const decimalRate = rate.toFixed(4).replace('.', ',');
+                            formattedRate = `Selic + ${decimalRate}%`;
+                        } else if (bondName.includes('IPCA')) {
+                            const percentageRate = rate.toFixed(2).replace('.', ',');
+                            formattedRate = `IPCA + ${percentageRate}%`;
+                        } else {
+                            const percentageRate = rate.toFixed(2).replace('.', ',');
+                            formattedRate = `${percentageRate}%`;
+                        }
 
-            if (bondName.includes('Selic')) {
-                // Spread decimal — precisa multiplicar por 100
-                decimalRate = rate.toFixed(4).replace('.', ',');
-                percentageRate = (rate * 100).toFixed(2).replace('.', ',');
-                formattedRate = `Selic: ${decimalRate}%`;
-            } else if (bondName.includes('IPCA')) {
-        // IPCA já está em percentual
-        decimalRate = rate.toFixed(4).replace('.', ',');
-        percentageRate = rate.toFixed(2).replace('.', ',');
-                formattedRate = `IPCA + ${percentageRate}%`;
-            } else {
-                // Prefixado — já vem em percentual
-                decimalRate = rate.toFixed(4).replace('.', ',');
-                percentageRate = rate.toFixed(2).replace('.', ',');
-                formattedRate = `${percentageRate}%`;
-            }
+                        rateEl.textContent = formattedRate;
+                        priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    };
 
-            rateEl.textContent = formattedRate;
-            priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        };
+                    selectorEl.innerHTML = ''; // Limpa as opções anteriores
+                    bonds.forEach((bondData, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = bondData.TrsrBd.nm;
+                        selectorEl.appendChild(option);
+                    });
 
-        selectorEl.innerHTML = ''; // Limpa a opção "Carregando..."
-        bonds.forEach((bondData, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = bondData.TrsrBd.nm;
-            selectorEl.appendChild(option);
-        });
+                    // Para evitar adicionar múltiplos listeners em novas renderizações, clona e substitui o elemento.
+                    const newSelectorEl = selectorEl.cloneNode(true);
+                    selectorEl.parentNode.replaceChild(newSelectorEl, selectorEl);
+                    
+                    newSelectorEl.addEventListener('change', (e) => {
+                        const selectedBond = bonds[e.target.value];
+                        updateTesouroCard(selectedBond);
+                    });
 
-        selectorEl.addEventListener('change', (e) => {
-            const selectedBond = bonds[e.target.value];
-            updateTesouroCard(selectedBond);
-        });
+                    if (bonds.length > 0) {
+                        updateTesouroCard(bonds[0]);
+                        newSelectorEl.value = "0"; // Garante que o primeiro item esteja selecionado
+                    }
 
-        // Carga inicial com o primeiro título da lista
-        if (bonds.length > 0) {
-            updateTesouroCard(bonds[0]);
-        }
-
-    } else {
-        selectorEl.innerHTML = '<option>Erro ao carregar</option>';
-        rateEl.textContent = errorText;
-        priceEl.textContent = errorText;
-    }
-},
-
-			
-			
+                } else {
+                    // Trata o estado de erro
+                    selectorEl.innerHTML = '<option>Erro ao carregar</option>';
+                    rateEl.textContent = errorText;
+                    priceEl.textContent = errorText;
+                }
+            },
+            // ===================================================================
+            // FIM DA CORREÇÃO
+            // ===================================================================
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
@@ -781,7 +790,6 @@ processTesouroDireto(promiseResult) {
                     uiController.updateText(yearElem, config.errorText);
                 }
             },
-            
             processPibBr(promiseResult) {
                 const pibValueElement = document.querySelector('#pib-br-value');
                 try {
@@ -827,7 +835,6 @@ processTesouroDireto(promiseResult) {
                     }
                 }
             },
-
             processUnemployment(promiseResult) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
@@ -946,10 +953,12 @@ processTesouroDireto(promiseResult) {
                 const promises = {};
                 
                 for (const key in fredIndicatorsConfig) {
-                    if (key !== 'treasury') {
-                         promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, fredIndicatorsConfig[key].hasToggle ? 300 : 1000);
+                    if (key === 'treasury' || key === 'fedtarget') {
+                        continue;
                     }
+                    promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, fredIndicatorsConfig[key].hasToggle ? 300 : 1000);
                 }
+
                 promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1000);
                 promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1000);
                 promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {});
