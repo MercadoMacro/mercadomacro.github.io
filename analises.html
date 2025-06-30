@@ -93,6 +93,11 @@
 
         .subheader { font-size: 16px; margin-bottom: 25px; color: var(--text-secondary); font-weight: 600;}
 
+        /* Estilo para o contêiner do carrossel para dar um espaçamento */
+        #tradingview-widget-container {
+            margin-bottom: 20px;
+        }
+
         .filters-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .filter-btn {
             padding: 8px 18px;
@@ -441,6 +446,8 @@
 
         <div class="subheader" id="data-atual">Acompanhamento de Ativos Financeiros</div>
 
+        <div id="tradingview-widget-container"></div>
+
         <div class="filters-container">
             <button class="filter-btn active" data-filter="all">Todos</button>
             <button class="filter-btn" data-filter="stocks">Ações</button>
@@ -548,6 +555,73 @@
             if (themeIcon) {
                 themeIcon.className = isLightMode ? 'fas fa-sun' : 'fas fa-moon';
             }
+        }
+        
+        /**
+         * NOVA FUNÇÃO ADICIONADA
+         * Renderiza o widget de carrossel de cotações (Ticker Tape) da TradingView.
+         */
+        function renderTickerTapeWidget(theme = 'dark') {
+            const container = document.getElementById('tradingview-widget-container');
+            if (!container) {
+                console.error('Container do widget Ticker Tape (#tradingview-widget-container) não foi encontrado.');
+                return;
+            }
+            container.innerHTML = '';
+
+            const widgetConfig = {
+                "symbols": [
+                    { "proName": "MRVE3", "title": "MRVE3" }, { "proName": "RAIL3", "title": "RAIL3" },
+                    { "proName": "ENEV3", "title": "ENEV3" }, { "proName": "RAIZ4", "title": "RAIZ4" },
+                    { "proName": "PCAR3", "title": "PCAR3" }, { "proName": "PETZ3", "title": "PETZ3" },
+                    { "proName": "SMTO3", "title": "SMTO3" }, { "proName": "MRFG3", "title": "MRFG3" },
+                    { "proName": "VAMO3", "title": "VAMO3" }, { "proName": "BRFS3", "title": "BRFS3" },
+                    { "proName": "DIRR3", "title": "DIRR3" }, { "proName": "IRBR3", "title": "IRBR3" },
+                    { "proName": "BBSE3", "title": "BBSE3" }, { "proName": "ENGI11", "title": "ENGI11" },
+                    { "proName": "STBP3", "title": "STBP3" }, { "proName": "FLRY3", "title": "FLRY3" },
+                    { "proName": "UGPA3", "title": "UGPA3" }, { "proName": "CVCB3", "title": "CVCB3" },
+                    { "proName": "WEGE3", "title": "WEGE3" }, { "proName": "TOTS3", "title": "TOTS3" },
+                    { "proName": "LREN3", "title": "LREN3" }, { "proName": "B3SA3", "title": "B3SA3" },
+                    { "proName": "RDOR3", "title": "RDOR3" }, { "proName": "RENT3", "title": "RENT3" },
+                    { "proName": "BRKM5", "title": "BRKM5" }, { "proName": "HYPE3", "title": "HYPE3" },
+                    { "proName": "PSSA3", "title": "PSSA3" }, { "proName": "MULT3", "title": "MULT3" },
+                    { "proName": "SUZB3", "title": "SUZB3" }, { "proName": "VBBR3", "title": "VBBR3" },
+                    { "proName": "SANB11", "title": "SANB11" }, { "proName": "IGTI11", "title": "IGTI11" },
+                    { "proName": "CPLE6", "title": "CPLE6" }, { "proName": "AURE3", "title": "AURE3" },
+                    { "proName": "MGLU3", "title": "MGLU3" }, { "proName": "BRAP4", "title": "BRAP4" },
+                    { "proName": "ASAI3", "title": "ASAI3" }, { "proName": "CYRE3", "title": "CYRE3" },
+                    { "proName": "YDUQ3", "title": "YDUQ3" }, { "proName": "COGN3", "title": "COGN3" },
+                    { "proName": "SBSP3", "title": "SBSP3" }, { "proName": "CPFE3", "title": "CPFE3" },
+                    { "proName": "ELET3", "title": "ELET3" }, { "proName": "ELET6", "title": "ELET6" },
+                    { "proName": "RADL3", "title": "RADL3" }, { "proName": "BEEF3", "title": "BEEF3" },
+                    { "proName": "EQTL3", "title": "EQTL3" }, { "proName": "CMIG4", "title": "CMIG4" },
+                    { "proName": "CXSE3", "title": "CXSE3" }, { "proName": "SLCE3", "title": "SLCE3" },
+                    { "proName": "EGIE3", "title": "EGIE3" }, { "proName": "GOAU4", "title": "GOAU4" },
+                    { "proName": "GGBR4", "title": "GGBR4" }, { "proName": "EMBR3", "title": "EMBR3" },
+                    { "proName": "TAEE11", "title": "TAEE11" }, { "proName": "KLBN11", "title": "KLBN11" },
+                    { "proName": "CMIN3", "title": "CMIN3" }, { "proName": "VALE3", "title": "VALE3" },
+                    { "proName": "RECV3", "title": "RECV3" }, { "proName": "ABEV3", "title": "ABEV3" },
+                    { "proName": "PRIO3", "title": "PRIO3" }, { "proName": "NTCO3", "title": "NTCO3" },
+                    { "proName": "TIMS3", "title": "TIMS3" }, { "proName": "VIVT3", "title": "VIVT3" },
+                    { "proName": "CSAN3", "title": "CSAN3" }, { "proName": "BPAC11", "title": "BPAC11" },
+                    { "proName": "ITSA4", "title": "ITSA4" }, { "proName": "PETR4", "title": "PETR4" },
+                    { "proName": "PETR3", "title": "PETR3" }, { "proName": "BBAS3", "title": "BBAS3" },
+                    { "proName": "BBDC4", "title": "BBDC4" }, { "proName": "USIM5", "title": "USIM5" },
+                    { "proName": "HAPV3", "title": "HAPV3" }, { "proName": "CSNA3", "title": "CSNA3" },
+                    { "proName": "ITUB4", "title": "ITUB4" }
+                ],
+                "showSymbolLogo": true,
+                "colorTheme": theme,
+                "isTransparent": true,
+                "displayMode": "adaptive",
+                "locale": "br"
+            };
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+            script.async = true;
+            script.textContent = JSON.stringify(widgetConfig);
+            container.appendChild(script);
         }
 
         function updateHeatmapToggleLabels(dataSource) {
@@ -708,6 +782,9 @@
             localStorage.setItem('themePreference', isLightMode ? 'light' : 'dark');
             const newTheme = isLightMode ? "light" : "dark";
             updateThemeIcon(isLightMode);
+
+            // ATUALIZA O CARROSSEL COM O NOVO TEMA
+            renderTickerTapeWidget(newTheme);
 
             const activeFilterButton = document.querySelector('.filter-btn.active');
             const currentActiveFilter = activeFilterButton ? activeFilterButton.dataset.filter : 'all';
@@ -886,6 +963,9 @@
             else isLightMode = !prefersDark;
             if (isLightMode) document.body.classList.add('light-mode');
             else document.body.classList.remove('light-mode');
+
+            // CHAMA A FUNÇÃO DO CARROSSEL NA CARGA INICIAL
+            renderTickerTapeWidget(isLightMode ? 'light' : 'dark');
 
             updateThemeIcon(isLightMode); updateDateTime();
             setupHeatmapToggle(); setupExpandButtons(); setupBackToTop();
