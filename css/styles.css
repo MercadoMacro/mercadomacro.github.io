@@ -183,7 +183,6 @@ body.body-modal-open {
 }
 .banner-text {
     white-space: nowrap;
-    text-overflow: ellipsis; /* Para quando não está scrollando */
     overflow: hidden;
 }
 @keyframes scrollBanner {
