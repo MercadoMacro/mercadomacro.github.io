@@ -150,8 +150,17 @@
 		/* Adicione este bloco para customizar o card do Tesouro */
 #tesouro-card {
     width: 300px;      /* Defina a largura desejada */
-    height: 250px;     /* Defina a altura desejada */
+    height: 320px;     /* Defina a altura desejada */
     flex: none;        /* Remove o comportamento flexível para este card específico */
+}
+/* Novas classes para as informações de status do Tesouro */
+.indicator-status,
+.indicator-times,
+.indicator-quote-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    line-height: 1.3;
 }
 
     </style>
@@ -188,6 +197,9 @@
                         <div class="indicator-description">Rendimento Anual</div>
                         <div class="indicator-value" id="tesouro-price-value">...</div>
                         <div class="indicator-description">Preço Unitário</div>
+                        <div class="indicator-status" id="tesouro-market-status">Status: Carregando...</div>
+                        <div class="indicator-times" id="tesouro-market-times">Aberto: --:-- | Fechado: --:--</div>
+                        <div class="indicator-description" id="tesouro-quote-time">Cotação: --:--</div>
                     </div>
                     <div class="indicator-back">
                         <strong>O que é o Tesouro Direto?</strong>
@@ -439,7 +451,10 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 igpmMonth: '#igp-m-month-value', igpm12m: '#igp-m-12m-value', igpdiMonth: '#igp-di-month-value',
                 igpdi12m: '#igp-di-12m-value', poupancaMonth: '#poupanca-month-value', poupancaAnnualized: '#poupanca-annualized-value',
                 desemprego: '#desemprego-value',
-                tesouroSelector: '#tesouro-bond-selector', tesouroRate: '#tesouro-rate-value', tesouroPrice: '#tesouro-price-value'
+                tesouroSelector: '#tesouro-bond-selector', tesouroRate: '#tesouro-rate-value', tesouroPrice: '#tesouro-price-value',
+                tesouroMarketStatus: '#tesouro-market-status', 
+                tesouroMarketTimes: '#tesouro-market-times',   
+                tesouroQuoteTime: '#tesouro-quote-time'        
             },
             apiCodes: {
                 dolarBuy: 1, dolarSell: 10813, euroBuy: 21619, euroSell: 21620, cdi: 12, selicMeta: 432, 
@@ -450,7 +465,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
             fredApiCodes: {
                 cpi: 'CPIAUCSL', 
                 coreCpi: 'CPILFESL', 
-                pce: 'PCEPI', // CORRIGIDO
+                pce: 'PCEPI', 
                 corePce: 'PCEPILFE',
                 fedfunds: 'FEDFUNDS', 
                 fedTargetUpper: 'DFEDTARU', 
@@ -549,7 +564,8 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     const response = await fetch(config.tesouroApiUrl);
                     if (!response.ok) throw new Error(`Tesouro Direto API Error: ${response.statusText}`);
                     const data = await response.json();
-                    return data.response.TrsrBdTradgList;
+                    // ALTERAÇÃO AQUI: Retornar o objeto 'response' completo
+                    return data.response; 
                 } catch (error) {
                     console.error("Erro ao buscar dados do Tesouro Direto:", error.message);
                     throw error;
@@ -621,6 +637,10 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     if (container) {
                         container.querySelectorAll('.indicator-value').forEach(el => el.textContent = config.loadingText);
                         container.querySelectorAll('.indicator-description[id]').forEach(el => el.textContent = '...');
+                        // Adicionado para os novos campos do Tesouro, caso haja loading
+                        container.querySelectorAll('.indicator-status').forEach(el => el.textContent = 'Status: Carregando...');
+                        container.querySelectorAll('.indicator-times').forEach(el => el.textContent = 'Aberto: --:-- | Fechado: --:--');
+                        container.querySelectorAll('.indicator-quote-time').forEach(el => el.textContent = 'Cotação: --:--');
                     }
                 }
             },
@@ -773,66 +793,98 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 const selectorEl = document.querySelector(selectors.tesouroSelector);
                 const rateEl = document.querySelector(selectors.tesouroRate);
                 const priceEl = document.querySelector(selectors.tesouroPrice);
+                const statusEl = document.querySelector(selectors.tesouroMarketStatus); 
+                const timesEl = document.querySelector(selectors.tesouroMarketTimes);   
+                const quoteTimeEl = document.querySelector(selectors.tesouroQuoteTime);    
 
-                if (!selectorEl || !rateEl || !priceEl) return;
+                if (!selectorEl || !rateEl || !priceEl || !statusEl || !timesEl || !quoteTimeEl) return;
 
-                if (promiseResult && promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
-                    const bonds = promiseResult.value.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0);
-
-                    const updateTesouroCard = (bond) => {
-                        const bondName = bond.TrsrBd.nm;
-                        const rate = bond.TrsrBd.anulInvstmtRate;
-                        const price = bond.TrsrBd.untrInvstmtVal;
-                        let formattedRate = '';
-
-                        if (bondName.includes('Selic')) {
-                            const decimalRate = rate.toFixed(4).replace('.', ',');
-                            formattedRate = `Selic + ${decimalRate}%`;
-                        } else if (bondName.includes('IPCA')) {
-                            const percentageRate = rate.toFixed(2).replace('.', ',');
-                            formattedRate = `IPCA + ${percentageRate}%`;
-                        } else {
-                            const percentageRate = rate.toFixed(2).replace('.', ',');
-                            formattedRate = `${percentageRate}%`;
-                        }
-
-                        rateEl.textContent = formattedRate;
-                        priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    };
-
-                    selectorEl.innerHTML = ''; 
-                    bonds.forEach((bondData, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = bondData.TrsrBd.nm;
-                        selectorEl.appendChild(option);
-                    });
-
-                    const newSelectorEl = selectorEl.cloneNode(true);
-                    selectorEl.parentNode.replaceChild(newSelectorEl, selectorEl);
+                if (promiseResult.status === 'fulfilled' && promiseResult.value) { // Verifica se promiseResult.value (agora o objeto 'response') existe
+                    const fullResponse = promiseResult.value; // promiseResult.value agora é o objeto 'response'
+                    const bonds = fullResponse.TrsrBdTradgList ? fullResponse.TrsrBdTradgList.filter(item => item.TrsrBd.anulInvstmtRate > 0 && item.TrsrBd.untrInvstmtVal > 0) : [];
+                    const marketInfo = fullResponse.TrsrBondMkt; // Acessa TrsrBondMkt diretamente do fullResponse
                     
-                    newSelectorEl.addEventListener('change', (e) => {
-                        const selectedBond = bonds[e.target.value];
-                        updateTesouroCard(selectedBond);
-                    });
+                    if (marketInfo) {
+                        statusEl.textContent = `Status: ${marketInfo.sts}`;
+                        
+                        // Formatação das horas para exibição
+                        const openTime = new Date(marketInfo.opngDtTm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const closeTime = new Date(marketInfo.clsgDtTm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        timesEl.textContent = `Aberto: ${openTime} | Fechado: ${closeTime}`;
 
-                    if (bonds.length > 0) {
-                        updateTesouroCard(bonds[0]);
-                        newSelectorEl.value = "0"; 
+                        const quoteTime = new Date(marketInfo.qtnDtTm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        quoteTimeEl.textContent = `Cotação: ${quoteTime}`;
+
+                    } else { // Caso marketInfo seja null/undefined, define N/D
+                        statusEl.textContent = 'Status: N/D';
+                        timesEl.textContent = 'Horários: N/D';
+                        quoteTimeEl.textContent = 'Cotação: N/D';
                     }
 
-                } else {
+                    // RESTANTE DO CÓDIGO DO SELECTOR E ATUALIZAÇÃO DOS TÍTULOS
+                    selectorEl.innerHTML = ''; 
+                    if (bonds.length > 0) { // Garante que há títulos para popular o seletor
+                        bonds.forEach((bondData, index) => {
+                            const option = document.createElement('option');
+                            option.value = index;
+                            option.textContent = bondData.TrsrBd.nm;
+                            selectorEl.appendChild(option);
+                        });
+
+                        const newSelectorEl = selectorEl.cloneNode(true);
+                        selectorEl.parentNode.replaceChild(newSelectorEl, selectorEl);
+                        
+                        newSelectorEl.addEventListener('change', (e) => {
+                            const selectedBond = bonds[e.target.value];
+                            updateTesouroCard(selectedBond);
+                        });
+                        
+                        // Seleciona o primeiro título por padrão
+                        updateTesouroCard(bonds[0]);
+                        newSelectorEl.value = "0"; 
+                    } else {
+                        selectorEl.innerHTML = '<option>Nenhum título disponível</option>';
+                        rateEl.textContent = errorText; 
+                        priceEl.textContent = errorText; 
+                    }
+
+                } else { // Este bloco é para quando a requisição TOTALMENTE falha
                     selectorEl.innerHTML = '<option>Erro ao carregar</option>';
                     rateEl.textContent = errorText;
                     priceEl.textContent = errorText;
+                    statusEl.textContent = `Status: ${errorText}`; 
+                    timesEl.textContent = `Horários: ${errorText}`;   
+                    quoteTimeEl.textContent = `Cotação: ${errorText}`;    
                 }
+
+                // Função auxiliar updateTesouroCard - pode ser definida aqui ou fora, como está no seu código
+                function updateTesouroCard(bond) {
+                    const bondName = bond.TrsrBd.nm;
+                    const rate = bond.TrsrBd.anulInvstmtRate;
+                    const price = bond.TrsrBd.untrInvstmtVal;
+                    let formattedRate = '';
+
+                    if (bondName.includes('Selic')) {
+                        const decimalRate = rate.toFixed(4).replace('.', ',');
+                        formattedRate = `Selic + ${decimalRate}%`;
+                    } else if (bondName.includes('IPCA')) {
+                        const percentageRate = rate.toFixed(2).replace('.', ',');
+                        formattedRate = `IPCA + ${percentageRate}%`;
+                    } else {
+                        const percentageRate = rate.toFixed(2).replace('.', ',');
+                        formattedRate = `${percentageRate}%`;
+                    }
+
+                    rateEl.textContent = formattedRate;
+                    priceEl.textContent = `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                };
             },
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) {
                 if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) {
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     uiController.updateText(monthElem, `${parseFloat(data[data.length - 1].valor).toFixed(2)}%`);
                     const yearValue = data.slice(-12).reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-                    uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)}%`);
+                    uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)}} %`);
                     uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy');
                 } else {
                     uiController.updateText(monthElem, config.errorText);
@@ -949,7 +1001,23 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     fullHistory = rawData.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}))
                 }
 
-                const filteredData = fullHistory.slice(-period);
+                let filteredData;
+                if (period === 'max') {
+                    filteredData = fullHistory;
+                } else {
+                    const cutoffDate = new Date();
+                    if (indicatorId === 'pibBr') {
+                        cutoffDate.setFullYear(cutoffDate.getFullYear() - period);
+                    } else {
+                        if (['dolarSell', 'euroSell', 'cdi', 'selicMeta'].includes(indicatorId)) {
+                            cutoffDate.setDate(cutoffDate.getDate() - period);
+                        } else if (['ipca', 'ipca15', 'inpc', 'igpm', 'igpdi', 'poupanca', 'desemprego'].includes(indicatorId)) {
+                            cutoffDate.setMonth(cutoffDate.getMonth() - period);
+                        }
+                    }
+                    filteredData = fullHistory.filter(item => item.date >= cutoffDate);
+                }
+                
                 const chartSelector = `#${indicatorId.replace('Meta','').replace('Sell','').replace('Br', '-br')}-chart-container`;
 
                 switch(indicatorId) {
@@ -973,7 +1041,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 }
             },
             
-// --- INÍCIO DA FUNÇÃO CORRIGIDA ---
             async fetchAllInternationalIndicators() {
                 const cacheKey = 'allInternationalIndicators_v6_treasury';
                 const cachedData = cacheService.get(cacheKey);
@@ -1001,18 +1068,15 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 const promises = {};
                 
                 for (const key in fredIndicatorsConfig) {
-                    // Lógica corrigida para pular 'treasury' E 'fedtarget'
                     if (key === 'treasury' || key === 'fedtarget') {
                         continue;
                     }
                     promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, 1000);
                 }
 
-                // Lógica restaurada para buscar as séries do Fed Target separadamente
                 promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1000);
                 promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1000);
                 
-                // Lógica para buscar as séries do Tesouro Americano
                 promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {});
                 promises.treasury10Y = apiService.getFREDData(fredApiCodes.treasury10Y, {});
                 promises.treasury30Y = apiService.getFREDData(fredApiCodes.treasury30Y, {});
@@ -1030,7 +1094,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
 
                 for (const key in data) {
                     const cfg = fredIndicatorsConfig[key];
-                    // A lógica de cálculo manual para indicadores com 'hasToggle' permanece
                     if (cfg && cfg.hasToggle && data[key] && key !== 'fedtarget') {
                         const variations = this.calculateVariations(data[key]);
                         data[key] = { raw: data[key], ...variations };
@@ -1044,7 +1107,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     uiController.updateDateTime('FRED St. Louis Fed');
                 }
             },
-            // --- FIM DA FUNÇÃO CORRIGIDA ---
 
             processInternationalResults() {
                 const { fredIndicatorsConfig, errorText } = config;
@@ -1403,7 +1465,6 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                 document.getElementById('cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('cpi'));
                 document.getElementById('core-cpi-toggle-switch').addEventListener('change', () => this.updateCpiCardView('coreCpi'));
                 
-                // --- LINHAS ADICIONADAS ---
                 document.getElementById('pce-toggle-switch').addEventListener('change', () => this.updateCpiCardView('pce'));
                 document.getElementById('core-pce-toggle-switch').addEventListener('change', () => this.updateCpiCardView('corePce'));
 
