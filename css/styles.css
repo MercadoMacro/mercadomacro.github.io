@@ -166,7 +166,7 @@ body.body-modal-open {
 /* Banner */
 .banner {
     flex-grow: 1;
-    max-width: 60%;
+    max-width: 80%;
     background: rgba(var(--card-bg-val), 0.4); /* Levemente mais opaco */
     border-left: 3px solid var(--primary-color);
     padding: 10px 15px; /* Mais padding */
