@@ -884,7 +884,7 @@ T10Y2Y negativo → Curva invertida: os juros de curto prazo superam os de longo
                     const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))}));
                     uiController.updateText(monthElem, `${parseFloat(data[data.length - 1].valor).toFixed(2)}%`);
                     const yearValue = data.slice(-12).reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-                    uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)}} %`);
+                    uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)} %`);
                     uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy');
                 } else {
                     uiController.updateText(monthElem, config.errorText);
