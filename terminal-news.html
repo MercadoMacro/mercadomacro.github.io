@@ -655,8 +655,97 @@
         .floating-btn-container.right { right: 10px; }
         .floating-btn { width: 40px; height: 40px; }
     }
+	
+	/* Estilos adicionais para o modal de notificações */
+#notification-types-list li {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+#notification-types-list input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+#notify-start, #notify-end {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 10px var(--shadow-color-soft);
+    font-size: 0.8rem;
+    font-weight: normal;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
   </style>
 </head>
+
+<div id="notifications-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="notifications-modal-title">
+    <div class="modal-content">
+        <button id="notifications-modal-close-btn" class="modal-close" aria-label="Fechar">&times;</button>
+        <h2 id="notifications-modal-title">Configurações de Notificações</h2>
+        
+        <div class="settings-section">
+            <h3>Tipos de Notificações</h3>
+            <ul id="notification-types-list" style="list-style: none; padding: 0;">
+                <li>
+                    <input type="checkbox" id="notify-urgent" checked>
+                    <label for="notify-urgent">Notícias urgentes (com "urgente" ou "alerta" no título)</label>
+                </li>
+                <li>
+                    <input type="checkbox" id="notify-updates">
+                    <label for="notify-updates">Atualizações regulares de notícias</label>
+                </li>
+                <li>
+                    <input type="checkbox" id="notify-market">
+                    <label for="notify-market">Movimentos significativos de mercado</label>
+                </li>
+            </ul>
+        </div>
+
+        <div class="settings-section">
+            <h3>Horário para Notificações</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label for="notify-start">De:</label>
+                <input type="time" id="notify-start" value="08:00">
+                <label for="notify-end">Até:</label>
+                <input type="time" id="notify-end" value="22:00">
+            </div>
+        </div>
+
+        <button id="notifications-save-btn" style="margin-top: 20px;">Salvar Configurações</button>
+    </div>
+</div>
 <body>
 
 <div id="aria-live-announcer" class="visually-hidden" role="status" aria-live="polite"></div>
@@ -1184,12 +1273,41 @@
     return `em ${date.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} às ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
   }
   
-  function showDesktopNotification(title, options) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(title, options);
-        notification.onclick = () => { window.open(options.data.url, '_blank'); };
+function showDesktopNotification(title, options) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const settings = loadNotificationSettings();
+    if (!settings.notifyUrgent && title.toLowerCase().includes('urgente')) return;
+	
+	  if (!settings.notifyMarket && options.marketAlert) return;
+
+    // Verifica horário de notificação
+    const now = new Date();
+    const [startHour, startMinute] = settings.notifyStart.split(':').map(Number);
+    const [endHour, endMinute] = settings.notifyEnd.split(':').map(Number);
+    
+    const startTime = new Date();
+    startTime.setHours(startHour, startMinute, 0, 0);
+    
+    const endTime = new Date();
+    endTime.setHours(endHour, endMinute, 0, 0);
+    
+    if (now < startTime || now > endTime) return;
+
+    // Envia notificação
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SEND_NOTIFICATION',
+            notification: { title, ...options }
+        });
+    } else {
+        new Notification(title, { 
+            body: options.body, 
+            icon: options.icon || './favicon.ico',
+            data: { url: options.data?.url || '/' }
+        });
     }
-  }
+}
 
   async function loadNews(feedKey, forceRefresh = false) {
     const feedConfig = rssFeeds[feedKey];
@@ -1505,44 +1623,162 @@
     UI.toggleModal('briefing-modal', true);
   }
   
-  function setupNotifications() {
-      const notificationsBtn = document.getElementById('notifications-btn');
-      if (!notificationsBtn || !('Notification' in window)) {
-          if (notificationsBtn) notificationsBtn.style.display = 'none';
-          return;
-      }
-      
-      const updateButtonState = () => {
-          if (Notification.permission === 'granted') {
-              notificationsBtn.style.color = 'var(--primary-color)';
-              notificationsBtn.title = 'Notificações ativadas';
-          } else if (Notification.permission === 'denied') {
-              notificationsBtn.style.opacity = '0.5';
-              notificationsBtn.style.cursor = 'not-allowed';
-              notificationsBtn.title = 'Notificações bloqueadas';
-          } else {
-              notificationsBtn.style.color = '';
-              notificationsBtn.title = 'Ativar notificações';
-          }
-      };
+function setupNotifications() {
+    const notificationsBtn = document.getElementById('notifications-btn');
+    if (!notificationsBtn || !('Notification' in window)) {
+        if (notificationsBtn) notificationsBtn.style.display = 'none';
+        return;
+    }
 
-      notificationsBtn.addEventListener('click', () => {
-          if (Notification.permission === 'granted' || Notification.permission === 'denied') {
-              UI.announceToScreenReader('O estado das notificações só pode ser alterado nas configurações do navegador.');
-              return;
-          }
-          Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                  UI.announceToScreenReader('Notificações ativadas.');
-                  showDesktopNotification('Terminal de Notícias', { body: 'Você receberá alertas de notícias importantes!' });
-              } else {
-                  UI.announceToScreenReader('Permissão para notificações não concedida.');
-              }
-              updateButtonState();
-          });
-      });
-      updateButtonState();
-  }
+    // Configuração do Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(registration => {
+            console.log('ServiceWorker registration successful');
+        }).catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+        });
+    }
+
+    // Configurações padrão
+    const defaultNotificationSettings = {
+        notifyUrgent: true,
+        notifyUpdates: false,
+        notifyMarket: false,
+        notifyStart: '08:00',
+        notifyEnd: '22:00'
+    };
+
+    // Carrega as configurações salvas
+    const loadNotificationSettings = () => {
+        const savedSettings = localStorage.getItem('notificationSettings');
+        return savedSettings ? JSON.parse(savedSettings) : defaultNotificationSettings;
+    };
+
+    // Salva as configurações
+    const saveNotificationSettings = (settings) => {
+        localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    };
+
+    // Atualiza o estado do botão
+    const updateButtonState = () => {
+        const settings = loadNotificationSettings();
+        const permission = Notification.permission;
+        
+        let icon, label, title, activeClass = '';
+        
+        if (permission === 'granted') {
+            icon = 'fa-bell';
+            label = 'Notificações ativadas';
+            title = 'Clique para configurar notificações';
+            activeClass = 'active';
+        } else if (permission === 'denied') {
+            icon = 'fa-bell-slash';
+            label = 'Notificações bloqueadas';
+            title = 'Notificações bloqueadas - Altere nas configurações do navegador';
+            activeClass = 'disabled';
+        } else {
+            icon = 'fa-bell';
+            label = 'Ativar notificações';
+            title = 'Clique para ativar notificações';
+        }
+        
+        notificationsBtn.innerHTML = `<i class="fas ${icon}"></i>`;
+        notificationsBtn.setAttribute('aria-label', label);
+        notificationsBtn.title = title;
+        notificationsBtn.className = `floating-btn ${activeClass}`;
+    };
+
+    // Mostra o modal de configurações
+    const showNotificationSettings = () => {
+        const settings = loadNotificationSettings();
+        
+        document.getElementById('notify-urgent').checked = settings.notifyUrgent;
+        document.getElementById('notify-updates').checked = settings.notifyUpdates;
+        document.getElementById('notify-market').checked = settings.notifyMarket;
+        document.getElementById('notify-start').value = settings.notifyStart;
+        document.getElementById('notify-end').value = settings.notifyEnd;
+        
+        UI.toggleModal('notifications-modal', true);
+    };
+
+    // Salva as configurações do modal
+    document.getElementById('notifications-save-btn')?.addEventListener('click', () => {
+        const settings = {
+            notifyUrgent: document.getElementById('notify-urgent').checked,
+            notifyUpdates: document.getElementById('notify-updates').checked,
+            notifyMarket: document.getElementById('notify-market').checked,
+            notifyStart: document.getElementById('notify-start').value,
+            notifyEnd: document.getElementById('notify-end').value
+        };
+        
+        saveNotificationSettings(settings);
+        UI.toggleModal('notifications-modal', false);
+        UI.announceToScreenReader('Configurações de notificações salvas.');
+    });
+
+    // Configura o modal
+    UI.setupModal('notifications-modal', 'notifications-modal-close-btn');
+
+    // Adiciona tooltips
+    const addTooltip = (elementId, text) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            const tooltip = document.createElement('span');
+            tooltip.className = 'tooltip';
+            tooltip.innerHTML = `<i class="fas fa-info-circle" style="color: var(--text-secondary);"></i>
+                                <span class="tooltiptext">${text}</span>`;
+            element.parentNode.insertBefore(tooltip, element.nextSibling);
+        }
+    };
+
+    // Adiciona tooltips explicativos
+    addTooltip('notify-urgent', 'Notificações serão enviadas para notícias marcadas como urgentes ou com alertas');
+    addTooltip('notify-updates', 'Receba notificações para as principais atualizações de notícias');
+    addTooltip('notify-market', 'Alertas sobre movimentos significativos em mercados financeiros');
+    addTooltip('notify-start', 'Período do dia em que deseja receber notificações');
+
+    // Handler do botão de notificações
+    notificationsBtn.addEventListener('click', async () => {
+        const permission = Notification.permission;
+        
+        if (permission === 'denied') {
+            UI.announceToScreenReader('Notificações bloqueadas. Você precisa alterar esta configuração manualmente nas configurações do navegador.');
+            return;
+        }
+        
+        if (permission === 'granted') {
+            showNotificationSettings();
+            return;
+        }
+        
+        // Mostra modal explicativo antes de pedir permissão
+        const confirmEnable = confirm('Deseja ativar notificações? Você receberá alertas para notícias importantes e atualizações do mercado. Pode configurar os tipos de notificações depois.');
+        
+        if (confirmEnable) {
+            try {
+                const permissionResult = await Notification.requestPermission();
+                
+                if (permissionResult === 'granted') {
+                    // Mostra notificação de exemplo
+                    new Notification('Terminal de Notícias', { 
+                        body: 'Notificações ativadas com sucesso! Você receberá alertas importantes.',
+                        icon: './favicon.ico'
+                    });
+                    
+                    // Mostra configurações após ativar
+                    setTimeout(() => showNotificationSettings(), 1000);
+                }
+                
+                updateButtonState();
+            } catch (error) {
+                console.error('Erro ao solicitar permissão:', error);
+                UI.announceToScreenReader('Erro ao ativar notificações.');
+            }
+        }
+    });
+
+    updateButtonState();
+}
 
   document.addEventListener('DOMContentLoaded', () => {
     AppState.init();
