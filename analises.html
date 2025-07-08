@@ -69,7 +69,6 @@
 
         :focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
         
-        /* Header from index.html */
         .header {
             padding: 0;
             text-align: center;
@@ -116,10 +115,21 @@
             border-radius: 4px;
         }
 
-        /* Banner */
-        .banner { flex-grow: 1; max-width: 80%; background: var(--card-bg); border-left: 2px solid var(--primary-color); padding: 8px 12px; border-radius: 8px; font-size: 14px; display: flex; align-items: center; overflow: hidden; position: relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); min-height: 40px; will-change: transform; }
-        .banner-text { white-space: nowrap; }
-        @keyframes scrollBanner { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        /* Banner ALTERADO para conter o widget de cotações */
+        .banner {
+            flex-grow: 1;
+            max-width: 80%;
+            padding: 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            min-height: 48px;
+            will-change: transform;
+        }
+        
+        /* CSS para .banner-text e animação foram REMOVIDOS */
 
         .container {
             flex: 1; max-width: 1200px; width: 100%;
@@ -127,14 +137,8 @@
             box-sizing: border-box; text-align: center;
             display: flex; flex-direction: column;
         }
-
-       
-
-        /* Estilo para o contêiner do carrossel para dar um espaçamento */
-        #tradingview-widget-container {
-            margin-bottom: 20px;
-        }
-
+        
+        /* Contêiner original do widget foi REMOVIDO */
         .filters-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .filter-btn {
             padding: 8px 18px;
@@ -445,7 +449,7 @@
             .button-group { flex-direction: column; }
             .logo { text-align: center; }
             .page-title-header { font-size: 24px; }
-            .banner { max-width: 100%; margin-left: 0; text-align: center; font-size: 13px; }
+            .banner { max-width: 100%; margin-left: 0; text-align: center; } /* FONT-SIZE removido */
             .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; }
             .content-box { max-height: 420px; }
             .content-box.expanded { max-height: 65vh; }
@@ -483,17 +487,12 @@
                 <div class="page-title-header">Painel Financeiro</div>
                 <div class="logo-divider"></div>
             </div>
-            <div class="banner" id="random-banner">
-                <div class="banner-text">Carregando...</div>
-            </div>
+            <div class="banner" id="random-banner"></div>
         </div>
     </header>
 
     <div class="container">
        
-
-        <div id="tradingview-widget-container"></div>
-
         <div class="filters-container">
             <button class="filter-btn active" data-filter="all">Todos</button>
             <button class="filter-btn" data-filter="stocks">Ações</button>
@@ -596,27 +595,7 @@
             }
         }
         
-        function updateBanner() {
-            const BANNER_PHRASES = [
-                "Acompanhe as últimas movimentações do mercado financeiro em tempo real.",
-                "Seu painel completo de análises e cotações.",
-                "Informação é poder no mercado financeiro.",
-                "Bem-vindo ao Mercado Macro: Sua fonte de informações financeiras."
-            ];
-            const banner = document.getElementById('random-banner');
-            const bannerTextEl = banner ? banner.querySelector('.banner-text') : null;
-            if (bannerTextEl && BANNER_PHRASES && BANNER_PHRASES.length > 0) {
-                const randomPhrase = BANNER_PHRASES[Math.floor(Math.random() * BANNER_PHRASES.length)];
-                bannerTextEl.textContent = randomPhrase;
-                bannerTextEl.style.animation = 'none';
-                void bannerTextEl.offsetWidth;
-                if (window.innerWidth <= 768) {
-                    bannerTextEl.style.animation = 'scrollBanner 18s linear infinite';
-                } else {
-                    bannerTextEl.style.animation = '';
-                }
-            }
-        }
+        // ALTERADO: Função updateBanner foi removida.
 
         function updateThemeIcon(isLightMode) {
             const themeIcon = document.querySelector('#theme-toggle i');
@@ -630,9 +609,10 @@
          * Renderiza o widget de carrossel de cotações (Ticker Tape) da TradingView.
          */
         function renderTickerTapeWidget(theme = 'dark') {
-            const container = document.getElementById('tradingview-widget-container');
+            // ALTERADO: O contêiner agora é o banner.
+            const container = document.getElementById('random-banner');
             if (!container) {
-                console.error('Container do widget Ticker Tape (#tradingview-widget-container) não foi encontrado.');
+                console.error('Container do widget Ticker Tape (#random-banner) não foi encontrado.');
                 return;
             }
             container.innerHTML = '';
@@ -1033,8 +1013,7 @@
             else document.body.classList.remove('light-mode');
 
             renderTickerTapeWidget(isLightMode ? 'light' : 'dark');
-            updateBanner(); 
-            setInterval(updateBanner, 30000);
+            // ALTERADO: As chamadas para updateBanner() foram removidas.
 
             updateThemeIcon(isLightMode); updateDateTime();
             setupHeatmapToggle(); setupExpandButtons(); setupBackToTop();
