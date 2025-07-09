@@ -127,7 +127,9 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
         {
           "s": "BMFBOVESPA:WDO1!",
           "d": "DOL FUTURO"
-        }
+        },
+        { "s": "BMFBOVESPA:ISP1!", "d": "S&P 500" },
+         { "s": "BMFBOVESPA:EUR1!", "d": "Euro" }
       ]
     },
 		
