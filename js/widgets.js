@@ -127,26 +127,6 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
         {
           "s": "BMFBOVESPA:WDO1!",
           "d": "DOL FUTURO"
-        },
-        {
-          "s": "BMFBOVESPA:HSI1!",
-          "d": "HANG SENG FUTURO"
-        },
-        {
-          "s": "BMFBOVESPA:ISP1!",
-          "d": "S&P 500 FUTURO"
-        },
-        {
-          "s": "BMFBOVESPA:DAX1!",
-          "d": "DAX Frankfurt"
-        },
-        {
-          "s": "BMFBOVESPA:INK1!",
-          "d": "NIKKEI FUTURO"
-        },
-        {
-          "s": "BMFBOVESPA:ESX1!",
-          "d": "EURO STOXX 50"
         }
       ]
     },
@@ -168,7 +148,12 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
             {
                 "title": "Commodities",
                 "symbols": [
-                    { "s": "TVC:UKOIL", "d": "Petróleo Brent" },
+                    {
+          "s": "BLACKBULL:BRENT",
+          "d": "",
+          "logoid": "crude-oil",
+          "currency-logoid": "country/US"
+        },
                     { "s": "TVC:USOIL", "d": "Petróleo WTI" },
                     { "s": "OANDA:XAUUSD", "d": "Ouro" },
                     { "s": "TVC:SILVER", "d": "Prata" },
