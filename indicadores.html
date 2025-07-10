@@ -25,6 +25,41 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
+        /* CSS Adicionado para o novo cabeçalho padrão */
+        .header {
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--dark-bg);
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .header .logo-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .header .logo {
+            text-align: left;
+            margin-bottom: 0;
+        }
+
+        .header .page-title-header {
+            font-size: 25px;
+            margin-bottom: 8px;
+        }
+        
+        .header .logo-divider {
+             margin: 0;
+             width: 80px;
+             height: 4px;
+             background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+             border-radius: 3px;
+        }
+        /* Fim do CSS Adicionado */
+
         :root { 
             --primary-color: #00d180; --primary-light: #5bffb0; --primary-dark: #009e53;
             --dark-bg: #0d1117; --darker-bg: #010409; --text-color: #c9d1d9;
@@ -186,9 +221,20 @@
     </style>
 </head>
 <body>
+    <header class="header">
+        <div class="logo-container">
+            <div class="logo">
+                <a href="index.html" style="text-decoration: none;">
+                    <div class="page-title-header">Indicadores Financeiros</div>
+                    <div class="logo-divider"></div>
+                </a>
+            </div>
+        </div>
+    </header>
+
     <div class="container">
-        <header class="logo">
-            <h1 class="page-title-header">Indicadores Financeiros</h1>
+        <div class="logo">
+            
             <div class="switch-container">
                 <span id="label-nacional" class="switch-label active">Nacionais</span>
                 <label class="switch">
@@ -198,7 +244,7 @@
                 <span id="label-internacional" class="switch-label">Internacionais</span>
             </div>
             <div class="logo-divider"></div>
-        </header>
+        </div>
 
         <p class="subheader" id="data-atual"></p>
         
