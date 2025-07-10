@@ -1,13 +1,14 @@
 [
-    {
+       {
         "id": 1,
-        "title": "Panorama Semanal do Mercado: 24-30 de Junho de 2025",
-        "date": "2025-06-30",
-        "summary": "Análise aprofundada dos eventos econômicos e políticos que impactaram o mercado financeiro global e brasileiro na última semana. Destaques para decisões de bancos centrais, dados de inflação e o desempenho de setores chave. Inclui perspectivas para a próxima semana e recomendações estratégicas para o investidor moderno.",
-        "link": "reports/panorama_semanal_junho_2025_v2.pdf",
-        "image": "assets/img/report_cover_macro.jpg",
-        "tags": ["panorama", "semanal", "macroeconomia", "juros", "inflacao", "acoes", "mercado", "estrategia"]
+        "title": "Por que Petróleo e Minério de Ferro Fazem o Ibovespa Subir (ou Cair)?",
+        "date": "2025-07-10",
+        "summary": "Matérias-primas como o petróleo e o minério de ferro – commodities que são produtos brutos e padronizados – influenciam diretamente o desempenho do índice. A explicação se aprofunda no papel de empresas como a Vale (minério de ferro) e a Petrobras (petróleo), que, devido ao seu grande peso no Ibovespa, agem como "termômetros" da economia.",
+        "link": "reports/petroleo_v2.pdf",
+        "image": "assets/img/report_cover_petroleo.jpg",
+        "tags": ["financas", "educacao", "comportamental", "investimentos"]
     },
+
     {
         "id": 2,
         "title": "A Ascensão do Investimento Sustentável (ESG) no Brasil",
@@ -88,5 +89,15 @@
         "link": "reports/planejamento_financeiro_pessoal_v2.pdf",
         "image": "assets/img/report_cover_planejamento.jpg",
         "tags": ["planejamento", "financeiro pessoal", "educacao", "orcamento", "futuro"]
+    },
+    
+    {
+        "id": 11,
+        "title": "Panorama Semanal do Mercado: 24-30 de Junho de 2025",
+        "date": "2025-06-30",
+        "summary": "Análise aprofundada dos eventos econômicos e políticos que impactaram o mercado financeiro global e brasileiro na última semana. Destaques para decisões de bancos centrais, dados de inflação e o desempenho de setores chave. Inclui perspectivas para a próxima semana e recomendações estratégicas para o investidor moderno.",
+        "link": "reports/panorama_semanal_junho_2025_v2.pdf",
+        "image": "assets/img/report_cover_macro.jpg",
+        "tags": ["panorama", "semanal", "macroeconomia", "juros", "inflacao", "acoes", "mercado", "estrategia"]
     }
 ]
