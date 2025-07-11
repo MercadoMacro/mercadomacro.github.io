@@ -26,9 +26,10 @@
             --bg-color: #02040a;
             --text-color: #e6f1ff;
             --text-secondary: #a0b3d1;
-            --glass-bg: rgba(10, 16, 30, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-shadow: rgba(0, 0, 0, 0.2);
+            /* REVISED: Lighter glass effect */
+            --glass-bg: rgba(10, 16, 30, 0.4); /* Reduced opacity from 0.6 */
+            --glass-border: rgba(255, 255, 255, 0.08); /* Slightly reduced opacity from 0.1 */
+            --glass-shadow: rgba(0, 0, 0, 0.15); /* Reduced opacity and blur might feel lighter */
             --error-color: #ff5252;
             --success-color: var(--accent-color);
             --border-radius: 16px;
@@ -51,20 +52,26 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
-            background-image: 
+            /* As linhas abaixo foram removidas para deixar o fundo estático */
+            /*
+            background-image:
                 radial-gradient(ellipse at 70% 20%, hsla(var(--primary-glow-hue), 80%, 30%, 0.4), transparent 50%),
                 radial-gradient(ellipse at 30% 80%, hsla(280, 80%, 40%, 0.3), transparent 50%);
             background-attachment: fixed;
             animation: aurora-flow 20s ease-in-out infinite;
+            */
         }
 
         body.modal-open { overflow: hidden; }
 
+        /* A keyframe da animação foi removida */
+        /*
         @keyframes aurora-flow {
             0% { background-position: 0% 50%, 0% 50%; }
             50% { background-position: 100% 50%, 100% 50%; }
             100% { background-position: 0% 50%, 0% 50%; }
         }
+        */
 
         /* --- 2. LAYOUT E CABEÇALHO --- */
         .container {
@@ -72,7 +79,7 @@
             margin: 0 auto;
             padding: 40px 20px;
         }
-        
+
         /* ESTILOS DO NOVO CABEÇALHO (COPIADO DE STYLES.CSS) */
         .header {
             padding: 0;
@@ -90,7 +97,7 @@
             gap: 20px;
             width: 100%;
             /* Ajustado para caber o cabeçalho completo da index */
-            max-width: 1200px; 
+            max-width: 1200px;
             margin: 0 auto;
             padding: 10px 20px;
         }
@@ -165,7 +172,7 @@
             font-size: 0.9rem;
             transition: all var(--transition-speed) ease;
             cursor: pointer;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px); /* Adjusted */
         }
 
         .nav-btn:hover {
@@ -190,14 +197,16 @@
             padding: 32px;
             margin-bottom: 32px;
             border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px 0 var(--glass-shadow);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            /* REVISED: Lighter shadow */
+            box-shadow: 0 4px 20px 0 var(--glass-shadow); /* Adjusted shadow values */
+            /* REVISED: Lighter blur */
+            backdrop-filter: blur(8px); /* Reduced blur from 12px */
+            -webkit-backdrop-filter: blur(8px); /* Reduced blur from 12px */
             text-align: left;
             transition: all var(--transition-speed) ease;
             display: none; /* Inicia oculto, controlado pelo JS */
         }
-        
+
         .calculator.is-visible {
             display: block;
             animation: fadeIn 0.5s ease-out forwards;
@@ -244,15 +253,15 @@
             transition: all var(--transition-speed) ease;
             box-sizing: border-box;
         }
-        .input-group input[type="date"] { 
-            color-scheme: dark; 
+        .input-group input[type="date"] {
+            color-scheme: dark;
         }
         .input-group input:focus, .input-group select:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px hsla(var(--primary-glow-hue), 100%, 65%, 0.3);
         }
-        
+
         .button-group { display: flex; gap: 16px; margin-top: 28px; }
         .btn {
             cursor: pointer;
@@ -290,7 +299,7 @@
             border: 1px solid var(--glass-border);
         }
         .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.2); }
-        
+
         /* --- 6. SEÇÃO DE RESULTADOS --- */
         .result {
             margin-top: 32px;
@@ -323,7 +332,14 @@
             color: var(--text-color);
         }
         .result-value.positive { color: var(--success-color); }
-        
+        .result-actions {
+            margin-top: 20px;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
         /* --- 7. COMPONENTES ADICIONAIS --- */
         .insights-box {
             margin-top: 20px;
@@ -416,7 +432,7 @@
             padding: 30px 0;
             border-top: 1px solid var(--glass-border);
         }
-        
+
         /* --- 10. ANIMAÇÕES E RESPONSIVIDADE --- */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -424,7 +440,7 @@
         }
 
         .hidden { display: none !important; }
-        
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -433,24 +449,24 @@
                 scroll-behavior: auto !important;
             }
         }
-        
+
         @media (max-width: 768px) {
             .button-group { flex-direction: column; }
-            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; } 
-            .logo { text-align: center; } 
-            .page-title-header { font-size: 24px; } 
-            .logo-divider { margin: 5px auto; } 
+            .logo-container { flex-direction: column; align-items: center; gap: 10px; padding: 10px; }
+            .logo { text-align: center; }
+            .page-title-header { font-size: 24px; }
+            .logo-divider { margin: 5px auto; }
             .banner { max-width: 100%; margin-top: 15px; text-align: center; font-size: 13px; }
             .banner-text { animation: scrollBanner 18s linear infinite; }
-            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; } 
-            .content-box { max-height: 420px; } 
-            .content-box.expanded { max-height: 65vh; } 
-            .content-modal-content { width: 95%; height: 90%; padding: 15px; } 
-            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); } 
-            .settings-panel.visible { transform: translateY(0) scale(1); } 
+            .content-row { grid-template-columns: 1fr; grid-template-areas: "slotA" "slotB" "slotE" "slotC" "slotD"; }
+            .content-box { max-height: 420px; }
+            .content-box.expanded { max-height: 65vh; }
+            .content-modal-content { width: 95%; height: 90%; padding: 15px; }
+            .settings-panel { width: calc(100% - 40px); left: 20px; right: 20px; bottom: auto; top: 60px; transform: translateY(-10px) scale(0.95); }
+            .settings-panel.visible { transform: translateY(0) scale(1); }
         }
 
-        @media (max-width: 600px) { 
+        @media (max-width: 600px) {
             body {
                 zoom: 0.8;
                 touch-action: manipulation;
@@ -465,7 +481,7 @@
                 padding-bottom: 30px;
             }
         }
-        
+
         /* --- 11. MODO CLARO --- */
         body.light-mode {
             --primary-glow-hue: 210;
@@ -475,9 +491,10 @@
             --bg-color: #f0f4f9;
             --text-color: #0d1a2e;
             --text-secondary: #5a6b82;
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(0, 0, 0, 0.08);
-            --glass-shadow: rgba(13, 26, 46, 0.1);
+            /* REVISED: Lighter glass effect for light mode */
+            --glass-bg: rgba(255, 255, 255, 0.5); /* Reduced opacity from 0.7 */
+            --glass-border: rgba(0, 0, 0, 0.05); /* Slightly reduced opacity from 0.08 */
+            --glass-shadow: rgba(13, 26, 46, 0.08); /* Reduced opacity from 0.1 */
             background-image: none;
         }
         body.light-mode .header {
@@ -507,18 +524,18 @@
         body.light-mode .hp12c-close-btn:hover { background: var(--primary-color); color: white; }
 
         /* --- 12. BOTÕES FLUTUANTES E MODAL (Estilo V2) --- */
-        .floating-buttons-container { 
-            position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; 
+        .floating-buttons-container {
+            position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000;
         }
-        .floating-btn { 
+        .floating-btn {
             position: relative; width: 50px; height: 50px; border-radius: 50%; background: var(--glass-bg);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); 
-            color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 8px 20px var(--glass-shadow); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            -webkit-tap-highlight-color: transparent; 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); /* Adjusted */
+            color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 15px var(--glass-shadow); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); /* Adjusted */
+            -webkit-tap-highlight-color: transparent;
         }
-        .floating-btn:hover { 
-            transform: translateY(-6px) scale(1.1); box-shadow: 0 12px 25px hsla(var(--primary-glow-hue), 100%, 50%, 0.4); 
+        .floating-btn:hover {
+            transform: translateY(-6px) scale(1.1); box-shadow: 0 12px 25px hsla(var(--primary-glow-hue), 100%, 50%, 0.4);
             color: var(--primary-light);
         }
         .floating-btn:active { transform: translateY(0) scale(1); }
@@ -526,36 +543,36 @@
         #top-btn { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
         #top-btn.visible { opacity: 1; visibility: visible; }
         .theme-toggle { position: fixed; left: 20px; bottom: 20px; }
-        .hp12c-btn { 
-            position: fixed; top: 20px; right: 20px; z-index: 1001; width: 50px; height: 50px; border-radius: 50%; 
-            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
-            border: 1px solid var(--glass-border); color: var(--text-color); cursor: pointer; display: flex; align-items: center; 
-            justify-content: center; box-shadow: 0 8px 20px var(--glass-shadow); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); 
-            overflow: hidden; -webkit-tap-highlight-color: transparent; 
+        .hp12c-btn {
+            position: fixed; top: 20px; right: 20px; z-index: 1001; width: 50px; height: 50px; border-radius: 50%;
+            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); color: var(--text-color); cursor: pointer; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 8px 20px var(--glass-shadow); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            overflow: hidden; -webkit-tap-highlight-color: transparent;
         }
-        .hp12c-btn:hover { 
-            transform: translateY(-6px) scale(1.1); box-shadow: 0 12px 25px hsla(var(--primary-glow-hue), 100%, 50%, 0.4); color: #fff;  
+        .hp12c-btn:hover {
+            transform: translateY(-6px) scale(1.1); box-shadow: 0 12px 25px hsla(var(--primary-glow-hue), 100%, 50%, 0.4); color: #fff;
         }
         .hp12c-btn:active { transform: translateY(0) scale(1); }
         .hp12c-icon { width: 125%; height: 100%; border-radius: 50%; object-fit: contain; }
-        .hp12c-modal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 10, 42, 0.85); 
-            z-index: 2000;  backdrop-filter: blur(5px); animation: fadeIn 0.3s; padding: 20px; box-sizing: border-box; 
-            overflow-y: auto; justify-content: center; align-items: center; 
+        .hp12c-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 10, 42, 0.85);
+            z-index: 2000;  backdrop-filter: blur(5px); animation: fadeIn 0.3s; padding: 20px; box-sizing: border-box;
+            overflow-y: auto; justify-content: center; align-items: center;
         }
-        .hp12c-modal-content { 
-            background-color: #02040a; border-radius: 12px;  width: auto; height: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6);  
-            border: 1px solid var(--glass-border); flex-shrink: 0; 
+        .hp12c-modal-content {
+            background-color: #02040a; border-radius: 12px;  width: auto; height: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            border: 1px solid var(--glass-border); flex-shrink: 0;
         }
-        .hp12c-modal-header { 
-            display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; 
-            border-bottom: 1px solid var(--glass-border); 
+        .hp12c-modal-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;
+            border-bottom: 1px solid var(--glass-border);
         }
         .hp12c-modal-title { font-weight: bold; color: var(--primary-color); }
-        .hp12c-close-btn { 
-            border: none; background: rgba(255,255,255,0.1); font-size: 1.2rem; cursor: pointer; color: var(--text-secondary); 
-            transition: all 0.15s ease; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; line-height: 1; 
+        .hp12c-close-btn {
+            border: none; background: rgba(255,255,255,0.1); font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);
+            transition: all 0.15s ease; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; line-height: 1;
         }
         .hp12c-close-btn:hover { color: var(--bg-color); background: var(--primary-color); }
         .hp12c-iframe-container {  width: 465px; height: 295px; overflow: hidden; border-radius: 0 0 12px 12px; }
@@ -578,24 +595,25 @@
 
     <div class="container">
         <nav class="calculator-nav" aria-label="Navegação das Calculadoras">
-            <a href="#retirement-calc" class="nav-btn active" data-id="retirement-calc">Aposentadoria</a>
-            <a href="#juros-compostos-calc" class="nav-btn" data-id="juros-compostos-calc">Juros Compostos</a>
-            <a href="#amortizacao-calc" class="nav-btn" data-id="amortizacao-calc">Financiamento</a>
-            <a href="#cdb-calc" class="nav-btn" data-id="cdb-calc">Renda Fixa</a>
-            <a href="#price-average-calc" class="nav-btn" data-id="price-average-calc">Preço Médio</a>
-            <a href="#inflation-calc" class="nav-btn" data-id="inflation-calc">Inflação</a>
-            <a href="#currency-calc" class="nav-btn" data-id="currency-calc">Moedas</a>
+            <a href="#retirement-calc" class="nav-btn active" data-id="retirement-calc" data-calc-name="aposentadoria">Aposentadoria</a>
+            <a href="#juros-compostos-calc" class="nav-btn" data-id="juros-compostos-calc" data-calc-name="juros-compostos">Juros Compostos</a>
+            <a href="#amortizacao-calc" class="nav-btn" data-id="amortizacao-calc" data-calc-name="financiamento">Financiamento</a>
+            <a href="#cdb-calc" class="nav-btn" data-id="cdb-calc" data-calc-name="renda-fixa">Renda Fixa</a>
+            <a href="#price-average-calc" class="nav-btn" data-id="price-average-calc" data-calc-name="preco-medio">Preço Médio</a>
+            <a href="#inflation-calc" class="nav-btn" data-id="inflation-calc" data-calc-name="inflacao">Inflação</a>
+            <a href="#currency-calc" class="nav-btn" data-id="currency-calc" data-calc-name="moedas">Moedas</a>
         </nav>
 
         <section class="calculator" id="retirement-calc" aria-labelledby="retirement-title">
             <h2 id="retirement-title"><i class="fas fa-umbrella-beach"></i> Aposentadoria</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="ret-current-age">Idade Atual</label><input type="text" id="ret-current-age" placeholder="30"></div>
-                <div class="input-group"><label for="ret-age">Idade de Aposentadoria</label><input type="text" id="ret-age" placeholder="65"></div>
-                <div class="input-group"><label for="ret-initial">Patrimônio Atual (R$)</label><input type="text" id="ret-initial" placeholder="R$ 50.000,00"></div>
-                <div class="input-group"><label for="ret-monthly">Aporte Mensal (R$)</label><input type="text" id="ret-monthly" placeholder="R$ 500,00"></div>
-                <div class="input-group"><label for="ret-rate">Rendimento Anual (%)</label><input type="text" id="ret-rate" placeholder="8,00 %"></div>
-                <div class="input-group"><label for="ret-payout-years">Período de Recebimento (anos)</label><input type="text" id="ret-payout-years" value="20" placeholder="20"></div>
+                <div class="input-group"><label for="ret-current-age">Idade Atual</label><input type="text" id="ret-current-age" placeholder="30" inputmode="numeric" pattern="[0-9]*"></div>
+                <div class="input-group"><label for="ret-age">Idade de Aposentadoria</label><input type="text" id="ret-age" placeholder="65" inputmode="numeric" pattern="[0-9]*"></div>
+                <div class="input-group"><label for="ret-initial">Patrimônio Atual (R$)</label><input type="text" id="ret-initial" placeholder="R$ 50.000,00" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="ret-monthly">Aporte Mensal (R$)</label><input type="text" id="ret-monthly" placeholder="R$ 500,00" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="ret-rate">Rendimento Anual (%)</label><input type="text" id="ret-rate" placeholder="8,00 %" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="ret-inflation">Inflação Anual Estimada (%)</label><input type="text" id="ret-inflation" placeholder="4,00 %" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="ret-payout-years">Período de Recebimento (anos)</label><input type="text" id="ret-payout-years" value="20" placeholder="20" inputmode="numeric" pattern="[0-9]*"></div>
             </div>
             <div class="button-group">
                 <button class="calculate-btn" id="calculate-retirement"><i class="fas fa-calculator"></i> Calcular Projeção</button>
@@ -603,14 +621,14 @@
             </div>
             <div class="result" id="retirement-result" style="display: none;" aria-live="polite"></div>
         </section>
-        
+
         <section class="calculator" id="juros-compostos-calc" aria-labelledby="jc-title">
             <h2 id="jc-title"><i class="fas fa-chart-area"></i> Juros Compostos</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="jc-principal">Valor Inicial (R$)</label><input type="text" id="jc-principal" placeholder="R$ 1.000,00"></div>
-                <div class="input-group"><label for="jc-monthly">Aporte Mensal (R$)</label><input type="text" id="jc-monthly" placeholder="R$ 200,00"></div>
-                <div class="input-group"><label for="jc-rate">Taxa de Juros (% ao ano)</label><input type="text" id="jc-rate" placeholder="8,50 %"></div>
-                <div class="input-group"><label for="jc-time">Período (anos)</label><input type="text" id="jc-time" placeholder="10"></div>
+                <div class="input-group"><label for="jc-principal">Valor Inicial (R$)</label><input type="text" id="jc-principal" placeholder="R$ 1.000,00" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="jc-monthly">Aporte Mensal (R$)</label><input type="text" id="jc-monthly" placeholder="R$ 200,00" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="jc-rate">Taxa de Juros (% ao ano)</label><input type="text" id="jc-rate" placeholder="8,50 %" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="jc-time">Período (anos)</label><input type="text" id="jc-time" placeholder="10" inputmode="numeric" pattern="[0-9]*"></div>
             </div>
             <div class="button-group">
                 <button class="calculate-btn" id="calculate-compound"><i class="fas fa-calculator"></i> Calcular</button>
@@ -622,10 +640,11 @@
         <section class="calculator" id="amortizacao-calc" aria-labelledby="amort-title">
             <h2 id="amort-title"><i class="fas fa-house-damage"></i> Financiamento</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="loan-amount">Valor Financiado (R$)</label><input type="text" id="loan-amount" placeholder="R$ 200.000,00"></div>
-                <div class="input-group"><label for="loan-rate">Taxa de Juros (% ao ano)</label><input type="text" id="loan-rate" placeholder="8,50 %"></div>
-                <div class="input-group"><label for="loan-term">Prazo (anos)</label><input type="text" id="loan-term" placeholder="30"></div>
+                <div class="input-group"><label for="loan-amount">Valor Financiado (R$)</label><input type="text" id="loan-amount" placeholder="R$ 200.000,00" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="loan-rate">Taxa de Juros (% ao ano)</label><input type="text" id="loan-rate" placeholder="8,50 %" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="loan-term">Prazo (anos)</label><input type="text" id="loan-term" placeholder="30" inputmode="numeric" pattern="[0-9]*"></div>
                 <div class="input-group"><label for="loan-type">Sistema</label><select id="loan-type"><option value="price">Tabela PRICE</option><option value="sac">Tabela SAC</option></select></div>
+                <div class="input-group"><label for="loan-extra-costs">Outros Custos (Taxas, Seguros) (R$)</label><input type="text" id="loan-extra-costs" placeholder="R$ 1.500,00" inputmode="numeric" pattern="[0-9,.]*"></div>
             </div>
             <div class="button-group">
                 <button class="calculate-btn" id="calculate-amortization"><i class="fas fa-calculator"></i> Calcular</button>
@@ -637,12 +656,12 @@
         <section class="calculator" id="cdb-calc" aria-labelledby="cdb-title">
             <h2 id="cdb-title"><i class="fas fa-piggy-bank"></i> Rendimento de Renda Fixa</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="cdb-initial">Investimento Inicial (R$)</label><input type="text" id="cdb-initial" placeholder="R$ 10.000,00"></div>
+                <div class="input-group"><label for="cdb-initial">Investimento Inicial (R$)</label><input type="text" id="cdb-initial" placeholder="R$ 10.000,00" inputmode="numeric" pattern="[0-9,.]*"></div>
                 <div class="input-group"><label for="cdb-type">Tipo de Ativo</label><select id="cdb-type"><option value="cdb">CDB / RDB / LC</option><option value="lci-lca">LCI / LCA / CR</option></select></div>
                 <div class="input-group"><label for="cdb-rate-type">Tipo de Taxa</label><select id="cdb-rate-type"><option value="pos">Pós-fixado (% do CDI)</option><option value="pre">Pré-fixado (% a.a.)</option></select></div>
-                <div class="input-group"><label for="cdb-rate">Taxa do Investimento (%)</label><input type="text" id="cdb-rate" placeholder="110,00 %"></div>
-                <div class="input-group"><label for="cdb-term">Prazo do Investimento (dias)</label><input type="text" id="cdb-term" placeholder="720"></div>
-                <div class="input-group"><label for="cdb-cdi-rate">Taxa CDI Anualizada (% a.a.)</label><input type="text" id="cdb-cdi-rate" placeholder="Carregando..." disabled></div>
+                <div class="input-group"><label for="cdb-rate">Taxa do Investimento (%)</label><input type="text" id="cdb-rate" placeholder="110,00 %" inputmode="numeric" pattern="[0-9,.]*"></div>
+                <div class="input-group"><label for="cdb-term">Prazo do Investimento (dias)</label><input type="text" id="cdb-term" placeholder="720" inputmode="numeric" pattern="[0-9]*"></div>
+                <div class="input-group"><label for="cdb-cdi-rate">Taxa CDI Anualizada (% a.a.)</label><input type="text" id="cdb-cdi-rate" placeholder="Carregando..." disabled inputmode="numeric" pattern="[0-9,.]*"></div>
             </div>
             <div class="button-group">
                 <button class="calculate-btn" id="calculate-cdb"><i class="fas fa-calculator"></i> Simular</button>
@@ -654,21 +673,21 @@
         <section class="calculator" id="price-average-calc" aria-labelledby="pa-title">
             <h2 id="pa-title"><i class="fas fa-chart-pie"></i> Preço Médio de Ativos</h2>
             <p class="page-subtitle" style="margin: -20px 0 20px; text-align: left; max-width: 100%;">Adicione suas operações de compra para descobrir o preço médio do seu ativo.</p>
-            
+
             <div class="input-grid" style="margin-bottom: 24px;">
                 <div class="input-group">
                     <label for="pa-current-quantity">Posição Atual: Quantidade (Opcional)</label>
-                    <input type="text" id="pa-current-quantity" placeholder="Quantidade que você já possui">
+                    <input type="text" id="pa-current-quantity" placeholder="Quantidade que você já possui" inputmode="numeric" pattern="[0-9,.]*">
                 </div>
                 <div class="input-group">
                     <label for="pa-current-price">Posição Atual: Preço Médio (R$)</label>
-                    <input type="text" id="pa-current-price" placeholder="Seu preço médio atual">
+                    <input type="text" id="pa-current-price" placeholder="Seu preço médio atual" inputmode="numeric" pattern="[0-9,.]*">
                 </div>
             </div>
 
             <div id="operations-list"></div>
             <button class="btn btn-secondary" id="add-operation-btn" style="width: auto; margin-bottom: 24px;"><i class="fas fa-plus"></i> Adicionar Operação</button>
-            
+
             <div class="button-group">
                 <button class="calculate-btn" id="calculate-price-average"><i class="fas fa-calculator"></i> Calcular Preço Médio</button>
                 <button class="btn btn-secondary clear-btn" data-form="price-average-calc" data-result="price-average-result"><i class="fas fa-eraser"></i> Limpar Tudo</button>
@@ -679,7 +698,7 @@
         <section class="calculator" id="inflation-calc" aria-labelledby="inflation-title">
             <h2 id="inflation-title"><i class="fas fa-balance-scale"></i> Correção pela Inflação (IPCA)</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="inflation-value">Valor a ser corrigido (R$)</label><input type="text" id="inflation-value" placeholder="R$ 1.000,00"></div>
+                <div class="input-group"><label for="inflation-value">Valor a ser corrigido (R$)</label><input type="text" id="inflation-value" placeholder="R$ 1.000,00" inputmode="numeric" pattern="[0-9,.]*"></div>
                 <div class="input-group"><label for="inflation-start">Data Inicial</label><input type="date" id="inflation-start"></div>
                 <div class="input-group"><label for="inflation-end">Data Final</label><input type="date" id="inflation-end"></div>
             </div>
@@ -693,7 +712,7 @@
         <section class="calculator" id="currency-calc" aria-labelledby="currency-title">
             <h2 id="currency-title"><i class="fas fa-exchange-alt"></i> Conversor de Moedas</h2>
             <div class="input-grid">
-                <div class="input-group"><label for="currency-amount">Valor</label><input type="text" id="currency-amount" placeholder="100,00"></div>
+                <div class="input-group"><label for="currency-amount">Valor</label><input type="text" id="currency-amount" placeholder="100,00" inputmode="numeric" pattern="[0-9,.]*"></div>
                 <div class="input-group"><label for="currency-from">De</label><select id="currency-from"></select></div>
                 <div class="input-group"><label for="currency-to">Para</label><select id="currency-to"></select></div>
             </div>
@@ -742,10 +761,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstances: {},
         inputMasks: new Map()
     };
-    
+
     const Storage = {
         save: (key, data) => {
-            try { localStorage.setItem(key, JSON.stringify(data)); } 
+            try { localStorage.setItem(key, JSON.stringify(data)); }
             catch (e) { console.error("Erro ao salvar no localStorage", e); }
         },
         load: (key) => {
@@ -786,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const UI = {
         formatCurrency: (value, currency = 'BRL') => new Intl.NumberFormat('pt-BR', { style: 'currency', currency, minimumFractionDigits: 2 }).format(value || 0),
         formatNumber: (value, digits = 2) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value || 0),
-        
+
         animateValue: (element, start, end, duration, formatFn) => {
             let startTime = null;
             const step = (timestamp) => {
@@ -799,19 +818,23 @@ document.addEventListener('DOMContentLoaded', () => {
             window.requestAnimationFrame(step);
         },
 
-        createResultBlock: (title, icon, items, insightText) => {
+        createResultBlock: (title, icon, items, insightText, calcName) => {
             const itemsHTML = items.map(item => `
                 <div class="result-item">
                     <span class="result-label">${item.label}</span>
                     <span class="result-value ${item.class || ''}" data-target-value="${item.value}">${item.initialValue || UI.formatCurrency(0)}</span>
                 </div>`).join('');
             const insightHTML = insightText ? `<div class="insights-box"><i class="fas fa-lightbulb"></i><span>${insightText}</span></div>` : '';
-            return `<h3><i class="fas ${icon}"></i> ${title}</h3>${itemsHTML}${insightHTML}`;
+            const shareButtonHTML = `
+                <div class="result-actions">
+                    <button class="btn btn-secondary share-btn" data-calc-name="${calcName}"><i class="fas fa-share-alt"></i> Compartilhar</button>
+                </div>`;
+            return `<h3><i class="fas ${icon}"></i> ${title}</h3>${itemsHTML}${insightHTML}${shareButtonHTML}`;
         },
-        
+
         renderResults: (containerId, resultData) => {
             const container = document.getElementById(containerId);
-            container.innerHTML = UI.createResultBlock(resultData.title, resultData.icon, resultData.items, resultData.insight);
+            container.innerHTML = UI.createResultBlock(resultData.title, resultData.icon, resultData.items, resultData.insight, resultData.calcName);
             container.style.display = 'block';
 
             resultData.items.forEach(item => {
@@ -876,7 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isDarkMode = !document.body.classList.contains('light-mode');
             const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
             const labelColor = isDarkMode ? '#a0b3d1' : '#5a6b82';
-            
+
             const defaultOptions = {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { labels: { color: labelColor } } },
@@ -892,14 +915,18 @@ document.addEventListener('DOMContentLoaded', () => {
         retirement: () => {
             const currentAge = Calculators.getMaskedValue('ret-current-age'), retirementAge = Calculators.getMaskedValue('ret-age'),
                   initialSavings = Calculators.getMaskedValue('ret-initial'), monthlyContribution = Calculators.getMaskedValue('ret-monthly'),
-                  annualRate = Calculators.getMaskedValue('ret-rate') / 100, payoutYears = Calculators.getMaskedValue('ret-payout-years');
+                  annualRate = Calculators.getMaskedValue('ret-rate') / 100,
+                  annualInflation = Calculators.getMaskedValue('ret-inflation') / 100,
+                  payoutYears = Calculators.getMaskedValue('ret-payout-years');
+
             if (retirementAge <= currentAge || payoutYears <= 0) {
                  if (payoutYears <= 0) alert('O período de recebimento deve ser maior que zero.');
                  return;
             }
 
-            const months = (retirementAge - currentAge) * 12, monthlyRate = (1 + annualRate) ** (1 / 12) - 1;
-            
+            const realAnnualRate = ((1 + annualRate) / (1 + annualInflation)) - 1;
+            const months = (retirementAge - currentAge) * 12, monthlyRate = (1 + realAnnualRate) ** (1 / 12) - 1;
+
             let futureValue;
             if (monthlyRate > 0) {
                 futureValue = initialSavings * (1 + monthlyRate) ** months + monthlyContribution * (((1 + monthlyRate) ** months - 1) / monthlyRate);
@@ -915,14 +942,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 monthlyIncome = payoutMonths > 0 ? futureValue / payoutMonths : 0;
             }
 
-            UI.renderResults('retirement-result', {
-                title: "Projeção Futura", icon: "fa-piggy-bank",
+            const totalContribution = initialSavings + (monthlyContribution * months);
+            const totalInterest = futureValue - totalContribution;
+
+            const resultEl = UI.renderResults('retirement-result', {
+                title: "Projeção Futura (Valores Reais)", icon: "fa-piggy-bank",
                 items: [
+                    { label: "Total Aportado", value: totalContribution },
+                    { label: "Total em Juros Reais", value: totalInterest, class: 'positive' },
                     { label: "Valor Total Acumulado", value: futureValue },
                     { label: `Renda Mensal por ${payoutYears} anos`, value: monthlyIncome }
                 ],
-                insight: `*Renda estimada considerando o consumo total do patrimônio ao longo de ${payoutYears} anos.`
+                insight: `Projeção em valores de hoje, descontando a inflação. A renda mensal estimada considera o consumo total do patrimônio.`,
+                calcName: 'aposentadoria'
             });
+
+            // Geração de gráfico para aposentadoria
+            const chartContainer = document.createElement('div');
+            chartContainer.className = 'chart-container';
+            chartContainer.innerHTML = `<canvas id="retirement-chart"></canvas>`;
+            resultEl.appendChild(chartContainer);
+
+            const dataPoints = [];
+            let currentAmountForChart = initialSavings;
+            for (let i = 1; i <= months; i++) {
+                currentAmountForChart = currentAmountForChart * (1 + monthlyRate) + monthlyContribution;
+                if (i % 12 === 0 || i === months) {
+                    const totalContributionAtThisPoint = initialSavings + (monthlyContribution * i);
+                    dataPoints.push({
+                        year: Math.ceil(i / 12),
+                        totalInvested: totalContributionAtThisPoint,
+                        interest: currentAmountForChart - totalContributionAtThisPoint
+                    });
+                }
+            }
+
+            Charts.render('retirement-chart', 'bar', {
+                labels: dataPoints.map(d => `Ano ${d.year}`),
+                datasets: [
+                    { label: 'Total Aportado', data: dataPoints.map(d => d.totalInvested), backgroundColor: '#3b82f6', borderRadius: 4 },
+                    { label: 'Juros Reais', data: dataPoints.map(d => d.interest), backgroundColor: '#00e676', borderRadius: 4 }
+                ]
+            }, (grid, label) => ({ scales: { x: { stacked: true, ticks: { color: label }, grid: { color: grid } }, y: { stacked: true, ticks: { color: label, callback: (v) => `R$${(v/1000).toFixed(0)}k` }, grid: { color: grid } } } }), 'retirement-result');
         },
 
         compoundInterest: () => {
@@ -941,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const totalContribution = principal + (monthly * months);
             const totalInterest = finalAmount - totalContribution;
-            
+
             const resultEl = UI.renderResults('compound-result', {
                 title: "Resultado Final", icon: "fa-coins",
                 items: [
@@ -949,14 +1010,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     { label: "Total em Juros", value: totalInterest, class: 'positive' },
                     { label: "Valor Final Acumulado", value: finalAmount }
                 ],
-                insight: `Os juros compostos representaram ${((totalInterest/finalAmount)*100 || 0).toFixed(0)}% do seu patrimônio final.`
+                insight: `Os juros compostos representaram ${((totalInterest/finalAmount)*100 || 0).toFixed(0)}% do seu patrimônio final.`,
+                calcName: 'juros-compostos'
             });
 
             const chartContainer = document.createElement('div');
             chartContainer.className = 'chart-container';
             chartContainer.innerHTML = `<canvas id="compound-chart"></canvas>`;
             resultEl.appendChild(chartContainer);
-            
+
             const dataPoints = [];
             let currentAmountForChart = principal;
             for (let i = 1; i <= months; i++) {
@@ -983,7 +1045,8 @@ document.addEventListener('DOMContentLoaded', () => {
         amortization: {
             calculate: () => {
                 const amount = Calculators.getMaskedValue('loan-amount'), annualRate = Calculators.getMaskedValue('loan-rate') / 100,
-                      years = Calculators.getMaskedValue('loan-term'), type = document.getElementById('loan-type').value;
+                      years = Calculators.getMaskedValue('loan-term'), type = document.getElementById('loan-type').value,
+                      extraCosts = Calculators.getMaskedValue('loan-extra-costs');
                 if (amount <= 0 || annualRate <= 0 || years <= 0) return;
 
                 const months = years * 12, monthlyRate = (1 + annualRate) ** (1/12) - 1;
@@ -998,17 +1061,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     firstInstallment = amortization + (amount * monthlyRate);
                 }
                 const totalPaid = amount + totalInterest;
+                const totalPaidWithFees = totalPaid + extraCosts;
+
 
                 const resultEl = UI.renderResults('amortization-result', {
                     title: "Resumo do Financiamento", icon: "fa-file-invoice-dollar",
                     items: [
                         { label: `1ª Parcela (${type.toUpperCase()})`, value: firstInstallment },
                         { label: "Total de Juros", value: totalInterest, class: 'positive' },
-                        { label: "Custo Total", value: totalPaid }
+                        { label: "Custo Total (Financiamento)", value: totalPaid },
+                        { label: "Custo Total com Taxas", value: totalPaidWithFees }
                     ],
-                    insight: `Os juros representam ${((totalInterest/totalPaid)*100 || 0).toFixed(0)}% do custo total.`
+                    insight: `Os juros representam ${((totalInterest/totalPaidWithFees)*100 || 0).toFixed(0)}% do custo total incluindo taxas.`,
+                    calcName: 'financiamento'
                 });
-                
+
                 const extraHTML = `
                     <div class="dual-chart-container">
                         <div><h3>Proporção Juros/Principal</h3><p class="page-subtitle" style="text-align:left;max-width:100%;font-size:0.9rem;margin:0;">Divisão do valor total pago ao final.</p></div>
@@ -1017,11 +1084,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn btn-secondary" id="show-amortization-table" style="margin-top: 16px; width: 100%;"><i class="fas fa-table"></i> Exibir Tabela Detalhada</button>
                     <div class="amortization-table-container" style="display:none;"></div>`;
                 resultEl.insertAdjacentHTML('beforeend', extraHTML);
-                
+
                 const bgColor = document.body.classList.contains('light-mode') ? '#f0f4f9' : '#0a101e';
                 Charts.render('amortization-donut-chart', 'doughnut', {
-                    labels: ['Total de Juros', 'Valor Financiado'],
-                    datasets: [{ data: [totalInterest, amount], backgroundColor: ['#ff5252', '#3b82f6'], borderColor: bgColor, borderWidth: 4 }]
+                    labels: ['Total de Juros', 'Valor Financiado', 'Outros Custos'],
+                    datasets: [{ data: [totalInterest, amount, extraCosts], backgroundColor: ['#ff5252', '#3b82f6', '#ff9800'], borderColor: bgColor, borderWidth: 4 }]
                 }, (grid, label) => ({ cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: label } }, tooltip: { callbacks: { label: (c) => `${c.label}: ${UI.formatCurrency(c.raw)}` } } } }), 'amortization-result');
 
                 document.getElementById('show-amortization-table').addEventListener('click', Calculators.amortization.generateTable);
@@ -1030,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const amount = Calculators.getMaskedValue('loan-amount'), annualRate = Calculators.getMaskedValue('loan-rate') / 100,
                       years = Calculators.getMaskedValue('loan-term'), type = document.getElementById('loan-type').value;
                 const months = years * 12, monthlyRate = (1 + annualRate) ** (1/12) - 1;
-                
+
                 let balance = amount, tableRows = '';
                 const tableHeader = `<thead><tr><th>#</th><th>Parcela</th><th>Juros</th><th>Amortização</th><th>Saldo Devedor</th></tr></thead>`;
 
@@ -1066,13 +1133,13 @@ document.addEventListener('DOMContentLoaded', () => {
                       rateType = document.getElementById('cdb-rate-type').value;
 
                 if (!State.cdiRate) { alert("Aguarde, a taxa CDI ainda está sendo carregada."); return; }
-                
+
                 const cdiAnualDecimal = State.cdiRate / 100;
                 const effectiveAnnualRate = rateType === 'pos' ? cdiAnualDecimal * (userInputRate / 100) : userInputRate / 100;
 
                 const dailyRate = (1 + effectiveAnnualRate) ** (1 / 252) - 1;
                 const grossProfit = amount * (((1 + dailyRate) ** days) - 1);
-                
+
                 let taxRate = 0;
                 let taxRateDisplay = "Isento";
                 if (assetType === 'cdb') {
@@ -1092,7 +1159,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         { label: "Rendimento Líquido", value: netProfit, class: 'positive' },
                         { label: "Valor Final Líquido", value: netAmount }
                     ],
-                    insight: assetType === 'lci-lca' ? 'Ativos isentos de Imposto de Renda para pessoa física.' : `Alíquota de IR de ${taxRateDisplay} para ${days} dias.`
+                    insight: assetType === 'lci-lca' ? 'Ativos isentos de Imposto de Renda para pessoa física.' : `Alíquota de IR de ${taxRateDisplay} para ${days} dias.`,
+                    calcName: 'renda-fixa'
                 });
             },
             getTaxRate: (days) => {
@@ -1109,19 +1177,19 @@ document.addEventListener('DOMContentLoaded', () => {
             calculate: () => {
                 let totalQuantity = Calculators.getMaskedValue('pa-current-quantity');
                 let totalInvestment = totalQuantity * Calculators.getMaskedValue('pa-current-price');
-                
+
                 document.querySelectorAll('.operation-card').forEach(op => {
                     const quantity = Calculators.getMaskedValue(op.querySelector('input[data-type="quantity"]').id);
                     const price = Calculators.getMaskedValue(op.querySelector('input[data-type="price"]').id);
-                    
+
                     if (quantity > 0 && price > 0) {
                         totalQuantity += quantity;
                         totalInvestment += quantity * price;
                     }
                 });
-                
+
                 const averagePrice = totalQuantity > 0 ? totalInvestment / totalQuantity : 0;
-                
+
                 UI.renderResults('price-average-result', {
                     title: "Resultado do Preço Médio", icon: "fa-dolly-flatbed",
                     items: [
@@ -1129,7 +1197,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         { label: "Custo Total", value: totalInvestment },
                         { label: "Seu Preço Médio", value: averagePrice }
                     ],
-                    insight: `Este é o seu custo de aquisição médio por ativo.`
+                    insight: `Este é o seu custo de aquisição médio por ativo.`,
+                    calcName: 'preco-medio'
                 });
             },
             addOperation: () => {
@@ -1139,14 +1208,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <button class="remove-operation" aria-label="Remover operação">&times;</button>
                     <div class="input-grid">
-                        <div class="input-group"><label>Quantidade</label><input type="text" data-type="quantity" id="${opId}_q" class="pa-quantity" placeholder="100"></div>
-                        <div class="input-group"><label>Preço por Ativo (R$)</label><input type="text" data-type="price" id="${opId}_p" class="pa-price" placeholder="R$ 10,50"></div>
+                        <div class="input-group"><label>Quantidade</label><input type="text" data-type="quantity" id="${opId}_q" class="pa-quantity" placeholder="100" inputmode="numeric" pattern="[0-9,.]*"></div>
+                        <div class="input-group"><label>Preço por Ativo (R$)</label><input type="text" data-type="price" id="${opId}_p" class="pa-price" placeholder="R$ 10,50" inputmode="numeric" pattern="[0-9,.]*"></div>
                     </div>`;
                 document.getElementById('operations-list').appendChild(card);
                 App.initMasks(card);
             }
         },
-        
+
         inflation: async () => {
             const value = Calculators.getMaskedValue('inflation-value'),
                   startDate = document.getElementById('inflation-start').value,
@@ -1155,48 +1224,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const formatDate = (date) => date.split('-').reverse().join('/');
             const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`;
-            
+
             const response = await fetch(url);
             if (!response.ok) throw new Error("Não foi possível buscar os dados do IPCA do BCB.");
-            
+
             const data = await response.json();
             if (data.length === 0) throw new Error("Não há dados de inflação para o período selecionado. Tente um período que inclua meses completos.");
 
             const accumulatedFactor = data.reduce((acc, month) => acc * (1 + parseFloat(month.valor) / 100), 1);
             const correctedValue = value * accumulatedFactor;
             const totalInflation = (accumulatedFactor - 1) * 100;
-            
+
             UI.renderResults('inflation-result', {
                 title: "Valor Corrigido", icon: "fa-chart-bar",
                 items: [
                     { label: "Valor Corrigido", value: correctedValue },
                     { label: "Inflação no Período", value: totalInflation, formatFn: (v) => `${UI.formatNumber(v, 2)}%` }
                 ],
-                insight: `O valor de ${UI.formatCurrency(value)} em ${formatDate(startDate)} equivale a ${UI.formatCurrency(correctedValue, 'BRL')}.`
+                insight: `O valor de ${UI.formatCurrency(value)} em ${formatDate(startDate)} equivale a ${UI.formatCurrency(correctedValue, 'BRL')} hoje em termos de poder de compra. Ou seja, o que você comprava com R$ 100 antes, agora custaria ${UI.formatCurrency(100 * accumulatedFactor)}.`,
+                calcName: 'inflacao'
             });
         },
-        
+
         currency: {
             calculate: async () => {
                 const amount = Calculators.getMaskedValue('currency-amount'),
                       from = document.getElementById('currency-from').value,
                       to = document.getElementById('currency-to').value;
                 if (amount <= 0 || !from || !to) return;
-                
+
                 try {
                     const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${from}.json`);
                     if(!res.ok) throw new Error('Falha na resposta da API de moedas.');
                     const data = await res.json();
-                    
+
                     const rate = data[from][to];
                     const converted = amount * rate;
-                    
+
                     UI.renderResults('currency-result', {
                         title: "Resultado da Conversão", icon: "fa-dollar-sign",
                         items: [
                             { label: 'Valor Convertido', value: converted, formatFn: (v) => UI.formatCurrency(v, to.toUpperCase()) },
                             { label: `Taxa (1 ${from.toUpperCase()}/${to.toUpperCase()})`, value: rate, formatFn: (v) => UI.formatNumber(v, 6) }
-                        ]
+                        ],
+                        calcName: 'moedas'
                     });
 
                 } catch (e) {
@@ -1238,10 +1309,13 @@ document.addEventListener('DOMContentLoaded', () => {
             this.setupHP12CModal();
             Calculators.currency.populateSelects();
             await this.fetchInitialData();
-            Storage.loadAllInputs();
-            this.showInitialCalculator();
+
+            if (!this.applyUrlParameters()) {
+                Storage.loadAllInputs();
+                this.showInitialCalculator();
+            }
         },
-        
+
         setupTheme: () => {
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.body.classList.toggle('light-mode', savedTheme === 'light');
@@ -1262,18 +1336,18 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
             document.addEventListener('keydown', (e) => { if(e.key === "Escape" && modal.style.display === 'flex') closeModal(); });
         },
-        
+
         initMasks: (context = document) => {
             const money = { mask: 'R$ num', blocks: { num: { mask: Number, scale: 2, thousandsSeparator: '.', padFractionalZeros: true, radix: ',', mapToRadix: ['.'] }}};
             const percent = { mask: 'num %', blocks: { num: { mask: Number, scale: 2, padFractionalZeros: true, radix: ',' }}};
             const number = (scale=0) => ({ mask: Number, scale, thousandsSeparator: '.' });
             const anyNumber = { mask: Number, scale: 4, thousandsSeparator: '.', radix: ',' };
-            
+
             const masksConfig = [
                 { selector: '#ret-current-age, #ret-age, #ret-payout-years, #jc-time, #loan-term, #cdb-term', options: number() },
                 { selector: '#pa-current-quantity, .pa-quantity', options: anyNumber },
-                { selector: '#ret-initial, #ret-monthly, #jc-principal, #jc-monthly, #loan-amount, #cdb-initial, #inflation-value, #pa-current-price, .pa-price', options: money },
-                { selector: '#ret-rate, #jc-rate, #loan-rate, #cdb-rate, #cdb-cdi-rate', options: percent },
+                { selector: '#ret-initial, #ret-monthly, #jc-principal, #jc-monthly, #loan-amount, #loan-extra-costs, #cdb-initial, #inflation-value, #pa-current-price, .pa-price', options: money },
+                { selector: '#ret-rate, #ret-inflation, #jc-rate, #loan-rate, #cdb-rate, #cdb-cdi-rate', options: percent },
                 { selector: '#currency-amount', options: { mask: Number, scale: 2, thousandsSeparator: '.', radix: ',' } }
             ];
 
@@ -1285,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         },
-        
+
         async fetchInitialData() {
             try {
                 const cdiInput = document.getElementById('cdb-cdi-rate');
@@ -1294,17 +1368,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json');
                 const data = await response.json();
                 if (!data || data.length === 0) throw new Error('Dados do CDI não encontrados.');
-                
+
                 const lastDailyRate = parseFloat(data[0].valor);
                 State.cdiRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100;
-                
+
                 if (cdiInput) {
                     cdiInput.value = `${State.cdiRate.toFixed(2)}`;
                     State.inputMasks.get('cdb-cdi-rate')?.updateValue();
                 }
 
-            } catch (e) { 
-                console.error("Falha ao buscar CDI. Usando taxa padrão.", e); 
+            } catch (e) {
+                console.error("Falha ao buscar CDI. Usando taxa padrão.", e);
                 State.cdiRate = 10.50;
                 const cdiInput = document.getElementById('cdb-cdi-rate');
                 if (cdiInput) {
@@ -1314,29 +1388,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         },
-        
+
         showInitialCalculator: () => {
             const firstNav = document.querySelector('.nav-btn');
             document.getElementById(firstNav.dataset.id).classList.add('is-visible');
         },
 
+        applyUrlParameters: () => {
+            const params = new URLSearchParams(window.location.search);
+            const calcName = params.get('calc');
+            if (!calcName) return false;
+
+            const navBtn = document.querySelector(`.nav-btn[data-calc-name="${calcName}"]`);
+            if (!navBtn) return false;
+
+            // Ativa a aba da calculadora correta
+            document.querySelector('.nav-btn.active')?.classList.remove('active');
+            navBtn.classList.add('active');
+            document.querySelectorAll('.calculator').forEach(c => c.classList.remove('is-visible'));
+            const calcSection = document.getElementById(navBtn.dataset.id);
+            calcSection.classList.add('is-visible');
+
+            // Preenche os campos
+            params.forEach((value, key) => {
+                if (key === 'calc') return;
+                const input = document.getElementById(key);
+                if (input) {
+                    input.value = decodeURIComponent(value);
+                    State.inputMasks.get(key)?.updateValue();
+                    if (input.tagName === 'SELECT') input.dispatchEvent(new Event('change'));
+                }
+            });
+
+            // Rola para a calculadora e dispara o cálculo
+            setTimeout(() => {
+                calcSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const calcButton = calcSection.querySelector('.calculate-btn');
+                calcButton?.click();
+            }, 100);
+
+            // Limpa a URL para não interferir com o localStorage
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+
+            return true; // Indica que os parâmetros foram aplicados
+        },
+
         setupEventListeners() {
             document.body.addEventListener('click', (e) => {
                 const calcBtn = e.target.closest('.calculate-btn');
-                if (!calcBtn) return;
-                const fnMap = {
-                    'calculate-retirement': Calculators.retirement, 
-                    'calculate-compound': Calculators.compoundInterest,
-                    'calculate-amortization': Calculators.amortization.calculate, 
-                    'calculate-cdb': Calculators.fixedIncome.calculate,
-                    'calculate-price-average': Calculators.priceAverage.calculate, 
-                    'calculate-inflation': Calculators.inflation,
-                    'calculate-currency': Calculators.currency.calculate
-                };
-                if(fnMap[calcBtn.id]) UI.handleCalculation(calcBtn, fnMap[calcBtn.id]);
-            });
+                if (calcBtn) {
+                    const fnMap = {
+                        'calculate-retirement': Calculators.retirement,
+                        'calculate-compound': Calculators.compoundInterest,
+                        'calculate-amortization': Calculators.amortization.calculate,
+                        'calculate-cdb': Calculators.fixedIncome.calculate,
+                        'calculate-price-average': Calculators.priceAverage.calculate,
+                        'calculate-inflation': Calculators.inflation,
+                        'calculate-currency': Calculators.currency.calculate
+                    };
+                    if(fnMap[calcBtn.id]) UI.handleCalculation(calcBtn, fnMap[calcBtn.id]);
+                    return;
+                }
 
-            document.body.addEventListener('click', (e) => {
+                const shareBtn = e.target.closest('.share-btn');
+                if(shareBtn) {
+                    const calcName = shareBtn.dataset.calcName;
+                    const calcSection = shareBtn.closest('.calculator');
+                    const params = new URLSearchParams({ calc: calcName });
+
+                    calcSection.querySelectorAll('input[id], select[id]').forEach(input => {
+                        if (!input.disabled) {
+                             params.set(input.id, input.value);
+                        }
+                    });
+
+                    const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        alert('Link da simulação copiado para a área de transferência!');
+                    }, () => {
+                        alert('Erro ao copiar o link.');
+                    });
+                    return;
+                }
+
                 const clearBtn = e.target.closest('.clear-btn');
                 if (clearBtn) UI.clearResults(clearBtn.dataset.form, clearBtn.dataset.result);
             });
@@ -1349,7 +1483,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 navBtn.classList.add('active');
                 document.querySelectorAll('.calculator').forEach(c => c.classList.remove('is-visible'));
                 document.getElementById(navBtn.dataset.id).classList.add('is-visible');
-                window.scrollTo({ top: document.getElementById(navBtn.dataset.id).offsetTop - 100, behavior: 'smooth' });
+                // Atualiza o hash na URL sem pular a página
+                 if (history.pushState) {
+                    history.pushState(null, null, navBtn.href);
+                } else {
+                    location.hash = navBtn.href;
+                }
             });
 
             const topBtn = document.getElementById('top-btn');
@@ -1357,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             topBtn.addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
             document.getElementById('reload-btn').addEventListener('click', () => {
                 localStorage.removeItem('calculatorsData');
-                window.location.reload();
+                window.location.href = window.location.pathname; // Recarrega sem hash/query
             });
             document.getElementById('theme-toggle').addEventListener('click', this.toggleTheme);
             document.getElementById('home-btn').addEventListener('click', () => { window.location.href = '/index.html'; });
@@ -1375,8 +1514,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.remove();
                 }
             });
-            
-            document.querySelector('.container').addEventListener('change', Storage.saveAllInputs);
+
+            document.querySelector('.container').addEventListener('change', (e) => {
+                 if(e.target.closest('input, select')) {
+                     Storage.saveAllInputs();
+                 }
+            });
         },
 
         toggleTheme() {
@@ -1387,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             State.chartInstances = {};
         }
     };
-    
+
     const deepMerge = (target, source) => {
         const output = { ...target };
         if (target && typeof target === 'object' && source && typeof source === 'object') {
