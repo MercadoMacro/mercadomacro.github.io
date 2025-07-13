@@ -146,6 +146,7 @@
             border: 1px solid transparent; color: var(--text-color); font-size: 13px;
             font-weight: 600; cursor: pointer;
             transition: all var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+            text-decoration: none; /* Adicionado para remover sublinhado do link */
         }
         .filter-btn:hover { background: var(--primary-light); color: var(--dark-bg); transform: translateY(-2px); border-color: var(--primary-color); }
         .filter-btn.active { background: var(--primary-color); color: var(--dark-bg); font-weight: 700; box-shadow: 0 2px 8px var(--shadow-color-soft); border-color: var(--primary-dark); }
@@ -500,6 +501,7 @@
             <button class="filter-btn" data-filter="commodities">Commodities</button>
             <button class="filter-btn" data-filter="crypto">Cripto</button>
             <button class="filter-btn" data-filter="calendar">Calendário</button>
+            <a href="opcoes2.html" class="filter-btn">Simulador</a>
         </div>
 
         <div class="heatmap-controls">
@@ -853,7 +855,13 @@
             const calendarWidgetContainer = document.getElementById('calendar-widget-container');
 
             filterButtons.forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function(event) {
+                    // Se o botão for um link para outra página, não executa a lógica de filtro
+                    if (this.tagName === 'A') {
+                        return;
+                    }
+                    event.preventDefault(); // Impede o comportamento padrão caso seja um botão dentro de um form
+
                     filterButtons.forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
                     const filter = this.dataset.filter;
