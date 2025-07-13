@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Profissional de Opções</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Courier+New&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #00d180;
+            --primary-light: #5bffb0;
+            --primary-dark: #009e53;
+            --dark-bg: #0d1117;
+            --darker-bg: #010409;
+            --text-color: #c9d1d9;
+            --text-secondary: rgba(139, 148, 158, 0.7);
+            --card-bg-val: 22, 27, 34;
+            --card-bg: rgba(var(--card-bg-val), 0.85);
+            --border-color: rgba(48, 54, 61, 0.8);
+            --error-color: #ff7b72;
+            --transition-speed: 0.3s;
+            --shadow-color-soft: rgba(0, 0, 0, 0.2);
+            --shadow-color-medium: rgba(0, 0, 0, 0.3);
+            --link-color: #58a6ff;
+            --link-hover-color: #2f81f7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+            color: var(--text-color);
+            min-height: 100vh; width: 100%;
+            overflow-x: hidden;
+            line-height: 1.7;
+            display: flex; flex-direction: column;
+            transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+        }
+        
+        .header {
+            padding: 0; text-align: center; position: relative;
+            background-color: var(--dark-bg);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 var(--shadow-color-soft);
+            z-index: 100;
+        }
+        .logo-container {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 20px; width: 100%; max-width: 1200px;
+            margin: 0 auto; padding: 10px 20px;
+        }
+        .logo {
+            text-align: left; flex-shrink: 0; display: flex;
+            flex-direction: column; align-items: flex-start; margin-bottom: 0;
+        }
+        .page-title-header {
+            font-size: 28px; font-weight: 900; line-height: 1.1; letter-spacing: -0.7px;
+            background: linear-gradient(120deg, var(--primary-light) 20%, var(--primary-color) 80%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 4px; text-transform: uppercase;
+        }
+        .logo-divider {
+            width: 70px; height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+            margin: 0; border-radius: 4px;
+        }
+        
+        .container {
+            flex: 1; max-width: 1200px; width: 100%;
+            margin: 0 auto; padding: 30px 20px;
+            box-sizing: border-box; display: flex; flex-direction: column;
+        }
+
+        .form-group { margin-bottom: 20px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color); }
+        
+        input, select {
+            width: 100%; padding: 12px; border-radius: 6px;
+            box-sizing: border-box; font-size: 16px;
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+            background-color: var(--dark-bg); color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        input:focus { outline: none; border-color: var(--primary-color); }
+        
+        button#main-calculate-btn {
+            background-color: var(--primary-color); color: var(--dark-bg);
+            padding: 14px 22px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 16px; font-weight: bold;
+            transition: background-color 0.3s; margin-top: 10px; width: 100%;
+        }
+        button#main-calculate-btn:hover { background-color: var(--primary-dark); }
+        
+        .result {
+            margin-top: 30px; padding: 20px; border-radius: 8px;
+            background-color: rgba(var(--card-bg-val), 0.5);
+            border: 1px solid var(--border-color);
+        }
+        .result p { font-size: 16px; margin: 8px 0; }
+        .profit { color: #27ae60; font-weight: bold; }
+        .loss { color: #ff7b72; font-weight: bold; }
+        
+        .chart-container { margin-top: 35px; height: 400px; }
+        
+        .operation-type { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+        
+        .operation-btn {
+            padding: 14px; text-align: center; cursor: pointer;
+            background-color: transparent; border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px; transition: all 0.3s; font-weight: 600;
+        }
+        .operation-btn.active { color: white; font-weight: bold; }
+        .operation-btn[onclick*="buy"].active { background-color: #27ae60; border-color: #27ae60; }
+        .operation-btn[onclick*="sell"].active { background-color: #c0392b; border-color: #c0392b; }
+        
+        .info-box {
+            background-color: rgba(var(--card-bg-val), 0.3);
+            border-left: 5px solid var(--primary-color);
+            padding: 15px; margin-bottom: 25px; border-radius: 4px;
+            font-size: 15px;
+        }
+        
+        .educational-section { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 35px; }
+        
+        .option-card {
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px var(--shadow-color-soft);
+        }
+        .option-card h3 { color: white; padding: 12px 15px; margin: 0; font-size: 16px; }
+        .option-card .call-header { background-color: #f0ad4e; }
+        .option-card .put-header { background-color: #5cb85c; }
+        
+        .card-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .participant-column h4 { margin-top: 0; margin-bottom: 12px; color: var(--text-color); border-bottom: 2px solid var(--border-color); padding-bottom: 8px; }
+        .participant-column ul { list-style: none; padding: 0; margin: 0; font-size: 15px; }
+        .participant-column ul li { margin-bottom: 8px; position: relative; padding-left: 20px; }
+        .participant-column ul li::before { content: '✓'; position: absolute; left: 0; color: var(--primary-color); font-weight: bold; }
+        
+        .tooltip-icon { color: var(--primary-color); margin-left: 5px; cursor: help; font-size: 14px; }
+        .tooltip-text {
+            display: none; position: absolute; background-color: #2c3e50; color: white;
+            padding: 10px; border-radius: 5px; z-index: 100; width: 250px;
+            font-size: 14px; line-height: 1.4; bottom: 100%; left: 50%;
+            transform: translateX(-50%); margin-bottom: 10px;
+        }
+        .tooltip-container { position: relative; display: inline-block; }
+        .tooltip-container:hover .tooltip-text { display: block; }
+        
+        .roi-display { font-weight: bold; margin-top: 10px; font-size: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color); }
+        .input-hint { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-style: italic; }
+        .risk-note { font-size: 13px; color: var(--error-color); margin-top: 5px; font-weight: 600; }
+        
+        footer { 
+            font-size: 13px; margin-top: 40px; text-align: center;
+            color: var(--text-secondary); padding: 20px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .floating-btn-container {
+            position: fixed; bottom: 20px; z-index: 1000;
+            display: flex; gap: 10px;
+        }
+        .floating-btn-container.left { left: 20px; }
+        .floating-btn-container.right { right: 20px; }
+        
+        .floating-btn {
+            width: 50px; height: 50px; border-radius: 12px;
+            background-color: var(--card-bg); color: var(--text-color);
+            border: 1px solid var(--border-color); cursor: pointer; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px var(--shadow-color-soft);
+        }
+        .floating-btn:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-4px) scale(1.05);
+            color: var(--dark-bg);
+            box-shadow: 0 8px 20px var(--shadow-color-medium);
+        }
+        .floating-btn:active { transform: translateY(0) scale(1); }
+        .floating-btn i { font-size: 20px; }
+
+        #top-btn {
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #top-btn.visible { opacity: 1; visibility: visible; }
+
+        body.light-mode {
+            --primary-color: #007aff; --primary-light: #53a6ff; --primary-dark: #0056b3;
+            --dark-bg: #ffffff; --darker-bg: #f0f2f5;
+            --text-color: #1c1e21; --text-secondary: rgba(51, 51, 51, 0.75);
+            --card-bg: rgba(255, 255, 255, 0.98); --border-color: rgba(200, 205, 210, 0.7);
+            --card-bg-val: 248, 249, 250;
+            --error-color: #dc3545;
+            --shadow-color-soft: rgba(0, 0, 0, 0.08); --shadow-color-medium: rgba(0, 0, 0, 0.12);
+            --link-color: #0056b3; --link-hover-color: #004085;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+        }
+        body.light-mode .page-title-header { background: linear-gradient(120deg, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        body.light-mode .logo-divider { background: linear-gradient(to right, var(--primary-color), var(--primary-light));}
+        body.light-mode .floating-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+        body.light-mode .floating-btn:hover { background-color: var(--primary-color); color: white; }
+        body.light-mode input { background-color: #f0f2f5; }
+        body.light-mode .operation-btn { color: var(--text-color); border-color: var(--border-color); }
+        body.light-mode .operation-btn.active { color: white; }
+        body.light-mode .option-card, body.light-mode .result, body.light-mode .info-box { background-color: #fff; border-color: var(--border-color); }
+        body.light-mode button#main-calculate-btn { color: white; }
+
+        @media (max-width: 1200px) {
+            .logo-container, .container { padding-left: 20px; padding-right: 20px; }
+        }
+        @media (max-width: 992px) {
+            .logo-container { flex-direction: column; align-items: center; gap: 15px; padding: 10px 15px; }
+            .page-title-header { text-align: center; }
+            .logo-divider { margin: 5px auto; }
+        }
+        @media (max-width: 768px) {
+            .educational-section, .card-content { grid-template-columns: 1fr; }
+            .floating-btn-container { gap: 8px; }
+            .floating-btn-container.left { left: 15px; }
+            .floating-btn-container.right { right: 15px; }
+            .floating-btn { width: 45px; height: 45px; }
+        }
+        @media (max-width: 600px) {
+            .operation-type { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 480px) {
+            .floating-btn-container.left { left: 10px; }
+            .floating-btn-container.right { right: 10px; }
+            .floating-btn { width: 40px; height: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo-container">
+            <div class="logo">
+                <div class="page-title-header">Simulador de Opções</div>
+                <div class="logo-divider"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="info-box">
+            <p><strong>Instruções:</strong> Selecione o tipo de operação, insira os dados e veja o gráfico de payoff com os pontos-chave da estratégia.</p>
+            <p><i class="fas fa-info-circle"></i> <strong>Lembrete:</strong> Cada contrato de opção representa um lote padrão de 100 ações do ativo-objeto.</p>
+        </div>
+
+        <section class="educational-section">
+            <div class="option-card">
+                <h3 class="call-header">CALL - DIREITO DE COMPRA</h3>
+                <div class="card-content">
+                    <div class="participant-column"><h4>TITULAR (comprador)</h4><ul><li>Paga prêmio</li><li>Direito de comprar</li><li>Aposta na alta do ativo objeto</li><li>Risco limitado ao prêmio</li><li>Ganho potencial ilimitado</li></ul></div>
+                    <div class="participant-column"><h4>LANÇADOR (vendedor)</h4><ul><li>Recebe prêmio</li><li>Obrigação de vender</li><li>Aposta na queda do ativo objeto</li><li>Ganho limitado ao prêmio</li><li>Risco potencial ilimitado</li></ul></div>
+                </div>
+            </div>
+            <div class="option-card">
+                <h3 class="put-header">PUT - DIREITO DE VENDA</h3>
+                <div class="card-content">
+                    <div class="participant-column"><h4>TITULAR (comprador)</h4><ul><li>Paga prêmio</li><li>Direito de vender</li><li>Aposta na queda do ativo objeto</li><li>Risco limitado ao prêmio</li><li>Ganho potencial até o strike × 100</li></ul></div>
+                    <div class="participant-column"><h4>LANÇADOR (vendedor)</h4><ul><li>Recebe prêmio</li><li>Obrigação de comprar</li><li>Aposta na alta do ativo objeto</li><li>Ganho limitado ao prêmio</li><li>Risco potencial até o strike × 100</li></ul></div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="operation-type">
+            <button class="operation-btn active" onclick="selectOperation('buy_call', event)" title="Compra de CALL: direito de comprar o ativo se subir">Compra de CALL</button>
+            <button class="operation-btn" onclick="selectOperation('sell_call', event)" title="Venda de CALL: obrigação de vender se for exercido">Venda de CALL</button>
+            <button class="operation-btn" onclick="selectOperation('buy_put', event)" title="Compra de PUT: direito de vender o ativo se cair">Compra de PUT</button>
+            <button class="operation-btn" onclick="selectOperation('sell_put', event)" title="Venda de PUT: obrigação de comprar se for exercido">Venda de PUT</button>
+        </div>
+        
+        <div class="form-group"><label for="strikePrice">Preço de Exercício (Strike):<span class="tooltip-container"><i class="fas fa-info-circle tooltip-icon"></i><span class="tooltip-text">Preço pelo qual você pode comprar (call) ou vender (put) o ativo se exercer a opção. Este é o preço fixado no contrato.</span></span></label><input type="number" id="strikePrice" value="100" step="0.01" min="0.01"><div class="input-hint">Exemplo: 50.75 (valor deve ser positivo)</div></div>
+        <div class="form-group"><label for="premium">Prêmio da Opção (p/ ação):<span class="tooltip-container"><i class="fas fa-info-circle tooltip-icon"></i><span class="tooltip-text">Valor pago (na compra) ou recebido (na venda) por cada ação do contrato. O custo total será prêmio × 100 × quantidade de contratos.</span></span></label><input type="number" id="premium" value="3.50" step="0.01" min="0.01"><div class="input-hint">Exemplo: 2.50 (valor por ação, lote padrão = 100 ações)</div></div>
+        <div class="form-group"><label for="currentPrice">Preço Atual do Ativo-Objeto:<span class="tooltip-container"><i class="fas fa-info-circle tooltip-icon"></i><span class="tooltip-text">Preço de mercado atual do ativo que a opção referencia (ação, índice, etc.). Este é o preço spot atual.</span></span></label><input type="number" id="currentPrice" value="102" step="0.01" min="0.01"><div class="input-hint">Exemplo: 105.75 (valor atual de mercado)</div></div>
+        <div class="form-group"><label for="quantity">Quantidade de Contratos:<span class="tooltip-container"><i class="fas fa-info-circle tooltip-icon"></i><span class="tooltip-text">Número de contratos negociados. Cada contrato representa 100 ações do ativo-objeto.</span></span></label><input type="number" id="quantity" value="1" min="1"><div class="input-hint">Número inteiro de contratos (ex: 5). Cada contrato = 100 ações.</div></div>
+        
+        <button id="main-calculate-btn" onclick="calculateOption()">Analisar Operação</button>
+        
+        <div id="result" class="result" style="display: none;"><h3 id="operationTypeText"></h3><p id="resultText"></p><p id="profitLoss"></p><p id="breakEven"></p><p id="maxRisk"></p><p id="maxGain"></p><p id="roi" class="roi-display"></p><p id="riskNote" class="risk-note"></p></div>
+        <div class="chart-container"><canvas id="profitChart"></canvas></div>
+        
+        <footer>© <span id="current-year"></span> Mercado Macro - Ferramentas para Investidores</footer>
+    </div>
+
+    <div class="floating-btn-container left">
+        <button class="floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+    <div class="floating-btn-container right">
+        <button id="home-btn" class="floating-btn" aria-label="Página inicial">
+            <i class="fas fa-home"></i>
+        </button>
+        <button id="recalculate-btn" class="floating-btn" aria-label="Recalcular Análise">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button id="top-btn" class="floating-btn" aria-label="Voltar ao topo">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+    <script>
+        let profitChart = null;
+        let currentOperation = 'buy_call';
+
+        const chartJsPluginMoneyNessBackground = {
+            id: 'moneyNessBackground',
+            beforeDraw(chart) {
+                const strikePrice = parseFloat(document.getElementById('strikePrice').value);
+                if (isNaN(strikePrice) || !currentOperation) return;
+
+                const OTM_COLOR = 'rgba(255, 99, 132, 0.1)';
+                const ATM_COLOR = 'rgba(255, 205, 86, 0.1)';
+                const ITM_COLOR = 'rgba(75, 192, 192, 0.1)';
+
+                const { ctx, chartArea: { left, right, top, bottom }, scales: { x: xScale } } = chart;
+                
+                const atmWidthPercentage = 0.02;
+                const atmThreshold = strikePrice * atmWidthPercentage;
+                const atmStart = strikePrice - atmThreshold;
+                const atmEnd = strikePrice + atmThreshold;
+
+                const atmStartPixel = xScale.getPixelForValue(atmStart);
+                const atmEndPixel = xScale.getPixelForValue(atmEnd);
+
+                const drawZone = (color, x1, x2) => {
+                    ctx.save();
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x1, top, x2 - x1, bottom - top);
+                    ctx.restore();
+                };
+                
+                if (currentOperation.includes('call')) {
+                    drawZone(OTM_COLOR, left, atmStartPixel);
+                    drawZone(ATM_COLOR, atmStartPixel, atmEndPixel);
+                    drawZone(ITM_COLOR, atmEndPixel, right);
+                } else if (currentOperation.includes('put')) {
+                    drawZone(ITM_COLOR, left, atmStartPixel);
+                    drawZone(ATM_COLOR, atmStartPixel, atmEndPixel);
+                    drawZone(OTM_COLOR, atmEndPixel, right);
+                }
+            }
+        };
+        Chart.register(chartJsPluginMoneyNessBackground);
+        
+        function selectOperation(operation, event) {
+            currentOperation = operation;
+            document.querySelectorAll('.operation-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (document.getElementById('result').style.display !== 'none') {
+                calculateOption();
+            }
+        }
+        
+        function calculateOption() {
+            const strikePrice = parseFloat(document.getElementById('strikePrice').value);
+            const premium = parseFloat(document.getElementById('premium').value);
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            const quantity = parseInt(document.getElementById('quantity').value);
+
+            if (isNaN(strikePrice)) { alert("Por favor, insira um preço de exercício válido."); document.getElementById('strikePrice').focus(); return; }
+            if (isNaN(premium)) { alert("Por favor, insira um valor de prêmio válido."); document.getElementById('premium').focus(); return; }
+            if (isNaN(currentPrice)) { alert("Por favor, insira um preço atual válido."); document.getElementById('currentPrice').focus(); return; }
+            if (isNaN(quantity) || quantity <= 0 || !Number.isInteger(quantity)) { alert("Por favor, insira uma quantidade válida de contratos (número inteiro positivo)."); document.getElementById('quantity').focus(); return; }
+            if (strikePrice <= 0 || premium <= 0 || currentPrice <= 0) { alert("Todos os valores devem ser maiores que zero."); return; }
+            if (currentPrice > strikePrice * 3 || currentPrice < strikePrice * 0.3) { if (!confirm("O preço atual está muito diferente do preço de exercício (mais de 200% de diferença). Deseja continuar mesmo assim?")) { return; } }
+            
+            let profit = 0, breakEven = 0, maxRisk = 0, maxGain = 0, operationTypeText = '';
+            const totalPremium = premium * 100 * quantity;
+            const contractValue = strikePrice * 100 * quantity;
+            const marginRequirement = currentOperation.includes('sell') ? (contractValue * 0.2) + totalPremium : 0;
+            const investment = currentOperation.includes('buy') ? totalPremium : marginRequirement;
+            
+            switch(currentOperation) {
+                case 'buy_call':
+                    operationTypeText = "Compra de CALL (Long Call)"; profit = (Math.max(0, currentPrice - strikePrice) * 100 * quantity) - totalPremium;
+                    breakEven = strikePrice + premium; maxRisk = -totalPremium; maxGain = Infinity; break;
+                case 'sell_call':
+                    operationTypeText = "Venda de CALL (Short Call)"; profit = totalPremium - (Math.max(0, currentPrice - strikePrice) * 100 * quantity);
+                    breakEven = strikePrice + premium; maxRisk = -Infinity; maxGain = totalPremium; break;
+                case 'buy_put':
+                    operationTypeText = "Compra de PUT (Long Put)"; profit = (Math.max(0, strikePrice - currentPrice) * 100 * quantity) - totalPremium;
+                    breakEven = strikePrice - premium; maxRisk = -totalPremium; maxGain = contractValue - totalPremium; break;
+                case 'sell_put':
+                    operationTypeText = "Venda de PUT (Short Put)"; profit = totalPremium - (Math.max(0, strikePrice - currentPrice) * 100 * quantity);
+                    breakEven = strikePrice - premium; maxRisk = -contractValue + totalPremium; maxGain = totalPremium; break;
+            }
+            
+            let roi = 0;
+            if (investment > 0) { roi = (profit / investment) * 100; }
+            
+            const resultDiv = document.getElementById('result');
+            const resultTextEl = document.getElementById('resultText');
+            const riskNoteEl = document.getElementById('riskNote');
+            document.getElementById('operationTypeText').textContent = operationTypeText;
+            let baseText = `Com o ativo a R$ ${currentPrice.toFixed(2)}, o resultado da operação seria:`;
+            let explanation = '';
+            if (currentOperation === 'buy_call') { explanation = " Você tem o direito de comprar o ativo por R$ " + strikePrice.toFixed(2) + " até a data de vencimento."; } 
+            else if (currentOperation === 'sell_call') { explanation = " Se exercido, você será obrigado a vender o ativo por R$ " + strikePrice.toFixed(2) + "."; } 
+            else if (currentOperation === 'buy_put') { explanation = " Você tem o direito de vender o ativo por R$ " + strikePrice.toFixed(2) + " até a data de vencimento."; } 
+            else if (currentOperation === 'sell_put') { explanation = " Se exercido, você será obrigado a comprar o ativo por R$ " + strikePrice.toFixed(2) + "."; }
+            resultTextEl.textContent = baseText + explanation;
+            document.getElementById('profitLoss').innerHTML = profit >= 0 ? `Lucro: <span class="profit">R$ ${profit.toFixed(2)}</span>` : `Prejuízo: <span class="loss">R$ ${Math.abs(profit).toFixed(2)}</span>`;
+            document.getElementById('breakEven').textContent = `Ponto de Equilíbrio (Break-Even): R$ ${breakEven.toFixed(2)}`;
+            document.getElementById('maxRisk').innerHTML = `Risco Máximo: <span class="loss">${ maxRisk === -Infinity ? 'Ilimitado' : 'R$ ' + Math.abs(maxRisk).toFixed(2) }</span>`;
+            document.getElementById('maxGain').innerHTML = `Ganho Máximo: <span class="profit">${ maxGain === Infinity ? 'Ilimitado' : 'R$ ' + maxGain.toFixed(2) }</span>`;
+            if (investment > 0) { document.getElementById('roi').innerHTML = `ROI (Retorno sobre Investimento): <span class="${ roi >= 0 ? 'profit' : 'loss' }">${roi.toFixed(2)}%</span> | Investimento: R$ ${investment.toFixed(2)}`;
+            } else { document.getElementById('roi').innerHTML = `Margem Requerida Estimada: <span>R$ ${marginRequirement.toFixed(2)}</span>`; }
+            if (currentOperation.includes('sell')) { riskNoteEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ATENÇÃO: Operações de venda (short) podem requerer margem significativa e têm risco elevado.`;
+            } else { riskNoteEl.innerHTML = ''; }
+            resultDiv.style.display = 'block';
+            updateChart(currentOperation, strikePrice, premium, quantity, breakEven, currentPrice);
+        }
+        
+        function updateChart(operation, strikePrice, premium, quantity, breakEven, currentPrice) {
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            const rangeFactor = currentPrice > strikePrice * 1.5 || currentPrice < strikePrice * 0.5 ? 0.8 : 0.5;
+            const minPrice = Math.max(0, Math.min(strikePrice, currentPrice) * (1 - rangeFactor));
+            const maxPrice = Math.max(strikePrice, currentPrice) * (1 + rangeFactor);
+            const step = (maxPrice - minPrice) / 100;
+            const labels = [], data = [];
+            for (let price = minPrice; price <= maxPrice; price += step) {
+                labels.push(price);
+                let profit = 0;
+                switch(operation) {
+                    case 'buy_call': profit = (Math.max(0, price - strikePrice) - premium) * 100 * quantity; break;
+                    case 'sell_call': profit = (premium - Math.max(0, price - strikePrice)) * 100 * quantity; break;
+                    case 'buy_put': profit = (Math.max(0, strikePrice - price) - premium) * 100 * quantity; break;
+                    case 'sell_put': profit = (premium - Math.max(0, strikePrice - price)) * 100 * quantity; break;
+                }
+                data.push(profit);
+            }
+            if (profitChart) profitChart.destroy();
+
+            const isLightMode = document.body.classList.contains('light-mode');
+            const gridColor = isLightMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.08)';
+            const textColor = isLightMode ? '#333' : 'rgba(255, 255, 255, 0.7)';
+
+            profitChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Lucro/Prejuízo', data: data,
+                        borderColor: operation.includes('buy') ? '#27ae60' : '#c0392b',
+                        borderWidth: 3, tension: 0.1, pointRadius: 0,
+                        fill: { target: 'origin', above: 'rgba(39, 174, 96, 0.15)', below: 'rgba(192, 57, 43, 0.15)' }
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Preço do Ativo no Vencimento (R$)', font: { weight: 'bold', size: 14 }, padding: {top: 10}, color: textColor },
+                            ticks: { callback: value => 'R$ ' + value.toFixed(2), stepSize: (maxPrice - minPrice) / 10, color: textColor },
+                            grid: { display: false }, min: minPrice, max: maxPrice
+                        },
+                        y: {
+                            title: { display: true, text: 'Lucro / Prejuízo (R$)', font: { weight: 'bold', size: 14 }, padding: {bottom: 10}, color: textColor },
+                            grid: { color: gridColor },
+                            ticks: { callback: value => 'R$ ' + value.toFixed(0), color: textColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            intersect: false, mode: 'index',
+                            callbacks: {
+                                title: context => 'Preço do Ativo: R$ ' + context[0].parsed.x.toFixed(2),
+                                label: context => `Resultado: R$ ${context.parsed.y.toFixed(2)}`
+                            },
+                            backgroundColor: '#2c3e50', titleFont: { size: 14 }, bodyFont: { size: 12 }, padding: 10, cornerRadius: 4, displayColors: false
+                        },
+                        annotation: {
+                            annotations: {
+                                zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: isLightMode ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 },
+                                strikeLine: { type: 'line', xMin: strikePrice, xMax: strikePrice, borderColor: '#f39c12', borderWidth: 2, borderDash: [6, 6], label: { content: 'Strike: R$ ' + strikePrice.toFixed(2), display: true, position: 'start', backgroundColor: '#f39c12', font: { weight: 'bold' }, yAdjust: 15 } },
+                                breakEvenLine: { type: 'line', xMin: breakEven, xMax: breakEven, borderColor: '#3498db', borderWidth: 2, borderDash: [6, 6], label: { content: 'Break-Even: R$ ' + breakEven.toFixed(2), display: true, position: 'start', backgroundColor: '#3498db', font: { weight: 'bold' }, yAdjust: -15 } },
+                                currentPriceLine: { type: 'line', xMin: currentPrice, xMax: currentPrice, borderColor: '#8e44ad', borderWidth: 2, label: { content: 'Atual: R$ ' + currentPrice.toFixed(2), display: true, position: 'end', backgroundColor: '#8e44ad', font: { weight: 'bold' } } }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+            calculateOption();
+
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+            const themeIcon = themeToggle.querySelector('i');
+            const savedTheme = localStorage.getItem('themePreference');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if ((savedTheme === 'light') || (!savedTheme && !prefersDark)) {
+                 body.classList.add('light-mode');
+                 if(themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
+            }
+            
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('light-mode');
+                const isLight = body.classList.contains('light-mode');
+                localStorage.setItem('themePreference', isLight ? 'light' : 'dark');
+                if(themeIcon){
+                    themeIcon.classList.toggle('fa-moon', !isLight);
+                    themeIcon.classList.toggle('fa-sun', isLight);
+                }
+                if (document.getElementById('result').style.display !== 'none') {
+                    calculateOption();
+                }
+            });
+
+            const topBtn = document.getElementById('top-btn');
+            window.addEventListener('scroll', () => {
+                topBtn.classList.toggle('visible', window.pageYOffset > 300);
+            });
+            topBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            document.getElementById('recalculate-btn').addEventListener('click', calculateOption);
+            document.getElementById('home-btn').addEventListener('click', () => {
+                window.location.href = 'index.html'; 
+            });
+        });
+    </script>
+</body>
+</html>
