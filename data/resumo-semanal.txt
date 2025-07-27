@@ -1,18 +1,41 @@
-**Resumo Semanal**
-**Semana de 07 a 11 de Julho de 2025 – Tarifas, tensão e o labirinto geopolítico**
+**🗓️ Fechamento Semanal – 21 a 25 de Julho de 2025**
 
-A semana foi marcada pela escalada da guerra comercial entre os Estados Unidos e seus parceiros, com o Brasil no centro do furacão. As tarifas impostas por Trump reabriram cicatrizes do protecionismo e lançaram sombras sobre o cenário fiscal e inflacionário doméstico. Enquanto o investidor global buscava pistas sobre juros americanos, por aqui, o Ibovespa acumulou queda de 2,38%, refletindo cautela generalizada e desconfiança crescente.
+**📌 Panorama Geral**
+A semana foi dominada pela escalada da tensão comercial entre Brasil e Estados Unidos. O governo Trump manteve firme a postura de aplicar tarifas de até 50% sobre produtos brasileiros, enquanto o Planalto corre para montar um plano emergencial de resposta. A aproximação do prazo de 1º de agosto, data-limite para início das sobretaxas, trouxe volatilidade aos mercados locais, com o Ibovespa acumulando perdas e o dólar se valorizando frente ao real. No exterior, investidores acompanharam balanços importantes, como Tesla, Alphabet e bancos europeus, além de negociações paralelas entre EUA e UE.
 
-🔴 **Segunda-feira** já começou com tombo. Trump anunciou tarifas pesadas para parceiros comerciais e ameaçou sobretaxar países alinhados ao BRICS. O Ibovespa desabou 1,26%, puxado pelo temor de retaliações e desaceleração do comércio. Vale e Petrobras recuaram, enquanto o dólar subiu forte. O mercado local absorvia os impactos do novo capítulo do isolacionismo americano.
+**📉 Brasil**
+O Ibovespa recuou 3,84% na semana, encerrando aos 133.524 pontos. O índice operou pressionado principalmente por incertezas em relação à guerra tarifária com os EUA e seu impacto sobre o setor exportador, sobretudo o agronegócio. O dólar à vista subiu 1,61%, fechando em R\$ 5,5619. O governo Lula anunciou que equipes técnicas vão apresentar mais de 30 propostas para mitigar os efeitos do tarifaço, incluindo linhas de crédito, incentivos fiscais e compras públicas. A CNA projeta perda de US\$ 5,8 bilhões nas exportações do setor agro com a tarifa de 50%.
 
-🟠 **Na terça**, o ambiente seguiu pressionado. Com investidores avaliando o impacto das tarifas, o Ibovespa cedeu 0,13%. Apesar da alta do petróleo e do minério de ferro, o risco político e comercial manteve os ativos sob pressão. Destaque positivo para a Cury, com bons dados operacionais, enquanto a Helbor afundou mais de 13% após suspeitas contábeis.
+**🛢️ Commodities**
+O petróleo teve leve queda na semana, pressionado por incertezas sobre demanda global em meio ao conflito comercial. O Brent caiu 0,57%, fechando a US\$ 67,66, enquanto o WTI recuou 1,32%, a US\$ 65,16. O minério de ferro oscilou, mas encerrou em leve baixa, com queda de 0,55% em Dalian, a US\$ 113,26. Os papéis da Vale refletiram essa pressão, enquanto Petrobras teve leve ganho semanal.
 
-🔴 **Na quarta-feira**, o tom azedou de vez. O Ibovespa caiu 1,31%, refletindo o anúncio de que o Brasil seria alvo de tarifa de 50%, a valer a partir de 1º de agosto. Investidores correram para o dólar, que subiu 1,04%. A ata do Fed trouxe incertezas sobre o crescimento global, mas Wall Street sustentou alta. Por aqui, a Braskem foi destaque positivo, enquanto a PetroReconcavo afundou com dados fracos.
+**💹 Cotações da Semana**
+🔴 Ibovespa: 133.524 pts ⬇️ 3,84%
+🔵 Dólar: R\$ 5,5619 ⬆️ 1,61%
+🔵 S\&P 500: 6.388 pts ⬆️ 0,40%
+🔵 Nasdaq: 21.108 pts ⬆️ 0,24%
+🔵 Dow Jones: 44.901 pts ⬆️ 0,47%
+🔵 Brent: US\$ 67,66 ⬇️ 0,57%
+🔴 WTI: US\$ 65,16 ⬇️ 1,32%
+🔴 Minério (Dalian): US\$ 113,26 ⬇️ 0,55%
+🔴 Bitcoin: US\$ 116.522 ⬇️ 1,45%
+🔴 Ethereum: US\$ 3.652 ⬇️ 1,83%
 
-🟠 **Na quinta**, o Ibovespa perdeu mais 0,54% diante da sinalização de endurecimento das tarifas e falas duras de Haddad, sugerindo medidas não tarifárias. A Petrobras oscilou, enquanto a Marfrig saltou 6,38%. O mercado americano subiu com expectativas regulatórias mais flexíveis. Dólar voltou a subir, e o risco-país se manteve elevado.
+**🌎 Cenário Internacional**
+Os mercados globais mostraram resiliência, impulsionados por resultados corporativos e expectativas por acordos comerciais paralelos dos EUA com países asiáticos. Wall Street registrou ganhos moderados na semana, com destaque para ações de tecnologia. Na Europa, o BCE manteve juros estáveis, e a Ásia operou em alta com estímulos esperados na China e avanços diplomáticos. Os EUA estudam institucionalizar legalmente as tarifas contra o Brasil, intensificando o risco de retaliações e distorções comerciais.
 
-🔴 **Sexta-feira** encerrou a sequência negativa. O Ibovespa recuou 0,41%, com destaque para a tensão em torno do impacto das tarifas sobre a economia e a inflação. A fala de Goolsbee (Fed de Chicago) sobre possível atraso nos cortes de juros nos EUA esfriou os mercados. Vale se salvou com minério em alta, enquanto Marfrig e BRF caíram com adiamento da AGE sobre fusão. O dólar ficou estável, mas o clima seguia tenso.
+**🪙 Criptomoedas**
+Após ganhos recentes, o mercado cripto passou por correção. O Bitcoin encerrou a semana em queda de 1,45%, cotado a US\$ 116.522. O Ethereum caiu 1,83%, a US\$ 3.652. A regulação americana voltou ao centro do debate, com o CEO da Binance destacando iniciativas como o Clarity Act, que busca estruturar o setor.
 
-**Resumo da Semana:**
-A esperada calmaria pós-Powell não veio. A ofensiva tarifária de Trump colocou o Brasil e outras economias em alerta máximo. Com o IOF fora do centro da crise, o novo foco do investidor passou a ser o efeito real das tarifas na inflação e atividade. A confiança no Brasil voltou a ser testada, agora com uma guerra comercial real e um fiscal sem margem. O investidor inicia julho com os olhos na retaliação brasileira, na postura do Fed e, sobretudo, na resiliência das empresas mais expostas à balança comercial. O ruído político virou ruído cambial — e os próximos capítulos prometem tensão.
+**🏢 Destaques Corporativos**
+
+* **Cyrela (CYRE3):** liderou os ganhos semanais, com alta de 1,32%, impulsionada por expectativa positiva para o resultado do trimestre.
+* **Yduqs (YDUQ3):** caiu 4,69% após mudança inesperada na presidência, com Rossano Marques assumindo o cargo.
+* **Vale (VALE3):** reportou alta de 3,7% na produção de minério no 2º tri, mas queda nas vendas impactou os papéis.
+* **Embraer (EMBR3):** registrou carteira recorde de pedidos, somando US\$ 29,7 bilhões.
+* **Rede D’Or e Fleury:** avançaram nas negociações de fusão.
+* **Petrobras:** negou planos de reentrada no setor de distribuição de combustíveis.
+
+**📌 Resumo**
+A semana foi marcada por instabilidade nos mercados brasileiros, com o investidor pressionado por incertezas externas. A disputa tarifária entre Brasil e EUA continua sem resolução, e o prazo para início da sobretaxa se aproxima, gerando apreensão sobre os impactos na balança comercial e no crescimento do País. Enquanto o Ibovespa perdeu fôlego, os índices de Nova York avançaram, refletindo um cenário mais estável no exterior. Commodities oscilaram com volatilidade, enquanto as criptomoedas passaram por correção. O desenrolar das negociações entre Brasília, Washington e Bruxelas será crucial para definir os rumos dos mercados nas próximas semanas.
 
