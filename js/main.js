@@ -612,7 +612,7 @@ function updateDateTime() {
     }
     const footerElement = document.getElementById('footer');
     if (footerElement) {
-        footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • By Anderson Danilo`;
+        footerElement.textContent = `Fonte: Dados atualizados em ${formattedDate} • © 2025 Mercado Macro`;
     }
 }
 
