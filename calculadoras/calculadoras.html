@@ -366,6 +366,22 @@
             .page-title-header { font-size: 24px; }
             .logo-divider { margin: 5px auto; }
         }
+        @media (max-width: 600px) {
+            body {
+                zoom: 0.8;
+                touch-action: manipulation;
+            }
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            
+            .hp12c-modal {
+                align-items: flex-start; /* Alinha o conteúdo no topo */
+                padding-top: 30px;
+                padding-bottom: 30px;
+            }
+        }
 
         /* --- 11. MODO CLARO --- */
         body.light-mode {
