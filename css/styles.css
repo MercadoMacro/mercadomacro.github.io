@@ -254,7 +254,7 @@ body.body-modal-open {
     border-radius: 15px; /* Mais arredondado */
     padding: 25px; /* Mais padding interno */
     position: relative;
-    border-left: 5px solid var(--primary-color); /* Borda mais grossa */
+    border-left: 0px solid var(--primary-color); /* Borda mais grossa */
     box-shadow: 0 8px 25px var(--shadow-color-soft); /* Sombra mais pronunciada */
     display: flex;
     flex-direction: column;
@@ -1206,7 +1206,7 @@ body.light-mode .banner { background: rgba(var(--primary-color), 0.08); border-l
 body.light-mode .subheader { background-color: rgba(var(--card-bg-val), 0.7); border-bottom-color: var(--border-color); border-top-color: var(--border-color); }
 body.light-mode .subheader .update-status { color: var(--primary-color); }
 body.light-mode .subheader .datetime { color: var(--text-color); }
-body.light-mode .content-box { background: var(--card-bg); border-left: 5px solid var(--primary-color); box-shadow: 0 5px 15px var(--shadow-color-soft); }
+body.light-mode .content-box { background: var(--card-bg); border-left: 1px solid var(--primary-color); box-shadow: 0 5px 15px var(--shadow-color-soft); }
 body.light-mode .content-box:hover { box-shadow: 0 8px 25px var(--shadow-color-medium); border-left-color: var(--primary-light); }
 body.light-mode .box-header { border-bottom-color: var(--border-color); }
 body.light-mode .box-header h2, body.light-mode .box-header i:first-child { color: var(--primary-color); }
