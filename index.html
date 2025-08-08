@@ -169,13 +169,34 @@
 
     </div>
 
-    <button id="fullscreen-btn" class="action-btn floating-btn" aria-label="Modo tela cheia"><i class="fas fa-expand"></i></button>
-    <button id="fullscreen-exit-btn" class="action-btn floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"><i class="fas fa-compress"></i></button>
-    <button id="refresh-btn" class="action-btn floating-btn" aria-label="Atualizar dados"><i class="fas fa-redo"></i></button>
-    <button id="analises-btn" class="action-btn floating-btn" aria-label="Ir para Painel Financeiro"><i class="fas fa-border-all"></i></button>
-    <button id="indicadores-btn" class="action-btn floating-btn" aria-label="Ir para indicadores"><i class="fas fa-chart-pie"></i></button>
-    <button id="calculadoras-btn" class="action-btn floating-btn" aria-label="Ir para calculadoras"><i class="fas fa-calculator"></i></button>
-    <button id="terminal-btn" class="action-btn floating-btn" aria-label="Ir para terminal de notícias"><i class="fas fa-newspaper"></i></button>
+    <div class="fab-container" id="fab-container-main">
+        <div class="fab-options">
+            <button id="refresh-btn" class="action-btn floating-btn" aria-label="Atualizar dados">
+                <i class="fas fa-redo"></i>
+            </button>
+            <button id="fullscreen-btn" class="action-btn floating-btn" aria-label="Modo tela cheia">
+                <i class="fas fa-expand"></i>
+            </button>
+            <button id="fullscreen-exit-btn" class="action-btn floating-btn" aria-label="Sair do modo tela cheia" style="display:none;">
+                <i class="fas fa-compress"></i>
+            </button>
+            <button id="analises-btn" class="action-btn floating-btn" aria-label="Ir para Painel Financeiro">
+                <i class="fas fa-border-all"></i>
+            </button>
+            <button id="indicadores-btn" class="action-btn floating-btn" aria-label="Ir para indicadores">
+                <i class="fas fa-chart-pie"></i>
+            </button>
+            <button id="calculadoras-btn" class="action-btn floating-btn" aria-label="Ir para calculadoras">
+                <i class="fas fa-calculator"></i>
+            </button>
+            <button id="terminal-btn" class="action-btn floating-btn" aria-label="Ir para terminal de notícias">
+                <i class="fas fa-newspaper"></i>
+            </button>
+        </div>
+        <button class="floating-btn" id="fab-toggle-main" aria-label="Abrir menu de ações">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
 
     <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
     <button id="economic-calendar-toggle-btn" class="action-btn floating-btn" aria-label="Abrir Calendário Econômico"><i class="fas fa-calendar-alt"></i></button>
@@ -183,7 +204,7 @@
     <button id="spotify-btn" class="action-btn floating-btn" aria-label="Abrir player do Spotify">
         <i class="fab fa-spotify"></i>
     </button>
-
+    
     <div id="economic-calendar-overlay" class="overlay-panel">
         <div class="overlay-content" id="economic-calendar-content-panel">
             <div class="overlay-header">
