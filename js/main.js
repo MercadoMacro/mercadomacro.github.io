@@ -283,7 +283,7 @@ function printBoxContent(boxId) {
                     #watchlist-input-container, .floating-btn, .header, .subheader,
                     .contact-button-main, .legal-links, .footer, #economic-calendar-overlay,
                     .page-notification, #spotify-player-container, #visibility-settings-panel,
-                    .content-modal-overlay, .box-actions, .news-item .favorite-btn {
+                    .content-modal-overlay, .box-actions, .news-item .favorite-btn, .fab-container {
                         display: none !important;
                     }
                     ul { padding-left: 25px; margin-bottom: 1em; }
@@ -1756,6 +1756,59 @@ function setupPullToRefresh() {
 }
 
 // =============================================
+// NOVO: FUNÇÃO PARA O MENU FLUTUANTE (FAB) - VERSÃO ATUALIZADA
+// =============================================
+function setupFabMenu() {
+    const fabContainer = document.getElementById('fab-container-main');
+    const fabToggle = document.getElementById('fab-toggle-main');
+
+    if (!fabContainer || !fabToggle) {
+        console.warn('Elementos do Menu Flutuante (FAB) não encontrados.');
+        return;
+    }
+
+    const toggleIcon = fabToggle.querySelector('i'); // Seleciona o ícone único
+
+    // Função para fechar o menu e resetar o ícone
+    const closeMenu = () => {
+        if (fabContainer.classList.contains('active')) {
+            fabContainer.classList.remove('active');
+            toggleIcon.classList.remove('fa-times');
+            toggleIcon.classList.add('fa-plus');
+        }
+    };
+
+    fabToggle.addEventListener('click', (event) => {
+        event.stopPropagation(); // Impede que o clique no botão feche o menu imediatamente
+        const isActive = fabContainer.classList.toggle('active');
+
+        // Troca a classe do ícone baseado no estado do menu
+        if (isActive) {
+            toggleIcon.classList.remove('fa-plus');
+            toggleIcon.classList.add('fa-times');
+        } else {
+            toggleIcon.classList.remove('fa-times');
+            toggleIcon.classList.add('fa-plus');
+        }
+    });
+
+    // Fecha o menu se clicar fora dele
+    document.addEventListener('click', (event) => {
+        if (!fabContainer.contains(event.target)) {
+            closeMenu();
+        }
+    });
+
+    // Fecha o menu ao pressionar a tecla 'Escape'
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeMenu();
+        }
+    });
+}
+
+
+// =============================================
 // EVENT LISTENERS E INICIALIZAÇÃO GERAL
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1981,6 +2034,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Inicializa Pull-to-Refresh para dispositivos móveis
     setupPullToRefresh();
+    
+    // NOVO: Inicializa o Menu Flutuante (FAB)
+    setupFabMenu();
 
     // Carrega widgets TradingView
     if (typeof renderTickerTapeWidget === 'function') renderTickerTapeWidget(currentTheme);
