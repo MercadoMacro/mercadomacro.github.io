@@ -1,41 +1,61 @@
-**🗓️ Fechamento Semanal – 21 a 25 de Julho de 2025**
+ **Semana de 18 a 22 de Agosto de 2025 – Powell em Jackson Hole e a montanha-russa dos mercados**
 
-**📌 Panorama Geral**
-A semana foi dominada pela escalada da tensão comercial entre Brasil e Estados Unidos. O governo Trump manteve firme a postura de aplicar tarifas de até 50% sobre produtos brasileiros, enquanto o Planalto corre para montar um plano emergencial de resposta. A aproximação do prazo de 1º de agosto, data-limite para início das sobretaxas, trouxe volatilidade aos mercados locais, com o Ibovespa acumulando perdas e o dólar se valorizando frente ao real. No exterior, investidores acompanharam balanços importantes, como Tesla, Alphabet e bancos europeus, além de negociações paralelas entre EUA e UE.
+*A semana foi um retrato da volatilidade. Entre tensões geopolíticas, ruídos domésticos e a expectativa pelo discurso de Jerome Powell, o mercado oscilou com força. O Ibovespa saiu de quedas pesadas para encerrar com forte alta, embalado pelo alívio global com a sinalização de cortes de juros nos EUA. O fio condutor foi claro: juros americanos seguem ditando o ritmo do apetite ao risco.*
 
-**📉 Brasil**
-O Ibovespa recuou 3,84% na semana, encerrando aos 133.524 pontos. O índice operou pressionado principalmente por incertezas em relação à guerra tarifária com os EUA e seu impacto sobre o setor exportador, sobretudo o agronegócio. O dólar à vista subiu 1,61%, fechando em R\$ 5,5619. O governo Lula anunciou que equipes técnicas vão apresentar mais de 30 propostas para mitigar os efeitos do tarifaço, incluindo linhas de crédito, incentivos fiscais e compras públicas. A CNA projeta perda de US\$ 5,8 bilhões nas exportações do setor agro com a tarifa de 50%.
 
-**🛢️ Commodities**
-O petróleo teve leve queda na semana, pressionado por incertezas sobre demanda global em meio ao conflito comercial. O Brent caiu 0,57%, fechando a US\$ 67,66, enquanto o WTI recuou 1,32%, a US\$ 65,16. O minério de ferro oscilou, mas encerrou em leve baixa, com queda de 0,55% em Dalian, a US\$ 113,26. Os papéis da Vale refletiram essa pressão, enquanto Petrobras teve leve ganho semanal.
 
-**💹 Cotações da Semana**
-🔴 Ibovespa: 133.524 pts ⬇️ 3,84%
-🔵 Dólar: R\$ 5,5619 ⬆️ 1,61%
-🔵 S\&P 500: 6.388 pts ⬆️ 0,40%
-🔵 Nasdaq: 21.108 pts ⬆️ 0,24%
-🔵 Dow Jones: 44.901 pts ⬆️ 0,47%
-🔵 Brent: US\$ 67,66 ⬇️ 0,57%
-🔴 WTI: US\$ 65,16 ⬇️ 1,32%
-🔴 Minério (Dalian): US\$ 113,26 ⬇️ 0,55%
-🔴 Bitcoin: US\$ 116.522 ⬇️ 1,45%
-🔴 Ethereum: US\$ 3.652 ⬇️ 1,83%
+🟢 **Segunda-feira (18/08) começou positiva, mas em compasso de espera.**
+O Ibovespa avançou 0,72%, apoiado por bancos, siderúrgicas e Petrobras. O dólar também subiu 0,67%, refletindo cautela. O pano de fundo era a reunião entre Donald Trump e Volodymyr Zelensky, com expectativa de cessar-fogo na Ucrânia. As bolsas em Nova York ficaram praticamente estáveis, mostrando que o investidor global preferiu esperar fatos concretos antes de tomar posições mais ousadas.
 
-**🌎 Cenário Internacional**
-Os mercados globais mostraram resiliência, impulsionados por resultados corporativos e expectativas por acordos comerciais paralelos dos EUA com países asiáticos. Wall Street registrou ganhos moderados na semana, com destaque para ações de tecnologia. Na Europa, o BCE manteve juros estáveis, e a Ásia operou em alta com estímulos esperados na China e avanços diplomáticos. Os EUA estudam institucionalizar legalmente as tarifas contra o Brasil, intensificando o risco de retaliações e distorções comerciais.
+* **Destaques de alta**: Raízen (+10,6%) com especulações sobre aporte da Petrobras no setor de etanol.
+* **Destaques de baixa**: Prio (-3,1%), após interdição de plataforma da Equinor pela ANP.
+* **Commodities**: Petróleo em alta de 1,1%, minério de ferro em queda leve, puxando Vale (-0,23%).
 
-**🪙 Criptomoedas**
-Após ganhos recentes, o mercado cripto passou por correção. O Bitcoin encerrou a semana em queda de 1,45%, cotado a US\$ 116.522. O Ethereum caiu 1,83%, a US\$ 3.652. A regulação americana voltou ao centro do debate, com o CEO da Binance destacando iniciativas como o Clarity Act, que busca estruturar o setor.
 
-**🏢 Destaques Corporativos**
 
-* **Cyrela (CYRE3):** liderou os ganhos semanais, com alta de 1,32%, impulsionada por expectativa positiva para o resultado do trimestre.
-* **Yduqs (YDUQ3):** caiu 4,69% após mudança inesperada na presidência, com Rossano Marques assumindo o cargo.
-* **Vale (VALE3):** reportou alta de 3,7% na produção de minério no 2º tri, mas queda nas vendas impactou os papéis.
-* **Embraer (EMBR3):** registrou carteira recorde de pedidos, somando US\$ 29,7 bilhões.
-* **Rede D’Or e Fleury:** avançaram nas negociações de fusão.
-* **Petrobras:** negou planos de reentrada no setor de distribuição de combustíveis.
+🔴 **Terça-feira (19/08) foi o dia do tombo.**
+O Ibovespa despencou 2,10%, com apenas 5 papéis no positivo. O dólar disparou para R\$ 5,50, maior patamar em semanas. O estresse veio do setor bancário, pressionado por ruídos envolvendo a **Lei Magnitsky** e sua aplicabilidade no Brasil, além da aversão global ao risco. Em Nova York, Nasdaq caiu 1,46%.
 
-**📌 Resumo**
-A semana foi marcada por instabilidade nos mercados brasileiros, com o investidor pressionado por incertezas externas. A disputa tarifária entre Brasil e EUA continua sem resolução, e o prazo para início da sobretaxa se aproxima, gerando apreensão sobre os impactos na balança comercial e no crescimento do País. Enquanto o Ibovespa perdeu fôlego, os índices de Nova York avançaram, refletindo um cenário mais estável no exterior. Commodities oscilaram com volatilidade, enquanto as criptomoedas passaram por correção. O desenrolar das negociações entre Brasília, Washington e Bruxelas será crucial para definir os rumos dos mercados nas próximas semanas.
+* **Altas**: Minerva (+2,9%), beneficiada pela forte demanda de exportação de carne para China e Oriente Médio.
+* **Baixas**: Raízen (-9,6%) devolveu ganhos da véspera após a Petrobras negar interesse na companhia; Cosan caiu 6,4%.
+* **Criptos**: Bitcoin -3,1% (US\$ 112,8 mil), Ethereum -5,4%.
+* **Commodities**: Petróleo WTI -1,5%, refletindo incertezas sobre negociações na guerra.
+
+
+🟠 **Quarta-feira (20/08) trouxe uma pausa, mas sem firmeza.**
+O Ibovespa oscilou pouco e fechou em alta de 0,17%. O dólar caiu 0,51%, para R\$ 5,47. O mercado reagiu à **ata do Federal Reserve**, que apontou riscos maiores de desaceleração do PIB americano, mas também alertou para pressões inflacionárias vindas das tarifas comerciais do governo Trump.
+
+* **Altas**: GPA (+8,6%), beneficiado pela queda nos juros futuros e recuperação após semanas de queda.
+* **Baixas**: Azzas (-3,4%), com dúvidas sobre crescimento no 2º semestre.
+* **Commodities**: Petróleo retomou alta (Brent +1,6%), apoiado por estoques menores nos EUA. Vale caiu levemente, seguindo minério em queda na Ásia.
+* **Criptos**: Bitcoin praticamente estável (+0,35%), Ethereum +3,6%, impulsionados pela discussão sobre stablecoins no Fed.
+
+
+
+🔴 **Quinta-feira (21/08) foi de cautela, com olhos voltados para Jackson Hole.**
+O Ibovespa recuou 0,12%, acompanhando Nova York (S\&P 500 -0,40%). O dólar ficou estável, em R\$ 5,48. O nervosismo veio das falas de dirigentes do Fed em Jackson Hole, que reduziram a probabilidade de corte de juros já em setembro.
+
+* **Altas**: Sabesp (+0,9%), após revisão de preço-alvo pelo Itaú BBA. Embraer (+1,2%) também subiu com perspectivas de novos contratos internacionais.
+* **Baixas**: Yduqs (-6%), após fala da Cogna afastando fusão; Oncoclínicas despencou 17%, em meio a denúncias de irregularidades em captação de CRI.
+* **Commodities**: Petróleo +1,3% (estoques em queda nos EUA), minério em recuperação, Vale +0,9%.
+* **Criptos**: Bitcoin -0,9%, Ethereum -0,8%, refletindo cautela global antes de Powell.
+
+
+
+🟢 **Sexta-feira (22/08) terminou em euforia.**
+O aguardado discurso de Jerome Powell no Simpósio de Jackson Hole trouxe alívio: ele admitiu que os riscos no mercado de trabalho aumentaram e abriu espaço para **corte de juros já em setembro**. O Ibovespa disparou 2,57%, com **todas as ações da carteira em alta**. O dólar caiu 0,97%, a R\$ 5,42. Em Nova York, Dow Jones +1,9%, Nasdaq +1,9%, S\&P 500 +1,5%.
+
+* **Altas generalizadas**: destaque para Cogna (+7,7%), Cyrela (+6,7%) e Natura (+8,3%).
+* **Commodities**: Petróleo seguiu em alta, acumulando +2% na semana. Ações da Petrobras subiram até 3%. Vale também ganhou fôlego (+2,5%).
+* **Criptos**: Bitcoin +3,8%, Ethereum +12,1%, surfando no apetite ao risco global.
+
+
+
+# 📌 **Resumo da Semana**
+
+O mercado viveu um carrossel: começou esperançoso, mergulhou no pessimismo, ensaiou recuperação, sofreu com incertezas e fechou em festa. O fio condutor foi a expectativa com a política monetária dos EUA.
+
+* **Brasil**: Bancos e educação foram os setores mais pressionados, enquanto consumo e construção brilharam no fim da semana.
+* **Mundo**: O petróleo acumulou ganhos pelo terceiro pregão seguido, enquanto criptoativos reagiram ao alívio global.
+* **Palavra da semana**: **Expectativa**. Powell deixou o mercado sonhando com cortes de juros já em setembro. Até lá, a volatilidade continuará como companheira inseparável do investidor.
 
