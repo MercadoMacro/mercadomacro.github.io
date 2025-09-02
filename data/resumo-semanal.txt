@@ -1,61 +1,43 @@
- **Semana de 18 a 22 de Agosto de 2025 – Powell em Jackson Hole e a montanha-russa dos mercados**
 
-*A semana foi um retrato da volatilidade. Entre tensões geopolíticas, ruídos domésticos e a expectativa pelo discurso de Jerome Powell, o mercado oscilou com força. O Ibovespa saiu de quedas pesadas para encerrar com forte alta, embalado pelo alívio global com a sinalização de cortes de juros nos EUA. O fio condutor foi claro: juros americanos seguem ditando o ritmo do apetite ao risco.*
-
+** Semana de 25 a 29 de Agosto de 2025, Expectativas e Conflitos: juros no radar e a geopolítica em ebulição**
 
 
-🟢 **Segunda-feira (18/08) começou positiva, mas em compasso de espera.**
-O Ibovespa avançou 0,72%, apoiado por bancos, siderúrgicas e Petrobras. O dólar também subiu 0,67%, refletindo cautela. O pano de fundo era a reunião entre Donald Trump e Volodymyr Zelensky, com expectativa de cessar-fogo na Ucrânia. As bolsas em Nova York ficaram praticamente estáveis, mostrando que o investidor global preferiu esperar fatos concretos antes de tomar posições mais ousadas.
+📉 Entre cortes de juros aguardados e tensões internacionais, o mercado navegou entre euforia e cautela.
 
-* **Destaques de alta**: Raízen (+10,6%) com especulações sobre aporte da Petrobras no setor de etanol.
-* **Destaques de baixa**: Prio (-3,1%), após interdição de plataforma da Equinor pela ANP.
-* **Commodities**: Petróleo em alta de 1,1%, minério de ferro em queda leve, puxando Vale (-0,23%).
+A última semana de agosto trouxe ao investidor um coquetel de emoções. O pano de fundo foi a expectativa sobre o Federal Reserve e os cortes de juros nos EUA, enquanto no Brasil a percepção de política monetária também mexia com o ânimo. Mas os mercados não viveram apenas de juros: commodities oscilaram ao sabor da geopolítica, e a guerra comercial entre EUA, China e Índia voltou ao radar.
+
+O Ibovespa, fiel ao clima de cada sessão, alternou entre avanços expressivos e ajustes técnicos, embalado por Petrobras, bancos e setor de energia. Lá fora, os índices de Nova York testaram novos recordes, mas também sofreram com dados de confiança abaixo do esperado. Criptomoedas, por sua vez, mostraram a volatilidade de sempre, ora surfando a liquidez, ora apanhando da aversão ao risco.
 
 
 
-🔴 **Terça-feira (19/08) foi o dia do tombo.**
-O Ibovespa despencou 2,10%, com apenas 5 papéis no positivo. O dólar disparou para R\$ 5,50, maior patamar em semanas. O estresse veio do setor bancário, pressionado por ruídos envolvendo a **Lei Magnitsky** e sua aplicabilidade no Brasil, além da aversão global ao risco. Em Nova York, Nasdaq caiu 1,46%.
+**🔴 Segunda-feira (25/08)**
+A semana começou com realização de lucros. O Ibovespa ficou praticamente estável (+0,04%), após o rali da sexta-feira, enquanto em Nova York prevaleceu o mau humor. O dólar recuou para R\$ 5,41. A Eneva e o GPA brilharam, com altas de 4,6% e 9%, respectivamente, enquanto Rumo recuou 3%. Nos EUA, o cobre e outros minerais ganharam relevância estratégica, sinalizando disputa global por insumos críticos. O petróleo seguiu firme, sustentado pela tensão em torno de Rússia e Ucrânia. Já o Bitcoin desabou para mínima de seis semanas.
 
-* **Altas**: Minerva (+2,9%), beneficiada pela forte demanda de exportação de carne para China e Oriente Médio.
-* **Baixas**: Raízen (-9,6%) devolveu ganhos da véspera após a Petrobras negar interesse na companhia; Cosan caiu 6,4%.
-* **Criptos**: Bitcoin -3,1% (US\$ 112,8 mil), Ethereum -5,4%.
-* **Commodities**: Petróleo WTI -1,5%, refletindo incertezas sobre negociações na guerra.
+**🔴 Terça-feira (26/08)**
+O clima azedou. O Ibovespa cedeu 0,18%, pressionado por Petrobras, enquanto o dólar subiu a R\$ 5,43. O estresse veio do embate entre Trump e o Federal Reserve, com a polêmica demissão da diretora Lisa Cook. Wall Street conseguiu resistir e fechou em leve alta. Vibra e Ultrapar se destacaram positivamente, enquanto MRV sofreu. O petróleo corrigiu após quatro dias de alta, devolvendo quase 2,5%. Criptoativos também recuaram, com Bitcoin a US\$ 110,6 mil.
 
+**🟢 Quarta-feira (27/08)**
+O meio da semana trouxe alívio. O Ibovespa avançou 1,04%, apoiado em bancos e no setor elétrico, acompanhando Nova York no azul. Dólar caiu a R\$ 5,41. A São Martinho subiu mais de 4% após recomendação do Citi, enquanto Auren destoou com queda de 1,6%. O petróleo seguiu em alta após queda de estoques nos EUA, e a Petrobras surfou o movimento. Criptos também reagiram positivamente, embaladas por parcerias no setor.
 
-🟠 **Quarta-feira (20/08) trouxe uma pausa, mas sem firmeza.**
-O Ibovespa oscilou pouco e fechou em alta de 0,17%. O dólar caiu 0,51%, para R\$ 5,47. O mercado reagiu à **ata do Federal Reserve**, que apontou riscos maiores de desaceleração do PIB americano, mas também alertou para pressões inflacionárias vindas das tarifas comerciais do governo Trump.
+**🟢 Quinta-feira (28/08)**
+O rali ganhou força. O Ibovespa disparou 1,32%, cravando máxima histórica de 142 mil pontos. O dólar recuou levemente. Em Wall Street, o S\&P 500 renovou recorde. A pauta do dia foi a promessa de mais fiscalização sobre fintechs no Brasil, enquanto Ultrapar e Vibra subiram forte, fora do alcance da PF em operação sobre combustíveis. O petróleo avançou novamente, sustentado por tensões entre Rússia e Ucrânia. O Bitcoin, por outro lado, oscilou, com leve alta.
 
-* **Altas**: GPA (+8,6%), beneficiado pela queda nos juros futuros e recuperação após semanas de queda.
-* **Baixas**: Azzas (-3,4%), com dúvidas sobre crescimento no 2º semestre.
-* **Commodities**: Petróleo retomou alta (Brent +1,6%), apoiado por estoques menores nos EUA. Vale caiu levemente, seguindo minério em queda na Ásia.
-* **Criptos**: Bitcoin praticamente estável (+0,35%), Ethereum +3,6%, impulsionados pela discussão sobre stablecoins no Fed.
+**🟠 Sexta-feira (29/08)**
+O mês se encerrou em tom misto. O Ibovespa subiu apenas 0,26%, mas fechou agosto com ganho de 6,3%, o maior em um ano. O dólar subiu a R\$ 5,42. Os dados de inflação e consumo dos EUA decepcionaram, pressionando Wall Street, que fechou no vermelho. Raízen e Cosan brilharam com alta após venda de usinas; Natura ficou na ponta oposta. O petróleo recuou diante da expectativa de maior oferta da Opep, mas Petrobras resistiu e fechou no positivo. O Bitcoin caiu quase 4%, devolvendo ganhos recentes.
 
 
 
-🔴 **Quinta-feira (21/08) foi de cautela, com olhos voltados para Jackson Hole.**
-O Ibovespa recuou 0,12%, acompanhando Nova York (S\&P 500 -0,40%). O dólar ficou estável, em R\$ 5,48. O nervosismo veio das falas de dirigentes do Fed em Jackson Hole, que reduziram a probabilidade de corte de juros já em setembro.
+ **Resumo da Semana**
 
-* **Altas**: Sabesp (+0,9%), após revisão de preço-alvo pelo Itaú BBA. Embraer (+1,2%) também subiu com perspectivas de novos contratos internacionais.
-* **Baixas**: Yduqs (-6%), após fala da Cogna afastando fusão; Oncoclínicas despencou 17%, em meio a denúncias de irregularidades em captação de CRI.
-* **Commodities**: Petróleo +1,3% (estoques em queda nos EUA), minério em recuperação, Vale +0,9%.
-* **Criptos**: Bitcoin -0,9%, Ethereum -0,8%, refletindo cautela global antes de Powell.
+A semana foi marcada por **expectativas em torno da política monetária**. Tanto no Brasil quanto nos EUA, investidores digeriram indicadores e discursos para calibrar apostas em cortes de juros. O pano de fundo internacional, com tarifas americanas e incertezas sobre Rússia e Ucrânia, manteve o mercado dividido entre apetite e cautela.
 
+Entre os vencedores, destaque para o setor de energia — Petrobras, Ultrapar, Vibra e São Martinho — que surfaram o petróleo e ajustes de mercado. No lado perdedor, construtoras e varejistas, ainda pressionadas por juros altos.
 
+A palavra da semana foi **expectativa**: todos os movimentos orbitavam em torno do que o Fed e o Banco Central fariam nos próximos encontros.
 
-🟢 **Sexta-feira (22/08) terminou em euforia.**
-O aguardado discurso de Jerome Powell no Simpósio de Jackson Hole trouxe alívio: ele admitiu que os riscos no mercado de trabalho aumentaram e abriu espaço para **corte de juros já em setembro**. O Ibovespa disparou 2,57%, com **todas as ações da carteira em alta**. O dólar caiu 0,97%, a R\$ 5,42. Em Nova York, Dow Jones +1,9%, Nasdaq +1,9%, S\&P 500 +1,5%.
-
-* **Altas generalizadas**: destaque para Cogna (+7,7%), Cyrela (+6,7%) e Natura (+8,3%).
-* **Commodities**: Petróleo seguiu em alta, acumulando +2% na semana. Ações da Petrobras subiram até 3%. Vale também ganhou fôlego (+2,5%).
-* **Criptos**: Bitcoin +3,8%, Ethereum +12,1%, surfando no apetite ao risco global.
+Para a próxima semana, os holofotes estarão sobre os dados do PIB dos EUA e a leitura de inflação no Brasil. O mercado começa setembro com a mesma dúvida: até onde a política monetária seguirá apertando os cintos ou, finalmente, afrouxará o passo?
 
 
 
-# 📌 **Resumo da Semana**
 
-O mercado viveu um carrossel: começou esperançoso, mergulhou no pessimismo, ensaiou recuperação, sofreu com incertezas e fechou em festa. O fio condutor foi a expectativa com a política monetária dos EUA.
-
-* **Brasil**: Bancos e educação foram os setores mais pressionados, enquanto consumo e construção brilharam no fim da semana.
-* **Mundo**: O petróleo acumulou ganhos pelo terceiro pregão seguido, enquanto criptoativos reagiram ao alívio global.
-* **Palavra da semana**: **Expectativa**. Powell deixou o mercado sonhando com cortes de juros já em setembro. Até lá, a volatilidade continuará como companheira inseparável do investidor.
 
