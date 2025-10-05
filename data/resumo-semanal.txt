@@ -1,38 +1,60 @@
-**Semana de 29 de Setembro a 3 de Outubro de 2025, Shutdown e Cautela: a incerteza fiscal americana dominou os mercados**
+**Semana de 29 de Setembro a 3 de Outubro de 2025, Shutdown e Incerteza: o mercado à deriva em meio ao impasse americano**
 
-📉 Entre paralisação do governo dos EUA e expectativas sobre juros, o mercado global oscilou entre otimismo e apreensão.
+📉 Entre a política fiscal de Washington e as apostas de juros do Fed, os mercados viveram uma semana de tensão, ruído e expectativa.
 
-A primeira semana de outubro foi marcada por volatilidade e um sentimento de espera. O pano de fundo foi o *shutdown* norte-americano — a paralisação parcial da máquina pública —, que travou a divulgação de dados importantes e deixou o Federal Reserve “às cegas” para calibrar sua política monetária. Ao mesmo tempo, dados de emprego e inflação reforçaram a percepção de que novos cortes de juros estão no horizonte. No Brasil, o Ibovespa alternou leves ganhos e perdas, enquanto o dólar seguiu estável. Lá fora, Wall Street viveu dias de hesitação, e o petróleo reagiu às incertezas geopolíticas.
+O fim de setembro e o início de outubro trouxeram uma sensação de déjà vu para investidores ao redor do mundo: um novo *shutdown* nos Estados Unidos, a desaceleração dos dados de emprego e o receio de que a ausência de indicadores deixasse o Federal Reserve “voando às cegas”. No Brasil, o Ibovespa, que vinha embalado por um trimestre positivo, perdeu fôlego em meio à aversão global ao risco. O dólar ficou contido, mas as commodities oscilaram conforme a temperatura geopolítica subia — do Oriente Médio à Rússia.
+
+Enquanto Nova York tentava medir os impactos da paralisação do governo, Brasília olhava para fora com preocupação e esperança: a eventual reunião entre Lula e Donald Trump poderia abrir brechas para aliviar o *tarifaço* imposto aos produtos brasileiros. Mas o humor dos mercados mudava a cada dia, como se a semana inteira fosse uma sequência de capítulos de uma mesma história: a da incerteza.
+
+---
 
 🔴 **Segunda-feira (29/09)**
 
-O penúltimo pregão de setembro começou com ânimo. O Ibovespa subiu **0,61%**, aos **146.336 pontos**, acompanhando o bom humor externo com expectativa de diálogo entre Lula e Donald Trump sobre tarifas americanas. O dólar cedeu para **R$ 5,32**, e o Nasdaq avançou **0,48%**. Cogna (+2,8%) e Minerva (+3,2%) foram destaques positivos, enquanto Braskem (-5,1%) desabou após rebaixamento de rating pela Fitch e S&P. O petróleo, por outro lado, teve forte queda superior a 3%, diante da possibilidade de aumento de oferta pela Opep+.
+O penúltimo pregão de setembro começou com esperança e terminou em respiro. O **Ibovespa subiu 0,61%**, aos **146.336 pontos**, puxado por Cogna e Minerva, enquanto o **dólar recuou a R$ 5,32**. Lá fora, o clima era de expectativa: Trump e Lula poderiam conversar sobre tarifas, e o mercado torcia por uma trégua comercial.
+Mas a tensão não tardou a voltar. Nos bastidores, crescia o temor de uma paralisação do governo americano por falta de acordo no orçamento — o fantasma do *shutdown*.
+Braskem despencou mais de 5% após novo rebaixamento de rating, e o petróleo derreteu mais de 3% com rumores de que a Opep+ poderia ampliar a produção. No fim do dia, o sentimento era claro: a calmaria era apenas aparente.
+
+---
 
 🔴 **Terça-feira (30/09)**
 
-O último pregão do mês foi de leve realização. O Ibovespa caiu **0,07%**, mas fechou setembro com alta acumulada de **3,4%**. O dólar ficou praticamente estável em **R$ 5,32**. Lá fora, Trump confirmou a paralisação do governo americano, o que elevou a incerteza sobre os próximos indicadores econômicos. Em Nova York, os índices fecharam no azul, com Pfizer em destaque (+6,8%) após acordo para corte de preços de medicamentos. Minerva voltou a subir com recomendação do Safra, enquanto GPA despencou 8,7% após rebaixamento do Citi.
+O último dia do mês começou sob o peso da incerteza. O **Ibovespa recuou 0,07%**, mas encerrou setembro com alta acumulada de **3,4%**, coroando o melhor mês desde abril. O **dólar seguiu estável**.
+Nos EUA, Trump confirmou o *shutdown*: parte da máquina pública foi desligada, suspendendo a divulgação de relatórios vitais para o mercado. Mesmo assim, as bolsas de Nova York fecharam em alta, sustentadas por Pfizer (+6,8%) após acordo com o governo americano para reduzir preços de medicamentos.
+Por aqui, o foco foi em balanços e reavaliações: Minerva subiu após o Safra elevar recomendação para compra, enquanto GPA desabou 8,7% após rebaixamento do Citi. No pano de fundo, um mercado dividido entre o otimismo com o Brasil e o receio com Washington.
+
+---
 
 🔴 **Quarta-feira (01/10)**
 
-O primeiro pregão de outubro foi de correção. O Ibovespa recuou **0,49%**, pressionado por bancos como Bradesco (-1,9%) e Itaú (-1,8%). O dólar permaneceu em **R$ 5,32**. Nos EUA, o *shutdown* ganhou corpo, mas dados fracos do setor privado reacenderam expectativas de corte de juros pelo Fed ainda em outubro. Dasa (+4,6%) subiu após anunciar a venda de ativos na Argentina e no Brasil, enquanto Weg (-2,2%) caiu com rebaixamento do Citi. O petróleo seguiu em queda, com o Brent a **US$ 65,35**, e as ações da Petrobras recuaram.
+O mês começou com um banho de realidade. O **Ibovespa caiu 0,49%**, pressionado por bancos e pela cautela externa. Bradesco e Itaú lideraram as perdas, e a **Weg (-2,2%)** sofreu novo corte de recomendação. O **dólar manteve-se em R$ 5,32**.
+Nos Estados Unidos, a falta de dados oficiais fez o mercado operar no escuro — o Fed de Chicago chegou a admitir estar “operando às cegas”. Ainda assim, a expectativa por cortes de juros ganhou força após o setor privado mostrar retração de 32 mil vagas em setembro.
+A **Dasa (+4,6%)** brilhou com a venda de ativos na Argentina e no Brasil, reforçando caixa e foco estratégico. Já o petróleo caiu para **US$ 65,35**, refletindo o aumento dos estoques nos EUA e a possibilidade de nova ampliação da produção pela Opep+.
+
+---
 
 🔴 **Quinta-feira (02/10)**
 
-O clima azedou. O Ibovespa caiu **1,08%**, aos **143.949 pontos**, enquanto o dólar subiu levemente para **R$ 5,34**. O mercado reagiu à continuidade da paralisação nos EUA e à ausência de dados econômicos cruciais, como o payroll. CVC (-4,3%) liderou as perdas, enquanto Vale (+0,7%) ofereceu suporte ao índice. No exterior, Wall Street seguiu em leve alta, sustentada pela perspectiva de cortes de juros. O petróleo acumulou sua quarta queda consecutiva, com o Brent a **US$ 64,11**, e a Berkshire Hathaway anunciou a compra de uma unidade petroquímica da Occidental por US$ 9,7 bilhões.
+O pessimismo voltou a dominar. O **Ibovespa caiu 1,08%**, aos **143.949 pontos**, enquanto o **dólar subiu levemente para R$ 5,34**. A ausência de dados macroeconômicos nos EUA deixou os investidores sem bússola.
+A **CVC (-4,3%)** foi destaque negativo, penalizada pela aversão ao risco e pela dependência de juros mais baixos, enquanto **Vale (+0,7%)** amenizou as perdas do índice.
+No exterior, Wall Street resistiu no positivo, sustentada pela aposta de que o Fed precisará cortar juros para sustentar a economia. O petróleo acumulou a quarta queda consecutiva, e os olhares se voltaram para a reunião da Opep+ marcada para o fim de semana.
+
+---
 
 🟢 **Sexta-feira (03/10)**
 
-O encerramento da semana foi morno, com o Ibovespa subindo **0,17%**, aos **144.200 pontos**, e o dólar praticamente estável em **R$ 5,33**. Nos EUA, as bolsas fecharam mistas: o Dow Jones avançou 0,5%, enquanto o Nasdaq recuou 0,28%. O petróleo reagiu, com alta de 0,66%, diante da possibilidade de acordo de paz em Gaza mediado por Trump. Weg (+0,75%) e RD Saúde (+4,5%) se destacaram positivamente, enquanto Ambev (-0,5%) recuou após relatório negativo do Goldman Sachs. No campo das criptos, o Bitcoin subiu **1,6%**, a **US$ 122,4 mil**, renovando máxima histórica.
+O último capítulo da semana trouxe um breve alívio. O **Ibovespa subiu 0,17%**, aos **144.200 pontos**, e o **dólar recuou levemente para R$ 5,33**. Em Nova York, os índices fecharam mistos, à espera de novidades sobre o impasse orçamentário americano.
+Nos setores, **Weg (+0,75%)** e **RD Saúde (+4,5%)** se destacaram após eventos corporativos positivos. Já a **Ambev (-0,5%)** recuou, penalizada por relatório negativo do Goldman Sachs sobre queda na produção de bebidas.
+O petróleo reagiu em alta de 0,66% após o Hamas aceitar pontos de uma proposta de paz mediada por Trump, e o **Bitcoin** renovou máxima histórica, a **US$ 122,4 mil**, embalado pela expectativa de juros menores.
 
 ---
 
 **Resumo da Semana**
 
-O início de outubro foi dominado por incertezas políticas e fiscais. A paralisação do governo norte-americano contaminou o sentimento global, ao suspender a divulgação de dados que servem de bússola para o mercado. Ainda assim, a percepção majoritária é de que o Federal Reserve manterá o ciclo de afrouxamento monetário diante do enfraquecimento do mercado de trabalho.
+A transição de setembro para outubro foi um lembrete de que, nos mercados, o silêncio dos dados também fala alto. O *shutdown* americano deixou o Federal Reserve sem bússola, obrigando investidores a navegarem por instinto. Em meio à neblina fiscal e política dos EUA, o Brasil mostrou resiliência — mas também prudência.
 
-No Brasil, o Ibovespa mostrou resiliência, mesmo com o exterior adverso. Destaques positivos ficaram com **Vale, Dasa, RD Saúde e Minerva**, enquanto **bancos, Braskem e CVC** estiveram entre as maiores pressões negativas. O setor de energia seguiu volátil, com **Petrobras** reagindo às incertezas da Opep+ e ao sobe-e-desce do petróleo.
+Os setores de energia, saúde e mineração sustentaram parte do índice, enquanto bancos e consumo interno sentiram o peso da cautela. A história da semana foi a da **expectativa travada**: todos aguardam o mesmo sinal, o próximo passo do Fed.
 
-A palavra da semana foi **cautela**. Com o *shutdown* prolongando-se e a política monetária dos EUA no centro do radar, investidores mantêm posições defensivas à espera de clareza sobre juros e dados econômicos.
+Se setembro terminou com otimismo, outubro começou com dúvida. O mercado aprendeu mais uma vez que, às vezes, o risco não está no que se sabe — mas no que se deixa de saber.
 
-Para a próxima semana, o foco se volta à possibilidade de reabertura do governo americano e à divulgação do **payroll**, caso o impasse se resolva. O mercado entra em outubro com uma sensação nítida: a volatilidade ainda será a regra enquanto a política dos EUA ditar o ritmo do mundo.
+Para a próxima semana, a grande questão é uma só: o governo americano voltará a funcionar a tempo de mostrar se o emprego ainda resiste? O mundo financeiro, por enquanto, segura o fôlego — à espera de dados, decisões e, principalmente, direção.
 
