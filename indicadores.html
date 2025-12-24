@@ -805,25 +805,14 @@
                         const card = e.target.closest('.indicator-card');
                         if (!card) return;
 
-                        // Botão de período
-                        const periodBtn = e.target.closest('.chart-period-btn');
-                        if (periodBtn) {
-                            const controls = periodBtn.parentElement;
-                            const indicatorId = controls.dataset.indicatorId;
-                            controls.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
-                            periodBtn.classList.add('active');
-
-                            if (containerType === 'national') {
-                                const period = periodBtn.dataset.days || periodBtn.dataset.months || periodBtn.dataset.years;
-                                const periodValue = period === 'max' ? 50 : parseInt(period, 10);
-                                this.updateNationalChartForPeriod(indicatorId, periodValue);
-                            } else {
-                                const periodValue = periodBtn.dataset.years === 'max' ? 'max' : parseInt(periodBtn.dataset.years, 10);
-                                const periodUnit = periodBtn.dataset.years === 'max' ? 'max' : 'years';
-                                this.updateInternationalChartForPeriod(indicatorId, periodValue, periodUnit);
-                            }
-                            return;
-                        }
+// Botão de Yield (Tesouro Americano - 2Y, 10Y, 30Y)
+const yieldBtn = e.target.closest('.yield-btn');
+if (yieldBtn) {
+    const yieldType = yieldBtn.dataset.yield;
+    // Chama a função que já criaste para atualizar a visualização
+    this.updateTreasuryView(yieldType); 
+    return; // Impede que o card vire
+}
 
                         // Outros controles que não devem virar o card
                         if (e.target.closest('.yield-controls') || e.target.closest('.drag-handle') || e.target.closest('select') || e.target.closest('.card-switch-container')) {
