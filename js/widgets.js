@@ -102,78 +102,82 @@ function renderMarketOverviewWidget(theme, targetContainerId = 'market-overview-
         "belowLineFillColorGrowingBottom": theme === 'light' ? "rgba(0, 123, 255, 0)" : "rgba(0, 209, 128, 0)",
         "belowLineFillColorFallingBottom": theme === 'light' ? "rgba(220, 53, 69, 0)" : "rgba(248, 81, 73, 0)",
         "symbolActiveColor": theme === 'light' ? "rgba(0, 123, 255, 0.12)" : "rgba(0, 209, 128, 0.12)",
-        "tabs": [
-            {
-                "title": "Indices",
-                "symbols": [
-                    { "s": "FOREXCOM:SPXUSD", "d": "S&P 500" },
-                    { "s": "FOREXCOM:NSXUSD", "d": "NASDAQ 100" },
-                    { "s": "FOREXCOM:DJI", "d": "Dow Jones" },
-                    { "s": "BMFBOVESPA:IBOV", "d": "IBOVESPA" },
-                    { "s": "INDEX:DEU40", "d": "DAX" },
-                    { "s": "FOREXCOM:UKXGBP", "d": "FTSE 100" }
-                ],
-                "originalTitle": "Indices"
-            },
-			
-			
-			 {
-      "title": "Futuros",
-      "symbols": [
-        {
-          "s": "BMFBOVESPA:WIN1!",
-          "d": "IBOV FUTURO"
-        },
-        {
-          "s": "BMFBOVESPA:WDO1!",
-          "d": "DOL FUTURO"
-        },
-        { "s": "BMFBOVESPA:ISP1!", "d": "S&P 500" },
-         { "s": "BMFBOVESPA:EUR1!", "d": "Euro" }
-      ]
-    },
-		
-			
-			
-            {
-                "title": "Moedas",
-                "symbols": [
-                    { "s": "FX_IDC:USDBRL", "d": "USD/BRL" },
-                    { "s": "FX:EURUSD", "d": "EUR/USD" },
-                    { "s": "FX:GBPUSD", "d": "GBP/USD" },
-                    { "s": "FX:USDJPY", "d": "USD/JPY" },
-                    { "s": "FX:AUDUSD", "d": "AUD/USD" },
-                    { "s": "FX:USDCAD", "d": "USD/CAD" }
-                ],
-                "originalTitle": "Forex"
-            },
-            {
-                "title": "Commodities",
-                "symbols": [
-                    {
-          "s": "BLACKBULL:BRENT",
-          "d": "",
-          "logoid": "crude-oil",
-          "currency-logoid": "country/US"
-        },
-                    { "s": "TVC:USOIL", "d": "Petróleo WTI" },
-                    { "s": "OANDA:XAUUSD", "d": "Ouro" },
-                    { "s": "TVC:SILVER", "d": "Prata" },
-                    { "s": "COMEX:HG1!", "d": "Cobre" }
-                ],
-                "originalTitle": "Commodities"
-            },
-            {
-                "title": "Cripto",
-                "symbols": [
-                    { "s": "BINANCE:BTCUSDT", "d": "Bitcoin" },
-                    { "s": "BINANCE:ETHUSDT", "d": "Ethereum" },
-                    { "s": "BINANCE:SOLUSDT", "d": "Solana" }
-                ],
-                "originalTitle": "Crypto"
-            }
-			
+       "tabs": [
+
+    {
+        "title": "Índices Globais",
+        "symbols": [
+            { "s": "FOREXCOM:SPXUSD", "d": "S&P 500" },
+            { "s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100" },
+            { "s": "FOREXCOM:DJI", "d": "Dow Jones" },
+            { "s": "CME_MINI:RTY1!", "d": "Russell 2000" },
+            { "s": "INDEX:DEU40", "d": "DAX" },
+            { "s": "INDEX:SX5E", "d": "Euro Stoxx 50" },
+            { "s": "FOREXCOM:UKXGBP", "d": "FTSE 100" },
+            { "s": "INDEX:NKY", "d": "Nikkei 225" },
+            { "s": "INDEX:SSEC", "d": "Shanghai" },
+            { "s": "INDEX:HSI", "d": "Hang Seng" }
         ]
+    },
+
+    {
+        "title": "Juros",
+        "symbols": [
+            { "s": "TVC:US02Y", "d": "US 2Y Yield" },
+            { "s": "TVC:US10Y", "d": "US 10Y Yield" },
+            { "s": "TVC:US30Y", "d": "US 30Y Yield" },
+            { "s": "BMFBOVESPA:DI1!", "d": "DI 1 Ano" },
+            { "s": "BMFBOVESPA:DI5!", "d": "DI 5 Anos" },
+            { "s": "BMFBOVESPA:DI10!", "d": "DI 10 Anos" }
+        ]
+    },
+
+    {
+        "title": "Moedas",
+        "symbols": [
+            { "s": "TVC:DXY", "d": "DXY" },
+            { "s": "FX_IDC:USDBRL", "d": "USD/BRL" },
+            { "s": "FX:EURUSD", "d": "EUR/USD" },
+            { "s": "FX:USDJPY", "d": "USD/JPY" }
+        ]
+    },
+
+    {
+        "title": "Commodities",
+        "symbols": [
+            { "s": "TVC:USOIL", "d": "Petróleo WTI" },
+            { "s": "TVC:UKOIL", "d": "Petróleo Brent" },
+            { "s": "OANDA:XAUUSD", "d": "Ouro" },
+            { "s": "OANDA:XAGUSD", "d": "Prata" },
+            { "s": "COMEX:HG1!", "d": "Cobre" },
+            { "s": "TVC:TIO1!", "d": "Minério de Ferro" }
+        ]
+    },
+
+    {
+        "title": "Brasil",
+        "symbols": [
+            { "s": "BMFBOVESPA:IBOV", "d": "Ibovespa" },
+            { "s": "BMFBOVESPA:WIN1!", "d": "Índice Futuro" },
+            { "s": "BMFBOVESPA:WDO1!", "d": "Dólar Futuro" },
+            { "s": "BMFBOVESPA:PETR4", "d": "Petrobras" },
+            { "s": "BMFBOVESPA:VALE3", "d": "Vale" },
+            { "s": "BMFBOVESPA:ITUB4", "d": "Itaú" },
+            { "s": "BMFBOVESPA:BBDC4", "d": "Bradesco" }
+        ]
+    },
+
+    {
+        "title": "Cripto & Vol",
+        "symbols": [
+            { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" },
+            { "s": "BITSTAMP:ETHUSD", "d": "Ethereum" },
+            { "s": "CRYPTOCAP:BTC.D", "d": "BTC Dominância" },
+            { "s": "CBOE:VIX", "d": "VIX" }
+        ]
+    }
+]
+
     };
 
     // Create widget container and script
