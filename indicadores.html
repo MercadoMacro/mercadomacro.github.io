@@ -246,9 +246,6 @@
                 <div class="page-title-header">Indicadores Financeiros</div>
                 <div class="logo-divider"></div>
             </div>
-            
-
-            </div>
         </div>
     </header>
 
@@ -429,8 +426,8 @@
         // --- 1. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
-            cdsApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
-            tesouroApiUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json'),
+            cdsApiUrl: 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
+            tesouroApiUrl: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json'),
             fredApiBaseUrl: 'https://api.stlouisfed.org/fred/series/observations',
             fredApiKey: 'c7962c590edac9a2dae25b59e18ebd84', // ATENÇÃO: Chave de API exposta. O ideal é usar um backend para proteger esta chave.
             errorText: 'Erro',
@@ -486,9 +483,9 @@
             async getBCBData(seriesId, days = 1) { const url = `${config.apiBaseUrl}${seriesId}/dados/ultimos/${days}?formato=json`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
             async getBCBDataByDateRange(seriesId, days) { const endDate = new Date(); const startDate = new Date(); startDate.setDate(endDate.getDate() - days); const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
             async getBCBDataByYearRange(seriesId, years) { const endDate = new Date(); const startDate = new Date(); startDate.setFullYear(endDate.getFullYear() - years); const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
-            async getCDSData() { try { const response = await fetch(config.cdsApiUrl); if (!response.ok) throw new Error(`CDS API Error: ${response.statusText}`); const htmlContent = await response.text(); const parser = new DOMParser(); const doc = parser.parseFromString(htmlContent, 'text/html'); const cdsValueElement = doc.querySelector('[data-test="instrument-price-last"]'); if (!cdsValueElement) throw new Error('Elemento do valor do CDS não encontrado.'); return parseFloat(cdsValueElement.textContent.replace(',', '.')).toFixed(2); } catch (error) { console.error("Erro ao buscar CDS:", error.message); throw error; } },
+            async getCDSData() { try { const response = await fetch(config.cdsApiUrl); if (!response.ok) throw new Error(`CDS API Error: ${response.statusText}`); const data = await response.json(); const htmlContent = data.contents; const parser = new DOMParser(); const doc = parser.parseFromString(htmlContent, 'text/html'); const cdsValueElement = doc.querySelector('[data-test="instrument-price-last"]'); if (!cdsValueElement) throw new Error('Elemento do valor do CDS não encontrado.'); return parseFloat(cdsValueElement.textContent.replace(',', '.')).toFixed(2); } catch (error) { console.error("Erro ao buscar CDS:", error.message); throw error; } },
             async getTesouroDiretoData() { try { const response = await fetch(config.tesouroApiUrl); if (!response.ok) throw new Error(`Tesouro Direto API Error: ${response.statusText}`); const data = await response.json(); return data.response; } catch (error) { console.error("Erro ao buscar dados do Tesouro Direto:", error.message); throw error; } },
-            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') { const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options; let fredUrl = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`; if (units) fredUrl += `&units=${units}`; if (frequency) fredUrl += `&frequency=${frequency}`; if (aggregation_method) fredUrl += `&aggregation_method=${aggregation_method}`; const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(fredUrl); try { const response = await fetch(proxyUrl); if (!response.ok) throw new Error(`FRED API Error for series ${seriesId} via proxy: ${response.status}`); const data = await response.json(); if (data.error_message) throw new Error(`FRED API Error for series ${seriesId}: ${data.error_message}`); return data.observations.filter(obs => obs.value !== '.').map(obs => { const parts = obs.date.split('-'); const date = new Date(parts[0], parts[1] - 1, parts[2]); return { date: date, valor: parseFloat(obs.value) }; }).reverse(); } catch (error) { console.error(`Failed to fetch ${seriesId}:`, error); throw error; } }
+            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') { const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options; let fredUrl = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`; if (units) fredUrl += `&units=${units}`; if (frequency) fredUrl += `&frequency=${frequency}`; if (aggregation_method) fredUrl += `&aggregation_method=${aggregation_method}`; const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(fredUrl); try { const response = await fetch(proxyUrl); if (!response.ok) throw new Error(`FRED API Error for series ${seriesId} via proxy: ${response.status}`); const data = await response.json(); if (data.error_message) throw new Error(`FRED API Error for series ${seriesId}: ${data.error_message}`); return data.observations.filter(obs => obs.value !== '.').map(obs => { const parts = obs.date.split('-'); const date = new Date(parts[0], parts[1] - 1, parts[2]); return { date: date, valor: parseFloat(obs.value) }; }).reverse(); } catch (error) { console.error(`Failed to fetch ${seriesId}:`, error); throw error; } }
         };
 
         // --- 3. UI CONTROLLER ---
@@ -805,8 +802,6 @@
                         const card = e.target.closest('.indicator-card');
                         if (!card) return;
 
-// --- 1. LÓGICA DOS BOTÕES DE PERÍODO (1A, 5A, Max...) ---
-    // (Esta é a parte que deve ter sumido)
     const periodBtn = e.target.closest('.chart-period-btn');
     if (periodBtn) {
         const controls = periodBtn.parentElement;
@@ -823,19 +818,16 @@
             const periodUnit = periodBtn.dataset.years === 'max' ? 'max' : 'years';
             this.updateInternationalChartForPeriod(indicatorId, periodValue, periodUnit);
         }
-        return; // IMPORTANTE: Pára aqui e não deixa virar o card
+        return;
     }
 
-    // --- 2. LÓGICA DOS BOTÕES DO TESOURO (2 Anos, 10 Anos...) ---
     const yieldBtn = e.target.closest('.yield-btn');
     if (yieldBtn) {
         const yieldType = yieldBtn.dataset.yield;
         this.updateTreasuryView(yieldType);
-        return; // IMPORTANTE: Pára aqui e não deixa virar o card
+        return; 
     }
 
-    // --- 3. BLOQUEIO DE OUTROS ELEMENTOS INTERATIVOS ---
-    // Se clicar nestes elementos, não faz nada (nem vira o card)
     if (e.target.closest('.yield-controls') || 
         e.target.closest('.drag-handle') || 
         e.target.closest('select') || 
@@ -843,11 +835,8 @@
         return;
     }
 
-    // --- 4. AÇÃO PADRÃO: VIRAR O CARD ---
-    // Se não clicou em nenhum botão acima, vira o cartão
     card.classList.toggle('flipped');
 });
-                    // Acessibilidade por teclado para virar
                     container.addEventListener('keydown', e => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             const card = e.target.closest('.indicator-card');
