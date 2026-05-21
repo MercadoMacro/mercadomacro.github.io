@@ -19,10 +19,19 @@
     <meta property="og:url" content="https://mercadomacro.github.io/indicadores.html">
     <meta name="theme-color" content="#0d1117">
     <title>Indicadores Financeiros - Mercado Macro</title>
+    <link rel="preconnect" href="https://corsproxy.io">
+    <link rel="preconnect" href="https://api.allorigins.win">
+    <link rel="preconnect" href="https://api.bcb.gov.br">
+    <link rel="preconnect" href="https://api.stlouisfed.org">
+    <link rel="dns-prefetch" href="https://corsproxy.io">
+    <link rel="dns-prefetch" href="https://api.allorigins.win">
+    <link rel="dns-prefetch" href="https://api.bcb.gov.br">
+    <link rel="dns-prefetch" href="https://api.stlouisfed.org">
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js" as="script">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         :root { 
@@ -100,8 +109,8 @@
         
         .indicator-card { 
             background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 12px var(--shadow-color-soft); padding: 0; 
-            flex: 1 1 280px; max-width: calc(25% - 15px); text-align: center; transition: all 0.3s ease; 
-            border: 1px solid var(--border-color); min-height: 190px; display: flex; flex-direction: column; 
+            flex: 1 1 280px; max-width: calc(25% - 15px); text-align: center; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            border: 1px solid var(--border-color); min-height: 200px; display: flex; flex-direction: column; 
             justify-content: center; position: relative; transform-style: preserve-3d; overflow: hidden; 
             perspective: 1000px;
             opacity: 0;
@@ -114,7 +123,7 @@
         .indicator-card:focus-visible { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--dark-bg), 0 0 0 4px var(--primary-color); }
         .indicator-card.sortable-ghost { opacity: 0.4; }
         .indicator-card.sortable-chosen { box-shadow: 0 8px 20px var(--shadow-color-medium); transform: scale(1.02); cursor: grabbing; }
-        .indicator-card--with-chart { min-height: 310px; max-width: calc(33.33% - 15px); }
+        .indicator-card--with-chart { min-height: 340px; max-width: calc(33.33% - 15px); }
         .indicator-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 8px 20px var(--shadow-color-medium); }
         
         .indicator-front, .indicator-back { 
@@ -149,11 +158,11 @@
 
         .indicator-card--multi-value .indicator-front { padding-top: 10px; padding-bottom: 10px; }
         .indicator-card--multi-value .indicator-value { font-size: 15px; }
-        #tesouro-card { min-height: 310px; }
+        #tesouro-card { min-height: 260px; width: auto; height: auto; flex: 1 1 280px; max-width: calc(25% - 15px); }
         #tesouro-card .indicator-front { justify-content: center; }
         #tesouro-bond-selector { width: 90%; background: var(--darker-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 5px; padding: 6px; margin: 8px 0; font-family: 'Montserrat', sans-serif; font-weight: 600; cursor: pointer; }
         #tesouro-bond-selector:focus { outline: 1px solid var(--primary-color); }
-        .sparkline-chart { min-height: 80px; margin: 8px 0; }
+        .sparkline-chart { min-height: 105px; margin: 6px 0 0; }
         .drag-handle { position: absolute; left: 0; top: 0; bottom: 0; width: 30px; display: flex; align-items: center; justify-content: center; color: rgba(139, 148, 158, 0.4); cursor: grab; transition: color 0.2s ease; z-index: 3;}
         .indicator-card:hover .drag-handle { color: rgba(139, 148, 158, 0.7); }
         .drag-handle:active { cursor: grabbing; }
@@ -162,7 +171,7 @@
         .chart-period-btn:hover { background: var(--primary-color); color: var(--dark-bg); }
         .chart-period-btn.active { background: var(--primary-dark); color: white; border-color: var(--primary-dark); }
         .accessible-chart-data { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
-        .footer { font-size: 13px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 20px 0; border-top: 1px solid var(--border-color); }
+        .footer { font-size: 12px; margin-top: 40px; text-align: center; color: var(--text-secondary); padding: 24px 20px; border-top: 1px solid var(--border-color); letter-spacing: 0.3px; line-height: 1.8; }
         .floating-btn { position: fixed; width: 50px; height: 50px; border-radius: 50%; background: rgba(var(--card-bg-val), 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); overflow: hidden; will-change: transform, background-color, box-shadow; }
         .floating-btn::before { content: ''; position: absolute; top: -20%; left: -50%; width: 200%; height: 150%; background: linear-gradient( 145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 80% ); transform: rotate(20deg); transition: all 0.4s ease; pointer-events: none; }
         .floating-btn:hover { transform: translateY(-6px) scale(1.01); background: rgba(var(--card-bg-val), 0.6); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4); color: #fff; }
@@ -172,10 +181,65 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .is-refreshing i { animation: spin 1s linear infinite; }
 
+        /* ===== FLOATING DOCK ===== */
+        .floating-dock {
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+            align-items: center;
+            z-index: 1000;
+            background: rgba(var(--card-bg-val), 0.45);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 6px 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,209,128,0.05);
+            transition: box-shadow 0.3s ease;
+        }
+        .floating-dock:hover {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,209,128,0.12);
+        }
+        .floating-dock .floating-btn {
+            position: static;
+            width: 36px;
+            height: 36px;
+            box-shadow: none;
+            border: none;
+            background: transparent;
+            border-radius: 50%;
+        }
+        .floating-dock .floating-btn:hover {
+            background: rgba(0,209,128,0.1);
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: none;
+            color: var(--primary-color);
+        }
+        .floating-dock .floating-btn::before { display: none; }
+        .dock-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+
+        /* Theme toggle (left side) */
+        .theme-toggle-dock {
+            position: fixed;
+            bottom: 24px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        /* Legacy fallback positioning */
         #back-btn { right: 20px; bottom: 20px; }
         #refresh-btn { right: 80px; bottom: 20px; }
         #fullscreen-btn { right: 140px; bottom: 20px; }
-        #fullscreen-exit-btn { right: 140px, bottom: 20px; display: none; }
+        #fullscreen-exit-btn { right: 140px; bottom: 20px; display: none; }
         .theme-toggle { left: 20px; bottom: 20px; }
         
         #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -233,10 +297,208 @@
         }
         @media (max-width: 768px) { .indicator-card { max-width: calc(50% - 15px); } .indicator-card--with-chart { max-width: calc(50% - 15px); } .page-title-header { font-size: 26px; } }
         @media (max-width: 600px) { .indicator-card { max-width: 100%; } .indicator-card--with-chart { max-width: 100%; } .container { padding: 15px 12px; } .page-title-header { font-size: 24px; } .floating-btn, .profile-btn { width: 45px; height: 45px; } #back-btn { right: 15px; } #refresh-btn { right: 70px; } #fullscreen-btn, #fullscreen-exit-btn { right: 125px; } .theme-toggle { left: 15px; } .profile-btn { top: 15px; right: 15px; } }
-        @supports(padding: max(0px)) { .floating-btn, .theme-toggle { bottom: max(15px, env(safe-area-inset-bottom)); } .profile-btn { top: max(15px, env(safe-area-inset-top)); right: max(15px, env(safe-area-inset-right)); } }
+        @supports(padding: max(0px)) { .floating-dock { bottom: max(24px, env(safe-area-inset-bottom)); right: max(20px, env(safe-area-inset-right)); } .profile-btn { top: max(15px, env(safe-area-inset-top)); right: max(15px, env(safe-area-inset-right)); } }
 		
-		#tesouro-card { width: 350px; height: 350px; flex: none; }
+        
         .indicator-status, .indicator-times, .indicator-quote-time { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; line-height: 1.3; }
+
+        /* ===== UPGRADED VISUAL STYLES ===== */
+
+        /* Glowing border on card hover */
+        .indicator-card {
+            background: linear-gradient(145deg, rgba(var(--card-bg-val), 0.9), rgba(var(--card-bg-val), 0.75));
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .indicator-card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 17px;
+            background: linear-gradient(135deg, transparent 30%, rgba(0,209,128,0) 60%, transparent 100%);
+            transition: background 0.4s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .indicator-card:hover::before {
+            background: linear-gradient(135deg, transparent 20%, rgba(0,209,128,0.18) 50%, transparent 80%);
+        }
+        .indicator-card:hover {
+            transform: translateY(-8px) scale(1.015);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,209,128,0.2);
+        }
+
+        /* Trend badge on values */
+        .indicator-value { position: relative; }
+
+        /* Chart area polish */
+        .sparkline-chart .apexcharts-canvas { border-radius: 8px; overflow: hidden; }
+
+        /* Enhanced chart period buttons */
+        .chart-period-btn {
+            background: rgba(var(--card-bg-val), 0.3);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            letter-spacing: 0.3px;
+        }
+        .chart-period-btn:hover {
+            background: rgba(0,209,128,0.15);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+        .chart-period-btn.active {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 10px rgba(0,209,128,0.35);
+        }
+
+        /* Yield buttons upgraded */
+        .yield-btn {
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .yield-btn.active {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 10px rgba(0,209,128,0.3);
+        }
+
+        /* Indicator icon upgrade */
+        .indicator-icon {
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(0,209,128,0.15), rgba(0,209,128,0.05));
+            border: 1px solid rgba(0,209,128,0.2);
+            margin: 0 auto 8px;
+            transition: all 0.3s ease;
+        }
+        .indicator-card:hover .indicator-icon {
+            background: linear-gradient(135deg, rgba(0,209,128,0.25), rgba(0,209,128,0.08));
+            box-shadow: 0 0 16px rgba(0,209,128,0.25);
+        }
+
+        /* Header ticker tape */
+        .ticker-tape {
+            background: linear-gradient(90deg, rgba(0,209,128,0.08), rgba(0,209,128,0.04), rgba(0,209,128,0.08));
+            border-top: 1px solid rgba(0,209,128,0.1);
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+            height: 32px;
+            display: flex;
+            align-items: center;
+        }
+        .ticker-tape-inner {
+            display: flex;
+            gap: 0;
+            animation: ticker-scroll 40s linear infinite;
+            white-space: nowrap;
+            will-change: transform;
+        }
+        .ticker-tape-inner:hover { animation-play-state: paused; }
+        @keyframes ticker-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 22px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-right: 1px solid var(--border-color);
+            letter-spacing: 0.3px;
+        }
+        .ticker-item .ticker-label { color: var(--text-secondary); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ticker-item .ticker-value { color: var(--text-color); }
+        .ticker-item .ticker-up { color: var(--up-trend); }
+        .ticker-item .ticker-down { color: var(--down-trend); }
+        .ticker-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary-color); opacity: 0.6; flex-shrink: 0; }
+
+        /* Ticker tape edge fade */
+        .ticker-tape { position: relative; }
+        .ticker-tape::before, .ticker-tape::after {
+            content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
+        }
+        .ticker-tape::before { left: 0; background: linear-gradient(to right, var(--dark-bg), transparent); }
+        .ticker-tape::after { right: 0; background: linear-gradient(to left, var(--dark-bg), transparent); }
+        body.light-mode .ticker-tape::before { background: linear-gradient(to right, var(--darker-bg), transparent); }
+        body.light-mode .ticker-tape::after { background: linear-gradient(to left, var(--darker-bg), transparent); }
+
+        /* Sticky header */
+        .header { position: sticky; top: 0; z-index: 200; }
+
+        /* Nav links */
+        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .nav-link { color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 8px; transition: all 0.2s ease; letter-spacing: 0.3px; }
+        .nav-link:hover { color: var(--text-color); background: rgba(var(--card-bg-val), 0.6); }
+        .nav-link.active { color: var(--primary-color); background: rgba(0,209,128,0.08); }
+        .nav-link i { margin-right: 6px; font-size: 12px; }
+
+        /* Page title font upgrade */
+        .page-title-header { font-family: 'Space Grotesk', 'Montserrat', sans-serif; }
+
+        @media (max-width: 768px) { .nav-links { display: none; } }
+
+        /* Subheader glow badge */
+        #data-atual {
+            background: rgba(0,209,128,0.07);
+            border: 1px solid rgba(0,209,128,0.15);
+            border-radius: 30px;
+            padding: 6px 18px;
+            display: inline-block;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        /* Section title for nacional/internacional */
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--primary-color);
+            opacity: 0.8;
+        }
+
+        /* Light mode overrides for new styles */
+        body.light-mode .indicator-icon {
+            background: linear-gradient(135deg, rgba(0,123,255,0.12), rgba(0,123,255,0.04));
+            border: 1px solid rgba(0,123,255,0.15);
+        }
+        body.light-mode .indicator-card:hover {
+            box-shadow: 0 16px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,123,255,0.15);
+        }
+        body.light-mode .chart-period-btn.active {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            box-shadow: 0 2px 10px rgba(0,123,255,0.25);
+        }
+        body.light-mode .ticker-tape {
+            background: linear-gradient(90deg, rgba(0,123,255,0.05), rgba(0,123,255,0.02), rgba(0,123,255,0.05));
+            border-top: 1px solid rgba(0,123,255,0.08);
+        }
+        body.light-mode #data-atual {
+            background: rgba(0,123,255,0.06);
+            border: 1px solid rgba(0,123,255,0.12);
+        }
     </style>
 </head>
 <body>
@@ -246,8 +508,34 @@
                 <div class="page-title-header">Indicadores Financeiros</div>
                 <div class="logo-divider"></div>
             </div>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i>Início</a>
+                <a href="indicadores.html" class="nav-link active"><i class="fas fa-chart-bar"></i>Indicadores</a>
+                <a href="api.html" class="nav-link"><i class="fas fa-user-tie"></i>Perfil</a>
+            </nav>
         </div>
     </header>
+    
+    <!-- Ticker Tape -->
+    <div class="ticker-tape" id="ticker-tape" aria-hidden="true">
+        <div class="ticker-tape-inner" id="ticker-tape-inner">
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">SELIC</span><span class="ticker-value" id="tk-selic">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">IPCA 12m</span><span class="ticker-value" id="tk-ipca">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">CDI a.a.</span><span class="ticker-value" id="tk-cdi">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">USD/BRL</span><span class="ticker-value" id="tk-dolar">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">EUR/BRL</span><span class="ticker-value" id="tk-euro">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">CDS 5A</span><span class="ticker-value" id="tk-cds">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">PIB Brasil</span><span class="ticker-value" id="tk-pib">—</span></span>
+            <!-- Duplicate for seamless loop -->
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">SELIC</span><span class="ticker-value" id="tk-selic2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">IPCA 12m</span><span class="ticker-value" id="tk-ipca2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">CDI a.a.</span><span class="ticker-value" id="tk-cdi2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">USD/BRL</span><span class="ticker-value" id="tk-dolar2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">EUR/BRL</span><span class="ticker-value" id="tk-euro2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">CDS 5A</span><span class="ticker-value" id="tk-cds2">—</span></span>
+            <span class="ticker-item"><span class="ticker-dot"></span><span class="ticker-label">PIB Brasil</span><span class="ticker-value" id="tk-pib2">—</span></span>
+        </div>
+    </div>
 
     <div class="container">
         <p class="subheader" id="data-atual"></p>
@@ -265,10 +553,6 @@
                 <article class="indicator-card indicator-card--with-chart" data-id="risk" tabindex="0">
                     <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
                     <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-shield-alt"></i></div><div class="indicator-name">Risco País (CDS 5 Anos)</div><div class="indicator-value" id="risk-value"></div><div class="indicator-description">CDS (pontos-base)</div><div class="sparkline-chart" id="risk-chart-container"></div><div class="accessible-chart-data" id="risk-chart-data-table"></div></div><div class="indicator-back"><strong>O que é o CDS?</strong> O Credit Default Swap (CDS) é um contrato de seguro contra o calote da dívida de um país. A pontuação do CDS de 5 anos indica a percepção de risco dos investidores internacionais. Quanto maior o valor, maior o risco soberano percebido.</div></div>
-                </article>
-                <article class="indicator-card indicator-card--multi-value" id="tesouro-card" data-id="tesouro" tabindex="0">
-                    <div class="skeleton-loader"><div class="skeleton skeleton-title" style="height: 20px;"></div><div class="skeleton" style="width: 90%; height: 35px; margin: 10px auto;"></div><div class="skeleton skeleton-value" style="margin-top: 15px;"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-value" style="margin-top: 15px;"></div><div class="skeleton skeleton-desc"></div></div>
-                    <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-landmark"></i></div><div class="indicator-name">Taxas Tesouro Direto</div><select id="tesouro-bond-selector" aria-label="Selecione um título do Tesouro Direto"></select><div class="indicator-value" id="tesouro-rate-value"></div><div class="indicator-description">Rendimento Anual</div><div class="indicator-value" id="tesouro-price-value"></div><div class="indicator-description">Preço Unitário</div><div class="indicator-status" id="tesouro-market-status"></div><div class="indicator-times" id="tesouro-market-times"></div><div class="indicator-description" id="tesouro-quote-time"></div></div><div class="indicator-back"><strong>O que é o Tesouro Direto?</strong> É um programa do Tesouro Nacional do Brasil para venda de títulos públicos federais para pessoas físicas, de forma 100% online. É considerado um dos investimentos de menor risco na economia. Este card mostra as taxas de rendimento e os preços no momento da compra.</div></div>
                 </article>
                 <article class="indicator-card indicator-card--multi-value indicator-card--with-chart" data-id="dolar" tabindex="0">
                     <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
@@ -389,45 +673,97 @@
     
     <div id="toast-container"></div>
 
-    <a href="api.html" class="profile-btn floating-btn" aria-label="Análise de Perfil do Investidor"> <i class="fas fa-user-tie"></i></a>
-    <button id="back-btn" class="floating-btn" aria-label="Voltar para página inicial"> <i class="fas fa-home"></i></button>
-    <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados"> <i class="fas fa-redo"></i></button>
-    <button id="fullscreen-btn" class="floating-btn" aria-label="Modo tela cheia"> <i class="fas fa-expand"></i></button>
-    <button id="fullscreen-exit-btn" class="floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"> <i class="fas fa-compress"></i></button>
-    <button class="theme-toggle floating-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro"> <i class="fas fa-moon"></i></button>
+    <!-- Floating Dock (bottom right) -->
+    <div class="floating-dock">
+        <button id="back-btn" class="floating-btn" aria-label="Voltar para página inicial"><i class="fas fa-home"></i></button>
+        <div class="dock-divider"></div>
+        <button id="refresh-btn" class="floating-btn" aria-label="Atualizar dados"><i class="fas fa-redo"></i></button>
+        <button id="fullscreen-btn" class="floating-btn" aria-label="Modo tela cheia"><i class="fas fa-expand"></i></button>
+        <button id="fullscreen-exit-btn" class="floating-btn" aria-label="Sair do modo tela cheia" style="display:none;"><i class="fas fa-compress"></i></button>
+        <div class="dock-divider"></div>
+        <button class="floating-btn theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro"><i class="fas fa-moon"></i></button>
+    </div>
+
+    <!-- Profile button (top right, kept separate) -->
+    <a href="api.html" class="profile-btn floating-btn" aria-label="Análise de Perfil do Investidor"><i class="fas fa-user-tie"></i></a>
 
     <script>
-        // --- 0. CACHE SERVICE ---
+        // --- 0. CACHE SERVICE (stale-while-revalidate) ---
+        // Mostra dados em cache imediatamente (mesmo expirados) e revalida em background
         const cacheService = {
-            CACHE_TTL: 15 * 60 * 1000, 
-            get(key) {
+            FRESH_TTL: 30 * 60 * 1000,       // 30 min - dados frescos, nao rebusca
+            STALE_TTL: 24 * 60 * 60 * 1000,  // 24h - mostra mas rebusca em background
+
+            getWithStatus(key) {
                 const itemStr = localStorage.getItem(key);
                 if (!itemStr) return null;
                 try {
                     const item = JSON.parse(itemStr);
-                    const isExpired = (Date.now() - item.timestamp) > this.CACHE_TTL;
-                    return isExpired ? null : item.data;
-                } catch (e) {
-                    console.error("Erro ao ler cache:", e);
-                    localStorage.removeItem(key);
-                    return null;
-                }
+                    const age = Date.now() - item.timestamp;
+                    if (age > this.STALE_TTL) { localStorage.removeItem(key); return null; }
+                    return { data: item.data, stale: age > this.FRESH_TTL };
+                } catch(e) { localStorage.removeItem(key); return null; }
             },
+
+            // Compatibilidade - retorna dados (fresh ou stale) ou null se nao existe
+            get(key) {
+                const r = this.getWithStatus(key);
+                return r ? r.data : null;
+            },
+
             set(key, data) {
-                const item = { data: data, timestamp: Date.now() };
-                try {
-                    localStorage.setItem(key, JSON.stringify(item));
-                } catch (e) {
-                    console.error("Erro ao salvar no cache:", e);
-                }
+                try { localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() })); }
+                catch(e) { console.error("Erro ao salvar cache:", e); }
             }
         };
 
-        // --- 1. CONFIGURATION ---
+        // --- 1. PROXY SERVICE ---
+        // Dispara todos os proxies em paralelo, usa o primeiro que responder
+        const proxyService = {
+            proxies: [
+                { id: 'corsproxy',    build: u => `https://corsproxy.io/?${encodeURIComponent(u)}` },
+                { id: 'allorigins',   build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+                { id: 'codetabs',     build: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
+                { id: 'htmldriven',   build: u => `https://cors.bridged.cc/${u}` },
+            ],
+            _winner: {},   // memoriza proxy mais rapido por dominio-alvo
+
+            async fetch(targetUrl, timeoutMs = 7000) {
+                const domain = new URL(targetUrl).hostname;
+                // Tenta o proxy vencedor anterior primeiro (mais rapido)
+                const prev = this._winner[domain];
+                if (prev !== undefined) {
+                    try { return await this._try(this.proxies[prev], targetUrl, timeoutMs * 0.6); }
+                    catch(_) { /* cai na corrida */ }
+                }
+                // Corrida: todos os proxies ao mesmo tempo
+                return new Promise((resolve, reject) => {
+                    let done = false, fails = 0;
+                    this.proxies.forEach((proxy, i) => {
+                        this._try(proxy, targetUrl, timeoutMs)
+                            .then(res => { if (!done) { done = true; this._winner[domain] = i; resolve(res); } })
+                            .catch(() => { if (++fails === this.proxies.length && !done) reject(new Error('Todos os proxies falharam: ' + targetUrl)); });
+                    });
+                });
+            },
+
+            async _try(proxy, url, ms) {
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), ms);
+                try {
+                    const res = await fetch(proxy.build(url), { signal: ctrl.signal });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const text = await res.text();
+                    try { return { json: JSON.parse(text), text }; } catch(_) { return { json: null, text }; }
+                } finally { clearTimeout(t); }
+            }
+        };
+
+        // --- 2. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
-            cdsApiUrl: 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://br.investing.com/rates-bonds/brazil-cds-5-years-usd'),
-            tesouroApiUrl: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json'),
+            cdsTargetUrl: 'https://br.investing.com/rates-bonds/brazil-cds-5-years-usd',
+            tesouroTargetUrl: 'https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json',
             fredApiBaseUrl: 'https://api.stlouisfed.org/fred/series/observations',
             fredApiKey: 'c7962c590edac9a2dae25b59e18ebd84', // ATENÇÃO: Chave de API exposta. O ideal é usar um backend para proteger esta chave.
             errorText: 'Erro',
@@ -478,41 +814,110 @@
             }
         };
 
-        // --- 2. API SERVICE ---
+        // --- 3. API SERVICE ---
         const apiService = {
             async getBCBData(seriesId, days = 1) { const url = `${config.apiBaseUrl}${seriesId}/dados/ultimos/${days}?formato=json`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
             async getBCBDataByDateRange(seriesId, days) { const endDate = new Date(); const startDate = new Date(); startDate.setDate(endDate.getDate() - days); const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
             async getBCBDataByYearRange(seriesId, years) { const endDate = new Date(); const startDate = new Date(); startDate.setFullYear(endDate.getFullYear() - years); const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados?formato=json&dataInicial=${formatDate(startDate)}&dataFinal=${formatDate(endDate)}`; try { const response = await fetch(url); if (!response.ok) throw new Error(`BCB API Error for series ${seriesId}: ${response.statusText}`); return await response.json(); } catch (error) { console.error(error.message); throw error; } },
-            async getCDSData() { try { const response = await fetch(config.cdsApiUrl); if (!response.ok) throw new Error(`CDS API Error: ${response.statusText}`); const data = await response.json(); const htmlContent = data.contents; const parser = new DOMParser(); const doc = parser.parseFromString(htmlContent, 'text/html'); const cdsValueElement = doc.querySelector('[data-test="instrument-price-last"]'); if (!cdsValueElement) throw new Error('Elemento do valor do CDS não encontrado.'); return parseFloat(cdsValueElement.textContent.replace(',', '.')).toFixed(2); } catch (error) { console.error("Erro ao buscar CDS:", error.message); throw error; } },
-            async getTesouroDiretoData() { try { const response = await fetch(config.tesouroApiUrl); if (!response.ok) throw new Error(`Tesouro Direto API Error: ${response.statusText}`); const data = await response.json(); return data.response; } catch (error) { console.error("Erro ao buscar dados do Tesouro Direto:", error.message); throw error; } },
-            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') { const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options; let fredUrl = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`; if (units) fredUrl += `&units=${units}`; if (frequency) fredUrl += `&frequency=${frequency}`; if (aggregation_method) fredUrl += `&aggregation_method=${aggregation_method}`; const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(fredUrl); try { const response = await fetch(proxyUrl); if (!response.ok) throw new Error(`FRED API Error for series ${seriesId} via proxy: ${response.status}`); const data = await response.json(); if (data.error_message) throw new Error(`FRED API Error for series ${seriesId}: ${data.error_message}`); return data.observations.filter(obs => obs.value !== '.').map(obs => { const parts = obs.date.split('-'); const date = new Date(parts[0], parts[1] - 1, parts[2]); return { date: date, valor: parseFloat(obs.value) }; }).reverse(); } catch (error) { console.error(`Failed to fetch ${seriesId}:`, error); throw error; } }
+            async getCDSData() {
+                try {
+                    const res = await proxyService.fetch(config.cdsTargetUrl);
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(res.text, 'text/html');
+                    const el = doc.querySelector('[data-test="instrument-price-last"]');
+                    if (!el) throw new Error('Elemento CDS nao encontrado');
+                    return parseFloat(el.textContent.replace(',', '.')).toFixed(2);
+                } catch(e) { console.error("Erro CDS:", e.message); throw e; }
+            },
+            async getTesouroDiretoData() {
+                try {
+                    const res = await proxyService.fetch(config.tesouroTargetUrl);
+                    const data = res.json || JSON.parse(res.text);
+                    return data.response;
+                } catch(e) { console.error("Erro Tesouro:", e.message); throw e; }
+            },
+            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') {
+                const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options;
+                let url = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`;
+                if (units) url += `&units=${units}`;
+                if (frequency) url += `&frequency=${frequency}`;
+                if (aggregation_method) url += `&aggregation_method=${aggregation_method}`;
+                try {
+                    const res = await proxyService.fetch(url);
+                    const data = res.json || JSON.parse(res.text);
+                    if (data.error_message) throw new Error(`FRED error ${seriesId}: ${data.error_message}`);
+                    return data.observations.filter(o => o.value !== '.').map(o => {
+                        const [y,m,d] = o.date.split('-');
+                        return { date: new Date(y, m-1, d), valor: parseFloat(o.value) };
+                    }).reverse();
+                } catch(e) { console.error(`Erro FRED ${seriesId}:`, e); throw e; }
+            }
         };
 
-        // --- 3. UI CONTROLLER ---
+        // --- 4. UI CONTROLLER ---
         const uiController = {
             updateText(selector, text, options = {}) { const { unit = '', unitPosition = 'before', isDate = false, data = 'N/D' } = options; const element = document.querySelector(selector); if (element) { if (text === config.errorText) { element.textContent = config.errorTextFriendly; return; } if (isDate) { element.textContent = data; return; } const value = text ?? config.errorTextFriendly; const formattedText = String(value).replace('.', ','); if(unitPosition === 'after') { element.textContent = `${formattedText}${unit}`; } else { element.textContent = `${unit}${formattedText}`; } } },
-            updateDateTime(source = 'BCB, Investing.com') { const now = new Date(); const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }; this.updateText(config.selectors.updateTime, ``, { isDate: true, data: `Atualizado em ${now.toLocaleDateString('pt-BR', options)}` }); document.querySelector(config.selectors.footer).textContent = `Fontes: ${source}, Tesouro Direto • © ${new Date().getFullYear()} Mercado Macro`; },
+            updateDateTime(source = 'BCB, Investing.com') { const now = new Date(); const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }; this.updateText(config.selectors.updateTime, ``, { isDate: true, data: `Atualizado em ${now.toLocaleDateString('pt-BR', options)}` }); document.querySelector(config.selectors.footer).innerHTML = `<div>Fontes: <strong>${source}</strong>, Tesouro Direto &nbsp;|&nbsp; Dados com fins informativos — não constituem recomendação de investimento.</div><div style="margin-top:6px">© ${new Date().getFullYear()} Mercado Macro &nbsp;·&nbsp; Todos os direitos reservados</div>`; },
             setLoadingState(isLoading) { if (isLoading) { this.updateText(config.selectors.updateTime, ``, { isDate: true, data: 'Atualizando dados...' }); } },
             showToast(message, type = 'success', duration = 3000) { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.textContent = message; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); },
             createSparklineChart(selector, seriesData, name = 'Valor', tooltipUnit = '%', dateFormat = 'mm/yyyy', customOptions = {}) {
                 const container = document.querySelector(selector);
                 if (container) container.innerHTML = '';
                 if (!seriesData || seriesData.length === 0) { if (container) container.textContent = "Dados insuficientes para gerar gráfico."; return null; }
+                const isLight = document.body.classList.contains('light-mode');
                 const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+                const values = seriesData.map(d => d.valor);
+                const minVal = Math.min(...values);
+                const maxVal = Math.max(...values);
+                const lastVal = values[values.length - 1];
+                const firstVal = values[0];
+                const trend = lastVal >= firstVal;
+                const trendColor = trend ? '#3fb950' : '#f85149';
+                const chartColor = primaryColor;
+
                 const defaultOptions = {
-                    chart: { type: 'area', height: 80, sparkline: { enabled: true }, animations: { enabled: true, speed: 800 }},
-                    stroke: { curve: 'smooth', width: 2 },
-                    fill: { opacity: 0.3 },
-                    colors: [primaryColor],
+                    chart: {
+                        type: 'area',
+                        height: 100,
+                        sparkline: { enabled: true },
+                        toolbar: { show: false },
+                        zoom: { enabled: false },
+                        animations: { enabled: true, speed: 900, animateGradually: { enabled: true, delay: 100 } },
+                        background: 'transparent',
+                        dropShadow: { enabled: true, top: 3, left: 0, blur: 4, opacity: 0.15, color: chartColor }
+                    },
+                    dataLabels: { enabled: false },
+                    stroke: { curve: 'smooth', width: 2.5, lineCap: 'round' },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shade: isLight ? 'light' : 'dark',
+                            type: 'vertical',
+                            shadeIntensity: 0.4,
+                            gradientToColors: [chartColor],
+                            inverseColors: false,
+                            opacityFrom: 0.45,
+                            opacityTo: 0.02,
+                            stops: [0, 100]
+                        }
+                    },
+                    colors: [chartColor],
                     series: [{ name: name, data: seriesData.map(item => ({ x: item.date.getTime(), y: item.valor })) }],
-                    tooltip: { theme: document.body.classList.contains('light-mode') ? 'light' : 'dark', style: { fontSize: '12px', fontFamily: 'Montserrat' }, x: { formatter: (val, opts) => { if (!seriesData[opts.dataPointIndex]) return ''; const date = seriesData[opts.dataPointIndex].date; const day = String(date.getDate()).padStart(2, '0'); const month = String(date.getMonth() + 1).padStart(2, '0'); const year = date.getFullYear(); if (dateFormat === 'yyyy') return year; if (dateFormat === 'dd/mm') return `${day}/${month}`; return `${month}/${year}`; } }, y: { formatter: (value) => { const formattedValue = value ? value.toFixed(2).replace('.', ',') : '0,00'; const unitSymbol = (tooltipUnit === '$' || tooltipUnit === 'R$') ? tooltipUnit : ''; const unitText = (tooltipUnit === '$' || tooltipUnit === 'R$') ? '' : ` ${tooltipUnit}`; return `${unitSymbol}${formattedValue}${unitText}`; }, title: { formatter: (seriesName) => seriesName || '' } }, marker: { show: false } }
+                    markers: { size: 0, hover: { size: 5 } },
+                    tooltip: {
+                        theme: isLight ? 'light' : 'dark',
+                        style: { fontSize: '12px', fontFamily: 'Montserrat' },
+                        x: { formatter: (val, opts) => { if (!seriesData[opts.dataPointIndex]) return ''; const date = seriesData[opts.dataPointIndex].date; const day = String(date.getDate()).padStart(2, '0'); const month = String(date.getMonth() + 1).padStart(2, '0'); const year = date.getFullYear(); if (dateFormat === 'yyyy') return year; if (dateFormat === 'dd/mm') return `${day}/${month}`; return `${month}/${year}`; } },
+                        y: { formatter: (value) => { const formattedValue = value ? value.toFixed(2).replace('.', ',') : '0,00'; const unitSymbol = (tooltipUnit === '$' || tooltipUnit === 'R$') ? tooltipUnit : ''; const unitText = (tooltipUnit === '$' || tooltipUnit === 'R$') ? '' : ` ${tooltipUnit}`; return `${unitSymbol}${formattedValue}${unitText}`; }, title: { formatter: (seriesName) => seriesName || '' } },
+                        marker: { show: true }
+                    }
                 };
                 const finalOptions = { ...defaultOptions, ...customOptions, annotations: { ...defaultOptions.annotations, ...customOptions.annotations }, chart: { ...defaultOptions.chart, ...customOptions.chart }, tooltip: { ...defaultOptions.tooltip, ...customOptions.tooltip } };
                 if (container) { const chart = new ApexCharts(container, finalOptions); chart.render(); return chart; } return null;
             }
         };
         
-        // --- 4. MAIN APPLICATION ---
+        // --- 5. MAIN APPLICATION ---
         const app = {
             nationalData: {},
             internationalData: { series: {}, charts: {}, activeTreasuryYield: '10Y' },
@@ -521,23 +926,43 @@
             markCardAsLoaded(cardId) { const card = document.querySelector(`[data-id="${cardId}"]`); if (card) { card.classList.add('card-loaded'); } },
 
             async fetchAllNationalIndicators() {
-                const cachedData = cacheService.get('allNationalIndicators');
-                if (cachedData) { this.processNationalResults(cachedData); uiController.updateText(config.selectors.updateTime, '', { isDate: true, data: 'Exibindo dados do cache...' }); } 
-                else { uiController.setLoadingState(true); }
+                const CACHE_KEY = 'allNationalIndicators_v2';
+                const cached = cacheService.getWithStatus(CACHE_KEY);
+
+                // Mostra cache imediatamente se existir (mesmo expirado)
+                if (cached) {
+                    this.processNationalResults(cached.data);
+                    uiController.updateText(config.selectors.updateTime, '', { isDate: true,
+                        data: cached.stale ? 'Atualizando em segundo plano...' : 'Cache atualizado' });
+                    if (!cached.stale) return; // dados frescos, nao precisa rebuscar
+                } else {
+                    uiController.setLoadingState(true);
+                }
+
+                // Fetch real (foreground se sem cache, background se stale)
                 const { apiCodes } = config;
                 const promises = {
-                    cds: apiService.getCDSData(), tesouro: apiService.getTesouroDiretoData(), dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
-                    dolarSell: apiService.getBCBDataByDateRange(apiCodes.dolarSell, 365), euroBuy: apiService.getBCBData(apiCodes.euroBuy, 1),
-                    euroSell: apiService.getBCBDataByDateRange(apiCodes.euroSell, 365), cdi: apiService.getBCBDataByDateRange(apiCodes.cdi, 365),
-                    selicMeta: apiService.getBCBDataByDateRange(apiCodes.selicMeta, 365), ipca: apiService.getBCBData(apiCodes.ipca, 12),
-                    ipca15: apiService.getBCBData(apiCodes.ipca15, 12), inpc: apiService.getBCBData(apiCodes.inpc, 12),
-                    igpm: apiService.getBCBData(apiCodes.igpm, 12), igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
-                    pibBr: apiService.getBCBDataByYearRange(apiCodes.pibBr, 50), poupanca: apiService.getBCBData(apiCodes.poupanca, 12),
+                    cds: apiService.getCDSData(),
+                    dolarBuy: apiService.getBCBData(apiCodes.dolarBuy, 1),
+                    dolarSell: apiService.getBCBDataByDateRange(apiCodes.dolarSell, 180),
+                    euroBuy: apiService.getBCBData(apiCodes.euroBuy, 1),
+                    euroSell: apiService.getBCBDataByDateRange(apiCodes.euroSell, 180),
+                    cdi: apiService.getBCBDataByDateRange(apiCodes.cdi, 180),
+                    selicMeta: apiService.getBCBDataByDateRange(apiCodes.selicMeta, 180),
+                    ipca: apiService.getBCBData(apiCodes.ipca, 12),
+                    ipca15: apiService.getBCBData(apiCodes.ipca15, 12),
+                    inpc: apiService.getBCBData(apiCodes.inpc, 12),
+                    igpm: apiService.getBCBData(apiCodes.igpm, 12),
+                    igpdi: apiService.getBCBData(apiCodes.igpdi, 12),
+                    pibBr: apiService.getBCBDataByYearRange(apiCodes.pibBr, 50),
+                    poupanca: apiService.getBCBData(apiCodes.poupanca, 12),
                     desemprego: apiService.getBCBData(apiCodes.desemprego, 12)
                 };
                 const results = await Promise.allSettled(Object.values(promises));
                 const data = Object.keys(promises).reduce((acc, key, index) => { acc[key] = results[index]; return acc; }, {});
-                this.nationalData = data; this.processNationalResults(data); cacheService.set('allNationalIndicators', data);
+                this.nationalData = data;
+                this.processNationalResults(data);
+                cacheService.set(CACHE_KEY, data);
                 if (!this.isInternationalView) { uiController.updateDateTime('BCB, Investing.com'); }
             },
 
@@ -547,8 +972,6 @@
                 
                 uiController.updateText(selectors.riskValue, data.cds.status === 'fulfilled' ? data.cds.value : errorText);
                 this.processCDSChart(); this.markCardAsLoaded('risk');
-
-                this.processTesouroDireto(data.tesouro);
 
                 uiController.updateText(selectors.dolarBuy, data.dolarBuy.status === 'fulfilled' ? parseFloat(data.dolarBuy.value?.[0]?.valor).toFixed(2) : errorText, {unit:'R$ '});
                 uiController.updateText(selectors.dolarSell, data.dolarSell.status === 'fulfilled' && data.dolarSell.value.length > 0 ? parseFloat(data.dolarSell.value?.[data.dolarSell.value.length - 1]?.valor).toFixed(2) : errorText, {unit:'R$ '});
@@ -570,6 +993,37 @@
                 this.processPibBr(data.pibBr); this.markCardAsLoaded('pib-br');
                 this.processPoupanca(data.poupanca); this.markCardAsLoaded('poupanca');
                 this.processUnemployment(data.desemprego); this.markCardAsLoaded('desemprego');
+                this.updateTickerTape(data);
+            },
+            
+            updateTickerTape(data) {
+                const set = (ids, val) => { ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = val; }); };
+                if (data.selicMeta?.status === 'fulfilled' && data.selicMeta.value?.length) {
+                    const v = parseFloat(data.selicMeta.value[data.selicMeta.value.length-1].valor).toFixed(2);
+                    set(['tk-selic','tk-selic2'], v + '% a.a.');
+                }
+                if (data.ipca?.status === 'fulfilled' && data.ipca.value?.length) {
+                    const yr = data.ipca.value.slice(-12).reduce((a,i) => a * (1 + parseFloat(i.valor)/100), 1);
+                    set(['tk-ipca','tk-ipca2'], (((yr-1)*100).toFixed(2)) + '%');
+                }
+                if (data.cdi?.status === 'fulfilled' && data.cdi.value?.length) {
+                    const d = data.cdi.value; const last = parseFloat(d[d.length-1].valor);
+                    const ann = ((Math.pow(1 + last/100, 252)-1)*100).toFixed(2);
+                    set(['tk-cdi','tk-cdi2'], ann + '% a.a.');
+                }
+                if (data.dolarBuy?.status === 'fulfilled' && data.dolarBuy.value?.length) {
+                    set(['tk-dolar','tk-dolar2'], 'R$ ' + parseFloat(data.dolarBuy.value[0].valor).toFixed(2));
+                }
+                if (data.euroBuy?.status === 'fulfilled' && data.euroBuy.value?.length) {
+                    set(['tk-euro','tk-euro2'], 'R$ ' + parseFloat(data.euroBuy.value[0].valor).toFixed(2));
+                }
+                if (data.cds?.status === 'fulfilled') {
+                    set(['tk-cds','tk-cds2'], data.cds.value + ' pts');
+                }
+                if (data.pibBr?.status === 'fulfilled' && data.pibBr.value?.length) {
+                    const last = data.pibBr.value[data.pibBr.value.length-1];
+                    set(['tk-pib','tk-pib2'], 'R$ ' + (parseFloat(last.valor)/1e12).toFixed(2).replace('.',',') + ' tri');
+                }
             },
             
             processCDSChart() { const cdsHistoryData = [ { date: new Date('2017-01-01'), valor: 160.50 }, { date: new Date('2018-01-01'), valor: 207.70 }, { date: new Date('2019-01-01'), valor: 99.10 },  { date: new Date('2020-01-01'), valor: 142.30 }, { date: new Date('2021-01-01'), valor: 203.10 }, { date: new Date('2022-01-01'), valor: 250.26 }, { date: new Date('2023-01-01'), valor: 132.49 }, { date: new Date('2024-01-01'), valor: 205.02 }, { date: new Date('2025-01-01'), valor: 156.55 } ]; uiController.createSparklineChart('#risk-chart-container', cdsHistoryData, 'CDS Anual', ' pts', 'yyyy'); },
@@ -669,17 +1123,62 @@
                 }
             },
             
+            _deserializeIntlCache(raw) {
+                return Object.entries(raw).reduce((acc, [key, value]) => {
+                    if (value?.raw) {
+                        acc[key] = {
+                            raw: value.raw.map(i => ({...i, date: new Date(i.date)})),
+                            yoy: value.yoy.map(i => ({...i, date: new Date(i.date)})),
+                            mom: value.mom.map(i => ({...i, date: new Date(i.date)}))
+                        };
+                    } else if (value) {
+                        acc[key] = value.map(i => ({...i, date: new Date(i.date)}));
+                    }
+                    return acc;
+                }, {});
+            },
+
             async fetchAllInternationalIndicators() {
-                const cacheKey = 'allInternationalIndicators_v6_treasury';
-                const cachedData = cacheService.get(cacheKey);
-                if (cachedData) { this.internationalData.series = Object.entries(cachedData).reduce((acc, [key, value]) => { if (value?.raw) { acc[key] = { raw: value.raw.map(item => ({...item, date: new Date(item.date)})), yoy: value.yoy.map(item => ({...item, date: new Date(item.date)})), mom: value.mom.map(item => ({...item, date: new Date(item.date)})) }; } else if(value) { acc[key] = value.map(item => ({...item, date: new Date(item.date)})); } return acc; }, {}); this.processInternationalResults(); uiController.updateText(config.selectors.updateTime, '', {isDate: true, data: 'Exibindo dados do cache...'}); return; }
-                uiController.setLoadingState(true); const { fredApiCodes, fredIndicatorsConfig } = config; const promises = {};
-                for (const key in fredIndicatorsConfig) { if (key === 'treasury' || key === 'fedtarget') continue; promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, 1000); }
-                promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1000); promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1000);
-                promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {}); promises.treasury10Y = apiService.getFREDData(fredApiCodes.treasury10Y, {}); promises.treasury30Y = apiService.getFREDData(fredApiCodes.treasury30Y, {});
-                const results = await Promise.allSettled(Object.values(promises)); let data = Object.keys(promises).reduce((acc, key, index) => { if (results[index].status === 'fulfilled') { acc[key] = results[index].value; } else { acc[key] = null; } return acc; }, {});
-                for (const key in data) { const cfg = fredIndicatorsConfig[key]; if (cfg && cfg.hasToggle && data[key] && key !== 'fedtarget') { const variations = this.calculateVariations(data[key]); data[key] = { raw: data[key], ...variations }; } }
-                this.internationalData.series = data; this.processInternationalResults(); cacheService.set(cacheKey, data); if (this.isInternationalView) { uiController.updateDateTime('FRED St. Louis Fed'); }
+                const CACHE_KEY = 'allInternationalIndicators_v7';
+                const cached = cacheService.getWithStatus(CACHE_KEY);
+
+                // Mostra cache imediatamente se existir (mesmo expirado)
+                if (cached) {
+                    this.internationalData.series = this._deserializeIntlCache(cached.data);
+                    this.processInternationalResults();
+                    uiController.updateText(config.selectors.updateTime, '', { isDate: true,
+                        data: cached.stale ? 'Atualizando em segundo plano...' : 'Cache atualizado' });
+                    if (!cached.stale) return;
+                } else {
+                    uiController.setLoadingState(true);
+                }
+
+                const { fredApiCodes, fredIndicatorsConfig } = config;
+                const promises = {};
+                for (const key in fredIndicatorsConfig) {
+                    if (key === 'treasury' || key === 'fedtarget') continue;
+                    promises[key] = apiService.getFREDData(fredApiCodes[key], fredIndicatorsConfig[key].apiParams, 1000);
+                }
+                promises.fedTargetUpper = apiService.getFREDData(fredApiCodes.fedTargetUpper, {}, 1000);
+                promises.fedTargetLower = apiService.getFREDData(fredApiCodes.fedTargetLower, {}, 1000);
+                promises.treasury2Y = apiService.getFREDData(fredApiCodes.treasury2Y, {});
+                promises.treasury10Y = apiService.getFREDData(fredApiCodes.treasury10Y, {});
+                promises.treasury30Y = apiService.getFREDData(fredApiCodes.treasury30Y, {});
+                const results = await Promise.allSettled(Object.values(promises));
+                let data = Object.keys(promises).reduce((acc, key, index) => {
+                    acc[key] = results[index].status === 'fulfilled' ? results[index].value : null;
+                    return acc;
+                }, {});
+                for (const key in data) {
+                    const cfg = fredIndicatorsConfig[key];
+                    if (cfg && cfg.hasToggle && data[key] && key !== 'fedtarget') {
+                        data[key] = { raw: data[key], ...this.calculateVariations(data[key]) };
+                    }
+                }
+                this.internationalData.series = data;
+                this.processInternationalResults();
+                cacheService.set(CACHE_KEY, data);
+                if (this.isInternationalView) { uiController.updateDateTime('FRED St. Louis Fed'); }
             },
 
             processInternationalResults() {
@@ -778,8 +1277,8 @@
                     document.querySelectorAll('.indicator-card').forEach(c => c.classList.remove('card-loaded'));
                     
                     const refreshPromise = this.isInternationalView 
-                        ? (localStorage.removeItem('allInternationalIndicators_v6_treasury'), this.fetchAllInternationalIndicators())
-                        : (localStorage.removeItem('allNationalIndicators'), this.fetchAllNationalIndicators());
+                        ? (localStorage.removeItem('allInternationalIndicators_v7'), this.fetchAllInternationalIndicators())
+                        : (localStorage.removeItem('allNationalIndicators_v2'), this.fetchAllNationalIndicators());
 
                     refreshPromise.finally(() => {
                         btn.classList.remove('is-refreshing');
