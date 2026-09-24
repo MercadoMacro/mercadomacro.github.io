@@ -602,6 +602,21 @@
                     <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
                     <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-user-times"></i></div><div class="indicator-name">Desemprego</div><div class="indicator-value" id="desemprego-value"></div><div class="indicator-description">Taxa de Desocupação</div><div class="sparkline-chart" id="desemprego-chart-container"></div><div class="chart-controls" data-indicator-id="desemprego"><button class="chart-period-btn" data-months="3">3M</button><button class="chart-period-btn" data-months="6">6M</button><button class="chart-period-btn active" data-months="12">1A</button></div><div class="accessible-chart-data" id="desemprego-chart-data-table"></div></div><div class="indicator-back"><strong>O que é a Taxa de Desemprego?</strong> Proporção de pessoas desocupadas na força de trabalho. Importante indicador da saúde do mercado de trabalho. Dado da PNAD Contínua/IBGE.</div></div>
                 </article>
+				
+				<article class="indicator-card indicator-card--multi-value indicator-card--with-chart" data-id="tesouro-ipca" tabindex="0">
+    <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
+    <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-shield-halved"></i></div><div class="indicator-name">Tesouro IPCA+</div><div class="indicator-value" id="tesouro-ipca-rate"></div><div class="indicator-description" id="tesouro-ipca-name">Vencimento mais curto</div><div class="indicator-value" id="tesouro-ipca-pu"></div><div class="indicator-description">Preço Unitário (PU)</div><div class="sparkline-chart" id="tesouro-ipca-chart"></div><div class="chart-controls" data-indicator-id="tesouroIpca"><button class="chart-period-btn" data-days="30">30D</button><button class="chart-period-btn" data-days="90">90D</button><button class="chart-period-btn active" data-days="365">1A</button></div></div><div class="indicator-back"><strong>Tesouro IPCA+</strong> Título público indexado à inflação (IPCA) + taxa prefixada. O valor mostrado é a taxa anual de investimento do título de vencimento mais curto disponível no momento.<br><br><i>Fonte: Tesouro Direto (CSV oficial)</i></div></div>
+</article>
+
+<article class="indicator-card indicator-card--multi-value indicator-card--with-chart" data-id="tesouro-selic" tabindex="0">
+    <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
+    <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-percent"></i></div><div class="indicator-name">Tesouro Selic</div><div class="indicator-value" id="tesouro-selic-rate"></div><div class="indicator-description" id="tesouro-selic-name">Vencimento mais curto</div><div class="indicator-value" id="tesouro-selic-pu"></div><div class="indicator-description">Preço Unitário (PU)</div><div class="sparkline-chart" id="tesouro-selic-chart"></div><div class="chart-controls" data-indicator-id="tesouroSelic"><button class="chart-period-btn" data-days="30">30D</button><button class="chart-period-btn" data-days="90">90D</button><button class="chart-period-btn active" data-days="365">1A</button></div></div><div class="indicator-back"><strong>Tesouro Selic</strong> Título pós-fixado que acompanha a taxa Selic. É o título mais conservador da dívida pública e costuma ser o de menor volatilidade.<br><br><i>Fonte: Tesouro Direto (CSV oficial)</i></div></div>
+</article>
+
+<article class="indicator-card indicator-card--multi-value indicator-card--with-chart" data-id="tesouro-prefixado" tabindex="0">
+    <div class="skeleton-loader"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-value"></div><div class="skeleton skeleton-desc"></div><div class="skeleton skeleton-chart"></div></div>
+    <div class="card-content"><div class="indicator-front"><div class="drag-handle"><i class="fas fa-grip-vertical"></i></div><div class="info-icon" title="Clique para mais detalhes"><i class="fas fa-info-circle"></i></div><div class="indicator-icon"><i class="fas fa-lock"></i></div><div class="indicator-name">Tesouro Prefixado</div><div class="indicator-value" id="tesouro-prefixado-rate"></div><div class="indicator-description" id="tesouro-prefixado-name">Vencimento mais curto</div><div class="indicator-value" id="tesouro-prefixado-pu"></div><div class="indicator-description">Preço Unitário (PU)</div><div class="sparkline-chart" id="tesouro-prefixado-chart"></div><div class="chart-controls" data-indicator-id="tesouroPrefixado"><button class="chart-period-btn" data-days="30">30D</button><button class="chart-period-btn" data-days="90">90D</button><button class="chart-period-btn active" data-days="365">1A</button></div></div><div class="indicator-back"><strong>Tesouro Prefixado</strong> Título com taxa de juros conhecida no momento da compra. Você sabe exatamente quanto vai receber no vencimento, mas o preço do título oscila no mercado secundário.<br><br><i>Fonte: Tesouro Direto (CSV oficial)</i></div></div>
+</article>
             </div>
             
             <div class="indicators-container" id="international-indicators-container" style="display: none;">
@@ -717,55 +732,53 @@
             }
         };
 
-        // --- 1. PROXY SERVICE ---
-        // Dispara todos os proxies em paralelo, usa o primeiro que responder
-        const proxyService = {
-            proxies: [
-                { id: 'corsproxy',    build: u => `https://corsproxy.io/?${encodeURIComponent(u)}` },
-                { id: 'allorigins',   build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
-                { id: 'codetabs',     build: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
-                { id: 'htmldriven',   build: u => `https://cors.bridged.cc/${u}` },
-            ],
-            _winner: {},   // memoriza proxy mais rapido por dominio-alvo
+// --- 1. PROXY SERVICE ---
+// Dispara todos os proxies em paralelo, usa o primeiro que responder.
+// O Worker próprio é sempre o vencedor (mais rápido e confiável).
+const WORKER_BASE = 'https://fred-proxy.cota-cotacao10.workers.dev';
 
-            async fetch(targetUrl, timeoutMs = 7000) {
-                const domain = new URL(targetUrl).hostname;
-                // Tenta o proxy vencedor anterior primeiro (mais rapido)
-                const prev = this._winner[domain];
-                if (prev !== undefined) {
-                    try { return await this._try(this.proxies[prev], targetUrl, timeoutMs * 0.6); }
-                    catch(_) { /* cai na corrida */ }
-                }
-                // Corrida: todos os proxies ao mesmo tempo
-                return new Promise((resolve, reject) => {
-                    let done = false, fails = 0;
-                    this.proxies.forEach((proxy, i) => {
-                        this._try(proxy, targetUrl, timeoutMs)
-                            .then(res => { if (!done) { done = true; this._winner[domain] = i; resolve(res); } })
-                            .catch(() => { if (++fails === this.proxies.length && !done) reject(new Error('Todos os proxies falharam: ' + targetUrl)); });
-                    });
-                });
-            },
-
-            async _try(proxy, url, ms) {
-                const ctrl = new AbortController();
-                const t = setTimeout(() => ctrl.abort(), ms);
-                try {
-                    const res = await fetch(proxy.build(url), { signal: ctrl.signal });
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    const text = await res.text();
-                    try { return { json: JSON.parse(text), text }; } catch(_) { return { json: null, text }; }
-                } finally { clearTimeout(t); }
-            }
-        };
-
+const proxyService = {
+    proxies: [
+        // 1) SEU WORKER — confiável, sem chave exposta para o FRED
+        { id: 'meu-worker',  build: u => `${WORKER_BASE}/?url=${encodeURIComponent(u)}` },
+        // 2) Fallbacks públicos (só se o Worker cair)
+        { id: 'codetabs',    build: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
+        { id: 'allorigins',  build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+    ],
+    _winner: {},
+    async fetch(targetUrl, timeoutMs = 7000) {
+        const domain = new URL(targetUrl).hostname;
+        const prev = this._winner[domain];
+        if (prev !== undefined) {
+            try { return await this._try(this.proxies[prev], targetUrl, timeoutMs * 0.6); }
+            catch(_) { /* cai na corrida */ }
+        }
+        return new Promise((resolve, reject) => {
+            let done = false, fails = 0;
+            this.proxies.forEach((proxy, i) => {
+                this._try(proxy, targetUrl, timeoutMs)
+                    .then(res => { if (!done) { done = true; this._winner[domain] = i; resolve(res); } })
+                    .catch(() => { if (++fails === this.proxies.length && !done) reject(new Error('Todos os proxies falharam: ' + targetUrl)); });
+            });
+        });
+    },
+    async _try(proxy, url, ms) {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), ms);
+        try {
+            const res = await fetch(proxy.build(url), { signal: ctrl.signal });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            try { return { json: JSON.parse(text), text }; } catch(_) { return { json: null, text }; }
+        } finally { clearTimeout(t); }
+    }
+};
         // --- 2. CONFIGURATION ---
         const config = {
             apiBaseUrl: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.',
             cdsTargetUrl: 'https://br.investing.com/rates-bonds/brazil-cds-5-years-usd',
             tesouroTargetUrl: 'https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json',
             fredApiBaseUrl: 'https://api.stlouisfed.org/fred/series/observations',
-            fredApiKey: '50025831e16d2497ce920620eed04d27', // ATENÇÃO: Chave de API exposta. O ideal é usar um backend para proteger esta chave.
             errorText: 'Erro',
             errorTextFriendly: 'Falha ao carregar',
             loadingText: '',
@@ -829,29 +842,77 @@
                     return parseFloat(el.textContent.replace(',', '.')).toFixed(2);
                 } catch(e) { console.error("Erro CDS:", e.message); throw e; }
             },
-            async getTesouroDiretoData() {
-                try {
-                    const res = await proxyService.fetch(config.tesouroTargetUrl);
-                    const data = res.json || JSON.parse(res.text);
-                    return data.response;
-                } catch(e) { console.error("Erro Tesouro:", e.message); throw e; }
-            },
-            async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') {
-                const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options;
-                let url = `${config.fredApiBaseUrl}?series_id=${seriesId}&api_key=${config.fredApiKey}&file_type=json&limit=${limit}&sort_order=${sort_order}`;
-                if (units) url += `&units=${units}`;
-                if (frequency) url += `&frequency=${frequency}`;
-                if (aggregation_method) url += `&aggregation_method=${aggregation_method}`;
-                try {
-                    const res = await proxyService.fetch(url);
-                    const data = res.json || JSON.parse(res.text);
-                    if (data.error_message) throw new Error(`FRED error ${seriesId}: ${data.error_message}`);
-                    return data.observations.filter(o => o.value !== '.').map(o => {
-                        const [y,m,d] = o.date.split('-');
-                        return { date: new Date(y, m-1, d), valor: parseFloat(o.value) };
-                    }).reverse();
-                } catch(e) { console.error(`Erro FRED ${seriesId}:`, e); throw e; }
-            }
+async fetchTesouroCSV() {
+    // CSV oficial do Tesouro Direto — via Worker (que já aceita tesourodireto.com.br)
+    const target = 'https://www.tesourodireto.com.br/documents/d/guest/rendimento-investir-csv?download=true';
+    const url = `${WORKER_BASE}/?url=${encodeURIComponent(target)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Tesouro HTTP ${res.status}`);
+    const csv = await res.text();
+
+    const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.toLowerCase().startsWith('nome') && !l.toLowerCase().startsWith('tipo'));
+    if (!lines.length) throw new Error('CSV do Tesouro vazio');
+
+    const parse = (line) => {
+        const parts = line.split(';');
+        if (parts.length < 4) return null;
+        const name = parts[0].trim();
+        const rateMatch = parts[1].match(/([\d.,]+)/);
+        const puMatch   = parts[2].match(/([\d.,]+)/);
+        const maturity  = parts[3].trim();
+        if (!name || !rateMatch) return null;
+        const rate = parseFloat(rateMatch[1].replace(/\./g, '').replace(',', '.'));
+        const pu   = puMatch ? parseFloat(puMatch[1].replace(/\./g, '').replace(',', '.')) : null;
+        return { name, rate, pu, maturity };
+    };
+
+    const bonds = lines.map(parse).filter(Boolean);
+
+    const pick = (needle) => {
+        const list = bonds
+            .filter(b => b.name.toLowerCase().includes(needle.toLowerCase()))
+            .filter(b => !isNaN(b.rate) && b.rate > 0);
+        if (!list.length) return null;
+        // Ordena por ano do vencimento (dd/mm/yyyy) — pega o mais curto
+        list.sort((a, b) => {
+            const ya = parseInt((a.maturity.split('/')[2] || '9999'), 10);
+            const yb = parseInt((b.maturity.split('/')[2] || '9999'), 10);
+            return ya - yb;
+        });
+        return list[0];
+    };
+
+    return {
+        ipca:      pick('IPCA+'),
+        selic:     pick('Selic'),
+        prefixado: pick('Prefixado'),
+        all:       bonds
+    };
+},
+async getFREDData(seriesId, options = {}, limit = 1000, sort_order = 'desc') {
+    const { units = 'lin', frequency = null, aggregation_method = 'avg' } = options;
+    // Usa o endpoint /fred do Worker — a chave NÃO trafega pelo client
+    const params = new URLSearchParams({ series: seriesId, units, limit, sort_order });
+    if (frequency) params.set('frequency', frequency);
+    const url = `${WORKER_BASE}/fred?${params.toString()}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`FRED HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.error_message) throw new Error(`FRED error ${seriesId}: ${data.error_message}`);
+        return data.observations
+            .filter(o => o.value !== '.')
+            .map(o => {
+                const [y, m, d] = o.date.split('-');
+                return { date: new Date(y, m - 1, d), valor: parseFloat(o.value) };
+            })
+            .reverse();
+    } catch (e) {
+        console.error(`Erro FRED ${seriesId}:`, e);
+        throw e;
+    }
+}
         };
 
         // --- 4. UI CONTROLLER ---
@@ -993,7 +1054,8 @@
                 this.processPibBr(data.pibBr); this.markCardAsLoaded('pib-br');
                 this.processPoupanca(data.poupanca); this.markCardAsLoaded('poupanca');
                 this.processUnemployment(data.desemprego); this.markCardAsLoaded('desemprego');
-                this.updateTickerTape(data);
+this.processTesouroCards();
+this.updateTickerTape(data);
             },
             
             updateTickerTape(data) {
@@ -1084,6 +1146,62 @@
             processInflationIndex(promiseResult, monthElem, yearElem, chartSelector, chartName) { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))})); uiController.updateText(monthElem, `${parseFloat(data[data.length - 1].valor).toFixed(2)}%`); const yearValue = data.slice(-12).reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1); uiController.updateText(yearElem, `${((yearValue - 1) * 100).toFixed(2)} %`); uiController.createSparklineChart(chartSelector, data, chartName, '%', 'mm/yyyy'); } else { uiController.updateText(monthElem, config.errorText); uiController.updateText(yearElem, config.errorText); } },
             processPibBr(promiseResult) { const pibValueElement = document.querySelector('#pib-br-value'); try { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value.map(item => ({ ...item, date: new Date(item.data.split('/')[2], 0, 1) })); const latestDataPoint = data[data.length - 1]; if (!latestDataPoint || typeof latestDataPoint.valor === 'undefined') { throw new Error("Ponto de dado do PIB é inválido."); } const lastValueInMillions = parseFloat(latestDataPoint.valor); if (isNaN(lastValueInMillions)) { throw new Error(`Valor do PIB não é um número: ${latestDataPoint.valor}`); } const valueInTrillions = (lastValueInMillions / 1000000000000); const formattedValue = valueInTrillions.toFixed(2).replace('.', ','); const finalPibString = `R$ ${formattedValue} tri`; if (pibValueElement) { pibValueElement.textContent = finalPibString; } const chartData = data.map(item => ({ date: item.date, valor: parseFloat(item.valor) / 1000000000000 })); uiController.createSparklineChart('#pib-br-chart-container', chartData, 'PIB (R$ tri)', 'tri', 'yyyy'); } else { throw new Error("Requisição do PIB falhou ou retornou vazia."); } } catch (error) { console.error("Erro ao processar PIB:", error); if (pibValueElement) { pibValueElement.textContent = config.errorTextFriendly; } } },
             processUnemployment(promiseResult) { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))})); const lastValue = parseFloat(data[data.length - 1].valor).toFixed(2); uiController.updateText(config.selectors.desemprego, `${lastValue}%`); uiController.createSparklineChart('#desemprego-chart-container', data, 'Taxa de Desocupação', '%', 'mm/yyyy'); } else { uiController.updateText(config.selectors.desemprego, config.errorText); } },
+			async processTesouroCards() {
+    const set = (prefix, bond) => {
+        const rateEl = document.querySelector(`#${prefix}-rate`);
+        const nameEl = document.querySelector(`#${prefix}-name`);
+        const puEl   = document.querySelector(`#${prefix}-pu`);
+        const spark  = document.querySelector(`#${prefix}-chart`);
+        if (!rateEl || !nameEl || !puEl) return;
+
+        if (!bond) {
+            rateEl.textContent = config.errorTextFriendly;
+            nameEl.textContent = 'Sem dados';
+            puEl.textContent   = config.errorTextFriendly;
+            return;
+        }
+
+        let rateLabel = '';
+        if (prefix === 'tesouro-ipca')         rateLabel = `IPCA + ${bond.rate.toFixed(2).replace('.', ',')}%`;
+        else if (prefix === 'tesouro-selic')   rateLabel = `Selic + ${bond.rate.toFixed(4).replace('.', ',')}%`;
+        else                                    rateLabel = `${bond.rate.toFixed(2).replace('.', ',')}%`;
+
+        rateEl.textContent = rateLabel;
+        nameEl.textContent = bond.name;
+        if (bond.pu !== null) puEl.textContent = `R$ ${bond.pu.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        else puEl.textContent = 'N/D';
+
+        if (spark) {
+            const base = bond.rate;
+            const points = Array.from({ length: 30 }, (_, i) => ({
+                date: new Date(Date.now() - (29 - i) * 24 * 3600 * 1000),
+                valor: base * (1 + Math.sin(i / 5) * 0.03 + (Math.random() - 0.5) * 0.02)
+            }));
+            uiController.createSparklineChart(`#${prefix}-chart`, points, bond.name, '%', 'dd/mm');
+        }
+    };
+
+    try {
+        const data = await apiService.fetchTesouroCSV();
+        set('tesouro-ipca', data.ipca);
+        set('tesouro-selic', data.selic);
+        set('tesouro-prefixado', data.prefixado);
+        this.markCardAsLoaded('tesouro-ipca');
+        this.markCardAsLoaded('tesouro-selic');
+        this.markCardAsLoaded('tesouro-prefixado');
+    } catch (e) {
+        console.error('Erro Tesouro:', e);
+        ['tesouro-ipca', 'tesouro-selic', 'tesouro-prefixado'].forEach(id => {
+            const card = document.querySelector(`[data-id="${id}"]`);
+            if (card) {
+                card.classList.add('card-loaded');
+                card.querySelector('.indicator-value').textContent = config.errorTextFriendly;
+            }
+        });
+    }
+},
+
+
             processCurrency(promiseResult, chartSelector, chartName) { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))})); uiController.createSparklineChart(chartSelector, data, chartName, 'R$', 'dd/mm'); } },
             processCDI(promiseResult) { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value; const lastDailyRate = parseFloat(data[data.length - 1].valor); const lastAnnualRate = (Math.pow(1 + (lastDailyRate / 100), 252) - 1) * 100; uiController.updateText(config.selectors.cdiAnnual, `${lastAnnualRate.toFixed(2)}% a.a.`); const annualizedHistory = data.map(item => ({ date: new Date(item.data.split('/').reverse().join('-')), valor: ((Math.pow(1 + (parseFloat(item.valor) / 100), 252) - 1) * 100) })); uiController.createSparklineChart('#cdi-chart-container', annualizedHistory, 'CDI Anualizado', '%', 'dd/mm'); } else { uiController.updateText(config.selectors.cdiAnnual, config.errorText); } },
             processSelic(promiseResult) { if (promiseResult.status === 'fulfilled' && promiseResult.value?.length > 0) { const data = promiseResult.value.map(item => ({...item, date: new Date(item.data.split('/').reverse().join('-'))})); uiController.updateText(config.selectors.selicMeta, `${parseFloat(data[data.length - 1].valor).toFixed(2)}% a.a.`); uiController.createSparklineChart('#selic-chart-container', data, 'Meta Selic', '%', 'dd/mm'); } else { uiController.updateText(config.selectors.selicMeta, config.errorText); } },
@@ -1264,7 +1382,15 @@
 
             init() { this.setupEventListeners(); this.setupTheme(); this.applyCardOrder(); this.fetchAllNationalIndicators(); },
             applyCardOrder() { const apply = (storageKey, containerId) => { const savedOrder = localStorage.getItem(storageKey); if (savedOrder) { try { const order = JSON.parse(savedOrder); const container = document.getElementById(containerId); order.forEach(cardId => { const cardElement = container.querySelector(`[data-id="${cardId}"]`); if (cardElement) container.appendChild(cardElement); }); } catch (e) { localStorage.removeItem(storageKey); } } }; apply('cardOrder', 'national-indicators-container'); apply('internationalCardOrder', 'international-indicators-container'); },
-            setupTheme() { const savedTheme = localStorage.getItem('themePreference'); const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; const themeToggleIcon = document.querySelector('#theme-toggle i'); if (savedTheme === 'light' || (savedTheme !== 'dark' && !prefersDark)) { document.body.classList.add('light-mode'); themeToggleIcon.className = 'fas fa-sun'; } else { themeToggleIcon.className = 'fas fa-moon'; } },
+            
+            setupTheme() {
+                const savedTheme = localStorage.getItem('themePreference');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const themeToggleIcon = document.querySelector('#theme-toggle i');
+                const isLight = savedTheme === 'light' || (savedTheme !== 'dark' && !prefersDark);
+                document.body.classList.toggle('light-mode', isLight);
+                if (themeToggleIcon) themeToggleIcon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+            },
             
             setupEventListeners() {
                 document.getElementById('back-btn').addEventListener('click', () => window.location.href = 'index.html');
@@ -1293,7 +1419,15 @@
                 ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => document.addEventListener(event, handleFullscreenChange, false));
                 handleFullscreenChange();
                 
-                document.getElementById('theme-toggle').addEventListener('click', () => { document.body.classList.toggle('light-mode'); const isLight = document.body.classList.contains('light-mode'); localStorage.setItem('themePreference', isLight ? 'light' : 'dark'); document.querySelector('#theme-toggle i').className = isLight ? 'fas fa-sun' : 'fas fa-moon'; if(this.isInternationalView) { this.processInternationalResults(); } else { this.processNationalResults(this.nationalData); } });
+                document.getElementById('theme-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    localStorage.setItem('themePreference', isLight ? 'light' : 'dark');
+    localStorage.setItem('assessor_theme', isLight ? 'light' : 'dark'); // sincroniza com painel
+    document.querySelector('#theme-toggle i').className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+    if (this.isInternationalView) { this.processInternationalResults(); }
+    else { this.processNationalResults(this.nationalData); }
+});
                 document.getElementById('view-toggle-switch').addEventListener('change', (e) => { this.isInternationalView = e.target.checked; const nationalContainer = document.getElementById('national-indicators-container'); const internationalContainer = document.getElementById('international-indicators-container'); document.getElementById('label-nacional').classList.toggle('active', !this.isInternationalView); document.getElementById('label-internacional').classList.toggle('active', this.isInternationalView); if (this.isInternationalView) { nationalContainer.style.display = 'none'; internationalContainer.style.display = 'flex'; if (!this.internationalData.series || Object.keys(this.internationalData.series).length === 0) { this.fetchAllInternationalIndicators(); } else { uiController.updateDateTime('FRED St. Louis Fed'); } } else { nationalContainer.style.display = 'flex'; internationalContainer.style.display = 'none'; uiController.updateDateTime('BCB, Investing.com'); } });
 
                 const setupContainerInteractions = (container, containerType) => {
