@@ -34,7 +34,6 @@ const ROTAS = [
   ['Minério de ferro (/minerio)', API + '/minerio', (j) => (j.valor > 0 ? '' : 'sem preço')],
   ['CDS Brasil (/cds)', API + '/cds', (j) => (j.valor > 0 ? '' : 'sem valor')],
   ['Banco Central SGS (/bcb)', API + '/bcb?c=432&q=' + encodeURIComponent('/ultimos/1'), (j) => (temLista(j) && j[0].valor ? '' : 'série vazia')],
-  ['Dólar AwesomeAPI (/fx)', API + '/fx?p=USD-BRL', (j) => (j.USDBRL && +j.USDBRL.bid > 0 ? '' : 'sem cotação')],
   ['IBGE SIDRA (/sidra)', API + '/sidra?q=ipca12', (j) => (temLista(j) && j.length > 1 ? '' : 'tabela vazia')],
   ['Balanços EUA (/finnhub/earnings)', API + `/finnhub/earnings?from=${daqui(0)}&to=${daqui(7)}`, (j) => (j.fonte ? '' : 'resposta sem fonte')],
   ['Fundamentos EUA (/finnhub/fund)', API + '/finnhub/fund?s=AAPL', (j) => (j.fonte ? '' : 'resposta sem fonte')],

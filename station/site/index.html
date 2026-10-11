@@ -3419,18 +3419,15 @@ async function fetchMinerio() {
     return { ...y, note: 'Yahoo (TIO=F), US$ por tonelada; pode estar defasado' };
   }
 }
-// AwesomeAPI: primeiro pelo worker; se falhar, direto
-async function fxAwesome(par) {
-  const ok = (d) => { if (!d || !d[par.replace('-', '')]) throw new Error('sem dados'); return d; };
-  try { return ok(await (await fetchT(`${CORS_PROXY}/fx?p=${par}`)).json()); }
-  catch (e) { return ok(await (await fetchT(`https://economia.awesomeapi.com.br/last/${par}`)).json()); }
-}
+// AwesomeAPI fica direto do navegador: ela recusa (HTTP 429) as chamadas vindas da Cloudflare
 async function fetchUSD() {
-  const d = await fxAwesome('USD-BRL');
+  const res = await fetchT('https://economia.awesomeapi.com.br/last/USD-BRL');
+  const d = await res.json();
   return { value: parseFloat(d.USDBRL.bid), change: parseFloat(d.USDBRL.pctChange), unit: 'R$' };
 }
 async function fetchEUR() {
-  const d = await fxAwesome('EUR-BRL');
+  const res = await fetchT('https://economia.awesomeapi.com.br/last/EUR-BRL');
+  const d = await res.json();
   return { value: parseFloat(d.EURBRL.bid), change: parseFloat(d.EURBRL.pctChange), unit: 'R$' };
 }
 

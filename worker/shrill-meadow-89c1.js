@@ -774,22 +774,6 @@ export default {
       }
     }
 
-    // =========================================================
-    // ENDPOINT: /fx?p=USD-BRL  (AwesomeAPI, cache curto)
-    // =========================================================
-    if (path === '/fx') {
-      const par = (url.searchParams.get('p') || '').toUpperCase();
-      if (!['USD-BRL', 'EUR-BRL'].includes(par)) return json({ error: 'Par não liberado' }, 400, cors);
-      try {
-        const r = await fetch(`https://economia.awesomeapi.com.br/last/${par}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000), cf: { cacheTtl: 60, cacheEverything: true } });
-        const d = await r.json().catch(() => null);
-        if (!r.ok || !d || !d[par.replace('-', '')]) return json({ error: 'AwesomeAPI HTTP ' + r.status }, 502, cors);
-        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=60' });
-      } catch (err) {
-        return json({ error: 'AwesomeAPI falhou: ' + err.message }, 502, cors);
-      }
-    }
-
     if (path === '/sidra') {
       const q = url.searchParams.get('q') || '';
       const SIDRA = {
