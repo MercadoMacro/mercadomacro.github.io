@@ -5,7 +5,7 @@
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
 const CACHE = 'mm-site-v1';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'estilo.css?v=6', 'app.js?v=2', 'ajustes.js?v=2', 'extras.js?v=5',
+const BASE = ['./', 'index.html', 'estilo.css?v=6', 'app.js?v=3', 'ajustes.js?v=2', 'extras.js?v=5',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

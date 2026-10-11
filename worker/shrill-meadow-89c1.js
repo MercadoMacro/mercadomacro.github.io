@@ -774,6 +774,41 @@ export default {
       }
     }
 
+    // =========================================================
+    // ENDPOINT: /td?s=USD/BRL,EUR/BRL  (Twelve Data: só reserva do dólar e do euro,
+    // usada quando a AwesomeAPI falha; chave no segredo TWELVEDATA_API_KEY; cache de 2 min
+    // para gastar pouco do limite gratuito de 800 créditos por dia)
+    // =========================================================
+    if (path === '/td') {
+      const PARES = ['USD/BRL', 'EUR/BRL'];
+      const pedidos = (url.searchParams.get('s') || '').toUpperCase().split(',').map((x) => x.trim()).filter((x) => PARES.includes(x));
+      if (!pedidos.length) return json({ error: 'Par não liberado' }, 400, cors);
+      if (!env.TWELVEDATA_API_KEY) return json({ error: 'Falta o segredo TWELVEDATA_API_KEY' }, 503, cors);
+      const lista = [...new Set(pedidos)].sort().join(',');
+      const cache = caches.default;
+      const ck = new Request('https://td.cache/quote/' + encodeURIComponent(lista));
+      const hit = await cache.match(ck);
+      if (hit) return json(await hit.json(), 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      try {
+        const r = await fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(lista)}&apikey=${env.TWELVEDATA_API_KEY}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d || d.status === 'error') return json({ error: 'Twelve Data: ' + (d?.message || 'HTTP ' + r.status) }, 502, cors);
+        // um par vem como objeto direto; vários vêm separados pelo símbolo
+        const porPar = lista.includes(',') ? d : { [lista]: d };
+        const out = {};
+        for (const [par, q] of Object.entries(porPar)) {
+          const v = parseFloat(q?.close), c = parseFloat(q?.percent_change);
+          if (q && q.status !== 'error' && isFinite(v)) out[par] = { valor: v, variacao: isFinite(c) ? c : null, ts: q.timestamp ? q.timestamp * 1000 : Date.now() };
+        }
+        if (!Object.keys(out).length) return json({ error: 'Twelve Data sem cotação' }, 502, cors);
+        const body = { fonte: 'twelvedata', cotacoes: out };
+        ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120' } })));
+        return json(body, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      } catch (err) {
+        return json({ error: 'Twelve Data falhou: ' + err.message }, 502, cors);
+      }
+    }
+
     if (path === '/sidra') {
       const q = url.searchParams.get('q') || '';
       const SIDRA = {

@@ -290,17 +290,24 @@ async function fetchMinerio() {
     return { ...y, note: 'Yahoo (TIO=F), US$ por tonelada; pode estar defasado' };
   }
 }
-// AwesomeAPI fica direto do navegador: ela recusa (HTTP 429) as chamadas vindas da Cloudflare
-async function fetchUSD() {
-  const res = await fetchT('https://economia.awesomeapi.com.br/last/USD-BRL');
-  const d = await res.json();
-  return { value: parseFloat(d.USDBRL.bid), change: parseFloat(d.USDBRL.pctChange), unit: 'R$' };
+// AwesomeAPI fica direto do navegador: ela recusa (HTTP 429) as chamadas vindas da Cloudflare.
+// Se ela falhar, a reserva é a Twelve Data pelo worker (/td).
+async function fxReal(par) {
+  try {
+    const d = await (await fetchT(`https://economia.awesomeapi.com.br/last/${par}`)).json();
+    const q = d[par.replace('-', '')], v = parseFloat(q?.bid);
+    if (!isFinite(v)) throw new Error('AwesomeAPI sem cotação');
+    return { value: v, change: parseFloat(q.pctChange), unit: 'R$' };
+  } catch (e1) {
+    const s = par.replace('-', '/');
+    const d = await (await fetchT(`${CORS_PROXY}/td?s=${encodeURIComponent(s)}`)).json().catch(() => null);
+    const q = d?.cotacoes?.[s];
+    if (!q || !isFinite(q.valor)) throw e1;
+    return { value: q.valor, change: q.variacao ?? NaN, unit: 'R$' };
+  }
 }
-async function fetchEUR() {
-  const res = await fetchT('https://economia.awesomeapi.com.br/last/EUR-BRL');
-  const d = await res.json();
-  return { value: parseFloat(d.EURBRL.bid), change: parseFloat(d.EURBRL.pctChange), unit: 'R$' };
-}
+const fetchUSD = () => fxReal('USD-BRL');
+const fetchEUR = () => fxReal('EUR-BRL');
 
 /* ---- Yahoo: 1 chamada em lote por ciclo (em vez de ~40) ---- */
 const YAHOO_SYMBOLS = [...new Set(
