@@ -12,6 +12,14 @@
   window.__opcoesLoaded = true;
 
   const root = document.getElementById('opt-root');
+  // acessibilidade: campos das tabelas ganham o nome do cabeçalho da coluna (leitor de tela)
+  const rotula = () => root && root.querySelectorAll('td input, td select').forEach((el) => {
+    if (el.getAttribute('aria-label')) return;
+    const td = el.closest('td'), th = td?.closest('table')?.querySelector('thead tr')?.children[td.cellIndex];
+    const t = th?.textContent?.trim() || el.dataset.f || '';
+    if (t) el.setAttribute('aria-label', t);
+  });
+  if (root) new MutationObserver(rotula).observe(root, { childList: true, subtree: true });
   if (!root) return;
 
   const PROXY = (typeof CORS_PROXY !== 'undefined' && CORS_PROXY) || 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';

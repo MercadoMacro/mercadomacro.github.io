@@ -1,0 +1,41 @@
+/* Mercado Macro: service worker do aplicativo instalado.
+   Arquivos do site: sempre tenta a rede primeiro (nunca prende numa versão velha)
+   e usa a cópia guardada só quando está sem internet.
+   Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
+   Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
+const CACHE = 'mm-site-v1';
+const CDN = 'mm-cdn-v1';
+const BASE = ['./', 'index.html', 'estilo.css?v=3', 'app.js?v=1', 'ajustes.js?v=2', 'extras.js?v=5',
+  'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
+const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASE)).catch(() => {}).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys()
+    .then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== CDN).map((k) => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  if (url.origin === self.location.origin) {
+    e.respondWith(fetch(req).then((r) => {
+      if (r.ok) { const cp = r.clone(); caches.open(CACHE).then((c) => c.put(req, cp)); }
+      return r;
+    }).catch(() => caches.match(req).then((hit) => hit || (req.mode === 'navigate' ? caches.match('index.html') : Response.error()))));
+    return;
+  }
+
+  if (CDN_HOSTS.includes(url.hostname)) {
+    e.respondWith(caches.open(CDN).then((c) => c.match(req).then((hit) => {
+      const net = fetch(req).then((r) => { if (r.ok || r.type === 'opaque') c.put(req, r.clone()); return r; }).catch(() => hit);
+      return hit || net;
+    })));
+  }
+});

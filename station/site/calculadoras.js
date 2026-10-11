@@ -896,6 +896,13 @@
     ['fx', 'fa-exchange-alt', 'Moedas', viewFX, calcFX]
   ];
   if (!SUBS.some((s) => s[0] === S.sub)) S.sub = 'rf';
+  // acessibilidade: campo sem rótulo ligado ganha o nome do título do bloco (leitor de tela)
+  const rotula = () => root.querySelectorAll('input, select').forEach((el) => {
+    if (el.labels?.length || el.getAttribute('aria-label') || el.type === 'hidden') return;
+    const t = el.closest('.cl-f')?.querySelector(':scope > span')?.textContent?.trim();
+    if (t) el.setAttribute('aria-label', el.tagName === 'SELECT' ? t + ' (unidade)' : t);
+  });
+  new MutationObserver(rotula).observe(root, { childList: true, subtree: true });
   root.innerHTML = `
     <div class="cl-head">
       <div class="cl-title"><h2>Calculadoras</h2><p>Resultado na hora, enquanto você digita</p></div>
