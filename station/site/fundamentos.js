@@ -284,9 +284,12 @@
   function chart(cols) {
     const pts = cols.filter((c) => ok(c.r.receita) || ok(c.r.lucro));
     if (!pts.length) return '<div class="fd-msg">Sem números para o gráfico.</div>';
-    const W = 560, H = 230, L = 8, R = 8, T = 18, B = 34;
+    const W = 560, H = 236, L = 8, R = 8, T = 22, B = 40;
     const vals = pts.flatMap((c) => [c.r.receita, c.r.lucro].filter(ok));
     const max = Math.max(0, ...vals), min = Math.min(0, ...vals);
+    // rótulos só com o número (a unidade vai no canto do gráfico), para não encostarem nas barras vizinhas
+    const [dv, un] = Math.max(...vals.map(Math.abs)) >= 1e9 ? [1e9, 'bi'] : [1e6, 'mi'];
+    const rot = (v) => { const a = Math.abs(v) / dv; return (v < 0 ? '−' : '') + nf(a, a >= 100 ? 0 : 1); };
     const span = max - min || 1;
     const y = (v) => T + (max - v) / span * (H - T - B);
     const gw = (W - L - R) / pts.length, bw = Math.min(34, gw * 0.32);
@@ -296,12 +299,13 @@
         if (!ok(v)) return '';
         const y1 = y(Math.max(v, 0)), y2 = y(Math.min(v, 0));
         return `<rect class="${cls}${v < 0 ? ' neg' : ''}" x="${(x0 + dx).toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y2 - y1).toFixed(1)}" rx="3"><title>${esc(c.k)}: ${esc(brl(v))}</title></rect>`
-          + `<text class="fd-cv" x="${(x0 + dx + bw / 2).toFixed(1)}" y="${(v < 0 ? y2 + 11 : y1 - 4).toFixed(1)}">${esc(brl(v).replace('R$ ', ''))}</text>`;
+          + `<text class="fd-cv" x="${(x0 + dx + bw / 2).toFixed(1)}" y="${(v < 0 ? y2 + 11 : y1 - 4).toFixed(1)}">${esc(rot(v))}</text>`;
       };
       return one(c.r.receita, -bw - 2, 'r') + one(c.r.lucro, 2, 'l')
-        + `<text class="fd-cx${c.ttm ? ' ttm' : ''}" x="${x0.toFixed(1)}" y="${H - 12}">${esc(c.k)}</text>`;
+        + `<text class="fd-cx${c.ttm ? ' ttm' : ''}" x="${x0.toFixed(1)}" y="${H - 8}">${esc(c.k)}</text>`;
     }).join('');
     return `<svg class="fd-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Receita e lucro por ano">
+      <text class="fd-un" x="${L}" y="12">em R$ ${un}</text>
       <line class="fd-zero" x1="${L}" x2="${W - R}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>${bars}</svg>`;
   }
 
@@ -366,6 +370,8 @@
   const css = document.createElement('style');
   css.textContent = `
   .fd-wrap { padding:10px 18px 28px; display:flex; flex-direction:column; gap:12px; }
+  #fd-body { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  #fd-body > .fd-ref { margin-top:-6px; }
   .fd-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .fd-search { position:relative; flex:1 1 320px; max-width:560px; }
   .fd-search > i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-3); font-size:12px; pointer-events:none; }
@@ -416,6 +422,7 @@
   .fd-chart .fd-zero { stroke:var(--line-2); stroke-width:1; }
   .fd-chart text { font:10px 'JetBrains Mono', monospace; fill:var(--text-3); text-anchor:middle; }
   .fd-chart text.fd-cx { font-size:11px; fill:var(--text-2); }
+  .fd-chart text.fd-un { text-anchor:start; font-size:10px; }
   .fd-chart text.fd-cx.ttm { fill:var(--accent); font-weight:600; }
   .fd-tbl { overflow-x:auto; }
   .fd-tbl table, .fd-rk table { width:100%; border-collapse:collapse; font-size:12.5px; }
