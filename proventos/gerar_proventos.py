@@ -50,6 +50,8 @@ def tipo_de(label):
         return 'JCP'
     if 'RENDIMENTO' in l:
         return 'Rendimento'
+    if 'REST' in l and 'CAP' in l:
+        return 'Restituição de capital'
     if 'DIVIDENDO' in l:
         return 'Dividendo'
     return (label or '').strip().title() or 'Provento'
@@ -94,16 +96,21 @@ def b3_empresa(emp):
 
 
 def ticker_por_isin(isin, tickers, especie):
-    # ISIN brasileiro: BR + 4 letras do emissor + 3 da espécie (ACN=ON, PRA=PNA, PRB=PNB, ACP? etc.)
-    sufixo = {'ACN': '3', 'ACNOR': '3', 'PR': '4', 'PRA': '5', 'PRB': '6', 'PRC': '7', 'UNT': '11', 'CDA': '11'}
-    s = isin[6:9] if len(isin) >= 9 else ''
-    alvo = sufixo.get(s) or ('3' if s.startswith('AC') else '4' if s.startswith('PR') else None)
-    e = especie.upper()
-    if not alvo:
-        alvo = '3' if 'ON' in e else '11' if 'UNT' in e else '4' if 'PN' in e else None
-    for t in sorted(tickers):
-        if alvo and t.endswith(alvo) and not t[:-len(alvo)][-1:].isdigit():
-            return t
+    # ISIN de ação brasileira: BR + emissor (4 letras) + ACN + classe (OR=ON, PR=PN, PA=PNA, PB=PNB...) + dígito
+    # units: BR + emissor + CDA... (ticker com final 11)
+    classe = {'OR': '3', 'PR': '4', 'PA': '5', 'PB': '6', 'PC': '7', 'PD': '8'}
+    fim = None
+    if len(isin) == 12 and isin.startswith('BR'):
+        if isin[6:9] == 'ACN':
+            fim = classe.get(isin[9:11])
+        elif isin[6:9] in ('CDA', 'UNT'):
+            fim = '11'
+    if not fim:
+        e = especie.upper()
+        fim = '11' if 'UNT' in e else '3' if 'ON' in e else '4' if 'PN' in e else None
+    if fim:
+        emissor = isin[2:6] if len(isin) == 12 else sorted(tickers)[0][:4]
+        return emissor + fim
     return sorted(tickers)[0]
 
 
