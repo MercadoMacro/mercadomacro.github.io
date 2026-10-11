@@ -322,6 +322,11 @@ def main():
             ttm = {k: a[ult_ano]['m'].get(k) for k in FLUXO}
             balanco = {k: a[ult_ano]['m'].get(k) for k in ESTOQUE}
         q = qtd.get(cnpj)
+        # Algumas empresas informam a composição do capital em milhares de ações (o arquivo não diz a escala).
+        # Se o patrimônio por ação passar de R$ 1.500 (nenhuma ação da B3 chega perto), a quantidade está em mil.
+        pl_ref = (balanco or {}).get('pl')
+        if q and pl_ref and pl_ref > 0 and (q[1] + q[2]) > 0 and pl_ref / (q[1] + q[2]) > 1500:
+            q = (q[0], q[1] * 1000, q[2] * 1000)
         fin = any(x.get('fin') for x in a.values())
         lista_t = sorted(tks)
         doc = {
