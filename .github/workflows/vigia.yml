@@ -1,0 +1,59 @@
+# Vigia do site: a cada hora testa o site (station) e as rotas do Worker (shrill-meadow-89c1).
+# Se algo quebrar, abre uma issue "Vigia: problema no site" (o GitHub avisa você por e-mail).
+# Quando volta ao normal, comenta e fecha a issue sozinho.
+name: Vigia do site
+
+on:
+  schedule:
+    - cron: '17 * * * *'      # a cada hora, no minuto 17
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: vigia
+  cancel-in-progress: false
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Testar site e rotas
+        env:
+          VIGIA_OUT: ${{ runner.temp }}/vigia.json
+        run: node vigia/vigia.mjs
+      - name: Abrir, atualizar ou fechar a issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VIGIA_OUT: ${{ runner.temp }}/vigia.json
+        run: |
+          TITULO="Vigia: problema no site"
+          gh label create vigia --color B60205 --description "Alertas do vigia do site" 2>/dev/null || true
+          ABERTA=$(gh issue list --label vigia --state open --json number --jq '.[0].number // empty')
+          FALHAS=$(jq -r '.falhas | join(", ")' "$VIGIA_OUT")
+          jq -r '.resumo' "$VIGIA_OUT" > corpo.md
+          if [ -n "$FALHAS" ]; then
+            if [ -z "$ABERTA" ]; then
+              printf '\n\nFalhando: %s\n' "$FALHAS" >> corpo.md
+              gh issue create --title "$TITULO" --label vigia --body-file corpo.md
+            else
+              # só comenta quando a lista de rotas com problema muda (evita um e-mail por hora)
+              ANTES=$(gh issue view "$ABERTA" --json body,comments --jq '[.body] + [.comments[].body] | last' | sed -n 's/^Falhando: //p' | tail -1)
+              if [ "$ANTES" != "$FALHAS" ]; then
+                printf '\n\nFalhando: %s\n' "$FALHAS" >> corpo.md
+                gh issue comment "$ABERTA" --body-file corpo.md
+              else
+                echo "Mesmas falhas da última vez ($FALHAS); issue #$ABERTA segue aberta."
+              fi
+            fi
+          elif [ -n "$ABERTA" ]; then
+            gh issue comment "$ABERTA" --body-file corpo.md
+            gh issue close "$ABERTA" --reason completed
+          fi
