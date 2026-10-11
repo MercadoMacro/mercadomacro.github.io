@@ -1,0 +1,10 @@
+name: diag-tmp
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://station.danilo-nillo.workers.dev
+          for f in "" estilo.css?v=3 app.js?v=1 sw.js manifest.webmanifest icone-192.png icone-512-maskable.png previa-link-mercado-macro.png calculadoras.js?v=4 opcoes.js?v=3; do echo -n "$f: "; curl -s -o /tmp/o -w "%{http_code} %{content_type} %{size_download}\n" "$B/$f"; done
+          curl -s $B/ | grep -o 'app.js?v=1\|estilo.css?v=3\|manifest.webmanifest' | sort -u
