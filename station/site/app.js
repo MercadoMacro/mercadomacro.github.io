@@ -4534,6 +4534,46 @@ function newsReadMins(n) {
 })();
 
 /* =========================================================
+   CELULAR: fileiras que rolam para o lado (chips, cartões) ganham uma borda
+   esmaecida do lado em que ainda há conteúdo, para mostrar que dá para arrastar
+   ========================================================= */
+(() => {
+  const mq = matchMedia('(max-width: 900px)');
+  const marca = (el) => {
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('sx-l', max > 8 && el.scrollLeft > 4);
+    el.classList.toggle('sx-r', max > 8 && el.scrollLeft < max - 4);
+  };
+  const rolaLado = (el) => {
+    if (el.clientHeight > 260 || el.scrollWidth <= el.clientWidth + 8 || el.closest('.ticker')) return false;
+    return /(auto|scroll)/.test(getComputedStyle(el).overflowX);
+  };
+  let vistos = new Set(), t = 0;
+  const varre = () => {
+    t = 0;
+    if (!mq.matches) { vistos.forEach((el) => el.classList.remove('sx-l', 'sx-r')); vistos = new Set(); return; }
+    const raiz = [document.querySelector('.tab-panel.active, .panel.active, [id$="-panel"].active'), document.getElementById('tabs')].filter(Boolean);
+    raiz.forEach((r) => { if (rolaLado(r)) { vistos.add(r); marca(r); } r.querySelectorAll('*').forEach((el) => { if (rolaLado(el)) { vistos.add(el); marca(el); } }); });
+  };
+  const agenda = () => { if (!t) t = setTimeout(varre, 1200); };
+  document.addEventListener('scroll', (e) => { if (vistos.has(e.target)) marca(e.target); }, { passive: true, capture: true });
+  addEventListener('resize', agenda);
+  document.addEventListener('click', (e) => { if (e.target.closest('.tab-btn, .side-item, button')) agenda(); }, true);
+  // só reage quando entram elementos novos (o relógio e as cotações mudando texto não contam)
+  new MutationObserver((ms) => { if (mq.matches && ms.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1))) agenda(); })
+    .observe(document.body, { childList: true, subtree: true });
+  agenda();
+  // a aba aberta fica sempre visível na barra de abas (no celular ela rola para o lado)
+  const centraAba = () => {
+    const bar = document.getElementById('tabs'), b = bar?.querySelector('.tab-btn.active');
+    if (!mq.matches || !b || bar.scrollWidth <= bar.clientWidth) return;
+    bar.scrollTo({ left: b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2, behavior: 'smooth' });
+  };
+  document.getElementById('tabs')?.addEventListener('click', () => setTimeout(centraAba, 50));
+  setTimeout(centraAba, 400);
+})();
+
+/* =========================================================
    APLICATIVO (PWA): permite instalar o site na tela inicial e abrir sem internet
    ========================================================= */
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
