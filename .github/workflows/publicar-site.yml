@@ -1,0 +1,52 @@
+# Publicação automática na Cloudflare: cada mudança em station/ enviada ao GitHub vai para o ar.
+# Precisa de dois segredos do repositório (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN  token da Cloudflare com o modelo "Edit Cloudflare Workers"
+#   CLOUDFLARE_ACCOUNT_ID ID da conta (aparece na página inicial do painel da Cloudflare)
+# Sem o token, o robô só avisa e não publica nada.
+name: Publicar site (Cloudflare)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'station/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar-site
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir os arquivos (erro de sintaxe não vai para o ar)
+        working-directory: station
+        run: for f in site/*.js; do node --check "$f"; done; test -s site/index.html
+      - name: Conferir o token
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::Falta o segredo CLOUDFLARE_API_TOKEN no repositório. Nada foi publicado."
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publicar na Cloudflare
+        if: steps.token.outputs.ok == '1'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: station
+          command: deploy

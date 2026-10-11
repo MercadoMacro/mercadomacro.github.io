@@ -1,0 +1,9 @@
+// Site Mercado Macro (worker "station", só arquivos estáticos).
+// Publicado pelo .github/workflows/publicar-site.yml a cada mudança em station/site/.
+{
+  "name": "station",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./site"
+  }
+}

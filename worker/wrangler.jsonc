@@ -1,0 +1,10 @@
+// Worker das cotações e fontes do site (shrill-meadow-89c1).
+// Publicado pelo .github/workflows/publicar-worker.yml a cada mudança nesta pasta.
+// As chaves (FINNHUB_API_KEY, FMP_API_KEY, FRED_API_KEY) são segredos guardados na Cloudflare:
+// a publicação não mexe nelas, e keep_vars mantém as variáveis criadas pelo painel.
+{
+  "name": "shrill-meadow-89c1",
+  "main": "shrill-meadow-89c1.js",
+  "compatibility_date": "2025-06-01",
+  "keep_vars": true
+}
