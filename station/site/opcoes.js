@@ -292,7 +292,8 @@
   }
   async function loadSelic() {
     try {
-      const j = await getJ('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json', 12000);
+      const j = await getJ(`${PROXY}/bcb?c=432&q=${encodeURIComponent('/ultimos/1')}`, 12000)
+        .catch(() => getJ('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json', 12000));
       const last = Array.isArray(j) ? j[j.length - 1] : null, v = parseFloat(last?.valor);
       if (!isFinite(v)) throw new Error('sem valor');
       if (!st.rManual) { st.r = v / 100; st.rSrc = `Selic meta · BCB ${last.data}`; reprice(); save(); renderAll(); }

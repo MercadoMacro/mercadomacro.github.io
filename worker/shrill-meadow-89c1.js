@@ -752,6 +752,44 @@ export default {
     // =========================================================
     // ENDPOINT: /sidra?q=ipca|pib|desemp  (IBGE/SIDRA para a aba Indicadores; só as consultas da lista)
     // =========================================================
+    // =========================================================
+    // ENDPOINT: /bcb?c=432&q=/ultimos/1  (séries do SGS do Banco Central, com cache)
+    // q aceita /ultimos/N e dataInicial/dataFinal (dd/mm/aaaa); o resto é ignorado
+    // =========================================================
+    if (path === '/bcb') {
+      const c = url.searchParams.get('c') || '';
+      const q = url.searchParams.get('q') || '';
+      if (!/^\d{1,6}$/.test(c)) return json({ error: 'Série inválida' }, 400, cors);
+      const ult = q.match(/\/ultimos\/(\d{1,2})\b/);
+      const di = q.match(/dataInicial=(\d{2}\/\d{2}\/\d{4})/), df = q.match(/dataFinal=(\d{2}\/\d{2}\/\d{4})/);
+      let u = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${c}/dados${ult ? '/ultimos/' + Math.min(+ult[1], 20) : ''}?formato=json`;
+      if (!ult && di) u += `&dataInicial=${di[1]}`;
+      if (!ult && df) u += `&dataFinal=${df[1]}`;
+      try {
+        const d = await indFetchJSON(u, 25000);
+        if (!Array.isArray(d)) return json({ error: 'BCB sem dados' }, 502, cors);
+        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=900' });
+      } catch (err) {
+        return json({ error: 'BCB falhou: ' + err.message }, 502, cors);
+      }
+    }
+
+    // =========================================================
+    // ENDPOINT: /fx?p=USD-BRL  (AwesomeAPI, cache curto)
+    // =========================================================
+    if (path === '/fx') {
+      const par = (url.searchParams.get('p') || '').toUpperCase();
+      if (!['USD-BRL', 'EUR-BRL'].includes(par)) return json({ error: 'Par não liberado' }, 400, cors);
+      try {
+        const r = await fetch(`https://economia.awesomeapi.com.br/last/${par}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000), cf: { cacheTtl: 60, cacheEverything: true } });
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d || !d[par.replace('-', '')]) return json({ error: 'AwesomeAPI HTTP ' + r.status }, 502, cors);
+        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      } catch (err) {
+        return json({ error: 'AwesomeAPI falhou: ' + err.message }, 502, cors);
+      }
+    }
+
     if (path === '/sidra') {
       const q = url.searchParams.get('q') || '';
       const SIDRA = {

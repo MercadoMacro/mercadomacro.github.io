@@ -104,7 +104,7 @@
       getJSON(`${PROXY}/cds`),
       getJSON(`${PROXY}/fred/series?id=DFEDTARU&units=lin&limit=1`),
       getJSON(`${PROXY}/fred/series?id=DFEDTARL&units=lin&limit=1`),
-      getJSON('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json'),
+      getJSON(`${PROXY}/bcb?c=432&q=${encodeURIComponent('/ultimos/1')}`).catch(() => getJSON('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json')),
       getJSON(`${PROXY}/minerio`)
     ]);
     // minério: rota própria do worker (Investing/SGX em US$, ou Dalian em yuan); o TIO=F do Yahoo fica só de reserva

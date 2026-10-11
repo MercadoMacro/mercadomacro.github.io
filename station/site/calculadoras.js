@@ -15,8 +15,10 @@
   if (!root) return;
 
   const PROXY = (typeof CORS_PROXY !== 'undefined' && CORS_PROXY) || 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
-  const KEY = 'calc_state_v1';
   const BCB = (code, q) => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${code}/dados${q}`;
+  // Banco Central: primeiro pelo worker, depois direto
+  const bcbW = (u) => { const m = String(u).match(/bcdata\.sgs\.(\d+)\/dados(.*)$/); return m ? `${PROXY}/bcb?c=${m[1]}&q=${encodeURIComponent(m[2])}` : u; };
+  const KEY = 'calc_state_v1';
 
   /* ---------------- utilidades ---------------- */
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -93,7 +95,8 @@
   /* ---------------- dados de mercado ---------------- */
   const M = { cdi: null, cdiSrc: '', selic: null, selicSrc: '', ipca: null, ipcaSrc: '', tesouro: null, tesErr: '', fx: null, fxDate: '', fxErr: '' };
   const lastBCB = async (code) => {
-    const j = await getJ(BCB(code, '/ultimos/1?formato=json'), 12000);
+    const u = BCB(code, '/ultimos/1?formato=json');
+    const j = await getJ(bcbW(u), 12000).catch(() => getJ(u, 12000));
     const o = Array.isArray(j) ? j[j.length - 1] : null, v = parseFloat(o?.valor);
     if (!isFinite(v)) throw new Error('sem valor');
     return { v, d: o.data };
@@ -705,7 +708,8 @@
     const k = `${code}|${ini}|${fim}`;
     if (infCache.has(k)) return infCache.get(k);
     const [y0, m0] = ym(ini), [y1, m1] = ym(fim);
-    const p = getJ(BCB(code, `?formato=json&dataInicial=01/${String(m0).padStart(2, '0')}/${y0}&dataFinal=01/${String(m1).padStart(2, '0')}/${y1}`), 20000)
+    const u = BCB(code, `?formato=json&dataInicial=01/${String(m0).padStart(2, '0')}/${y0}&dataFinal=01/${String(m1).padStart(2, '0')}/${y1}`);
+    const p = getJ(bcbW(u), 20000).catch(() => getJ(u, 20000))
       .then((j) => { if (!Array.isArray(j)) throw new Error('resposta inválida do BCB'); return j.map((o) => ({ d: o.data.slice(3), v: parseFloat(o.valor) / 100 })).filter((o) => isFinite(o.v)); });
     infCache.set(k, p);
     p.catch(() => infCache.delete(k));

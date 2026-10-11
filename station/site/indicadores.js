@@ -11,6 +11,9 @@
 
   const PROXY = (typeof CORS_PROXY !== 'undefined' && CORS_PROXY) || 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   const OLD_WORKER = 'https://fred-proxy.cota-cotacao10.workers.dev'; // worker da página antiga: só reserva
+  // Banco Central: primeiro pelo worker, depois direto
+  const bcbW = (u) => { const m = String(u).match(/bcdata\.sgs\.(\d+)\/dados(.*)$/); return m ? `${PROXY}/bcb?c=${m[1]}&q=${encodeURIComponent(m[2])}` : u; };
+  const bcbGet = (u, ms) => getJSON(bcbW(u), ms).catch(() => getJSON(u, ms));
   const CACHE_KEY = 'ind_cache_v1';
   const PREF_KEY = 'ind_prefs_v1';
   const TTL = 4 * 3600 * 1000;
@@ -74,7 +77,7 @@
     const end = new Date();
     let url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${code}/dados?formato=json`;
     if (days) { const ini = new Date(end.getTime() - days * DAY); url += `&dataInicial=${ddmmyyyy(ini)}&dataFinal=${ddmmyyyy(end)}`; }
-    const j = await getJSON(url, 20000);
+    const j = await bcbGet(url, 20000);
     if (!Array.isArray(j)) throw new Error('Resposta inválida do BCB');
     return j.map((o) => [parseBR(o.data), parseFloat(o.valor)]).filter((p) => isFinite(p[1]));
   }
@@ -1171,7 +1174,7 @@
       ini = new Date(ate.getTime() + DAY);
     }
     const parts = await Promise.all(wins.map(([a, b]) =>
-      getJSON(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${code}/dados?formato=json&dataInicial=${ddmmyyyy(a)}&dataFinal=${ddmmyyyy(b)}`, 30000)));
+      bcbGet(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${code}/dados?formato=json&dataInicial=${ddmmyyyy(a)}&dataFinal=${ddmmyyyy(b)}`, 30000)));
     const out = [];
     parts.forEach((j) => { if (Array.isArray(j)) j.forEach((o) => { const v = parseFloat(o.valor); if (isFinite(v)) out.push([parseBR(o.data), v]); }); });
     const seen = new Set();
