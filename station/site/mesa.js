@@ -63,8 +63,8 @@
       ['RTY=F', 'Russell 2000 futuro', 'US'], ['^IRX', 'Treasury 3 meses', 'US', 3], ['^FVX', 'Treasury 5 anos', 'US', 3], ['^TNX', 'Treasury 10 anos', 'US', 3],
       ['^TYX', 'Treasury 30 anos', 'US', 3], ['EWZ', 'EWZ (Brasil em NY)', 'BR'], ['__cds', 'CDS Brasil 5 anos', 'BR']] }
   ];
-  // datas de decisão do Fed (calendário oficial do FOMC; atualizar todo ano). As do Copom vêm do index.html.
-  const FOMC = ['2026-10-28', '2026-12-09'];
+  // datas de decisão do Fed e do Copom vêm do index.html (FOMC_DECISIONS e COPOM_DECISIONS)
+  const FOMC = (typeof FOMC_DECISIONS !== 'undefined' && FOMC_DECISIONS.length) ? FOMC_DECISIONS : ['2026-10-28', '2026-12-09'];
 
   const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
 

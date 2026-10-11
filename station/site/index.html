@@ -3,12 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terminal do Trader | Market Dashboard</title>
+<title>Mercado Macro | Painel do mercado</title>
+<meta name="description" content="Mercado Macro: cotações, juros, câmbio, commodities, indicadores do Brasil e dos EUA, calendário econômico e notícias em um só painel.">
+<meta name="theme-color" content="#070b14">
+<link rel="icon" type="image/png" href="icone-mercado-macro.png">
+<link rel="apple-touch-icon" href="icone-mercado-macro.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mercado Macro">
+<meta property="og:title" content="Mercado Macro | Painel do mercado">
+<meta property="og:description" content="Cotações, juros, câmbio, indicadores e calendário econômico em um só painel.">
+<meta property="og:image" content="https://station.danilo-nillo.workers.dev/previa-link-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #070b14;
@@ -1826,7 +1835,9 @@
     .ecal-table td, .ecal-table th { padding:8px 6px; font-size:12px; }
     .ecal-list { max-height:none; min-height:0; }
     .calendar-actions .btn-sm, .ecal-actions .btn-sm { font-size:11px; }
-    .fab-summary { display:inline-flex; gap:6px; align-items:center; }
+    .fab-summary { display:inline-flex; gap:6px; align-items:center; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); padding:9px 12px; font-size:12px; opacity:.92; }
+    .fab-summary.fab-min { padding:0; width:42px; height:42px; justify-content:center; }
+    .fab-summary.fab-min .fab-txt { display:none; }
     .modal-content { width:calc(100vw - 20px) !important; max-height:calc(100vh - 20px); overflow:auto; padding:18px 14px !important; }
     .summary-textarea { min-height:52vh; font-size:12px; }
   }
@@ -2895,7 +2906,7 @@
         <div class="calendar-iframe-wrap">
           <iframe
             id="economic-calendar"
-            src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=110,17,29,25,32,6,37,26,5,22,39,14,48,10,35,7,43,38,4,36,12,72&calType=day&timeZone=12&lang=12"
+            data-src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=110,17,29,25,32,6,37,26,5,22,39,14,48,10,35,7,43,38,4,36,12,72&calType=day&timeZone=12&lang=12"
             frameborder="0"
             allowtransparency="true"
             marginwidth="0"
@@ -3115,7 +3126,7 @@
 
 <div id="toast-container"></div>
 
-<button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i> Resumo</button>
+<button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
 <script>
 /* =========================================================
    ⚙️ CONFIGURAÇÃO
@@ -4898,7 +4909,8 @@ $('#calendar-refresh-btn')?.addEventListener('click', () => {
   if (!iframe) return;
   const btn = $('#calendar-refresh-btn');
   btn?.classList.add('spinning');
-  const baseSrc = iframe.src.split('&_=')[0];
+  const baseSrc = (iframe.getAttribute('src') || iframe.dataset.src || '').split('&_=')[0];
+  if (!baseSrc) return;
   iframe.src = baseSrc + '&_=' + Date.now();
   setTimeout(() => btn?.classList.remove('spinning'), 1200);
   toast('Calendário recarregado', 'success');
@@ -5265,7 +5277,13 @@ const SUMMARY_MODE_KEY = 'summary_mode_v1';
 const SP_TZ = 'America/Sao_Paulo';
 
 // Decisões do Copom (2º dia da reunião, ~18h30). Atualize a cada ano com o calendário do BCB.
-const COPOM_DECISIONS = ['2026-11-04', '2026-12-09'];
+// Datas de decisão de juros: o único lugar a atualizar (index.html, indicadores.js e mesa.js leem daqui).
+// Copom: calendário do BCB (2027 divulgado em 23/06/2026). FOMC: calendário oficial do Fed (2027 divulgado em 05/09/2025).
+const COPOM_DECISIONS = ['2026-11-04', '2026-12-09',
+  '2027-01-27', '2027-03-17', '2027-04-28', '2027-06-16', '2027-08-04', '2027-09-22', '2027-10-27', '2027-12-08'];
+const FOMC_DECISIONS = ['2026-10-28', '2026-12-09',
+  '2027-01-27', '2027-03-17', '2027-04-28', '2027-06-09', '2027-07-28', '2027-09-15', '2027-10-27', '2027-12-08'];
+window.COPOM_DECISIONS = COPOM_DECISIONS; window.FOMC_DECISIONS = FOMC_DECISIONS;
 
 // Principais ações do Ibovespa usadas em "maiores altas e baixas" (máx. 45 por chamada do proxy)
 const IBOV_STOCKS = [
@@ -5680,7 +5698,12 @@ function ecalSetView(view) {
   $('#ecal-status')?.classList.toggle('hidden', view === 'earn' || view === 'focus' || view === 'prov');
   $('.calendar-main > .calendar-footer')?.classList.toggle('hidden', view === 'earn' || view === 'focus' || view === 'prov');
   $$('.ecal-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  if (view === 'iframe') setTimeout(fitCalendarIframe, 50);
+  if (view === 'iframe') {
+    // o calendário do Investing só carrega quando esta visão é aberta
+    const ifr = $('#economic-calendar');
+    if (ifr && !ifr.getAttribute('src') && ifr.dataset.src) ifr.src = ifr.dataset.src;
+    setTimeout(fitCalendarIframe, 50);
+  }
   if (view === 'earn') ecalEarn();
   if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=3', '__focusRender', 'o Boletim Focus');
   if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=1', '__provRender', 'a agenda de proventos');
@@ -6276,6 +6299,16 @@ $('#summary-text')?.addEventListener('keydown', (e) => {
 
 // Botão flutuante no celular
 $('#fab-summary')?.addEventListener('click', () => openSummaryModal());
+// no celular o botão encolhe para só o ícone ao rolar a página, para não cobrir os valores
+(() => {
+  const fab = $('#fab-summary'); if (!fab) return;
+  let t = 0;
+  // os painéis rolam por dentro (.market-wrap etc.), então escuta a rolagem de qualquer elemento
+  document.addEventListener('scroll', (e) => {
+    const el = e.target === document ? document.scrollingElement : e.target;
+    if (!t) t = requestAnimationFrame(() => { t = 0; fab.classList.toggle('fab-min', (el?.scrollTop || 0) > 120); });
+  }, { passive: true, capture: true });
+})();
 
 // "/" foca a busca da aba atual
 document.addEventListener('keydown', (e) => {
@@ -7468,7 +7501,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=11';
+    sc.src = 'indicadores.js?v=12';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('ind-root');
@@ -7485,7 +7518,7 @@ function newsReadMins(n) {
     window.__indWarm = true;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=11';
+    sc.src = 'indicadores.js?v=12';
     sc.onerror = () => { asked = false; };
     document.body.appendChild(sc);
   };
@@ -7528,7 +7561,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=3';
+    sc.src = 'mesa.js?v=4';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');

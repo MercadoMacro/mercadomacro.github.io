@@ -520,8 +520,8 @@
   }
 
   /* ---------------- próxima divulgação (calendário econômico do próprio painel) ---------------- */
-  // datas de decisão do Fed em 2026 (calendário oficial do FOMC); as do Copom vêm do index.html
-  const FOMC_DATES = ['2026-10-28', '2026-12-09'];
+  // datas de decisão do Fed e do Copom vêm do index.html (FOMC_DECISIONS e COPOM_DECISIONS)
+  const FOMC_DATES = (typeof FOMC_DECISIONS !== 'undefined' && FOMC_DECISIONS.length) ? FOMC_DECISIONS : ['2026-10-28', '2026-12-09'];
   const NEXT = {
     'br-selic': { c: 'BRL', re: [/decisão d[ae] taxa de juros|copom/i], ex: /ata/i, fixed: () => (typeof COPOM_DECISIONS !== 'undefined' ? COPOM_DECISIONS : []), nome: 'Copom' },
     'br-433': { c: 'BRL', re: [/^IPCA \(Anual\)/i, /^IPCA \(Mensal\)/i] },
