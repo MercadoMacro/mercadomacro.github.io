@@ -102,9 +102,15 @@
       const r = await fetch(`${OLD_WORKER}/?url=${encodeURIComponent(target)}`).catch(() => { throw e1; });
       if (!r.ok) throw e1;
       const num = (t) => { const m = String(t || '').match(/-?[\d.]*,?\d+/); return m ? parseFloat(m[0].replace(/\./g, '').replace(',', '.')) : null; };
-      const out = (await r.text()).split(/\r?\n/).map((l) => l.split(';').map((x) => x.trim()))
-        .filter((c) => c.length >= 4 && /tesouro/i.test(c[0]))
-        .map((c) => ({ nome: c[0], taxa: num(c[1]), pu: num(c[2]), vencimento: c[3] }))
+      // colunas pelo cabeçalho (o Tesouro incluiu "Investimento mínimo" em out/2026)
+      const linhas = (await r.text()).split(/\r?\n/).map((l) => l.split(';').map((x) => x.replace(/^\uFEFF/, '').trim()));
+      const cab = linhas.find((c) => c.some((x) => /vencimento/i.test(x))) || [];
+      const col = (re, padrao) => { const i = cab.findIndex((x) => re.test(x)); return i >= 0 ? i : padrao; };
+      const iTaxa = col(/rendimento|taxa/i, 1), iPU = col(/pre[çc]o unit/i, 2), iVenc = col(/vencimento/i, 3);
+      const DATA = /^\d{2}\/\d{2}\/\d{4}$/;
+      const out = linhas
+        .filter((c) => c.length >= 4 && /^tesouro/i.test(c[0]))
+        .map((c) => ({ nome: c[0], taxa: num(c[iTaxa]), pu: num(c[iPU]), vencimento: DATA.test(c[iVenc] || '') ? c[iVenc] : (c.find((x) => DATA.test(x)) || null) }))
         .filter((t) => t.taxa !== null);
       if (!out.length) throw e1;
       return out;

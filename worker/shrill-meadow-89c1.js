@@ -595,9 +595,17 @@ export default {
         let csv;
         try { csv = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch { csv = new TextDecoder('latin1').decode(buf); }
         const num = (t) => { const m = String(t || '').match(/-?[\d.]*,?\d+/); return m ? parseFloat(m[0].replace(/\./g, '').replace(',', '.')) : null; };
-        const titulos = csv.split(/\r?\n/).map((l) => l.split(';').map((x) => x.trim()))
-          .filter((c) => c.length >= 4 && /tesouro/i.test(c[0]))
-          .map((c) => ({ nome: c[0], taxa: num(c[1]), pu: num(c[2]), vencimento: c[3] }))
+        // colunas pelo cabeçalho: em out/2026 o Tesouro incluiu "Investimento mínimo" antes do preço unitário,
+        // o que empurrou o vencimento para a 5ª coluna. Sem cabeçalho reconhecível, usa a ordem antiga.
+        const linhas = csv.split(/\r?\n/).map((l) => l.split(';').map((x) => x.replace(/^\uFEFF/, '').trim()));
+        const cab = linhas.find((c) => c.some((x) => /vencimento/i.test(x))) || [];
+        const col = (re, padrao) => { const i = cab.findIndex((x) => re.test(x)); return i >= 0 ? i : padrao; };
+        const iTaxa = col(/rendimento|taxa/i, 1), iPU = col(/pre[çc]o unit/i, 2), iMin = col(/m[ií]nimo/i, -1), iVenc = col(/vencimento/i, 3);
+        const DATA = /^\d{2}\/\d{2}\/\d{4}$/;
+        const titulos = linhas
+          .filter((c) => c.length >= 4 && /^tesouro/i.test(c[0]))
+          .map((c) => ({ nome: c[0], taxa: num(c[iTaxa]), pu: num(c[iPU]), minimo: iMin >= 0 ? num(c[iMin]) : null,
+            vencimento: DATA.test(c[iVenc] || '') ? c[iVenc] : (c.find((x) => DATA.test(x)) || null) }))
           .filter((t) => t.taxa !== null && !isNaN(t.taxa));
         if (!titulos.length) return json({ error: 'CSV do Tesouro sem títulos' }, 502, cors);
         return json({ titulos, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=600' });
