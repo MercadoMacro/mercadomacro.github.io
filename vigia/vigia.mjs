@@ -25,7 +25,11 @@ const ROTAS = [
   ['Indicadores Brasil (/ind/bundle)', API + '/ind/bundle?g=br', (j) => (j.data && Object.keys(j.data).length ? '' : 'pacote sem dados')],
   ['Indicadores EUA (/ind/bundle)', API + '/ind/bundle?g=us', (j) => (j.data && Object.keys(j.data).length ? '' : 'pacote sem dados')],
   ['FRED (/fred/series)', API + '/fred/series?id=FEDFUNDS&limit=3', (j) => (temLista(j.obs) ? '' : 'série vazia')],
-  ['Tesouro Direto (/tesouro)', API + '/tesouro', (j) => (temLista(j.titulos) ? '' : 'sem títulos')],
+  ['Tesouro Direto (/tesouro)', API + '/tesouro', (j) => {
+    if (!temLista(j.titulos)) return 'sem títulos';
+    const pre = j.titulos.filter((t) => /prefixado/i.test(t.nome) && /^\d{2}\/\d{2}\/\d{4}$/.test(t.vencimento || ''));
+    return pre.length >= 2 ? '' : 'títulos sem data de vencimento (o CSV do Tesouro mudou?)';
+  }],
   ['Boletim Focus (/focus)', API + '/focus?full=1', (j) => (temLista(j.anuais) ? '' : 'sem expectativas')],
   ['Minério de ferro (/minerio)', API + '/minerio', (j) => (j.valor > 0 ? '' : 'sem preço')],
   ['CDS Brasil (/cds)', API + '/cds', (j) => (j.valor > 0 ? '' : 'sem valor')],
