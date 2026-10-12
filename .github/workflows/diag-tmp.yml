@@ -5,9 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          H=$(curl -s "https://arquivos.b3.com.br/bdi/")
-          for js in $(echo "$H" | grep -o '/bdi/static/js/[^"]*\.js'); do echo "== $js"; curl -s "https://arquivos.b3.com.br$js" > b.js; wc -c b.js; grep -o '"[^"]*\(table\|Table\|api\|Api\)[^"]\{0,80\}"' b.js | sort -u | head -40; grep -o '.\{80\}[Ee]strangeir.\{120\}' b.js | head -5; grep -o '.\{60\}[Pp]articipa.\{100\}' b.js | head -8; done
-          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq poppler-utils >/dev/null
-          curl -s -o b.pdf "https://arquivos.b3.com.br/bdi/download/bdi/2026-10-09/BDI_02_20261009.pdf"; pdfinfo b.pdf | grep Pages
-          pdftotext -layout b.pdf t.txt; grep -n -i "estrangeir" t.txt | head -20
-          L=$(grep -n -i "participa..o dos investidores\|investidor estrangeiro" t.txt | head -1 | cut -d: -f1); echo "linha $L"; [ -n "$L" ] && sed -n "$((L-2)),$((L+45))p" t.txt
+          js=$(curl -s "https://arquivos.b3.com.br/bdi/" | grep -o '/bdi/static/js/main[^"]*\.js' | head -1)
+          curl -s "https://arquivos.b3.com.br$js" > b.js
+          grep -o '[A-Za-z]*Api[A-Za-z]*\\\?"\?\s*:\s*\\\?"[^"\\]\{3,120\}' b.js | sort -u | head -20
+          grep -o 'https://[a-z0-9./-]*b3[a-z0-9./_-]*' b.js | sort -u | head -30
+          grep -o '.\{0,60\}[Pp]articipa[^"\\]\{0,60\}' b.js | sort -u | head -15
+          grep -o '"/[a-zA-Z]*/table/[^"\\]\{0,80\}\|table/[A-Za-z]\{3,40\}' b.js | sort -u | head -30
