@@ -6,8 +6,8 @@
 const COOKIE = 'mm_s';
 const SESSAO_DIAS = 90;
 const ITER = 30000;
-// arquivos que podem ser vistos sem login (ícones, logos, prévia de link e o service worker)
-const PUBLICO = /^\/(icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
+// arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
+const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 
 export default {
@@ -203,9 +203,14 @@ function html(s) {
 function redirect(to) {
   return new Response(null, { status: 302, headers: { Location: to, 'Cache-Control': 'no-store' } });
 }
+// a tela de entrada é a vitrine (station/site/vitrine/index.html)
 async function paginaEntrar(req, env) {
   if (await usuarioDaSessao(req, env)) return redirect('/');
-  return html(PAGINA_ENTRAR);
+  const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url), { headers: req.headers }));
+  const out = new Response(r.body, r);
+  out.headers.set('Cache-Control', 'no-cache');
+  out.headers.set('X-Frame-Options', 'DENY');
+  return out;
 }
 
 /* ---------------- páginas ---------------- */
@@ -218,90 +223,6 @@ button,input{font:inherit}
 .msg{font-size:13px;margin:12px 0 0;min-height:1.2em}
 .msg.erro{color:var(--neg)}.msg.ok{color:var(--pos)}
 `;
-
-const PAGINA_ENTRAR = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Entrar | Mercado Macro</title>
-<meta name="robots" content="noindex">
-<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
-<meta property="og:title" content="Mercado Macro"><meta property="og:image" content="/previa-link-mercado-macro.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>${BASE_CSS}
-main{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
-.card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 24px}
-.logo{display:block;height:34px;margin:0 auto 6px}
-.sub{text-align:center;color:var(--text-2);font-size:13px;margin:0 0 22px}
-.abas{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:18px}
-.abas button{border:0;background:none;color:var(--text-2);padding:8px;border-radius:7px;cursor:pointer;font-weight:600}
-.abas button[aria-selected=true]{background:var(--accent);color:var(--on-accent)}
-label{display:block;font-size:12px;color:var(--text-2);margin:12px 0 5px;font-weight:500}
-input{width:100%;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);border-radius:8px;padding:11px 12px;font-size:15px}
-input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
-.enviar{width:100%;margin-top:18px;border:0;border-radius:8px;padding:12px;background:var(--accent);color:var(--on-accent);font-weight:700;cursor:pointer;font-size:15px}
-.enviar:disabled{opacity:.6;cursor:wait}
-.nota{font-size:12px;color:var(--text-3);margin:16px 0 0;text-align:center}
-.pronto{text-align:center;padding:8px 0}
-.pronto h2{font-size:17px;margin:0 0 8px}.pronto p{color:var(--text-2);margin:0 0 16px}
-.link{border:0;background:none;color:var(--accent-text);cursor:pointer;text-decoration:underline;padding:0}
-</style></head><body><main>
-<div class="card">
-  <img class="logo" src="/logo-mercado-macro.png" alt="Mercado Macro" id="logo">
-  <p class="sub">Acesso restrito a usuários liberados</p>
-  <div id="forms">
-    <div class="abas" role="tablist">
-      <button type="button" role="tab" id="t-entrar" aria-selected="true" aria-controls="f-entrar">Entrar</button>
-      <button type="button" role="tab" id="t-cad" aria-selected="false" aria-controls="f-cad">Cadastrar</button>
-    </div>
-    <form id="f-entrar" role="tabpanel" aria-labelledby="t-entrar">
-      <label for="e-email">E-mail</label><input id="e-email" name="email" type="email" autocomplete="email" required>
-      <label for="e-senha">Senha</label><input id="e-senha" name="senha" type="password" autocomplete="current-password" required>
-      <button class="enviar" type="submit">Entrar</button>
-      <p class="msg" role="status" aria-live="polite"></p>
-    </form>
-    <form id="f-cad" role="tabpanel" aria-labelledby="t-cad" hidden>
-      <label for="c-nome">Nome</label><input id="c-nome" name="nome" autocomplete="name" required maxlength="80">
-      <label for="c-email">E-mail</label><input id="c-email" name="email" type="email" autocomplete="email" required>
-      <label for="c-senha">Senha (mínimo 8 caracteres)</label><input id="c-senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
-      <button class="enviar" type="submit">Pedir acesso</button>
-      <p class="msg" role="status" aria-live="polite"></p>
-      <p class="nota">Depois do cadastro, o administrador precisa liberar seu acesso.</p>
-    </form>
-  </div>
-  <div class="pronto" id="pronto" hidden>
-    <h2>Cadastro enviado</h2>
-    <p>Você poderá entrar assim que o administrador liberar seu acesso.</p>
-    <button type="button" class="link" id="voltar">Voltar para Entrar</button>
-  </div>
-</div></main>
-<script>
-(function(){
-  if (matchMedia('(prefers-color-scheme: light)').matches) document.getElementById('logo').src = '/logo-mercado-macro-claro.png';
-  var tE = document.getElementById('t-entrar'), tC = document.getElementById('t-cad');
-  var fE = document.getElementById('f-entrar'), fC = document.getElementById('f-cad');
-  function aba(cad){ tE.setAttribute('aria-selected', !cad); tC.setAttribute('aria-selected', cad); fE.hidden = cad; fC.hidden = !cad; (cad ? fC : fE).querySelector('input').focus(); }
-  tE.onclick = function(){ aba(false); }; tC.onclick = function(){ aba(true); };
-  if (location.hash === '#cadastrar') aba(true);
-  function enviar(form, rota, ok){
-    form.onsubmit = function(ev){
-      ev.preventDefault();
-      var msg = form.querySelector('.msg'), bt = form.querySelector('.enviar');
-      var dados = {}; new FormData(form).forEach(function(v, k){ dados[k] = v; });
-      msg.className = 'msg'; msg.textContent = ''; bt.disabled = true;
-      fetch('/api/auth/' + rota, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados), credentials: 'same-origin' })
-        .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { r: r, j: j }; }); })
-        .then(function(x){ if (x.r.ok) ok(x.j); else { msg.className = 'msg erro'; msg.textContent = x.j.erro || 'Não foi possível. Tente de novo.'; } })
-        .catch(function(){ msg.className = 'msg erro'; msg.textContent = 'Sem conexão. Tente de novo.'; })
-        .then(function(){ bt.disabled = false; });
-    };
-  }
-  enviar(fE, 'entrar', function(){
-    var v = new URLSearchParams(location.search).get('volta') || '/';
-    location.replace(/^\\/(?!\\/)/.test(v) ? v : '/');
-  });
-  enviar(fC, 'cadastrar', function(){ document.getElementById('forms').hidden = true; document.getElementById('pronto').hidden = false; fC.reset(); });
-  document.getElementById('voltar').onclick = function(){ document.getElementById('pronto').hidden = true; document.getElementById('forms').hidden = false; aba(false); };
-})();
-</script></body></html>`;
 
 const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

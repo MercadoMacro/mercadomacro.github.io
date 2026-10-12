@@ -12,7 +12,7 @@ const ABAS = [
   ['mercado', 'market-panel', 12000],
   ['mesa', 'mesa-panel', 14000],
   ['mapa', 'heatmap-panel', 16000],
-  ['indicadores', 'indicators-panel', 14000],
+  ['indicadores', 'indicators-panel', 35000],
   ['fundamentos', 'fund-panel', 12000],
   ['calendario', 'calendar-panel', 12000],
   ['calculadora', 'calculator-panel', 8000],
