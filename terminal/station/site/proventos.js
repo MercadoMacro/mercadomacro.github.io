@@ -8,7 +8,7 @@
    ========================================================= */
 (() => {
   if (window.__provRender) return;
-  const URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/proventos/agenda.json', 'proventos/agenda.json'];
+  const URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/proventos/agenda.json', 'proventos/agenda.json'];
   const CACHE_KEY = 'prov_cache_v1';
   const PREF_KEY = 'prov_prefs_v1';
   const TTL = 30 * 60 * 1000;

@@ -1,6 +1,6 @@
 # Coloque este arquivo em .github/workflows/fundamentos.yml no repositório do GitHub
-# (por exemplo MercadoMacro/mercadomacro.github.io) e o gerar_fundamentos.py em cvm/.
-# Toda segunda às 6h (Brasília) ele baixa os balanços da CVM e atualiza a pasta fundamentos/.
+# (por exemplo MercadoMacro/mercadomacro.github.io) e o gerar_fundamentos.py em terminal/cvm/.
+# Toda segunda às 6h (Brasília) ele baixa os balanços da CVM e atualiza a pasta terminal/fundamentos/.
 name: Fundamentos (CVM)
 
 on:
@@ -21,12 +21,12 @@ jobs:
         with:
           python-version: '3.12'
       - name: Gerar JSON a partir da CVM
-        run: python3 cvm/gerar_fundamentos.py fundamentos
+        run: python3 terminal/cvm/gerar_fundamentos.py terminal/fundamentos
       - name: Salvar no repositório
         run: |
           git config user.name "fundamentos-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add fundamentos
+          git add terminal/fundamentos
           if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
           git commit -m "Fundamentos: dados da CVM de $(date -u +%Y-%m-%d)"
           git push

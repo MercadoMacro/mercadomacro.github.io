@@ -148,7 +148,7 @@
   }
   function loadSnaps() { try { return JSON.parse(localStorage.getItem(CURVE_KEY) || '{}') || {}; } catch (e) { return {}; } }
   // curvas diárias de até 400 dias, gravadas pelo robô do GitHub (historico/curva.json, fonte Tesouro Transparente)
-  const HIST_CURVA = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/historico/curva.json', 'historico/curva.json'];
+  const HIST_CURVA = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/historico/curva.json', 'historico/curva.json'];
   let histCurva = null, histCurvaTentou = false;
   async function loadHistCurva() {
     if (histCurvaTentou) return;

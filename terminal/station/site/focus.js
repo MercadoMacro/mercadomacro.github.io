@@ -13,7 +13,7 @@
   const TTL = 60 * 60 * 1000;
   const OLINDA = 'https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/';
   // histórico semanal de 2 anos gravado todo dia pelo robô do GitHub (historico/focus.json)
-  const HIST_URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/historico/focus.json', 'historico/focus.json'];
+  const HIST_URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/historico/focus.json', 'historico/focus.json'];
 
   // nome no BCB, nome no site, unidade, casas decimais
   const IND = [

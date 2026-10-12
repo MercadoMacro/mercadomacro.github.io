@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const BASE = 'http://localhost:8080/';
-const OUT = 'station/site/vitrine/fotos';
+const OUT = 'terminal/station/site/vitrine/fotos';
 mkdirSync(OUT, { recursive: true });
 
 const ABAS = [

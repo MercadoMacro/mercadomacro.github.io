@@ -28,7 +28,7 @@ jobs:
       - name: Testar site e rotas
         env:
           VIGIA_OUT: ${{ runner.temp }}/vigia.json
-        run: node vigia/vigia.mjs
+        run: node terminal/vigia/vigia.mjs
       - name: Abrir, atualizar ou fechar a issue
         env:
           GH_TOKEN: ${{ github.token }}

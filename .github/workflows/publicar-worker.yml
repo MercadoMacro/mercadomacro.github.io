@@ -1,4 +1,4 @@
-# Publicação automática na Cloudflare: cada mudança em worker/ enviada ao GitHub vai para o ar.
+# Publicação automática na Cloudflare: cada mudança em terminal/worker/ enviada ao GitHub vai para o ar.
 # Precisa de dois segredos do repositório (Settings > Secrets and variables > Actions):
 #   CLOUDFLARE_API_TOKEN  token da Cloudflare com o modelo "Edit Cloudflare Workers"
 #   CLOUDFLARE_ACCOUNT_ID ID da conta (aparece na página inicial do painel da Cloudflare)
@@ -9,7 +9,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'worker/**'
+      - 'terminal/worker/**'
   workflow_dispatch: {}
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: '22'
       - name: Conferir os arquivos (erro de sintaxe não vai para o ar)
-        working-directory: worker
+        working-directory: terminal/worker
         run: cp shrill-meadow-89c1.js "$RUNNER_TEMP/w.mjs" && node --check "$RUNNER_TEMP/w.mjs"
       - name: Conferir o token
         id: token
@@ -48,6 +48,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: worker
+          workingDirectory: terminal/worker
           command: deploy
           wranglerVersion: '4.149.0'

@@ -1,6 +1,4 @@
-# GitHub Pages (www.mercadomacro.com.br): a pasta station/ é o site com login, servido só pela Cloudflare.
-# Fica fora daqui para ninguém abrir os arquivos dele sem cadastro.
+# GitHub Pages (mercadomacro.github.io, site antigo). A pasta terminal/ é o site novo (Mercado Macro com login),
+# servido só pela Cloudflare em www.mercadomacro.com.br; fica fora daqui para ninguém abrir os arquivos sem cadastro.
 exclude:
-  - station
-  - worker
-  - vigia
+  - terminal

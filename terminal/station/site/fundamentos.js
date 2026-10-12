@@ -15,7 +15,7 @@
   // Onde estão os JSON: primeiro o repositório do GitHub (atualizado toda semana pelo job),
   // depois a pasta fundamentos/ publicada junto com o site.
   const FUND_SOURCES = [
-    'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/fundamentos/',
+    'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fundamentos/',
     'fundamentos/'
   ];
   const PROXY = (typeof CORS_PROXY !== 'undefined' && CORS_PROXY) || 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';

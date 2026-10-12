@@ -9,7 +9,7 @@
    ========================================================= */
 (() => {
   if (window.__fluxoRender) return;
-  const URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/fluxo/fluxo.json', 'fluxo/fluxo.json'];
+  const URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', 'fluxo/fluxo.json'];
   const CACHE_KEY = 'fluxo_cache_v1';
   const PREF_KEY = 'fluxo_prefs_v1';
   const TTL = 60 * 60 * 1000;

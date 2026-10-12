@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
-  var RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/';
+  var RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/';
   var reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };

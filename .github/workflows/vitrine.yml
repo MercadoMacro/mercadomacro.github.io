@@ -29,15 +29,15 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Fotografar o painel
         run: |
-          python3 -m http.server 8080 -d station/site >/dev/null 2>&1 &
+          python3 -m http.server 8080 -d terminal/station/site >/dev/null 2>&1 &
           sleep 2
-          node vitrine/fotos.mjs
+          node terminal/vitrine/fotos.mjs
       - name: Salvar as fotos
         id: salvar
         run: |
           git config user.name "vitrine-bot"
           git config user.email "vitrine-bot@users.noreply.github.com"
-          git add station/site/vitrine/fotos
+          git add terminal/station/site/vitrine/fotos
           if git diff --cached --quiet; then echo "Nada mudou."; echo "mudou=0" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "mudou=1" >> "$GITHUB_OUTPUT"
           git commit -m "Vitrine: fotos do painel atualizadas"
@@ -49,6 +49,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: station
+          workingDirectory: terminal/station
           command: deploy
           wranglerVersion: '4.149.0'
