@@ -85,7 +85,7 @@
   }
   function fmtV(sym, q) {
     var a = INFO[sym], pre = (a && a[3]) || '';
-    return q ? pre + num(q.v, casas(q.v)) : '—';
+    return q ? pre + num(q.v, sym === 'BRL=X' || sym === 'EURBRL=X' ? 4 : casas(q.v)) : '—';
   }
   function carregarCotacoes() {
     return fetch(API + '/quotes?symbols=' + encodeURIComponent(TODOS.map(function (a) { return a[0]; }).join(',')))

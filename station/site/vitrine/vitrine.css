@@ -206,8 +206,8 @@ main { width: 100%; }
 @media (max-width: 640px) {
   .vt-top { gap: 10px; padding: 10px 16px; }
   .vt-brand img { height: 26px; }
-  .vt-top-bts .ghost { display: none; }
-  .vt-bt { padding: 9px 14px; font-size: 13.5px; }
+  .vt-top-bts { gap: 6px; }
+  .vt-bt { padding: 8px 12px; font-size: 13px; }
   .vt-hero { padding: 30px 16px 24px; }
   .vt-proof { grid-template-columns: 1fr 1fr; gap: 14px 10px; }
   .vt-pulse { grid-template-columns: 1fr 1fr; }
