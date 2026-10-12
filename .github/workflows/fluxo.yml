@@ -1,0 +1,42 @@
+# Fluxo de investidores na B3: todo dia útil lê o Boletim Diário da B3 (PDF) e grava
+# fluxo/fluxo.json com o saldo de compras menos vendas de estrangeiros, institucionais,
+# pessoas físicas e demais, por dia e por mês. A B3 publica com cerca de 2 pregões de atraso.
+name: Fluxo de investidores (B3)
+
+on:
+  schedule:
+    - cron: '30 11 * * 1-5'   # segunda a sexta, 08:30 em Brasília
+    - cron: '30 23 * * 1-5'   # e às 20:30, quando sai o boletim do dia
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Quantos dias para trás buscar (primeira carga: 300)'
+        required: false
+        default: '12'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fluxo
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar o leitor de PDF
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null
+      - name: Ler os boletins da B3
+        run: python3 fluxo/gerar_fluxo.py fluxo "${{ github.event.inputs.dias || '12' }}"
+      - name: Salvar no repositório
+        run: |
+          git config user.name "fluxo-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add fluxo/fluxo.json
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -m "Fluxo B3: $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
+          git pull --rebase -q origin main
+          git push
