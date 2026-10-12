@@ -1,0 +1,54 @@
+# Vitrine da tela de login: tira fotos reais do painel (com os dados do momento) e publica.
+# Roda toda quarta às 15h (Brasília) e quando acionado à mão.
+name: Fotos da vitrine
+
+on:
+  schedule:
+    - cron: '0 18 * * 3'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vitrine
+  cancel-in-progress: false
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar o navegador
+        run: |
+          npm i --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Fotografar o painel
+        run: |
+          python3 -m http.server 8080 -d station/site >/dev/null 2>&1 &
+          sleep 2
+          node vitrine/fotos.mjs
+      - name: Salvar as fotos
+        id: salvar
+        run: |
+          git config user.name "vitrine-bot"
+          git config user.email "vitrine-bot@users.noreply.github.com"
+          git add station/site/vitrine/fotos
+          if git diff --cached --quiet; then echo "Nada mudou."; echo "mudou=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "mudou=1" >> "$GITHUB_OUTPUT"
+          git commit -m "Vitrine: fotos do painel atualizadas"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin main && break; sleep 5; done
+      # commits feitos por este robô não disparam o publicar-site, então publica aqui mesmo
+      - name: Publicar na Cloudflare
+        if: steps.salvar.outputs.mudou == '1'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: station
+          command: deploy
+          wranglerVersion: '4.149.0'
