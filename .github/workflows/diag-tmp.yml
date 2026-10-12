@@ -5,12 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          sudo apt-get install -y -qq poppler-utils >/dev/null 2>&1 || true
-          for d in 2026-10-09 2026-10-08 2026-10-07; do
-            n=$(echo $d | tr -d -)
-            code=$(curl -s -o bdi$n.pdf -w "%{http_code}" "https://arquivos.b3.com.br/bdi/download/bdi/$d/BDI_02_$n.pdf"); echo "BDI_02 $d -> $code $(stat -c %s bdi$n.pdf 2>/dev/null)"
-          done
-          f=$(ls -S bdi*.pdf | head -1); pdftotext -layout $f t.txt && grep -n -i -B3 -A25 "estrangeir" t.txt | head -120
-          echo ==== pagina app
-          curl -s "https://arquivos.b3.com.br/bdi/" | head -c 1500; echo
-          curl -s "https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/consultas/boletim-diario/boletim-diario-do-mercado/" | grep -o 'https\?://[^"]*bdi[^"]*' | sort -u | head
+          H=$(curl -s "https://arquivos.b3.com.br/bdi/")
+          for js in $(echo "$H" | grep -o '/bdi/static/js/[^"]*\.js'); do echo "== $js"; curl -s "https://arquivos.b3.com.br$js" > b.js; wc -c b.js; grep -o '"[^"]*\(table\|Table\|api\|Api\)[^"]\{0,80\}"' b.js | sort -u | head -40; grep -o '.\{80\}[Ee]strangeir.\{120\}' b.js | head -5; grep -o '.\{60\}[Pp]articipa.\{100\}' b.js | head -8; done
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq poppler-utils >/dev/null
+          curl -s -o b.pdf "https://arquivos.b3.com.br/bdi/download/bdi/2026-10-09/BDI_02_20261009.pdf"; pdfinfo b.pdf | grep Pages
+          pdftotext -layout b.pdf t.txt; grep -n -i "estrangeir" t.txt | head -20
+          L=$(grep -n -i "participa..o dos investidores\|investidor estrangeiro" t.txt | head -1 | cut -d: -f1); echo "linha $L"; [ -n "$L" ] && sed -n "$((L-2)),$((L+45))p" t.txt
