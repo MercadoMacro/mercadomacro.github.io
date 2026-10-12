@@ -35,7 +35,9 @@ await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
 await pg.waitForTimeout(6000);
 for (const [nome, aba, espera] of ABAS) {
   try {
-    await pg.click(`.tab-btn[data-tab="${aba}"]`);
+    // em telas largas as abas ficam na barra lateral; o clique pelo script funciona nos dois casos
+    await pg.evaluate((a) => document.querySelector(`.tab-btn[data-tab="${a}"]`).click(), aba);
+    await pg.evaluate(() => window.scrollTo(0, 0));
     await pg.waitForTimeout(espera);
     await pg.evaluate(() => document.querySelectorAll('.toast, #cookie-consent').forEach((e) => e.remove()));
     await pg.screenshot({ path: `${OUT}/${nome}.jpg`, type: 'jpeg', quality: 78 });
