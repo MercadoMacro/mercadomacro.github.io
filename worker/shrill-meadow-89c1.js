@@ -12,6 +12,7 @@ const ALLOWED_ORIGINS = [
   /^https:\/\/([a-z0-9-]+--)?terminal-trade\.netlify\.app$/,
   /^https:\/\/([a-z0-9-]+--)?news-terminal\.netlify\.app$/,   // endereço temporário
   /^https:\/\/([a-z0-9-]+-)?station\.danilo-nillo\.workers\.dev$/, // site hospedado na Cloudflare (Workers)
+  /^https:\/\/(www\.)?mercadomacro\.com\.br$/,                       // domínio próprio (quando apontar para o worker station)
   /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 ];
 const originAllowed = (o) => !!o && ALLOWED_ORIGINS.some((re) => re.test(o));
