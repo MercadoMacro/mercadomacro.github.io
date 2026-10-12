@@ -15,7 +15,7 @@ const daqui = (n) => ymd(new Date(hoje.getTime() + n * 86400000));
 
 // [nome que aparece na issue, caminho, validação do JSON (devolve texto de erro ou nada)]
 const ROTAS = [
-  ['Site (página inicial)', SITE + '/', null, (t) => (/<html/i.test(t) ? '' : 'página sem HTML')],
+  ['Site (tela de login)', SITE + '/', null, (t) => (/Acesso restrito/.test(t) ? '' : 'a tela de login não apareceu')],
   ['Cotações (/quotes)', API + '/quotes?symbols=%5EBVSP,BRL=X', (j) => {
     const ok = Object.values(j).filter((v) => v && v.chart && v.chart.result).length;
     return ok ? '' : 'nenhum símbolo veio do Yahoo';
