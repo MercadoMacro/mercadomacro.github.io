@@ -2416,7 +2416,8 @@
 /* Acessibilidade (tema claro): o texto na cor de destaque sobre fundo claro fica mais escuro
    para ter contraste suficiente; vale para qualquer cor de destaque escolhida nos Ajustes */
 body.light :is(.ecal-view-btn.active, .side-item.active, .nm-toggle button.active, .market-section-head .sec-icon b,
-  .heatmap-selector button.active, .fd-views button.active, .fd-views button[aria-selected="true"]) {
+  .heatmap-selector button.active, .fd-views button.active, .fd-views button[aria-selected="true"],
+  .ecal-chip.active, .mj-n) {
   color: color-mix(in srgb, var(--accent) 68%, #000);
 }
 

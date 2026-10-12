@@ -4481,6 +4481,28 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
+   FLUXO NA B3 (última seção da aba Mercado): fluxo.js só é baixado
+   quando a seção chega perto da tela
+   ========================================================= */
+(() => {
+  const el = document.getElementById('fluxo-root');
+  if (!el) return;
+  let pedido = false;
+  const carrega = () => {
+    if (window.__fluxoRender) { window.__fluxoRender(el); return; }
+    if (pedido) return;
+    pedido = true;
+    const sc = document.createElement('script');
+    sc.src = 'fluxo.js?v=1';
+    sc.onload = () => window.__fluxoRender && window.__fluxoRender(el);
+    sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fluxo.js</b>.</div>'; };
+    document.body.appendChild(sc);
+  };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); carrega(); } }, { rootMargin: '600px 0px' }).observe(el);
+  } else carrega();
+})();
+/* =========================================================
    OPÇÕES: o código fica em opcoes.js (mesma pasta do index.html)
    e só é baixado na primeira vez que a aba é aberta
    ========================================================= */
