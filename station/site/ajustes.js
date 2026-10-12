@@ -90,7 +90,16 @@
     const live = document.getElementById('live-toggle');
     const liveOn = live ? live.classList.contains('on') : null;
     const scroll = box.querySelector('.aj-body')?.scrollTop || 0;
+    const C = window.__conta;
     box.querySelector('.aj-body').innerHTML = `
+      ${C && C.logado ? `<section class="aj-sec">
+        <h3>Conta</h3>
+        <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span></p>
+        <div class="aj-btns">
+          ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
+          <button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+      </section>` : ''}
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
@@ -231,6 +240,16 @@
       Promise.resolve(p).catch(() => toast('O navegador não permitiu a tela cheia.')).finally(() => setTimeout(render, 150));
       return;
     }
+    if (act === 'sair') {
+      b.disabled = true;
+      fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => null).then(() => {
+        const limpa = [];
+        try { if (window.caches) limpa.push(caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))); } catch (e2) { /* nada */ }
+        try { if (navigator.serviceWorker) limpa.push(navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))); } catch (e2) { /* nada */ }
+        return Promise.all(limpa).catch(() => null);
+      }).then(() => location.replace('/entrar'));
+      return;
+    }
     if (act === 'backup') { close(); setTimeout(() => document.getElementById('backup-btn')?.click(), 230); return; }
     if (act === 'cache') {
       if (!confirm('Limpar o cache de dados? As cotações, indicadores e notícias serão baixados de novo. Notas, compromissos, estratégias e ajustes ficam.')) return;
@@ -287,6 +306,18 @@
     img.onerror = () => { URL.revokeObjectURL(url); toast('Não foi possível abrir essa imagem.'); };
     img.src = url;
   }
+
+  /* ---------------- conta (login do site) ---------------- */
+  fetch('/api/auth/eu', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((c) => {
+    if (!c || !c.logado) return;
+    window.__conta = c;
+    if (box && !box.hidden) render();
+    if (c.admin && c.pendentes) {
+      let avisado = false;
+      try { avisado = sessionStorage.getItem('mm_pend_avisado') === String(c.pendentes); sessionStorage.setItem('mm_pend_avisado', String(c.pendentes)); } catch (e) { /* nada */ }
+      if (!avisado) setTimeout(() => toast(`${c.pendentes} ${c.pendentes > 1 ? 'cadastros aguardam' : 'cadastro aguarda'} sua liberação. Veja em Ajustes > Conta.`), 2500);
+    }
+  }).catch(() => null);
 
   /* ---------------- pontos de entrada ---------------- */
   document.getElementById('settings-btn')?.addEventListener('click', open);
@@ -356,6 +387,10 @@
   .aj input[type=url], .aj select { background:var(--surface-2); color:var(--text); border:1px solid var(--line-2); border-radius:8px; font-family:inherit; outline:none; }
   .aj input[type=url]:focus, .aj select:focus { border-color:var(--accent-line); }
   .aj-url input { flex:1; min-width:0; height:32px; padding:0 10px; font-size:12px; }
+  .aj-conta { margin:0 0 12px; display:flex; flex-direction:column; gap:2px; }
+  .aj-conta span { color:var(--text-2); font-size:12.5px; word-break:break-all; }
+  .aj-btns a.btn-sm { text-decoration:none; }
+  .aj-pend { background:var(--accent); color:#111; border-radius:9px; padding:0 7px; font-size:11px; font-weight:700; }
   .aj-link { align-self:flex-start; border:0; background:none; color:var(--neg); font:inherit; font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
   .aj-range { display:flex; flex-direction:column; gap:4px; margin-top:12px; font-size:12px; color:var(--text-3); }
   .aj-range b { color:var(--text); font-family:'JetBrains Mono', monospace; font-weight:600; }

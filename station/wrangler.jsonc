@@ -1,9 +1,16 @@
-// Site Mercado Macro (worker "station", só arquivos estáticos).
-// Publicado pelo .github/workflows/publicar-site.yml a cada mudança em station/site/.
+// Site Mercado Macro (worker "station").
+// Publicado pelo .github/workflows/publicar-site.yml a cada mudança em station/.
+// src/index.js é o porteiro: só quem tem cadastro liberado vê o site (usuários no D1 "mercadomacro-usuarios").
 {
   "name": "station",
+  "main": "src/index.js",
   "compatibility_date": "2025-06-01",
   "assets": {
-    "directory": "./site"
-  }
+    "directory": "./site",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
+  ]
 }

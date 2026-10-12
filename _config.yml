@@ -1,0 +1,6 @@
+# GitHub Pages (www.mercadomacro.com.br): a pasta station/ é o site com login, servido só pela Cloudflare.
+# Fica fora daqui para ninguém abrir os arquivos dele sem cadastro.
+exclude:
+  - station
+  - worker
+  - vigia

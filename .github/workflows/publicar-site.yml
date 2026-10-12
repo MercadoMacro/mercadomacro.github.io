@@ -30,7 +30,7 @@ jobs:
           node-version: '22'
       - name: Conferir os arquivos (erro de sintaxe não vai para o ar)
         working-directory: station
-        run: for f in site/*.js; do node --check "$f"; done; test -s site/index.html
+        run: for f in site/*.js; do node --check "$f"; done; cp src/index.js "$RUNNER_TEMP/porteiro.mjs" && node --check "$RUNNER_TEMP/porteiro.mjs"; test -s site/index.html
       - name: Conferir o token
         id: token
         env:

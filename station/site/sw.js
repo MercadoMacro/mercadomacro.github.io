@@ -3,9 +3,9 @@
    e usa a cópia guardada só quando está sem internet.
    Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
-const CACHE = 'mm-site-v1';
+const CACHE = 'mm-site-v2';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'estilo.css?v=7', 'app.js?v=4', 'ajustes.js?v=2', 'extras.js?v=5',
+const BASE = ['./', 'index.html', 'estilo.css?v=7', 'app.js?v=4', 'ajustes.js?v=3', 'extras.js?v=5',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -25,6 +25,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
 
   if (url.origin === self.location.origin) {
+    // login, cadastro e administração nunca passam pelo cache
+    if (/^\/(api\/|entrar|admin)/.test(url.pathname)) return;
     e.respondWith(fetch(req).then((r) => {
       if (r.ok) { const cp = r.clone(); caches.open(CACHE).then((c) => c.put(req, cp)); }
       return r;
