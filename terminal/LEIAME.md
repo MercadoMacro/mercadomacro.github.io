@@ -15,3 +15,6 @@ Tudo do site novo fica nesta pasta. O resto do repositório é o site antigo (me
 
 Os robôs ficam em `.github/workflows/` (o GitHub exige essa pasta na raiz).
 Mudanças em `station/` e `worker/` são publicadas sozinhas na Cloudflare.
+
+O site antigo (mercadomacro.github.io) foi guardado na pasta `site-antigo/` na raiz do repositório.
+O endereço mercadomacro.github.io agora só manda as pessoas para https://mercadomacro.com.br/.
