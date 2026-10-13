@@ -45,7 +45,7 @@ jobs:
       # commits feitos por este robô não disparam o publicar-site, então publica aqui mesmo
       - name: Publicar na Cloudflare
         if: steps.salvar.outputs.mudou == '1'
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
