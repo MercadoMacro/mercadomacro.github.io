@@ -38,5 +38,5 @@ jobs:
           git add terminal/fluxo/fluxo.json
           if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
           git commit -m "Fluxo B3: $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
-          git pull --rebase -q origin main
-          git push
+          # outros robôs podem ter gravado ao mesmo tempo: junta e tenta de novo
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1
