@@ -89,5 +89,6 @@ const resumo = falhas.length
 console.log(resumo);
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, resumo + '\n');
 writeFileSync(process.env.VIGIA_OUT || 'vigia-resultado.json', JSON.stringify({
-  quando, falhas: falhas.map((r) => r.nome), resumo
+  quando, total: res.length, falhas: falhas.map((r) => r.nome), resumo,
+  detalhes: falhas.map((r) => `${r.nome}: ${r.msg.slice(0, 120)}`),
 }));

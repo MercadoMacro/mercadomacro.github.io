@@ -18,6 +18,7 @@ export default {
     if (url.hostname === 'www.mercadomacro.com.br') return Response.redirect('https://mercadomacro.com.br' + p + url.search, 301);
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
+      if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
@@ -250,6 +251,47 @@ async function avisar(env, titulo, texto) {
   if (!(c.tg_token && c.tg_chat)) return false;
   const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: titulo + '\n\n' + texto });
   return !!r.ok;
+}
+
+/* ---------------- aviso do vigia (GitHub Actions) ----------------
+   O robô vigia.yml manda o texto do alerta com um token OIDC do GitHub. O token é assinado pelo GitHub
+   e só vale para este repositório, ramo main e o arquivo vigia.yml, então não há senha guardada em lugar nenhum. */
+const GH_ISS = 'https://token.actions.githubusercontent.com';
+const GH_AUD = 'mercadomacro-vigia';
+const GH_REPO = 'MercadoMacro/mercadomacro.github.io';
+let jwksCache = null; // { chaves, ate }
+const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+async function tokenDoGitHub(tok) {
+  const [h, p, sig] = String(tok).split('.');
+  if (!h || !p || !sig) return null;
+  const cab = JSON.parse(new TextDecoder().decode(b64url(h)));
+  const dados = JSON.parse(new TextDecoder().decode(b64url(p)));
+  if (cab.alg !== 'RS256') return null;
+  if (!jwksCache || jwksCache.ate < Date.now()) {
+    const r = await fetch(GH_ISS + '/.well-known/jwks');
+    jwksCache = { chaves: (await r.json()).keys || [], ate: Date.now() + 3600e3 };
+  }
+  const jwk = jwksCache.chaves.find((k) => k.kid === cab.kid);
+  if (!jwk) { jwksCache = null; return null; }
+  const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, b64url(sig), new TextEncoder().encode(h + '.' + p));
+  const agora = Date.now() / 1000;
+  if (!ok || dados.iss !== GH_ISS || dados.aud !== GH_AUD || dados.repository !== GH_REPO || dados.ref !== 'refs/heads/main'
+    || !String(dados.workflow_ref || '').startsWith(GH_REPO + '/.github/workflows/vigia.yml@') || !(dados.exp > agora) || (dados.nbf && dados.nbf > agora + 60)) return null;
+  return dados;
+}
+async function avisoDoVigia(req, env) {
+  if (req.method !== 'POST') return json({ erro: 'Método não permitido.' }, 405);
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  const quem = await tokenDoGitHub(tok).catch(() => null);
+  if (!quem) return json({ erro: 'Não autorizado.' }, 401);
+  const b = await req.json().catch(() => ({}));
+  const texto = String(b.texto || '').slice(0, 1500);
+  if (!texto) return json({ erro: 'Sem texto.' }, 400);
+  const c = await config(env);
+  if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Telegram não conectado.' }, 409);
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: texto, disable_web_page_preview: true });
+  return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
 /* ---------------- utilidades ---------------- */

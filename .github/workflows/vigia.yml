@@ -1,16 +1,24 @@
 # Vigia do site: a cada hora testa o site (station) e as rotas do Worker (shrill-meadow-89c1).
 # Se algo quebrar, abre uma issue "Vigia: problema no site" (o GitHub avisa você por e-mail).
 # Quando volta ao normal, comenta e fecha a issue sozinho.
+# Também manda os mesmos avisos pelo robô do Telegram, via https://mercadomacro.com.br/api/vigia
+# (o site confere o token OIDC que o GitHub assina para este robô; não há senha guardada).
 name: Vigia do site
 
 on:
   schedule:
     - cron: '17 * * * *'      # a cada hora, no minuto 17
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      teste:
+        description: 'Mandar uma mensagem de teste no Telegram'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   issues: write
+  id-token: write
 
 concurrency:
   group: vigia
@@ -29,7 +37,7 @@ jobs:
         env:
           VIGIA_OUT: ${{ runner.temp }}/vigia.json
         run: node terminal/vigia/vigia.mjs
-      - name: Abrir, atualizar ou fechar a issue
+      - name: Abrir, atualizar ou fechar a issue e avisar no Telegram
         env:
           GH_TOKEN: ${{ github.token }}
           VIGIA_OUT: ${{ runner.temp }}/vigia.json
@@ -39,16 +47,28 @@ jobs:
           ABERTA=$(gh issue list --label vigia --state open --json number --jq '.[0].number // empty')
           FALHAS=$(jq -r '.falhas | join(", ")' "$VIGIA_OUT")
           jq -r '.resumo' "$VIGIA_OUT" > corpo.md
+          # aviso no Telegram; se o site estiver fora do ar, sobra o e-mail da issue
+          telegram() {
+            TOK=$(curl -sS -m 20 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mercadomacro-vigia" | jq -r '.value // empty')
+            curl -sS -m 30 -X POST https://mercadomacro.com.br/api/vigia -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+              --data "$(jq -n --arg t "$1" '{texto: $t}')" || echo "Telegram não recebeu o aviso"
+            echo
+          }
+          if [ "${{ inputs.teste }}" = "true" ]; then telegram "Vigia: teste do aviso no Telegram. Quando algo quebrar no site, a mensagem chega aqui."; fi
+          N=$(jq '.falhas | length' "$VIGIA_OUT")
+          PROBLEMAS=$(jq -r '.detalhes[]? | "- " + .' "$VIGIA_OUT")
           if [ -n "$FALHAS" ]; then
             if [ -z "$ABERTA" ]; then
               printf '\n\nFalhando: %s\n' "$FALHAS" >> corpo.md
-              gh issue create --title "$TITULO" --label vigia --body-file corpo.md
+              URL=$(gh issue create --title "$TITULO" --label vigia --body-file corpo.md)
+              telegram "$(printf 'Vigia: %s problema(s) no site\n\n%s\n\nDetalhes: %s' "$N" "$PROBLEMAS" "$URL")"
             else
               # só comenta quando a lista de rotas com problema muda (evita um e-mail por hora)
               ANTES=$(gh issue view "$ABERTA" --json body,comments --jq '[.body] + [.comments[].body] | last' | sed -n 's/^Falhando: //p' | tail -1)
               if [ "$ANTES" != "$FALHAS" ]; then
                 printf '\n\nFalhando: %s\n' "$FALHAS" >> corpo.md
                 gh issue comment "$ABERTA" --body-file corpo.md
+                telegram "$(printf 'Vigia: mudou a lista de problemas (%s agora)\n\n%s\n\nDetalhes: https://github.com/%s/issues/%s' "$N" "$PROBLEMAS" "$GITHUB_REPOSITORY" "$ABERTA")"
               else
                 echo "Mesmas falhas da última vez ($FALHAS); issue #$ABERTA segue aberta."
               fi
@@ -56,4 +76,5 @@ jobs:
           elif [ -n "$ABERTA" ]; then
             gh issue comment "$ABERTA" --body-file corpo.md
             gh issue close "$ABERTA" --reason completed
+            telegram "$(printf 'Vigia: tudo funcionando de novo (%s verificações OK).' "$(jq '.total' "$VIGIA_OUT")")"
           fi
