@@ -1,0 +1,12 @@
+name: diag-ntfy
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/diag-ntfy.yml']
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          sleep 100
+          curl -sS https://mercadomacro.com.br/api/diag-ntfy-7f3a; echo

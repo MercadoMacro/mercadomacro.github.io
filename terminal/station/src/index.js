@@ -17,6 +17,10 @@ export default {
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
+      if (p === '/api/diag-ntfy-7f3a') { // TEMPORÁRIO: diagnóstico do aviso
+        const r = await fetch('https://ntfy.sh/mercadomacro-diag-' + hex(crypto.getRandomValues(new Uint8Array(6))), { method: 'POST', headers: { Title: 'teste' }, body: 'teste' }).catch((e) => ({ status: 0, text: async () => String(e) }));
+        return json({ status: r.status, body: (await r.text()).slice(0, 400) });
+      }
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
