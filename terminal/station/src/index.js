@@ -14,13 +14,19 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const p = url.pathname;
+    // um endereço só para o Google: www vai para o endereço sem www
+    if (url.hostname === 'www.mercadomacro.com.br') return Response.redirect('https://mercadomacro.com.br' + p + url.search, 301);
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
+      if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
+      if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
       if (!u) {
+        // a página inicial mostra a vitrine para quem não entrou (e para o Google), sem redirecionar
+        if ((p === '/' || p === '/index.html') && navegacao(req)) return paginaEntrar(req, env, true);
         if (navegacao(req)) {
           const volta = p === '/' || p === '/index.html' ? '' : '?volta=' + encodeURIComponent(p + url.search);
           return redirect('/entrar' + volta);
@@ -304,14 +310,31 @@ function redirect(to) {
   return new Response(null, { status: 302, headers: { Location: to, 'Cache-Control': 'no-store' } });
 }
 // a tela de entrada é a vitrine (station/site/vitrine/index.html)
-async function paginaEntrar(req, env) {
-  if (await usuarioDaSessao(req, env)) return redirect('/');
+async function paginaEntrar(req, env, jaSemLogin) {
+  if (!jaSemLogin && (await usuarioDaSessao(req, env))) return redirect('/');
   const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url), { headers: req.headers }));
   const out = new Response(r.body, r);
   out.headers.set('Cache-Control', 'no-cache');
   out.headers.set('X-Frame-Options', 'DENY');
   return out;
 }
+
+function texto(s, tipo) {
+  return new Response(s, { headers: { 'Content-Type': tipo + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+}
+const ROBOTS = `User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /conta
+
+Sitemap: https://mercadomacro.com.br/sitemap.xml
+`;
+const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://mercadomacro.com.br/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+</urlset>
+`;
 
 /* ---------------- páginas ---------------- */
 const BASE_CSS = `

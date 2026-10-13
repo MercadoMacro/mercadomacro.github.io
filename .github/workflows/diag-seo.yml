@@ -1,0 +1,16 @@
+name: diag-seo
+on:
+  push:
+    paths: ['.github/workflows/diag-seo.yml']
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          sleep 150
+          UA="Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+          curl -sS -A "$UA" -H "Accept: text/html" -o r.html -w "/ -> %{http_code}\n" https://mercadomacro.com.br/
+          grep -o '<title>[^<]*' r.html; grep -o '<link rel="canonical"[^>]*>' r.html; grep -c "Pedir acesso" r.html
+          curl -sS -o /dev/null -w "www -> %{http_code} %{redirect_url}\n" https://www.mercadomacro.com.br/
+          curl -sS https://mercadomacro.com.br/robots.txt; curl -sS https://mercadomacro.com.br/sitemap.xml
+          curl -sS -o /dev/null -w "previa -> %{http_code} %{size_download}\n" "https://mercadomacro.com.br/previa-link-mercado-macro.png?v=2"
