@@ -127,9 +127,17 @@ async function apiAuth(req, env, acao, ctx) {
   }
 
   if (acao === 'entrar') {
-    if (!(await dentroDoLimite(env, 'ent:' + ip, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
+    // só senhas erradas contam: 10 erros em 15 minutos bloqueiam este endereço; acertar zera a conta
+    const chave = 'ent:' + ip;
+    const t = await env.DB.prepare('SELECT n, janela FROM tentativas WHERE chave = ?').bind(chave).first();
+    const agoraS = Math.floor(Date.now() / 1000);
+    if (t && agoraS - t.janela <= 900 && t.n >= 10) return json({ erro: 'Muitas senhas erradas seguidas. Espere 15 minutos.' }, 429);
     const u = await env.DB.prepare('SELECT id, senha, status FROM usuarios WHERE email = ?').bind(email).first();
-    if (!u || !(await conferirSenha(senha, u.senha))) return json({ erro: 'E-mail ou senha incorretos.' }, 401);
+    if (!u || !(await conferirSenha(senha, u.senha))) {
+      await dentroDoLimite(env, chave, 10, 900);
+      return json({ erro: 'E-mail ou senha incorretos.' }, 401);
+    }
+    await env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(chave).run();
     if (u.status === 'pendente') return json({ erro: 'Seu cadastro ainda aguarda liberação do administrador.' }, 403);
     if (u.status !== 'ativo') return json({ erro: 'Seu acesso não está liberado.' }, 403);
     const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
