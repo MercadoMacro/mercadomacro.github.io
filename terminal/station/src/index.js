@@ -17,10 +17,6 @@ export default {
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
-      if (p === '/api/diag-ntfy-7f3a') { // TEMPORÁRIO: diagnóstico do aviso
-        const r = await fetch('https://ntfy.sh/mercadomacro-diag-' + hex(crypto.getRandomValues(new Uint8Array(6))), { method: 'POST', headers: { Title: 'teste' }, body: 'teste' }).catch((e) => ({ status: 0, text: async () => String(e) }));
-        return json({ status: r.status, body: (await r.text()).slice(0, 400) });
-      }
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
@@ -106,7 +102,7 @@ async function apiAuth(req, env, acao, ctx) {
     if (existe) return json({ erro: existe.status === 'pendente' ? 'Este e-mail já está cadastrado e aguarda liberação.' : 'Este e-mail já está cadastrado. Use Entrar.' }, 409);
     await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado) VALUES (?, ?, ?, 'pendente', ?)`)
       .bind(nome, email, await hashSenha(senha), new Date().toISOString()).run();
-    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro. Para liberar, abra mercadomacro.com.br/admin`).catch(() => {}));
+    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
     return json({ ok: true, msg: 'Cadastro enviado. Você poderá entrar assim que o administrador liberar seu acesso.' });
   }
 
@@ -185,39 +181,61 @@ async function apiAdmin(req, env, acao, eu) {
     return json({ ok: true });
   }
   if (acao === 'avisos') {
-    if (req.method === 'GET') {
-      const c = await config(env);
-      return json({ topico: c.ntfy_topico });
-    }
+    const c = await config(env);
+    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat) });
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
-    if (b.acao === 'novo-topico') await env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind('ntfy_topico', novoTopico()).run();
-    else if (b.acao === 'teste') {
+    if (b.acao === 'token') {
+      const token = String(b.token || '').trim();
+      if (!/^\d{5,15}:[\w-]{30,60}$/.test(token)) return json({ erro: 'Esse código não parece o token do BotFather. Copie a linha inteira, com os números, os dois-pontos e as letras.' }, 400);
+      const me = await telegram(token, 'getMe', {});
+      if (!me.ok) return json({ erro: 'O Telegram não aceitou esse token. Confira se copiou certo.' }, 400);
+      await salvarConfig(env, { tg_token: token, tg_bot: me.result.username, tg_chat: null });
+      return json({ ok: true, bot: me.result.username });
+    }
+    if (b.acao === 'conectar') {
+      if (!c.tg_token) return json({ erro: 'Cole o token do robô primeiro.' }, 400);
+      const up = await telegram(c.tg_token, 'getUpdates', { allowed_updates: ['message'] });
+      const msgs = (up.result || []).map((u) => u.message).filter((m) => m && m.chat && m.chat.type === 'private');
+      if (!msgs.length) return json({ erro: 'Ainda não achei sua mensagem. No Telegram, abra @' + c.tg_bot + ', toque em Iniciar (ou mande qualquer mensagem) e tente de novo.' }, 400);
+      const chat = String(msgs[msgs.length - 1].chat.id);
+      await salvarConfig(env, { tg_chat: chat });
+      await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: 'Pronto. Os avisos de cadastro novo do Mercado Macro vão chegar aqui.' });
+      return json({ ok: true });
+    }
+    if (b.acao === 'desligar') { await salvarConfig(env, { tg_token: null, tg_bot: null, tg_chat: null }); return json({ ok: true }); }
+    if (b.acao === 'teste') {
+      if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
-      if (!ok) return json({ erro: 'O serviço de avisos não respondeu. Tente de novo em alguns minutos.' }, 502);
-    } else return json({ erro: 'Ação inválida.' }, 400);
-    return json({ ok: true });
+      if (!ok) return json({ erro: 'O Telegram não entregou o aviso. Tente conectar de novo.' }, 502);
+      return json({ ok: true });
+    }
+    return json({ erro: 'Ação inválida.' }, 400);
   }
   return json({ erro: 'Não encontrado.' }, 404);
 }
 
-/* ---------------- avisos (ntfy.sh: notificação no celular pelo app ntfy) ----------------
-   O ntfy.sh não manda e-mail sem conta, por isso o aviso é só pelo app. */
-// o nome do canal funciona como senha: só quem sabe o nome recebe os avisos. Ele só aparece em /admin.
-const novoTopico = () => 'mercadomacro-' + hex(crypto.getRandomValues(new Uint8Array(10)));
+/* ---------------- avisos pelo Telegram ----------------
+   O administrador cria um robô no @BotFather e cola o token em /admin. O token fica só no banco D1
+   (nunca no código público) e não volta para o navegador. */
 async function config(env) {
   const r = await env.DB.prepare('SELECT chave, valor FROM config').all();
-  const c = Object.fromEntries(r.results.map((x) => [x.chave, x.valor]));
-  if (!c.ntfy_topico) {
-    c.ntfy_topico = novoTopico();
-    await env.DB.prepare('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)').bind('ntfy_topico', c.ntfy_topico).run();
-  }
-  return c;
+  return Object.fromEntries(r.results.map((x) => [x.chave, x.valor]));
+}
+async function salvarConfig(env, o) {
+  await env.DB.batch(Object.entries(o).map(([k, v]) => v == null
+    ? env.DB.prepare('DELETE FROM config WHERE chave = ?').bind(k)
+    : env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind(k, v)));
+}
+async function telegram(token, metodo, corpo) {
+  const r = await fetch(`https://api.telegram.org/bot${token}/${metodo}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  return r.json().catch(() => ({ ok: false }));
 }
 async function avisar(env, titulo, texto) {
   const c = await config(env);
-  const r = await fetch('https://ntfy.sh/' + c.ntfy_topico, { method: 'POST', headers: { Title: titulo, Click: 'https://mercadomacro.com.br/admin' }, body: texto });
-  return r.ok;
+  if (!(c.tg_token && c.tg_chat)) return false;
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: titulo + '\n\n' + texto });
+  return !!r.ok;
 }
 
 /* ---------------- utilidades ---------------- */
@@ -403,19 +421,34 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   }
   function avisos(){
     fetch('/api/admin/avisos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      av.innerHTML = '<div class="caixa"><p>Quando alguém pedir acesso, chega uma notificação no seu celular. Para ligar:</p><ol>'
-        + '<li>Instale o app gratuito <b>ntfy</b> (Play Store ou App Store).</li>'
-        + '<li>Toque em + (Subscribe to topic) e digite o canal abaixo. Deixe o servidor como ntfy.sh.</li>'
-        + '<li>Toque em Enviar aviso de teste, aqui embaixo, para conferir.</li></ol>'
-        + '<div class="linha"><span class="cod">' + esc(j.topico) + '</span><button type="button" id="av-copiar">Copiar</button></div>'
-        + '<p>O nome do canal funciona como senha: não mostre a ninguém. Se precisar, <button type="button" id="av-novo" style="min-height:0;padding:2px 8px">troque o canal</button> e inscreva o celular de novo.</p></div>'
-        + '<div class="linha"><button type="button" id="av-teste" style="border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px">Enviar aviso de teste</button><span class="msg" id="av-msg" style="margin:0"></span></div>';
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var h;
+      if (j.conectado) {
+        h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div></div>';
+      } else if (j.bot) {
+        h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
+          + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
+          + '<li>Volte aqui e toque em Conectar.</li></ol>'
+          + '<div class="linha"><button type="button" id="av-con" style="' + bt + '">Conectar</button><button type="button" id="av-off" style="' + bt + '">Usar outro robô</button></div></div>';
+      } else {
+        h = '<div class="caixa"><p>Receba uma mensagem no Telegram sempre que alguém pedir acesso. Para ligar:</p><ol>'
+          + '<li>No Telegram, abra <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--accent-text)">@BotFather</a> e mande <b>/newbot</b>.</li>'
+          + '<li>Ele pede um nome (por exemplo, Avisos Mercado Macro) e depois um usuário terminado em bot (por exemplo, avisos_mercadomacro_bot).</li>'
+          + '<li>Ele responde com um token, uma linha parecida com 1234567890:AAH... Copie e cole aqui:</li></ol>'
+          + '<div class="linha"><input id="av-token" autocomplete="off" spellcheck="false" placeholder="cole o token aqui" style="flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="av-salvar" style="' + bt + '">Salvar</button></div>'
+          + '<p>O token fica guardado só no servidor do site e não aparece de novo nesta página.</p></div>';
+      }
+      av.innerHTML = h + '<p class="msg" id="av-msg"></p>';
       var am = document.getElementById('av-msg');
       function diz(ok, t){ am.className = 'msg ' + (ok ? 'ok' : 'erro'); am.textContent = t; }
-      document.getElementById('av-copiar').onclick = function(){ var t = this; (navigator.clipboard ? navigator.clipboard.writeText(j.topico) : Promise.reject()).then(function(){ t.textContent = 'Copiado'; }, function(){ t.textContent = 'Selecione e copie'; }); };
-      document.getElementById('av-novo').onclick = function(){ if (confirm('Trocar o canal? O celular inscrito no canal atual para de receber avisos.')) postAviso({ acao: 'novo-topico' }).then(avisos); };
-      document.getElementById('av-teste').onclick = function(){ var t = this; t.disabled = true; diz(true, 'Enviando…');
-        postAviso({ acao: 'teste' }).then(function(){ diz(true, 'Aviso enviado. Confira o celular.'); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível enviar.'); }).then(function(){ t.disabled = false; }); };
+      function acao(corpo, bt, depois){ if (bt) bt.disabled = true; diz(true, 'Aguarde…');
+        postAviso(corpo).then(function(){ diz(true, ''); depois(); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ if (bt) bt.disabled = false; }); }
+      var el;
+      if ((el = document.getElementById('av-salvar'))) el.onclick = function(){ acao({ acao: 'token', token: document.getElementById('av-token').value }, this, avisos); };
+      if ((el = document.getElementById('av-con'))) el.onclick = function(){ acao({ acao: 'conectar' }, this, avisos); };
+      if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
+      if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
   }
   avisos();
