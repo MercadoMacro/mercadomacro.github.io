@@ -183,12 +183,11 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'avisos') {
     if (req.method === 'GET') {
       const c = await config(env);
-      return json({ topico: c.ntfy_topico, email: c.aviso_email !== 'nao', para: await emailAdmin(env) });
+      return json({ topico: c.ntfy_topico });
     }
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
-    if (b.acao === 'email') await env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind('aviso_email', b.on ? 'sim' : 'nao').run();
-    else if (b.acao === 'novo-topico') await env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind('ntfy_topico', novoTopico()).run();
+    if (b.acao === 'novo-topico') await env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind('ntfy_topico', novoTopico()).run();
     else if (b.acao === 'teste') {
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
       if (!ok) return json({ erro: 'O serviço de avisos não respondeu. Tente de novo em alguns minutos.' }, 502);
@@ -198,7 +197,8 @@ async function apiAdmin(req, env, acao, eu) {
   return json({ erro: 'Não encontrado.' }, 404);
 }
 
-/* ---------------- avisos (ntfy.sh: celular pelo app ntfy e e-mail) ---------------- */
+/* ---------------- avisos (ntfy.sh: notificação no celular pelo app ntfy) ----------------
+   O ntfy.sh não manda e-mail sem conta, por isso o aviso é só pelo app. */
 // o nome do canal funciona como senha: só quem sabe o nome recebe os avisos. Ele só aparece em /admin.
 const novoTopico = () => 'mercadomacro-' + hex(crypto.getRandomValues(new Uint8Array(10)));
 async function config(env) {
@@ -210,16 +210,9 @@ async function config(env) {
   }
   return c;
 }
-async function emailAdmin(env) {
-  const r = await env.DB.prepare(`SELECT email FROM usuarios WHERE admin = 1 AND status = 'ativo' ORDER BY id LIMIT 1`).first();
-  return r ? r.email : null;
-}
 async function avisar(env, titulo, texto) {
   const c = await config(env);
-  const h = { Title: titulo, Click: 'https://mercadomacro.com.br/admin' };
-  const para = c.aviso_email !== 'nao' ? await emailAdmin(env) : null;
-  if (para) h.Email = para;
-  const r = await fetch('https://ntfy.sh/' + c.ntfy_topico, { method: 'POST', headers: h, body: texto });
+  const r = await fetch('https://ntfy.sh/' + c.ntfy_topico, { method: 'POST', headers: { Title: titulo, Click: 'https://mercadomacro.com.br/admin' }, body: texto });
   return r.ok;
 }
 
@@ -331,8 +324,6 @@ h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);
 .cod{font:600 18px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:6px 10px;display:inline-block;word-break:break-all;user-select:all}
 .linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
 .caixa button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
-.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text);cursor:pointer}
-.chk input{width:18px;height:18px;accent-color:var(--accent)}
 ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 </style></head><body><main>
 <header><h1>Cadastros do Mercado Macro</h1><a class="vol" href="/">Voltar ao site</a></header>
@@ -408,21 +399,19 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   }
   function avisos(){
     fetch('/api/admin/avisos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      av.innerHTML = '<div class="caixa"><p><b>Por e-mail.</b> Quando alguém pedir acesso, chega um e-mail para ' + (j.para ? '<b>' + esc(j.para) + '</b>' : 'o administrador') + '. Ele vem do serviço ntfy (no-reply@ntfy.sh); se não aparecer, olhe a caixa de spam.</p>'
-        + '<label class="chk"><input type="checkbox" id="av-email"' + (j.email ? ' checked' : '') + '> Receber por e-mail</label></div>'
-        + '<div class="caixa"><p><b>No celular.</b> Para receber uma notificação na hora:</p><ol>'
+      av.innerHTML = '<div class="caixa"><p>Quando alguém pedir acesso, chega uma notificação no seu celular. Para ligar:</p><ol>'
         + '<li>Instale o app gratuito <b>ntfy</b> (Play Store ou App Store).</li>'
-        + '<li>Toque em + (Subscribe to topic) e digite o canal abaixo. Deixe o servidor como ntfy.sh.</li></ol>'
+        + '<li>Toque em + (Subscribe to topic) e digite o canal abaixo. Deixe o servidor como ntfy.sh.</li>'
+        + '<li>Toque em Enviar aviso de teste, aqui embaixo, para conferir.</li></ol>'
         + '<div class="linha"><span class="cod">' + esc(j.topico) + '</span><button type="button" id="av-copiar">Copiar</button></div>'
         + '<p>O nome do canal funciona como senha: não mostre a ninguém. Se precisar, <button type="button" id="av-novo" style="min-height:0;padding:2px 8px">troque o canal</button> e inscreva o celular de novo.</p></div>'
         + '<div class="linha"><button type="button" id="av-teste" style="border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px">Enviar aviso de teste</button><span class="msg" id="av-msg" style="margin:0"></span></div>';
       var am = document.getElementById('av-msg');
       function diz(ok, t){ am.className = 'msg ' + (ok ? 'ok' : 'erro'); am.textContent = t; }
-      document.getElementById('av-email').onchange = function(){ var on = this.checked; postAviso({ acao: 'email', on: on }).then(function(){ diz(true, on ? 'E-mail ligado.' : 'E-mail desligado.'); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível salvar.'); }); };
       document.getElementById('av-copiar').onclick = function(){ var t = this; (navigator.clipboard ? navigator.clipboard.writeText(j.topico) : Promise.reject()).then(function(){ t.textContent = 'Copiado'; }, function(){ t.textContent = 'Selecione e copie'; }); };
       document.getElementById('av-novo').onclick = function(){ if (confirm('Trocar o canal? O celular inscrito no canal atual para de receber avisos.')) postAviso({ acao: 'novo-topico' }).then(avisos); };
       document.getElementById('av-teste').onclick = function(){ var t = this; t.disabled = true; diz(true, 'Enviando…');
-        postAviso({ acao: 'teste' }).then(function(){ diz(true, 'Aviso enviado. Confira o celular e o e-mail.'); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível enviar.'); }).then(function(){ t.disabled = false; }); };
+        postAviso({ acao: 'teste' }).then(function(){ diz(true, 'Aviso enviado. Confira o celular.'); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível enviar.'); }).then(function(){ t.disabled = false; }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
   }
   avisos();
