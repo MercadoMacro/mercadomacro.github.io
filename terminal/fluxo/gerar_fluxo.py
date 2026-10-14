@@ -8,6 +8,10 @@ o pregão de referência (a B3 publica com cerca de 2 pregões de atraso), em R$
 O saldo de cada dia sai da diferença entre dois acumulados seguidos do mesmo mês
 (no primeiro pregão do mês, o acumulado já é o próprio dia).
 
+Primeiro tenta a mesma tabela em JSON, pelo serviço que alimenta o site do BDI
+(arquivos.b3.com.br/bdi/table/SharesInvesVolum/<data>): sai horas antes do PDF e tem poucos KB.
+Se não vier, lê o PDF (~40 MB), como antes.
+
 Uso: python3 fluxo/gerar_fluxo.py fluxo [dias_para_tras]
 Grava fluxo/fluxo.json. Nunca inventa número: dia sem boletim fica sem saldo.
 """
@@ -56,6 +60,33 @@ def baixa(d):
     return None
 
 
+API = 'https://arquivos.b3.com.br/bdi/table/SharesInvesVolum/{iso}/{iso}/1/50'
+
+
+def le_api(d):
+    """Tabela "Participação dos investidores" do BDI de d, em JSON. Devolve (data_ref ISO, {tipo: [compras, vendas]}) ou None."""
+    iso = d.isoformat()
+    req = urllib.request.Request(API.format(iso=iso), data=b'{}', method='POST',
+                                 headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (MercadoMacro fluxo)'})
+    for tentativa in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            t = j.get('table') or {}
+            texto = ' '.join((x.get('textPt') or '') for x in (t.get('texts') or []))
+            m = ATE.search(texto)
+            out = {}
+            for row in t.get('values') or []:
+                if len(row) >= 4 and row[0] in TIPOS and isinstance(row[1], (int, float)) and isinstance(row[3], (int, float)):
+                    out[TIPOS[row[0]]] = [int(row[1]), int(row[3])]
+            if not m or 'estrangeiro' not in out:
+                return None
+            return f'{m.group(3)}-{m.group(2)}-{m.group(1)}', out
+        except Exception:
+            time.sleep(5 * (tentativa + 1))
+    return None
+
+
 def le_tabela(pdf):
     """Devolve (data_ref ISO, {tipo: [compras, vendas]}) ou None."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -99,6 +130,15 @@ def main():
         iso = d.isoformat()
         if iso in lidos and d < hoje - timedelta(days=3):
             continue
+        t = le_api(d)
+        if t:
+            lidos.add(iso)
+            ref, tab = t
+            if acum.get(ref) != tab:
+                novos += 1
+            acum[ref] = tab
+            print(f'{iso}: (json) referente a {ref}, estrangeiro compras {tab["estrangeiro"][0]} vendas {tab["estrangeiro"][1]}')
+            continue
         pdf = baixa(d)
         if not pdf:
             print(f'{iso}: sem boletim')
@@ -139,8 +179,9 @@ def main():
         meses[d[:7]] = {'ate': d, 'tipos': {k: {'c': c, 'v': v, 'saldo': c - v} for k, (c, v) in acum[d].items()}}
 
     out = {
-        'gerado': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'fonte': 'B3, Boletim Diário do Mercado (BDI_02), tabela Participação dos investidores',
+        # sem dado novo, mantém a data de geração para não gravar o arquivo à toa
+        'gerado': base['gerado'] if (not novos and base.get('gerado') and set(lidos) == set(base.get('boletins', []))) else datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'fonte': 'B3, Boletim Diário do Mercado (BDI), tabela Participação dos investidores',
         'unidade': 'R$ mil',
         'dias': dias[-260:],
         'meses': dict(sorted(meses.items())[-24:]),

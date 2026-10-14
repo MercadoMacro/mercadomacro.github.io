@@ -1,15 +1,21 @@
 # Fluxo de investidores na B3: todo dia útil lê o Boletim Diário da B3 (PDF) e grava
 # terminal/fluxo/fluxo.json com o saldo de compras menos vendas de estrangeiros, institucionais,
 # pessoas físicas e demais, por dia e por mês. A B3 publica com cerca de 2 pregões de atraso.
+# Fonte principal: a tabela em JSON do site do BDI; o PDF (BDI_02) fica de reserva.
 name: Fluxo de investidores (B3)
 
 on:
   schedule:
-    - cron: '30 11 * * 1-5'   # segunda a sexta, 08:30 em Brasília
-    - cron: '30 23 * * 1-5'   # e às 20:30, quando sai o boletim do dia
-    # repescagens: o agendador do GitHub às vezes atrasa ou pula; sem boletim novo, não grava nada
-    - cron: '15 19 * * 1-5'
-    - cron: '45 1 * * 2-6'
+    # A tabela em JSON da B3 costuma sair de madrugada; o PDF, no fim da manhã ou à tarde.
+    # Várias passagens curtas: sem dado novo, não grava nada. O agendador do GitHub também atrasa ou pula.
+    - cron: '30 8 * * 1-5'    # 05:30 em Brasília
+    - cron: '30 10 * * 1-5'   # 07:30
+    - cron: '30 12 * * 1-5'   # 09:30
+    - cron: '30 14 * * 1-5'   # 11:30
+    - cron: '15 17 * * 1-5'   # 14:15
+    - cron: '15 19 * * 1-5'   # 16:15
+    - cron: '30 21 * * 1-5'   # 18:30
+    - cron: '30 23 * * 1-5'   # 20:30
   workflow_dispatch:
     inputs:
       dias:
