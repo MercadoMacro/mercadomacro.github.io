@@ -493,8 +493,51 @@ const US_FMP = {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Reserva: o Banco Central (SGS e Olinda) e o Tesouro às vezes recusam ou derrubam os pedidos vindos da Cloudflare.
+// Toda resposta boa dessas rotas fica guardada por 14 dias; se a fonte falhar, o site recebe a última resposta boa
+// (com o cabeçalho X-Reserva: 1) em vez de ficar sem o número.
+const RESERVA = new Set(['/bcb', '/focus', '/tesouro']);
+function chaveReserva(url) {
+  const sp = url.searchParams;
+  let k = url.pathname;
+  if (url.pathname === '/bcb') {
+    // o site manda dataInicial/dataFinal que mudam todo dia; a chave usa a série e o tamanho do período em anos
+    const q = sp.get('q') || '';
+    const ult = q.match(/\/ultimos\/(\d{1,2})/);
+    const di = q.match(/dataInicial=(\d{2})\/(\d{2})\/(\d{4})/), df = q.match(/dataFinal=(\d{2})\/(\d{2})\/(\d{4})/);
+    const d = (m) => (m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : Date.now());
+    k += '/' + (sp.get('c') || '') + '/' + (ult ? 'u' + ult[1] : di ? 'a' + Math.round((d(df) - d(di)) / (365.25 * 864e5)) : 'tudo');
+  } else if (url.pathname === '/focus') k += sp.get('full') === '1' ? '/full' : '/curto';
+  return 'https://reserva.mercadomacro' + k;
+}
+async function comReserva(request, resp, ctx) {
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || !RESERVA.has(url.pathname)) return resp;
+  const cache = caches.default, chave = chaveReserva(url);
+  if (resp.status === 200) {
+    const corpo = await resp.clone().text();
+    ctx.waitUntil(cache.put(chave, new Response(corpo, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=1209600' } })).catch(() => {}));
+    return resp;
+  }
+  if (resp.status < 500) return resp;
+  const guardada = await cache.match(chave).catch(() => null);
+  if (!guardada) return resp;
+  const h = new Headers(resp.headers);
+  h.set('Content-Type', 'application/json; charset=utf-8');
+  h.set('Cache-Control', 'public, max-age=120');
+  h.set('X-Reserva', '1');
+  return new Response(guardada.body, { status: 200, headers: h });
+}
+
 export default {
   async fetch(request, env, ctx) {
+    return comReserva(request, await rotas(request, env, ctx), ctx);
+  },
+};
+
+const rotas = async (request, env, ctx) => {
+  {
     const url = new URL(request.url);
     const path = url.pathname;
     const origin = request.headers.get('Origin');
