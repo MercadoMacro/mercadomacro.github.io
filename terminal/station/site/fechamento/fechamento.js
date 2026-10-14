@@ -42,7 +42,9 @@
       </div>
       ${!d.pregao ? `<div class="aviso">Sem pregão na B3 hoje. Números do último pregão${d.pregaoDia ? ' (' + ddmm(d.pregaoDia) + ')' : ''}.</div>` : ''}
       <div class="grade">${cards}</div>
-      <div class="bloco dest"><h2>Destaques do dia</h2><p>${esc(d.destaques || '—')}</p></div>
+      <div class="bloco dest"><h2>Principais notícias</h2>${d.noticias && d.noticias.length
+        ? `<ul class="nots">${d.noticias.map((n) => `<li><p>${esc(n.t)}</p>${n.f ? `<span>${esc(n.f)}</span>` : ''}</li>`).join('')}</ul>`
+        : '<p class="vazio">Sem notícias disponíveis agora.</p>'}</div>
       <div class="duas">
         <div class="bloco"><h2 class="h-up">Maiores altas</h2>${lista(d.altas, 'up')}</div>
         <div class="bloco"><h2 class="h-dn">Maiores baixas</h2>${lista(d.baixas, 'dn')}</div>
@@ -59,7 +61,7 @@
           <tr><td>No ano</td><td>${f ? bi(f.ano) : '—'}</td></tr>
           <tr><td colspan="2" style="text-align:left;font:400 10px Inter,sans-serif;color:#8591a8">A B3 divulga com cerca de 2 pregões de atraso</td></tr></table></div>
       </div>
-      <div class="rod"><b>mercadomacro.com.br</b><span>Altas e baixas entre as 45 maiores ações do Ibovespa.<br>Fontes: Yahoo Finance, Banco Central, Tesouro Direto e B3.</span></div>`;
+      <div class="rod"><b>mercadomacro.com.br</b><span>Altas e baixas entre as 45 maiores ações do Ibovespa.<br>Fontes: Yahoo Finance, Banco Central, Tesouro Direto, B3 e os veículos citados.</span></div>`;
   }
 
   async function carrega() {

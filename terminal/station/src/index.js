@@ -221,30 +221,32 @@ async function dadosFechamento(env) {
       ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
     };
   } catch (e) { /* fica "—" */ }
-  out.destaques = destaquesFechamento(out);
+  out.noticias = await noticiasDoDia().catch(() => []);
   return out;
 }
-const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
-// frases montadas só com os números do dia (sem explicar causas, que não temos como saber)
-function destaquesFechamento(d) {
-  const c = d.cards, f = [];
-  const mov = (x, m, f2) => (x > 0.005 ? `${m[0]} ${brn(x, 2)}%` : x < -0.005 ? `${m[1]} ${brn(-x, 2)}%` : m[2]) + (f2 || '');
-  if (c.ibov.ch != null) f.push(`O Ibovespa ${mov(c.ibov.ch, ['subiu', 'caiu', 'ficou estável'])}, aos ${brn(c.ibov.v, 0)} pontos.`);
-  if (c.dolar.ch != null) f.push(`O dólar ${mov(c.dolar.ch, ['subiu', 'caiu', 'ficou estável'])} frente ao real, a R$ ${brn(c.dolar.v, 4)}.`);
-  const ny = [['S&P 500', c.sp], ['Nasdaq', c.nasdaq], ['Dow Jones', c.dow]].filter((x) => x[1].ch != null);
-  if (ny.length) {
-    const sobe = ny.filter((x) => x[1].ch > 0).length;
-    const tom = sobe === ny.length ? 'as bolsas subiram' : sobe === 0 ? 'as bolsas caíram' : 'as bolsas fecharam sem direção única';
-    f.push(`Em Nova York, ${tom}: ${ny.map(([n, x]) => `${n} ${x.ch > 0 ? '+' : x.ch < 0 ? '−' : ''}${brn(Math.abs(x.ch), 2)}%`).join(', ')}.`);
+// principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
+// publicadas nas últimas 16 horas, sem repetir assunto e só em português (título traduzido ou fonte brasileira)
+async function noticiasDoDia() {
+  const r = await fetch('https://news.cota-cotacao10.workers.dev/', { cf: { cacheTtl: 120 } });
+  if (!r.ok) return [];
+  const lista = await r.json();
+  if (!Array.isArray(lista)) return [];
+  const desde = Date.now() - 16 * 3600000;
+  const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News']);
+  const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+  const escolhidas = [];
+  const cands = lista.filter((n) => n && n.titulo && n.link && +n.data >= desde && (n.traduzido || PT.has(n.fonte)))
+    .sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
+  for (const n of cands) {
+    const w = palavras(n.titulo);
+    const parecida = escolhidas.some((e) => { let c = 0; for (const x of w) if (e.w.has(x)) c++; return c / Math.max(1, Math.min(w.size, e.w.size)) >= 0.5; });
+    if (parecida) continue;
+    escolhidas.push({ w, t: n.titulo.trim(), f: (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '', link: n.link });
+    if (escolhidas.length === 4) break;
   }
-  if (c.brent.ch != null) f.push(`O petróleo Brent ${mov(c.brent.ch, ['subiu', 'caiu', 'ficou estável'])}, a US$ ${brn(c.brent.v, 2)}.`);
-  if (d.altas[0] && d.baixas[0]) f.push(`Entre as maiores ações do Ibovespa, ${d.altas[0].t} liderou as altas (+${brn(d.altas[0].ch, 2)}%) e ${d.baixas[0].t} as quedas (−${brn(-d.baixas[0].ch, 2)}%).`);
-  if (d.fluxo && d.fluxo.dia != null) {
-    const bi = brn(Math.abs(d.fluxo.dia) / 1e6, 2);
-    f.push(`Na B3, o investidor estrangeiro ${d.fluxo.dia >= 0 ? 'colocou' : 'retirou'} R$ ${bi} bi em ${d.fluxo.data.slice(8, 10)}/${d.fluxo.data.slice(5, 7)} (último dado divulgado).`);
-  }
-  return f.join(' ');
+  return escolhidas.map(({ t, f, link }) => ({ t, f, link }));
 }
+const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
 function textoFechamento(d, curto) {
   const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
   const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
@@ -262,6 +264,7 @@ function textoFechamento(d, curto) {
   if (!curto) {
     if (d.altas.length) linhas.push('', 'Maiores altas: ' + d.altas.slice(0, 3).map((a) => `${a.t} +${brn(a.ch, 2)}%`).join(', '));
     if (d.baixas.length) linhas.push('Maiores baixas: ' + d.baixas.slice(0, 3).map((a) => `${a.t} −${brn(-a.ch, 2)}%`).join(', '));
+    if (d.noticias && d.noticias.length) linhas.push('', 'Principais notícias', ...d.noticias.map((n) => `- ${n.t}${n.f ? ` (${n.f})` : ''}`));
   }
   linhas.push('', 'Juros',
     `Selic: ${j.selic != null ? brn(j.selic, 2) + '%' : '—'}`,
