@@ -31,11 +31,11 @@ jobs:
           git config user.name "posicoes-bot"
           git config user.email "actions@users.noreply.github.com"
           # o arquivo muda o campo "gerado" a cada execução; só grava se os dados mudaram
-          for f in cot.json 13f.json; do
+          for f in cot.json 13f.json 13f-acoes.json; do
             p=terminal/posicoes/$f
             if git cat-file -e HEAD:$p 2>/dev/null && [ "$(git show HEAD:$p | python3 -c 'import json,sys;d=json.load(sys.stdin);d.pop("gerado",None);print(json.dumps(d,sort_keys=True))')" = "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d.pop("gerado",None);print(json.dumps(d,sort_keys=True))' $p)" ]; then git checkout -q -- $p; fi
           done
-          git add terminal/posicoes/cot.json terminal/posicoes/13f.json
+          git add terminal/posicoes/cot.json terminal/posicoes/13f.json terminal/posicoes/13f-acoes.json
           if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
           git commit -m "Posições CFTC/13F: $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
           for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1

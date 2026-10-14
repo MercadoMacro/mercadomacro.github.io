@@ -9,7 +9,7 @@ Fonte: SEC EDGAR (data.sec.gov e www.sec.gov/Archives), sem chave; a SEC pede um
 User-Agent com contato e no máximo 10 pedidos por segundo.
 Uso: python3 gerar_13f.py <pasta_saida>
 """
-import json, sys, time, urllib.request
+import json, re, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 
@@ -127,6 +127,30 @@ def carteira(cik, f):
     return None
 
 
+SUFIXOS = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC", "SA", "NV", "AG", "SE", "LP", "LLC",
+           "HOLDINGS", "HOLDING", "HLDGS", "GROUP", "GRP", "THE", "CL", "CLASS", "A", "B", "C", "NEW", "DEL", "COM", "ADR", "ADS"}
+
+
+def chave_nome(n):
+    """'APPLE INC' e 'Apple Inc.' viram 'APPLE'; usado só para achar o ticker pelo nome."""
+    pal = re.sub(r"[^A-Z0-9 ]", " ", (n or "").upper().replace("&", " AND ")).split()
+    while pal and pal[-1] in SUFIXOS:
+        pal.pop()
+    return " ".join(pal)
+
+
+def tickers_sec():
+    """Nome da empresa -> ticker, da lista pública da SEC (company_tickers.json)."""
+    j = get("https://www.sec.gov/files/company_tickers.json") or {}
+    out = {}
+    for x in j.values():
+        k = chave_nome(x.get("title"))
+        if k and k not in out:
+            out[k] = x.get("ticker")
+    print(f"  {len(out)} nomes com ticker na SEC")
+    return out
+
+
 def arred(x):
     return round(x) if x is not None else None
 
@@ -135,6 +159,7 @@ def main():
     saida = sys.argv[1] if len(sys.argv) > 1 else "."
     limite = (datetime.now(timezone.utc) - timedelta(days=300)).strftime("%Y-%m-%d")
     fundos = []
+    acoes = {}  # (cusip, put/call) -> {nome, classe, pc, h: [[índice do fundo, valor, qtd, qtd antes, % da carteira]]}
     for cik, apelido, gestor, palavra in FUNDOS:
         nome, fs = filings(cik)
         if not nome or palavra not in nome.upper():
@@ -189,6 +214,17 @@ def main():
             "aumentou": pelo_valor(mais), "diminuiu": pelo_valor(menos),
             "n_novas": len(novas), "n_zeradas": len(zeradas), "n_aumentou": len(mais), "n_diminuiu": len(menos),
         })
+        fi = len(fundos) - 1
+        for k, p in atual.items():
+            a = acoes.setdefault(k, {"nome": p["nome"], "classe": p["classe"], "pc": p["pc"], "h": []})
+            pa = ant.get(k) if ant else None
+            a["h"].append([fi, arred(p["v"]), arred(p["q"]), arred(pa["q"]) if pa else (0 if ant else None),
+                           round(p["v"] / total * 100, 3) if total else None])
+        if ant:
+            for k, pa in ant.items():
+                if k not in atual:
+                    a = acoes.setdefault(k, {"nome": pa["nome"], "classe": pa["classe"], "pc": pa["pc"], "h": []})
+                    a["h"].append([fi, 0, 0, arred(pa["q"]), 0])
         print(f"  {cik} {apelido}: {fs[0]['periodo']} ({len(atual)} posições, US$ {total / 1e9:.1f} bi); "
               f"novas {len(novas)}, zeradas {len(zeradas)}, aumentou {len(mais)}, diminuiu {len(menos)}")
 
@@ -199,6 +235,17 @@ def main():
     with open(f"{saida}/13f.json", "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     print(f"13f.json: {len(fundos)} fundos")
+    # índice por ação, para a busca "quem tem essa ação?" (arquivo separado, só baixado ao buscar)
+    tk = tickers_sec()
+    lista = []
+    for (cusip, pc), a in acoes.items():
+        t = tk.get(chave_nome(a["nome"]))
+        lista.append({"c": cusip, "n": a["nome"], "cl": a["classe"], "pc": pc, "t": t, "h": sorted(a["h"], key=lambda x: -(x[1] or 0))})
+    lista.sort(key=lambda x: -sum(h[1] or 0 for h in x["h"]))
+    com_t = sum(1 for x in lista if x["t"])
+    with open(f"{saida}/13f-acoes.json", "w", encoding="utf-8") as f:
+        json.dump({"gerado": out["gerado"], "fundos": [f_["apelido"] for f_ in fundos], "acoes": lista}, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"13f-acoes.json: {len(lista)} ações ({com_t} com ticker)")
 
 
 if __name__ == "__main__":
