@@ -8,6 +8,8 @@ const SESSAO_DIAS = 90;
 const ITER = 30000;
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
 const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
+// páginas que existem só para quem entrou (não são arquivos)
+const ROTAS_LOGADO = /^\/(admin|conta)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 
 export default {
@@ -21,6 +23,7 @@ export default {
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
+      if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
@@ -29,6 +32,8 @@ export default {
         // a página inicial mostra a vitrine para quem não entrou (e para o Google), sem redirecionar
         if ((p === '/' || p === '/index.html') && navegacao(req)) return paginaEntrar(req, env, true);
         if (navegacao(req)) {
+          // endereço que não existe mostra a página de erro (e não manda para o login)
+          if (!ROTAS_LOGADO.test(p) && !(await existeArquivo(req, env))) return paginaFixa(req, env, '/vitrine/404', 404);
           const volta = p === '/' || p === '/index.html' ? '' : '?volta=' + encodeURIComponent(p + url.search);
           return redirect('/entrar' + volta);
         }
@@ -41,6 +46,7 @@ export default {
         return await apiAdmin(req, env, p.slice(11), u);
       }
       const r = await env.ASSETS.fetch(req);
+      if (r.status === 404 && navegacao(req)) return paginaFixa(req, env, '/vitrine/404', 404);
       const out = new Response(r.body, r);
       out.headers.set('Cache-Control', 'private, no-cache');
       return out;
@@ -306,7 +312,10 @@ async function dentroDoLimite(env, chave, max, seg) {
   const agora = Math.floor(Date.now() / 1000);
   const r = await env.DB.prepare('SELECT n, janela FROM tentativas WHERE chave = ?').bind(chave).first();
   if (!r || agora - r.janela > seg) {
-    await env.DB.prepare('INSERT OR REPLACE INTO tentativas (chave, n, janela) VALUES (?, 1, ?)').bind(chave, agora).run();
+    // registros de limite (alguns guardam IP) não passam de um dia, como diz a página /privacidade
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM tentativas WHERE janela < ?').bind(agora - 86400),
+      env.DB.prepare('INSERT OR REPLACE INTO tentativas (chave, n, janela) VALUES (?, 1, ?)').bind(chave, agora)]);
     return true;
   }
   if (r.n >= max) return false;
@@ -362,6 +371,19 @@ async function paginaEntrar(req, env, jaSemLogin) {
   return out;
 }
 
+// páginas públicas fixas da pasta vitrine (privacidade e erro)
+async function paginaFixa(req, env, caminho, status) {
+  const r = await env.ASSETS.fetch(new Request(new URL(caminho, req.url), { headers: req.headers }));
+  const out = new Response(r.body, { status, headers: r.headers });
+  out.headers.set('Cache-Control', 'no-cache');
+  out.headers.set('X-Frame-Options', 'DENY');
+  return out;
+}
+async function existeArquivo(req, env) {
+  const r = await env.ASSETS.fetch(new Request(req.url, { method: 'HEAD' }));
+  return r.status !== 404;
+}
+
 function texto(s, tipo) {
   return new Response(s, { headers: { 'Content-Type': tipo + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
 }
@@ -376,6 +398,7 @@ Sitemap: https://mercadomacro.com.br/sitemap.xml
 const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://mercadomacro.com.br/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
 `;
 

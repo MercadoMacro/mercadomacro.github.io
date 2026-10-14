@@ -6,6 +6,8 @@ import { writeFileSync, appendFileSync } from 'node:fs';
 const SITE = 'https://station.danilo-nillo.workers.dev';
 const API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
 const NEWS = 'https://news.cota-cotacao10.workers.dev/';
+// worker da vitrine na segunda conta da Cloudflare (terminal/vitrine-worker)
+const VITRINE = 'https://mercadomacro-vitrine.cota-cotacao10.workers.dev';
 const HDR = { Origin: SITE, 'User-Agent': 'MercadoMacro-Vigia/1.0', Accept: 'application/json,text/html,*/*' };
 
 const temLista = (x) => Array.isArray(x) && x.length > 0;
@@ -20,6 +22,11 @@ const ROTAS = [
     const ok = Object.values(j).filter((v) => v && v.chart && v.chart.result).length;
     return ok ? '' : 'nenhum símbolo veio do Yahoo';
   }],
+  ['Vitrine: cotações (worker da 2ª conta)', VITRINE + '/quotes?symbols=%5EBVSP,BRL=X', (j) => {
+    const ok = Object.values(j).filter((v) => v && v.chart && v.chart.result).length;
+    return ok ? '' : 'nenhum símbolo veio do Yahoo';
+  }],
+  ['Vitrine: Banco Central (worker da 2ª conta)', VITRINE + '/bcb?c=432&n=1', (j) => (temLista(j) && j[0].valor ? '' : 'série vazia')],
   ['Gráfico 3M (/history)', API + '/history?symbols=%5EBVSP', (j) => (j['^BVSP'] && !j['^BVSP'].error ? '' : 'Ibovespa sem histórico')],
   ['Agenda econômica (/calendar)', API + '/calendar', (j) => (temLista(j) || temLista(j.events) ? '' : 'agenda vazia')],
   ['Indicadores Brasil (/ind/bundle)', API + '/ind/bundle?g=br', (j) => (j.data && Object.keys(j.data).length ? '' : 'pacote sem dados')],

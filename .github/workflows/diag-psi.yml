@@ -1,0 +1,25 @@
+name: diag-psi
+on:
+  push:
+    paths: ['.github/workflows/diag-psi.yml']
+jobs:
+  psi:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: sleep 150
+      - name: rotas
+        run: |
+          for u in / /privacidade /qualquer-coisa /sitemap.xml; do curl -s -o /dev/null -H "Accept: text/html" -H "Sec-Fetch-Mode: navigate" -w "$u %{http_code} %{redirect_url}\n" "https://mercadomacro.com.br$u"; done
+          curl -s https://mercadomacro.com.br/ -H "Accept: text/html" | grep -o 'cloudflareinsights[^"]*' | head -2 || true
+      - name: pagespeed
+        run: |
+          for s in mobile desktop; do
+            for i in 1 2 3; do
+              curl -s -m 120 "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https%3A%2F%2Fmercadomacro.com.br%2F&strategy=$s&category=performance&category=accessibility&category=best-practices&category=seo" -o psi.json
+              jq -e .lighthouseResult psi.json >/dev/null && break; jq -c .error psi.json; sleep 20
+            done
+            echo "== $s"
+            jq -r '.lighthouseResult | (.categories | to_entries[] | "\(.key) \((.value.score*100)|round)"), (.audits | to_entries[] | select(.key|IN("first-contentful-paint","largest-contentful-paint","total-blocking-time","cumulative-layout-shift","speed-index")) | "\(.key) \(.value.displayValue)")' psi.json
+            echo "-- abaixo de 90%:"
+            jq -r '.lighthouseResult.audits | to_entries[] | select(.value.score != null and .value.score < 0.9 and (.value.scoreDisplayMode|IN("binary","numeric","metricSavings"))) | "\(.key) \(.value.score) \(.value.displayValue // "")"' psi.json | head -40
+          done
