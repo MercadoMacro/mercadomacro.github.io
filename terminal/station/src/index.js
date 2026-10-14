@@ -8,6 +8,13 @@ const SESSAO_DIAS = 90;
 const ITER = 30000;
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
 const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
+// ferramentas abertas ao público (sem login): endereço -> [arquivo na pasta vitrine, nome no contador de visitas]
+const PUBLICAS = {
+  '/calculadora-renda-fixa': ['/vitrine/calculadora', 'calculadora'],
+  '/calculadora-juros-compostos': ['/vitrine/juros-compostos', 'juros'],
+  '/calculadora-aposentadoria': ['/vitrine/aposentadoria', 'aposentadoria'],
+  '/indicadores-hoje': ['/vitrine/indicadores', 'indicadores'],
+};
 // páginas que existem só para quem entrou (não são arquivos)
 const ROTAS_LOGADO = /^\/(admin|conta)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
@@ -28,7 +35,7 @@ export default {
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
-      if (p === '/calculadora-renda-fixa') { if (navegacao(req)) contar(env, ctx, req, 'calculadora'); return paginaFixa(req, env, '/vitrine/calculadora', 200); }
+      if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
@@ -87,7 +94,12 @@ async function resumoSemanal(env) {
     `Semana de ${br(de)} a ${br(ate)}:`,
     '',
     `Vitrine (página de entrada) aberta: ${n('vitrine')} vezes`,
-    `Calculadora de renda fixa (pública) aberta: ${n('calculadora')} vezes`,
+    'Páginas abertas ao público:',
+    `- Calculadora de renda fixa: ${n('calculadora')}`,
+    `- Calculadora de juros compostos: ${n('juros')}`,
+    `- Calculadora de aposentadoria: ${n('aposentadoria')}`,
+    `- Indicadores de hoje: ${n('indicadores')}`,
+    '',
     `Terminal aberto por quem tem acesso: ${n('terminal')} vezes`,
     `Pessoas que fizeram login: ${logins}`,
     `Pedidos de acesso novos: ${pedidos}`,
@@ -473,6 +485,9 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://mercadomacro.com.br/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://mercadomacro.com.br/calculadora-renda-fixa</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/calculadora-juros-compostos</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/calculadora-aposentadoria</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
 `;

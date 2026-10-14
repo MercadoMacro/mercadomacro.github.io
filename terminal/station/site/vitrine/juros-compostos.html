@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de juros compostos com aporte mensal | Mercado Macro</title>
+<meta name="description" content="Simule juros compostos com valor inicial e aporte mensal: veja o saldo ano a ano, quanto você investiu e quanto ganhou de juros.">
+<link rel="canonical" href="https://mercadomacro.com.br/calculadora-juros-compostos">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#05080f">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mercado Macro">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="https://mercadomacro.com.br/calculadora-juros-compostos">
+<meta property="og:title" content="Calculadora de juros compostos | Mercado Macro">
+<meta property="og:description" content="Simule juros compostos com valor inicial e aporte mensal: veja o saldo ano a ano, quanto você investiu e quanto ganhou de juros.">
+<meta property="og:image" content="https://mercadomacro.com.br/previa-link-mercado-macro.png?v=2">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Calculadora de juros compostos","url":"https://mercadomacro.com.br/calculadora-juros-compostos","applicationCategory":"FinanceApplication","operatingSystem":"Web","inLanguage":"pt-BR","offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"},"publisher":{"@type":"Organization","name":"Mercado Macro","url":"https://mercadomacro.com.br/"}}
+</script>
+<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/vitrine/vitrine.css?v=5">
+<link rel="stylesheet" href="/vitrine/ferramentas.css?v=1">
+</head>
+<body class="vt-simples">
+<div class="vt-bg" aria-hidden="true"><div class="vt-grid"></div><div class="vt-glow g1"></div><div class="vt-glow g2"></div></div>
+<header class="vt-top">
+  <a class="vt-brand" href="/" aria-label="Mercado Macro, início"><img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="170" height="36"></a>
+  <div class="vt-top-bts"><a class="vt-bt" href="/#cadastrar">Pedir acesso</a></div>
+</header>
+<main class="cr">
+  <nav class="cr-nav" aria-label="Ferramentas grátis">
+    <a href="/calculadora-renda-fixa">Renda fixa</a>
+    <a href="/calculadora-juros-compostos" aria-current="page">Juros compostos</a>
+    <a href="/calculadora-aposentadoria">Aposentadoria</a>
+    <a href="/indicadores-hoje">Indicadores de hoje</a>
+  </nav>
+  <h1>Calculadora de juros compostos</h1>
+  <p class="lead">Veja quanto seu dinheiro pode virar com um valor inicial, aportes todo mês e uma taxa de juros. O resultado aparece na hora, com o saldo ano a ano.</p>
+  <div class="cr-box">
+    <div class="cr-grid">
+      <div><label for="ini">Valor inicial (R$)</label><input id="ini" inputmode="decimal" value="1.000" autocomplete="off"></div>
+      <div><label for="apo">Aporte mensal (R$)</label><input id="apo" inputmode="decimal" value="500" autocomplete="off"></div>
+      <div><label for="taxa">Taxa de juros</label><div class="cr-suf"><input id="taxa" inputmode="decimal" autocomplete="off" placeholder="—"><em id="taxa-u">% ao ano</em></div>
+        <div class="cr-chips" id="un" role="group" aria-label="Unidade da taxa"><button type="button" data-u="aa" aria-pressed="true">ao ano</button><button type="button" data-u="am" aria-pressed="false">ao mês</button></div>
+        <p class="cr-dica" id="dica-taxa">Buscando o CDI no Banco Central…</p></div>
+      <div><label for="anos">Prazo (anos)</label><input id="anos" inputmode="numeric" value="10" autocomplete="off">
+        <div class="cr-chips" id="chips" role="group" aria-label="Prazos comuns"><button type="button" data-a="5">5 anos</button><button type="button" data-a="10">10 anos</button><button type="button" data-a="20">20 anos</button><button type="button" data-a="30">30 anos</button></div></div>
+    </div>
+  </div>
+  <div class="cr-res" id="res"></div>
+  <div class="cr-graf"><p class="leg"><span><i style="background:var(--blue)"></i>Dinheiro que você colocou</span><span><i style="background:var(--accent)"></i>Juros ganhos</span></p><div id="graf"></div></div>
+  <h2>Ano a ano</h2>
+  <table class="cr-tab"><thead><tr><th>Ano</th><th>Total investido</th><th>Juros no ano</th><th>Juros acumulados</th><th>Saldo</th></tr></thead><tbody id="linhas"></tbody></table>
+  <p class="cr-nota">Conta sem impostos e sem inflação, com aporte no fim de cada mês e taxa constante. A taxa ao ano é convertida em mensal por juros compostos. Isto é uma simulação, não uma recomendação.</p>
+  <div class="cr-cta">
+    <div><h3>Quer ver isso com o seu investimento de verdade?</h3><p>No terminal do Mercado Macro a calculadora de juros compostos tem meta de patrimônio, e ainda há renda fixa com IR, aposentadoria, financiamento, cotações e indicadores.</p></div>
+    <a class="vt-bt big" href="/#cadastrar">Pedir acesso</a>
+  </div>
+  <section class="cr-faq">
+    <h2>Perguntas comuns</h2>
+    <h3>O que são juros compostos?</h3>
+    <p>São juros sobre juros: o rendimento de cada mês passa a render também nos meses seguintes. Por isso o saldo cresce cada vez mais rápido com o tempo.</p>
+    <h3>Taxa ao ano ou ao mês?</h3>
+    <p>As duas funcionam. 1% ao mês equivale a cerca de 12,68% ao ano por juros compostos, e não 12%.</p>
+    <h3>Por que a taxa vem preenchida com o CDI?</h3>
+    <p>É uma referência comum para quem investe em renda fixa. Você pode trocar por qualquer taxa.</p>
+  </section>
+</main>
+<footer class="vt-foot">
+  <img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="130" height="28" loading="lazy">
+  <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
+</footer>
+<script src="/vitrine/ferramentas.js?v=1"></script>
+<script src="/vitrine/calc-jc.js?v=1"></script>
+</body>
+</html>
