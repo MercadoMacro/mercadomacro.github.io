@@ -13,8 +13,8 @@ jobs:
           npm i --no-save --no-package-lock playwright@1.56.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           cat > s.mjs <<'X'
           import { chromium } from 'playwright';
-          const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 900, height: 700 } });
-          await p.goto('file://' + process.cwd() + '/.github/diag/tv.html'); await p.waitForTimeout(12000);
+          const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 1400 }, isMobile: true });
+          await new Promise((r) => setTimeout(r, 150000)); await p.goto('https://mercadomacro.com.br/indicadores-hoje'); await p.evaluate(() => document.getElementById('tv-mercado').scrollIntoView()); await p.waitForTimeout(12000);
           for (const f of p.frames()) { console.log('FRAME', f.url().slice(0, 80)); try { const t = await f.evaluate(() => document.body.innerText); console.log(t.slice(0, 1500)); } catch (e) { console.log('erro', e.message.slice(0, 100)); } }
           await p.screenshot({ path: 'tv.jpg', type: 'jpeg', quality: 45 }); await b.close();
           X

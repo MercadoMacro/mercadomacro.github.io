@@ -1,5 +1,5 @@
 /* Página pública "Indicadores de hoje" (/indicadores-hoje).
-   Banco Central (SGS) e Yahoo pelos workers; Focus do arquivo que o robô de histórico grava no GitHub. */
+   Banco Central (SGS) pelos workers; cotações no widget do TradingView (na própria página); Focus do arquivo que o robô de histórico grava no GitHub. */
 (function () {
   'use strict';
   var M = window.MM, $ = function (id) { return document.getElementById(id); };
@@ -31,25 +31,6 @@
     M.serie(433).then(function (s) { J.ipcam = ultimo(s); }).catch(function () {}),
     M.serie(189, 12).then(function (s) { J.igpm = s; }).catch(function () {})
   ]).then(juros);
-
-  // mercado
-  var ATIVOS = [['^BVSP', 'Ibovespa', '', 0, ' pontos'], ['BRL=X', 'Dólar', 'R$ ', 4, ''], ['EURBRL=X', 'Euro', 'R$ ', 4, ''], ['^GSPC', 'S&P 500', '', 0, ' pontos'], ['BZ=F', 'Petróleo Brent', 'US$ ', 2, ' o barril'], ['BTC-USD', 'Bitcoin', 'US$ ', 0, '']];
-  function mercado() {
-    return M.cotacoes(ATIVOS.map(function (a) { return a[0]; })).then(function (q) {
-      $('g-mercado').innerHTML = ATIVOS.map(function (a) {
-        var x = q[a[0]];
-        if (!x) return card(a[1], '—', 'sem cotação agora');
-        var ch = M.ok(x.ch) ? (x.ch >= 0 ? '+' : '') + M.nf(x.ch, 2) + '% no dia' : '';
-        return card(a[1], a[2] + M.nf(x.v, a[3]), '<span class="' + (x.ch >= 0 ? 'up' : 'dn') + '">' + ch + '</span>' + (a[4] ? ' · ' + a[4].trim() : ''));
-      }).join('');
-      $('hora').textContent = 'Cotações do Yahoo Finance consultadas às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '. Juros e inflação do Banco Central.';
-    }).catch(function () {
-      $('g-mercado').innerHTML = ATIVOS.map(function (a) { return card(a[1], '—', 'sem cotação agora'); }).join('');
-      $('hora').textContent = 'Não foi possível buscar as cotações agora.';
-    });
-  }
-  mercado();
-  setInterval(function () { if (!document.hidden) mercado(); }, 120000);
 
   // Focus
   var LIN = [['IPCA', 'IPCA (inflação)', '%', 2], ['Selic', 'Selic no fim do ano', '%', 2], ['PIB Total', 'PIB (crescimento)', '%', 2], ['Câmbio', 'Dólar no fim do ano', 'R$ ', 2], ['IGP-M', 'IGP-M', '%', 2]];

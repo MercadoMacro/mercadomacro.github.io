@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="/vitrine/vitrine.css?v=5">
-<link rel="stylesheet" href="/vitrine/ferramentas.css?v=1">
+<link rel="stylesheet" href="/vitrine/ferramentas.css?v=2">
 </head>
 <body class="vt-simples">
 <div class="vt-bg" aria-hidden="true"><div class="vt-grid"></div><div class="vt-glow g1"></div><div class="vt-glow g2"></div></div>
@@ -41,11 +41,25 @@
   </nav>
   <h1>Indicadores econômicos de hoje</h1>
   <p class="lead">Os principais números da economia brasileira numa página só, direto das fontes oficiais.</p>
-  <p class="cr-mk" id="hora" style="margin:-8px 0 18px">Buscando dados…</p>
   <h2 style="margin-top:0">Juros e inflação</h2>
   <div class="ind-grid" id="g-juros"></div>
   <h2>Mercado</h2>
-  <div class="ind-grid" id="g-mercado"></div>
+  <div class="cr-tv" id="tv-mercado">
+    <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+      <div class="tradingview-widget-copyright"><a href="https://br.tradingview.com/" rel="noopener nofollow" target="_blank">Cotações por TradingView</a></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
+      {"width": "100%", "height": 380, "symbolsGroups": [{"name": "Brasil e mundo", "symbols": [
+        {"name": "BMFBOVESPA:IBOV", "displayName": "Ibovespa"},
+        {"name": "FX_IDC:USDBRL", "displayName": "Dólar"},
+        {"name": "FX_IDC:EURBRL", "displayName": "Euro"},
+        {"name": "FOREXCOM:SPXUSD", "displayName": "S&P 500"},
+        {"name": "TVC:UKOIL", "displayName": "Petróleo Brent"},
+        {"name": "TVC:GOLD", "displayName": "Ouro"},
+        {"name": "BITSTAMP:BTCUSD", "displayName": "Bitcoin"}]}],
+      "showSymbolLogo": true, "isTransparent": true, "colorTheme": "dark", "locale": "br"}
+      </script>
+    </div>
+  </div>
   <h2>O que o mercado espera (Boletim Focus)</h2>
   <table class="cr-tab"><thead><tr><th>Indicador</th><th id="fa1">—</th><th id="fa2">—</th><th id="fa3">—</th></tr></thead><tbody id="focus"></tbody></table>
   <p class="cr-nota" id="focus-nota">Mediana das projeções de economistas, divulgada toda segunda-feira pelo Banco Central.</p>
@@ -56,9 +70,9 @@
   <section class="cr-faq">
     <h2>Perguntas comuns</h2>
     <h3>De onde vêm os números?</h3>
-    <p>Selic, CDI, IPCA e IGP-M vêm das séries oficiais do Banco Central (SGS). As cotações vêm do Yahoo Finance e as projeções do Boletim Focus, também do Banco Central.</p>
+    <p>Selic, CDI, IPCA e IGP-M vêm das séries oficiais do Banco Central (SGS). As cotações vêm do TradingView e as projeções do Boletim Focus, também do Banco Central.</p>
     <h3>Com que frequência a página atualiza?</h3>
-    <p>Toda vez que você abre. As cotações também se atualizam sozinhas a cada 2 minutos enquanto a página fica aberta.</p>
+    <p>Juros, inflação e Focus toda vez que você abre a página. As cotações se atualizam sozinhas enquanto a página fica aberta.</p>
   </section>
 </main>
 <footer class="vt-foot">
@@ -66,6 +80,6 @@
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
 </footer>
 <script src="/vitrine/ferramentas.js?v=1"></script>
-<script src="/vitrine/indicadores-hoje.js?v=1"></script>
+<script src="/vitrine/indicadores-hoje.js?v=2"></script>
 </body>
 </html>
