@@ -15,6 +15,8 @@ const ABAS = [
   ['indicadores', 'indicators-panel', 35000],
   ['fundamentos', 'fund-panel', 12000],
   ['calendario', 'calendar-panel', 12000],
+  // Análises: a foto mostra a posição dos especuladores (CFTC), que fica abaixo do botão da análise avançada
+  ['analises', 'analysis-panel', 12000, '#ana-sec-cot'],
   ['calculadora', 'calculator-panel', 8000],
   ['opcoes', 'options-panel', 10000],
   ['noticias', 'news-panel', 10000],
@@ -33,12 +35,15 @@ await ctx.addInitScript(prep);
 const pg = await ctx.newPage();
 await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
 await pg.waitForTimeout(6000);
-for (const [nome, aba, espera] of ABAS) {
+for (const [nome, aba, espera, rolar] of ABAS) {
   try {
     // em telas largas as abas ficam na barra lateral; o clique pelo script funciona nos dois casos
     await pg.evaluate((a) => document.querySelector(`.tab-btn[data-tab="${a}"]`).click(), aba);
     await pg.evaluate(() => window.scrollTo(0, 0));
+    if (rolar) await pg.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), rolar);
     await pg.waitForTimeout(espera);
+    if (rolar) await pg.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), rolar);
+    await pg.waitForTimeout(rolar ? 1500 : 0);
     await pg.evaluate(() => document.querySelectorAll('.toast, #cookie-consent').forEach((e) => e.remove()));
     await pg.screenshot({ path: `${OUT}/${nome}.jpg`, type: 'jpeg', quality: 78 });
     console.log('ok', nome);

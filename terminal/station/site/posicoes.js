@@ -206,6 +206,54 @@
       </div>`;
   }
 
+  /* ---------------- "Quem tem essa ação?" (índice por ação do 13F, baixado só ao buscar) ---------------- */
+  let acoes = null, acoesBusy = false, acoesErro = '', buscaQ = '';
+  async function carregaAcoes() {
+    if (acoes || acoesBusy) return;
+    acoesBusy = true; acoesErro = ''; drawBusca();
+    try {
+      for (const u of [RAW + '13f-acoes.json', 'posicoes/13f-acoes.json']) {
+        try { const r = await fetchT(u, {}, 25000); const x = await r.json().catch(() => null); if (r.ok && Array.isArray(x?.acoes)) { acoes = x; break; } } catch (e) { /* próxima */ }
+      }
+      if (!acoes) acoesErro = 'Não foi possível buscar o índice de ações agora.';
+    } finally { acoesBusy = false; drawBusca(); }
+  }
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  function achar(q) {
+    const Q = semAcento(q).trim();
+    if (Q.length < 2) return [];
+    const porTicker = acoes.acoes.filter((a) => a.t && a.t.split(' ').includes(Q));
+    if (porTicker.length) return porTicker.slice(0, 6);
+    return acoes.acoes.filter((a) => semAcento(a.n).includes(Q)).slice(0, 6);
+  }
+  function drawBusca() {
+    const box = buscaRes;
+    if (!box) return;
+    if (!buscaQ.trim()) { box.innerHTML = ''; return; }
+    if (!acoes) { box.innerHTML = `<div class="ps-msg">${acoesBusy ? 'Carregando o índice das carteiras…' : esc(acoesErro || '')}</div>`; return; }
+    const res = achar(buscaQ);
+    if (!res.length) { box.innerHTML = `<div class="ps-msg">Nenhum dos ${acoes.fundos.length} fundos declarou essa ação no último 13F. Tente o nome em inglês (ex.: Apple) ou o ticker (ex.: AAPL).</div>`; return; }
+    box.innerHTML = res.map((a) => {
+      const tem = a.h.filter((h) => h[2] > 0);
+      const comprou = a.h.filter((h) => h[3] != null && h[2] > h[3] * 1.005).length;
+      const vendeu = a.h.filter((h) => h[3] != null && h[2] < h[3] * 0.995).length;
+      const linhas = a.h.map(([fi, v, q, qa, pc]) => {
+        let tri = '—';
+        if (q === 0) tri = '<span class="ps-neg">zerou</span>';
+        else if (qa === 0) tri = '<span class="ps-novo">nova</span>';
+        else if (ok(qa) && qa > 0) { const x = (q / qa - 1) * 100; tri = Math.abs(x) < 0.5 ? '<span class="ps-mut">igual</span>' : `<span class="${tom(x)}">${pct(x, 0, true)}</span>`; }
+        return `<tr><th>${esc(acoes.fundos[fi] || '—')}</th><td>${q === 0 ? '—' : ok(pc) && pc < 0.05 ? '&lt;0,1%' : pct(pc)}</td><td>${q === 0 ? '—' : usd(v)}</td><td>${q === 0 ? '—' : int(q)}</td><td>${tri}</td></tr>`;
+      }).join('');
+      return `<div class="ps-bres">
+        <div class="ps-bh"><b>${esc(nomeEmpresa(a.n))}</b>${a.t ? ` <span class="ps-btk">${esc(a.t.split(' ').join(' · '))}</span>` : ''}
+          <small>${esc(a.cl || '')}${a.pc ? ` · opção de ${a.pc === 'Put' ? 'venda (put)' : 'compra (call)'}` : ''}</small>
+          <span class="ps-bsum">${tem.length} de ${acoes.fundos.length} fundos têm · ${comprou} ${comprou === 1 ? 'comprou' : 'compraram'} mais · ${vendeu} ${vendeu === 1 ? 'vendeu' : 'venderam'}</span></div>
+        <div class="ps-tw"><table class="ps-tab ps-tab13"><thead><tr><th>Fundo</th><th>% da carteira</th><th>Valor</th><th>Ações</th><th>No trimestre</th></tr></thead><tbody>${linhas}</tbody></table></div>
+      </div>`;
+    }).join('');
+  }
+  let buscaRes = null, buscaT = null;
+
   function bind(el) {
     el.addEventListener('click', (e) => {
       const t = e.target.closest('[data-grupo],[data-cot],[data-lista],[data-rf]');
@@ -222,6 +270,12 @@
     });
     el.addEventListener('change', (e) => {
       if (e.target.matches('[data-fundo]')) { prefs.fundo = +e.target.value; savePrefs(); drawF13(); }
+    });
+    el.addEventListener('input', (e) => {
+      if (!e.target.matches('.ps-bq input')) return;
+      buscaQ = e.target.value;
+      clearTimeout(buscaT);
+      buscaT = setTimeout(() => { if (buscaQ.trim().length >= 2 && !acoes) carregaAcoes(); drawBusca(); }, 200);
     });
   }
 
@@ -290,6 +344,17 @@
   ${R} .ps-foot a { color:var(--text-2); }
   ${R} .ps-err { display:block; color:var(--neg); margin-top:4px; }
   ${R} .ps-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
+  ${R} .ps-bq { margin-bottom:12px; }
+  ${R} .ps-bq label { display:flex; align-items:center; gap:10px; padding:10px 14px; color:var(--text-3); }
+  ${R} .ps-bq input { flex:1; min-width:0; background:var(--surface-2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 11px; font:inherit; font-size:13px; }
+  ${R} .ps-bout:empty { display:none; }
+  ${R} .ps-bres { border-top:1px solid var(--line); }
+  ${R} .ps-bh { padding:10px 14px 6px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
+  ${R} .ps-bh b { font-size:14px; color:var(--text); font-weight:600; }
+  ${R} .ps-bh small { font-size:11px; color:var(--text-3); }
+  ${R} .ps-btk { font:600 12px 'JetBrains Mono', monospace; color:var(--accent); }
+  ${R} .ps-bsum { flex-basis:100%; font-size:12px; color:var(--text-2); }
+  ${R} .ps-bout .ps-msg { border-top:1px solid var(--line); padding:18px; }
   ${R} .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   @media (max-width: 640px) {
     ${R} .ps-top:has(.ps-chips) { flex-wrap:wrap; }
@@ -313,8 +378,15 @@
       el.querySelector('.ps-card') || drawCot();
       carrega(COT, drawCot);
     } else {
-      if (f13Root !== el) { f13Root = el; bind(el); }
-      el.querySelector('.ps-card') || drawF13();
+      if (!el.querySelector('.ps-f13')) {
+        el.innerHTML = `<div class="ps-bq ps-card"><label><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Quem tem essa ação?</span>
+            <input type="search" placeholder="Quem tem essa ação? Digite o ticker ou o nome (ex.: NVDA, Apple)" autocomplete="off"></label>
+            <div class="ps-bout"></div></div><div class="ps-f13"></div>`;
+        bind(el);
+      }
+      buscaRes = el.querySelector('.ps-bout');
+      f13Root = el.querySelector('.ps-f13');
+      f13Root.querySelector('.ps-card') || drawF13();
       carrega(F13, drawF13);
     }
   };

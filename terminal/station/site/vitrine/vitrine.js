@@ -204,6 +204,8 @@
       ['Receita, lucro, margens, dívida e indicadores de valor', 'Séries anuais para ver a evolução da empresa', 'Busca de ações dos EUA']],
     ['calendario', 'fa-calendar-alt', 'Calendário', 'A agenda que move o mercado, com o que já saiu e o que vem por aí.',
       ['Agenda econômica do Brasil e do mundo, com o que saiu acima ou abaixo do esperado', 'Datas de balanço das empresas da B3 e dos EUA, e proventos', 'Boletim Focus semana a semana']],
+    ['analises', 'fa-chart-line', 'Análises', 'O que os grandes investidores estão fazendo, com dados oficiais.',
+      ['Posição dos especuladores em dólar, bolsas, juros e commodities (CFTC)', 'Carteiras dos grandes fundos dos EUA e quem tem cada ação (SEC 13F)', 'Fluxo do investidor estrangeiro na B3 e análise avançada dos ativos']],
     ['calculadora', 'fa-calculator', 'Calculadoras', 'Simuladores que recalculam na hora, enquanto você digita.',
       ['Renda fixa líquida de IR, com taxas do Tesouro Direto', 'Juros compostos, aposentadoria e financiamento SAC ou Price', 'Preço médio, risco por operação e inflação acumulada']],
     ['opcoes', 'fa-bullseye', 'Opções', 'Um laboratório completo para montar e entender estratégias com opções.',

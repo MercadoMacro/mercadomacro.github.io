@@ -30,7 +30,38 @@
   const WL_KEY = 'trader_watchlist_v1', WL3_KEY = 'watch_3m_v1', WL_MAX = 30;
   let wl = [];
   try { wl = (JSON.parse(localStorage.getItem(WL_KEY) || '[]') || []).filter((x) => x && x.s); } catch (e) { wl = []; }
-  const wlSave = () => { try { localStorage.setItem(WL_KEY, JSON.stringify(wl)); } catch (e) { /* cheio */ } };
+  // a lista também fica na conta (/api/conta/dados): muda aqui, aparece igual no celular e no computador
+  const WL_TS_KEY = 'trader_watchlist_ts';
+  let wlPushT = null;
+  const wlPush = () => {
+    clearTimeout(wlPushT);
+    wlPushT = setTimeout(() => {
+      let ts = 0; try { ts = +localStorage.getItem(WL_TS_KEY) || Date.now(); } catch (e) { ts = Date.now(); }
+      fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: 'watchlist', v: wl.map((x) => ({ s: x.s, n: x.n || '' })), ts }) }).catch(() => {});
+    }, 1200);
+  };
+  const wlSave = (sync = true) => {
+    try { localStorage.setItem(WL_KEY, JSON.stringify(wl)); if (sync) localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ }
+    if (sync) wlPush();
+  };
+  // ao abrir: fica com a versão mais nova entre a do navegador e a da conta
+  async function wlSync() {
+    try {
+      const r = await fetch('/api/conta/dados?k=watchlist', { credentials: 'same-origin', cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      let lts = 0; try { lts = +localStorage.getItem(WL_TS_KEY) || 0; } catch (e) { /* sem acesso */ }
+      if (Array.isArray(j.v) && j.ts > lts) {
+        wl = j.v.filter((x) => x && x.s).slice(0, WL_MAX);
+        try { localStorage.setItem(WL_TS_KEY, String(j.ts)); } catch (e) { /* cheio */ }
+        wlSave(false); wlRender(); wlStars();
+        if (document.getElementById('watch-panel')?.classList.contains('active')) wlRefresh();
+      } else if ((!j.ts || lts > j.ts) && (wl.length || lts)) {
+        if (!lts) { try { localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ } }
+        wlPush();
+      }
+    } catch (e) { /* sem conexão: segue com a lista do navegador */ }
+  }
   const inWl = (s) => wl.some((x) => x.s === s);
   const grid = document.getElementById('grid-watch');
   const ALIAS = {
@@ -106,7 +137,7 @@
         if (typeof yahooMemo !== 'undefined' && !yahooMemo[it.s]) yahooMemo[it.s] = wlMemo[it.s];
         if (q.name && !it.n) { it.n = q.name; changed = true; }
       });
-      if (changed) wlSave();
+      if (changed) wlSave(false);
       [...grid.querySelectorAll('.wl-card')].forEach((card) => {
         const s = card.dataset.symbol, d = wlMemo[s];
         if (d) { applyQuoteToCard(card, d, ''); if (typeof markStale === 'function') markStale(card, null); }
@@ -281,6 +312,7 @@
     wlRender();
     if (wpOn()) setTimeout(wlRefresh, 600);
     setTimeout(wlStars, 2500);
+    setTimeout(wlSync, 1500);
   }
 
   /* ---- gráfico do ativo (TradingView), aberto ao clicar num card da watchlist ---- */

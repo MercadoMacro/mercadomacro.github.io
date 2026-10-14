@@ -2589,7 +2589,7 @@ function ecalSetView(view) {
   }
   if (view === 'earn') ecalEarn();
   if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=3', '__focusRender', 'o Boletim Focus');
-  if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=1', '__bbrRender', 'a agenda de balanços do Brasil');
+  if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=2', '__bbrRender', 'a agenda de balanços do Brasil');
   if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=1', '__provRender', 'a agenda de proventos');
 }
 
@@ -4519,7 +4519,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'posicoes.js?v=1';
+    sc.src = 'posicoes.js?v=2';
     sc.onload = () => espera.forEach((x) => window.__posicoesRender && window.__posicoesRender(x.dataset.posicoes, x));
     sc.onerror = () => { pedido = false; espera.forEach((x) => { x.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>posicoes.js</b>.</div>'; }); espera.clear(); };
     document.body.appendChild(sc);

@@ -53,6 +53,7 @@ export default {
       }
       if (p === '/admin') return u.admin ? html(PAGINA_ADMIN) : redirect('/');
       if (p === '/conta') return html(PAGINA_CONTA);
+      if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p.startsWith('/api/admin/')) {
         if (!u.admin) return json({ erro: 'Sem permissão.' }, 403);
         return await apiAdmin(req, env, p.slice(11), u);
@@ -77,6 +78,38 @@ function contar(env, ctx, req, tipo) {
   ctx.waitUntil(env.DB.prepare('INSERT INTO visitas (dia, tipo, n) VALUES (?, ?, 1) ON CONFLICT(dia, tipo) DO UPDATE SET n = n + 1')
     .bind(dia, tipo).run().catch(() => {}));
 }
+// bloco do resumo semanal: posição dos especuladores (CFTC) em real, dólar, euro, ouro, petróleo e S&P,
+// com aviso quando algum está no extremo de 3 anos (0 a 10 = perto do mais vendido, 90 a 100 = perto do mais comprado)
+const COT_RESUMO = ['brl', 'dxy', 'eur', 'ouro', 'wti', 'spx'];
+async function especuladores() {
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/posicoes/cot.json', { cf: { cacheTtl: 600 } });
+    if (!r.ok) return '';
+    const j = await r.json();
+    const fmt = (x) => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toLocaleString('pt-BR');
+    let data = '';
+    const linhas = [], extremos = [];
+    for (const k of COT_RESUMO) {
+      const m = (j.mercados || []).find((x) => x.k === k);
+      const ss = m && m.semanas;
+      if (!ss || ss.length < 21) continue;
+      const nets = ss.map((w) => w.el - w.es);
+      const net = nets[nets.length - 1], ant = nets[nets.length - 2];
+      const min = Math.min(...nets), max = Math.max(...nets);
+      const idx = max > min ? Math.round((net - min) / (max - min) * 100) : null;
+      data = ss[ss.length - 1].d;
+      linhas.push(`- ${m.nome}: ${fmt(net)} contratos (${fmt(net - ant)} na semana)${idx != null ? `, ${idx} de 100 em 3 anos` : ''}`);
+      if (idx != null && idx >= 90) extremos.push(`${m.nome} perto do mais comprado em 3 anos`);
+      if (idx != null && idx <= 10) extremos.push(`${m.nome} perto do mais vendido em 3 anos`);
+    }
+    if (!linhas.length) return '';
+    return ['', '', `Especuladores nos futuros (CFTC, posição de ${data.slice(8, 10)}/${data.slice(5, 7)}):`, ...linhas, '',
+      extremos.length ? 'Atenção: ' + extremos.join('; ') + '.' : 'Nenhum desses mercados está num extremo de 3 anos.'].join('\n');
+  } catch (e) {
+    return '';
+  }
+}
+
 async function resumoSemanal(env) {
   const hoje = new Date(Date.now() - 3 * 3600000);
   const ate = new Date(hoje.getTime() - 86400000).toISOString().slice(0, 10); // ontem (domingo)
@@ -108,7 +141,7 @@ async function resumoSemanal(env) {
     `Usuários liberados no total: ${ativos}`,
     '',
     'Mais detalhes (países, aparelhos): painel da Cloudflare > Web Analytics.',
-  ].join('\n');
+  ].join('\n') + await especuladores();
   const enviado = await avisar(env, 'Resumo semanal do Mercado Macro', txt);
   await env.DB.prepare('DELETE FROM visitas WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run();
   return enviado;
@@ -137,6 +170,35 @@ async function usuarioDaSessao(req, env) {
 }
 function cookieSessao(tok, maxAge) {
   return `${COOKIE}=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+}
+
+/* ---------------- dados do usuário guardados na conta (hoje só a watchlist) ---------------- */
+// tabela dados_usuario(usuario_id, chave, valor, ts): o site manda a lista ao mudar e busca ao abrir,
+// e fica com a versão mais nova (ts em milissegundos, do navegador que mudou por último)
+const CHAVES_DADOS = { watchlist: (v) => Array.isArray(v) && v.length <= 30 && v.every((x) => x && typeof x.s === 'string' && x.s.length <= 24 && (x.n == null || (typeof x.n === 'string' && x.n.length <= 80))) };
+async function apiDados(req, env, u) {
+  const url = new URL(req.url);
+  if (req.method === 'GET') {
+    const k = url.searchParams.get('k') || '';
+    if (!CHAVES_DADOS[k]) return json({ erro: 'Chave desconhecida.' }, 400);
+    const r = await env.DB.prepare('SELECT valor, ts FROM dados_usuario WHERE usuario_id = ? AND chave = ?').bind(u.id, k).first();
+    return json(r ? { k, v: JSON.parse(r.valor), ts: r.ts } : { k, v: null, ts: 0 }, 200, { 'Cache-Control': 'no-store' });
+  }
+  if (req.method !== 'PUT') return json({ erro: 'Método não permitido.' }, 405);
+  if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+  const txt = await req.text();
+  if (txt.length > 8000) return json({ erro: 'Lista grande demais.' }, 413);
+  let b;
+  try { b = JSON.parse(txt); } catch (e) { return json({ erro: 'Dados inválidos.' }, 400); }
+  const ok = CHAVES_DADOS[b && b.k];
+  const ts = Math.floor(Number(b && b.ts));
+  if (!ok || !ok(b.v) || !(ts > 0)) return json({ erro: 'Dados inválidos.' }, 400);
+  const v = b.v.map((x) => (x.n ? { s: x.s, n: x.n } : { s: x.s }));
+  // só grava se for mais nova que a guardada (dois aparelhos mudando ao mesmo tempo)
+  await env.DB.prepare(`INSERT INTO dados_usuario (usuario_id, chave, valor, ts) VALUES (?, ?, ?, ?)
+    ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
+    .bind(u.id, b.k, JSON.stringify(v), ts).run();
+  return json({ ok: true });
 }
 
 /* ---------------- cadastro, login, saída ---------------- */
@@ -208,6 +270,7 @@ async function apiAuth(req, env, acao, ctx) {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind('sen:' + eu.id),
+      env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(eu.id),
     ]);
     cacheSessao.clear();
@@ -267,6 +330,7 @@ async function apiAdmin(req, env, acao, eu) {
     if (b.acao === 'excluir') {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(id),
       ]);
     } else if (novo) {

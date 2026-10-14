@@ -23,6 +23,24 @@
   const dmy = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}` : '—');
   const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const ok = (v) => v != null && isFinite(v);
+  const brl = (v) => {
+    if (!ok(v)) return '—';
+    const a = Math.abs(v), sg = v < 0 ? '−' : '';
+    const f = (x, c) => x.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
+    if (a >= 1e9) return `${sg}R$ ${f(a / 1e9, a >= 1e11 ? 0 : 1)} bi`;
+    if (a >= 1e6) return `${sg}R$ ${f(a / 1e6, 0)} mi`;
+    return `${sg}R$ ${f(a / 1e3, 0)} mil`;
+  };
+  // variação contra o mesmo período do ano anterior; com prejuízo num dos lados a % não faz sentido
+  const vari = (v, a) => {
+    if (!ok(v) || !ok(a)) return '';
+    if (a > 0 && v >= 0) { const p = (v / a - 1) * 100; return `<i class="${p >= 0 ? 'bb-up' : 'bb-dn'}">${p >= 0 ? '+' : '−'}${Math.abs(p).toLocaleString('pt-BR', { maximumFractionDigits: Math.abs(p) < 10 ? 1 : 0 })}%</i>`; }
+    if (a > 0 && v < 0) return '<i class="bb-dn">virou prejuízo</i>';
+    if (a < 0 && v > 0) return '<i class="bb-up">saiu do prejuízo</i>';
+    if (a < 0 && v < 0) return `<i class="${v > a ? 'bb-up' : 'bb-dn'}">${v > a ? 'prejuízo menor' : 'prejuízo maior'}</i>`;
+    return '';
+  };
   const MINUSC = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
   const nomeCurto = (s) => String(s || '').replace(/\s+(S\.?A\.?|S\/A)\.?$/i, '').replace(/\s+-\s+.*$/, '').trim().split(/\s+/).map((w, i) => {
     const l = w.toLocaleLowerCase('pt-BR');
@@ -96,6 +114,9 @@
         <span class="bb-tk">${esc((e.tickers || []).join(' · ') || '—')}</span>
         <span class="bb-n"><b>${esc(nomeCurto(e.nome))}</b><span>${esc(e.setor || '')}</span></span>
         <span class="bb-tri">${esc(x.tri)}</span>
+        ${x.res ? `<span class="bb-res" title="${x.res.per === 'ano' ? 'Ano inteiro' : 'Só o trimestre'}, contra o mesmo período do ano anterior">
+          <span><small>Receita</small><b>${brl(x.res.rec)}</b>${vari(x.res.rec, x.res.rec_a)}</span>
+          <span><small>Lucro${x.res.per === 'ano' ? ' no ano' : ''}</small><b class="${ok(x.res.luc) && x.res.luc < 0 ? 'bb-dn' : ''}">${brl(x.res.luc)}</b>${vari(x.res.luc, x.res.luc_a)}</span></span>` : x.st === 'feito' ? '<span class="bb-res" title="Receita e lucro não encontrados no documento"><span><small>Receita</small><b>—</b></span><span><small>Lucro</small><b>—</b></span></span>' : '<span class="bb-res"></span>'}
         ${tag(x)}
       </div>`;
     };
@@ -108,7 +129,7 @@
       </div>
       <div class="bb-list">${!lista.length ? `<div class="bb-msg">${prefs.q ? 'Nenhuma empresa encontrada neste período.' : 'Nenhum balanço neste período.'}</div>`
         : dias.map((dd) => `<div class="bb-day${dd === h ? ' today' : ''}">${esc(fmtDia(dd))} <small>${lista.filter((x) => x.data === dd).length}</small></div>${lista.filter((x) => x.data === dd).map(linha).join('')}`).join('')}</div>
-      <div class="calendar-footer"><span><b>Divulgado</b>: a CVM recebeu o ITR ou a DFP nesse dia (abre o documento). <b>Confirmada</b>: data anunciada pela empresa em comunicado ao mercado (abre o comunicado). <b>Provável</b>: a empresa ainda não anunciou; é o mesmo dia da semana em que entregou o mesmo trimestre no ano passado, então pode mudar.
+      <div class="calendar-footer"><span><b>Divulgado</b>: a CVM recebeu o ITR ou a DFP nesse dia (abre o documento); receita e lucro (parte dos controladores) são do próprio documento, só do trimestre (no 4º trimestre, o ano inteiro) e comparados com o mesmo período do ano anterior. <b>Confirmada</b>: data anunciada pela empresa em comunicado ao mercado (abre o comunicado). <b>Provável</b>: a empresa ainda não anunciou; é o mesmo dia da semana em que entregou o mesmo trimestre no ano passado, então pode mudar.
         Empresas com ação na B3. Fonte: <a href="https://dados.cvm.gov.br" target="_blank" rel="noopener">CVM Dados Abertos</a> (ITR, DFP e IPE), atualizado duas vezes por dia útil.</span></div>`;
   }
 
@@ -143,13 +164,20 @@
   .bb-day { position:sticky; top:0; z-index:1; background:var(--surface-2); padding:7px 14px; font-size:11.5px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--line); }
   .bb-day small { color:var(--text-3); font-weight:500; margin-left:4px; }
   .bb-day.today { color:var(--accent); }
-  .bb-row { display:grid; grid-template-columns:150px minmax(0,1fr) 54px 118px; gap:12px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line); }
+  .bb-row { display:grid; grid-template-columns:150px minmax(0,1fr) 54px 300px 118px; gap:12px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line); }
   .bb-row[data-t] { cursor:pointer; }
   .bb-row:hover { background:var(--surface-2); }
   .bb-tk { font:600 12.5px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .bb-n { display:flex; flex-direction:column; min-width:0; }
   .bb-n b { font-weight:500; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .bb-n span { font-size:11.5px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bb-res { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .bb-res > span { display:flex; flex-direction:column; min-width:0; }
+  .bb-res small { font-size:10.5px; color:var(--text-3); }
+  .bb-res b { font:600 12.5px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; }
+  .bb-res i { font-style:normal; font-size:11px; font-family:'JetBrains Mono', monospace; white-space:nowrap; }
+  .bb-up { color:var(--pos); } .bb-dn, .bb-res b.bb-dn { color:var(--neg); }
+  body.light .bb-up { color:color-mix(in srgb, var(--pos) 72%, #000); }
   .bb-tri { font:12px 'JetBrains Mono', monospace; color:var(--text-2); }
   .bb-tag { justify-self:end; font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; border:1px solid var(--line); text-decoration:none; white-space:nowrap; }
   .bb-feito { color:var(--pos); border-color:color-mix(in srgb, var(--pos) 40%, transparent); }
@@ -165,8 +193,9 @@
     .bb-bar .ecal-chip { flex:0 0 auto; }
     .bb-q { width:100%; }
     .bb-st { margin-left:0; }
-    .bb-row { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"tk tag" "n tri"; gap:2px 10px; padding:9px 12px; }
-    .bb-tk { grid-area:tk; } .bb-n { grid-area:n; } .bb-tri { grid-area:tri; justify-self:end; } .bb-tag { grid-area:tag; }
+    .bb-row { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"tk tag" "n tri" "res res"; gap:2px 10px; padding:9px 12px; }
+    .bb-tk { grid-area:tk; } .bb-n { grid-area:n; } .bb-tri { grid-area:tri; justify-self:end; } .bb-tag { grid-area:tag; } .bb-res { grid-area:res; margin-top:4px; }
+    .bb-res:empty { display:none; }
     .bb-list { max-height:none; min-height:0; }
   }`;
   document.head.appendChild(css);
