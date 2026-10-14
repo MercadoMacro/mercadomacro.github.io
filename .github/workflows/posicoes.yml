@@ -1,0 +1,41 @@
+# Posições dos grandes investidores: grava terminal/posicoes/cot.json (CFTC, posição dos
+# especuladores em moedas, juros, bolsas e commodities, sai toda sexta) e
+# terminal/posicoes/13f.json (SEC, carteiras dos grandes fundos americanos, sai a cada trimestre).
+name: Posições (CFTC e SEC 13F)
+
+on:
+  schedule:
+    - cron: '0 21 * * 5'    # sexta, 18h em Brasília, depois que a CFTC publica (15h30 em Nova York)
+    - cron: '0 12 * * 1-6'  # todo dia de manhã, para pegar 13F novos e atrasos da CFTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: posicoes
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: CFTC (posição dos especuladores)
+        run: python3 terminal/posicoes/gerar_cot.py terminal/posicoes
+      - name: SEC 13F (carteiras dos fundos)
+        run: python3 terminal/posicoes/gerar_13f.py terminal/posicoes
+      - name: Salvar no repositório
+        run: |
+          git config user.name "posicoes-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # o arquivo muda o campo "gerado" a cada execução; só grava se os dados mudaram
+          for f in cot.json 13f.json; do
+            p=terminal/posicoes/$f
+            if git cat-file -e HEAD:$p 2>/dev/null && [ "$(git show HEAD:$p | python3 -c 'import json,sys;d=json.load(sys.stdin);d.pop("gerado",None);print(json.dumps(d,sort_keys=True))')" = "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d.pop("gerado",None);print(json.dumps(d,sort_keys=True))' $p)" ]; then git checkout -q -- $p; fi
+          done
+          git add terminal/posicoes/cot.json terminal/posicoes/13f.json
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -m "Posições CFTC/13F: $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1
