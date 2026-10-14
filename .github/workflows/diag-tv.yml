@@ -1,0 +1,23 @@
+name: diag-tv
+on:
+  push:
+    paths: ['.github/workflows/diag-tv.yml']
+jobs:
+  tv:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: |
+          npm i --no-save --no-package-lock playwright@1.56.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          cat > s.mjs <<'X'
+          import { chromium } from 'playwright';
+          const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 900, height: 700 } });
+          await p.goto('file://' + process.cwd() + '/.github/diag/tv.html'); await p.waitForTimeout(12000);
+          for (const f of p.frames()) { try { const t = await f.evaluate(() => document.body.innerText); if (t.length > 50) console.log(t.slice(0, 1500)); } catch (e) {} }
+          await p.screenshot({ path: 'tv.png' }); await b.close();
+          X
+          node s.mjs
+      - uses: actions/upload-artifact@v4
+        with: { name: tv, path: tv.png }
