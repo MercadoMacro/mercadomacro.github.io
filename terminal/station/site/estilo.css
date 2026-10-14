@@ -1257,7 +1257,7 @@
   #ecal-alert-btn.active { color:var(--accent); border-color:var(--accent-line); }
   .calendar-layout.wide { grid-template-columns: minmax(0, 1fr) !important; }
   .calendar-layout.wide > .calendar-side { display: none !important; }
-  .ecal.hidden, .calendar-iframe-wrap.hidden, .earn.hidden, .focus.hidden, .prov.hidden, .ecal-actions.hidden, .ecal-status.hidden, .calendar-main > .calendar-footer.hidden { display:none !important; }
+  .ecal.hidden, .calendar-iframe-wrap.hidden, .earn.hidden, .focus.hidden, .prov.hidden, .bbr.hidden, .ecal-actions.hidden, .ecal-status.hidden, .calendar-main > .calendar-footer.hidden { display:none !important; }
   .ecal { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); overflow:hidden; }
   .ecal-filters { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
   .ecal-filter-row { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
