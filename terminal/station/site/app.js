@@ -4481,7 +4481,7 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
-   FLUXO NA B3 (última seção da aba Mercado): fluxo.js só é baixado
+   FLUXO NA B3 (aba Análises): fluxo.js só é baixado
    quando a seção chega perto da tela
    ========================================================= */
 (() => {
@@ -4503,7 +4503,7 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
-   POSIÇÕES (CFTC e SEC 13F, fim da aba Mercado): posicoes.js só é baixado
+   POSIÇÕES (CFTC e SEC 13F, aba Análises): posicoes.js só é baixado
    quando uma das duas seções chega perto da tela
    ========================================================= */
 (() => {

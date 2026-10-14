@@ -1,5 +1,5 @@
 /* =========================================================
-   POSIÇÕES DOS GRANDES INVESTIDORES (aba Mercado, duas seções)
+   POSIÇÕES DOS GRANDES INVESTIDORES (aba Análises, duas seções)
    1) "Posição dos especuladores": CFTC Commitments of Traders (relatório Legacy, só futuros).
       Contratos comprados menos vendidos dos "não comerciais" (fundos e gestores) e dos
       "comerciais" (quem usa o futuro para proteção). Sai toda sexta com dados da terça.

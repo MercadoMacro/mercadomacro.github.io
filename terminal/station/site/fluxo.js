@@ -1,5 +1,5 @@
 /* =========================================================
-   FLUXO DE INVESTIDORES NA B3 (aba Mercado, seção "Fluxo na B3")
+   FLUXO DE INVESTIDORES NA B3 (aba Análises, seção "Fluxo na B3")
    Compras menos vendas de estrangeiros, institucionais, pessoas físicas,
    instituições financeiras e demais, por dia, no mês e no ano.
    Fonte: fluxo/fluxo.json, gravado pelo robô do GitHub a partir do Boletim Diário

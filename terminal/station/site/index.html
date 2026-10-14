@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="estilo.css?v=7">
+<link rel="stylesheet" href="estilo.css?v=8">
 <style id="prefs-css">
   /* =====================================================================
      AJUSTES DO PAINEL (engrenagem): cor de destaque, papel de parede,
@@ -293,21 +293,6 @@
     <div class="market-section">
       <div class="market-section-head"><span class="sec-icon"><i class="fas fa-oil-can"></i></span><h2>Commodities</h2><span class="sec-count" id="m-count-commodities">—</span></div>
       <div class="market-grid" id="grid-commodities"></div>
-    </div>
-
-    <div class="market-section" id="mkt-sec-fluxo">
-      <div class="market-section-head"><span class="sec-icon"><i class="fas fa-exchange-alt"></i></span><h2>Fluxo na B3</h2><span class="sec-count">por investidor</span></div>
-      <div id="fluxo-root"><div class="fx-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">O fluxo de investidores carrega quando você chega aqui.</div></div>
-    </div>
-
-    <div class="market-section" id="mkt-sec-cot">
-      <div class="market-section-head"><span class="sec-icon"><i class="fas fa-balance-scale"></i></span><h2>Posição dos especuladores</h2><span class="sec-count">CFTC, semanal</span></div>
-      <div id="cot-root" data-posicoes="cot"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">A posição dos especuladores carrega quando você chega aqui.</div></div>
-    </div>
-
-    <div class="market-section" id="mkt-sec-13f">
-      <div class="market-section-head"><span class="sec-icon"><i class="fas fa-briefcase"></i></span><h2>Carteiras dos grandes fundos</h2><span class="sec-count">SEC 13F, trimestral</span></div>
-      <div id="f13-root" data-posicoes="f13"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As carteiras dos fundos carregam quando você chega aqui.</div></div>
     </div>
 
     <div class="market-note">
@@ -603,6 +588,21 @@
       </section>
 
       <p class="ana-foot" id="ana-usage"></p>
+    </div>
+
+    <div class="ana-extra">
+      <div class="market-section" id="ana-sec-fluxo">
+        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-exchange-alt"></i></span><h2>Fluxo na B3</h2><span class="sec-count">por investidor</span></div>
+        <div id="fluxo-root"><div class="fx-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">O fluxo de investidores carrega quando você chega aqui.</div></div>
+      </div>
+      <div class="market-section" id="ana-sec-cot">
+        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-balance-scale"></i></span><h2>Posição dos especuladores</h2><span class="sec-count">CFTC, semanal</span></div>
+        <div id="cot-root" data-posicoes="cot"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">A posição dos especuladores carrega quando você chega aqui.</div></div>
+      </div>
+      <div class="market-section" id="ana-sec-13f">
+        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-briefcase"></i></span><h2>Carteiras dos grandes fundos</h2><span class="sec-count">SEC 13F, trimestral</span></div>
+        <div id="f13-root" data-posicoes="f13"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As carteiras dos fundos carregam quando você chega aqui.</div></div>
+      </div>
     </div>
   </div>
 </div>
