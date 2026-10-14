@@ -53,6 +53,8 @@ const ROTAS = [
     (j) => { const ss = temLista(j.mercados) && j.mercados[0].semanas; return !temLista(ss) ? 'sem mercados' : (Date.now() - Date.parse(ss[ss.length - 1].d)) / 86400000 > 17 ? 'relatório com mais de 17 dias' : ''; }],
   ['Carteiras 13F SEC (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/posicoes/13f.json',
     (j) => (temLista(j.fundos) ? '' : 'sem fundos')],
+  ['Agenda de balanços B3 (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/balancos-br/agenda.json',
+    (j) => (temLista(j.proximos) || temLista(j.divulgados) ? (Date.now() - Date.parse(j.gerado)) / 86400000 > 5 ? 'agenda com mais de 5 dias' : '' : 'agenda vazia')],
   ['Fundamentos B3 (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fundamentos/index.json',
     (j) => (temLista(j.empresas) ? '' : 'índice sem empresas')]
 ];
