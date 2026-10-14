@@ -11,8 +11,12 @@ Grava terminal/balancos-br/agenda.json com:
 Só entram empresas que estão em terminal/fundamentos/index.json (as que têm ação na B3).
 Uso: python3 gerar_agenda.py <pasta_saida> <index_fundamentos.json>
 """
-import csv, io, json, re, subprocess, sys, tempfile, time, urllib.request, zipfile
+import csv, io, json, os, re, subprocess, sys, tempfile, time, urllib.request, zipfile
 from datetime import date, datetime, timedelta, timezone
+
+# reaproveita a leitura da DRE do robô dos Fundamentos (mesmas regras de lucro e receita)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cvm"))
+import gerar_fundamentos as gf  # noqa: E402
 
 BASE = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC"
 UA = {"User-Agent": "MercadoMacro (contato@mercadomacro.com.br)"}
@@ -120,6 +124,54 @@ def pdf_texto(dados):
             return ""
 
 
+def resultados(divulgados, zips, empresas):
+    """Receita e lucro de cada balanço divulgado contra o mesmo período do ano anterior.
+    ITR: só o trimestre (3 meses). DFP: o ano inteiro. Valores em R$, do próprio documento."""
+    quer = {}
+    for x in divulgados:
+        quer.setdefault((x["doc"], int(x["ref"][:4])), set()).add((x["cvm"], x["ref"]))
+    achados = {}
+    for (tipo, ano), alvos in quer.items():
+        z = zips.get((tipo, ano))
+        if not z:
+            continue
+        docs = {}
+        pre = tipo.lower()
+        for t in ("con", "ind"):
+            for r in gf.ler_csv(z, rf"{pre}_cia_aberta_DRE_{t}_\d{{4}}\.csv$"):
+                try:
+                    k = (int(r.get("CD_CVM") or 0), r.get("DT_REFER", ""))
+                except ValueError:
+                    continue
+                if k not in alvos:
+                    continue
+                ver = int(gf.num(r.get("VERSAO")) or 0)
+                d = docs.get(k)
+                if d is None or ver > d["ver"] or (ver == d["ver"] and d["tipo"] == "ind" and t == "con"):
+                    d = docs[k] = {"ver": ver, "tipo": t, "contas": {}}
+                elif ver < d["ver"] or d["tipo"] != t:
+                    continue
+                v = gf.num(r.get("VL_CONTA"))
+                if v is None:
+                    continue
+                if gf.norm(r.get("ESCALA_MOEDA")) == "MIL":
+                    v *= 1000
+                ordem = "U" if gf.norm(r.get("ORDEM_EXERC")).startswith("ULT") else "P"
+                d["contas"][("DRE", ordem, r.get("DT_INI_EXERC", ""), r.get("DT_FIM_EXERC", ""), r.get("CD_CONTA", ""))] = (gf.norm(r.get("DS_CONTA")), v)
+        for k, d in docs.items():
+            fin = bool(empresas.get(k[0], {}).get("fin"))
+            so_tri = tipo == "ITR"
+            u = gf.metricas(gf.recorte(d["contas"], "DRE", "U", ytd=not so_tri), {}, {}, {}, fin)
+            p = gf.metricas(gf.recorte(d["contas"], "DRE", "P", ytd=not so_tri), {}, {}, {}, fin)
+            achados[k] = {"per": "tri" if so_tri else "ano", "rec": u.get("receita"), "rec_a": p.get("receita"),
+                          "luc": u.get("lucro"), "luc_a": p.get("lucro")}
+        print(f"  {tipo} {ano}: resultado lido de {len(docs)} de {len(alvos)} documentos")
+    for x in divulgados:
+        r = achados.get((x["cvm"], x["ref"]))
+        if r and any(v is not None for v in r.values() if not isinstance(v, str)):
+            x["res"] = {k: (round(v) if isinstance(v, float) else v) for k, v in r.items()}
+
+
 def main():
     saida, idx_path = sys.argv[1], sys.argv[2]
     hoje = datetime.now(timezone.utc).date()
@@ -128,12 +180,14 @@ def main():
 
     # entregas de ITR e DFP: primeira data de recebimento de cada (empresa, data de referência)
     entregas = {}
+    zips = {}
     for tipo, anos in (("ITR", (hoje.year - 1, hoje.year)), ("DFP", (hoje.year - 2, hoje.year - 1))):
         for ano in anos:
             z = baixa(f"{BASE}/{tipo}/DADOS/{tipo.lower()}_cia_aberta_{ano}.zip")
             if not z:
                 print(f"  sem {tipo} {ano}")
                 continue
+            zips[(tipo, ano)] = z
             linhas = le_csv(z, f"{tipo.lower()}_cia_aberta_{ano}.csv")
             print(f"  {tipo} {ano}: {len(linhas)} entregas")
             for l in linhas:
@@ -154,6 +208,7 @@ def main():
         if e["data"] >= limite:
             divulgados.append({"cvm": cvm, "ref": ref, "tri": tri_nome(ref), "data": e["data"], "doc": e["doc"], "link": e["link"]})
     divulgados.sort(key=lambda x: (x["data"], x["cvm"]), reverse=True)
+    resultados(divulgados, zips, empresas)
 
     # trimestre em aberto: o último que já fechou (e o anterior, para quem ainda não entregou)
     alvo = fim_trimestre_anterior(hoje)
