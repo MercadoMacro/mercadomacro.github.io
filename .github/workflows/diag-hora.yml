@@ -1,0 +1,12 @@
+name: diag-hora
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null
+      - run: |
+          for d in 2026-10-14 2026-10-13 2026-10-09 2026-10-08 2026-10-07; do
+            y=${d//-/}; echo "== $d"
+            curl -sS -m 200 -A 'Mozilla/5.0' -o b.pdf "https://arquivos.b3.com.br/bdi/download/bdi/$d/BDI_02_$y.pdf"; pdfinfo b.pdf | grep -i -E "date|pages" || true
+          done
