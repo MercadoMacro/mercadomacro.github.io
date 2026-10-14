@@ -4503,6 +4503,31 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
+   POSIÇÕES (CFTC e SEC 13F, fim da aba Mercado): posicoes.js só é baixado
+   quando uma das duas seções chega perto da tela
+   ========================================================= */
+(() => {
+  const els = [...document.querySelectorAll('[data-posicoes]')];
+  if (!els.length) return;
+  let pedido = false;
+  const espera = new Set();
+  const carrega = (el) => {
+    if (window.__posicoesRender) { window.__posicoesRender(el.dataset.posicoes, el); return; }
+    espera.add(el);
+    if (pedido) return;
+    pedido = true;
+    const sc = document.createElement('script');
+    sc.src = 'posicoes.js?v=1';
+    sc.onload = () => espera.forEach((x) => window.__posicoesRender && window.__posicoesRender(x.dataset.posicoes, x));
+    sc.onerror = () => { pedido = false; espera.forEach((x) => { x.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>posicoes.js</b>.</div>'; }); espera.clear(); };
+    document.body.appendChild(sc);
+  };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); carrega(e.target); } }), { rootMargin: '600px 0px' });
+    els.forEach((el) => io.observe(el));
+  } else els.forEach(carrega);
+})();
+/* =========================================================
    OPÇÕES: o código fica em opcoes.js (mesma pasta do index.html)
    e só é baixado na primeira vez que a aba é aberta
    ========================================================= */

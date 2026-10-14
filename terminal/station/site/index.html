@@ -300,6 +300,16 @@
       <div id="fluxo-root"><div class="fx-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">O fluxo de investidores carrega quando você chega aqui.</div></div>
     </div>
 
+    <div class="market-section" id="mkt-sec-cot">
+      <div class="market-section-head"><span class="sec-icon"><i class="fas fa-balance-scale"></i></span><h2>Posição dos especuladores</h2><span class="sec-count">CFTC, semanal</span></div>
+      <div id="cot-root" data-posicoes="cot"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">A posição dos especuladores carrega quando você chega aqui.</div></div>
+    </div>
+
+    <div class="market-section" id="mkt-sec-13f">
+      <div class="market-section-head"><span class="sec-icon"><i class="fas fa-briefcase"></i></span><h2>Carteiras dos grandes fundos</h2><span class="sec-count">SEC 13F, trimestral</span></div>
+      <div id="f13-root" data-posicoes="f13"><div class="ps-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As carteiras dos fundos carregam quando você chega aqui.</div></div>
+    </div>
+
     <div class="market-note">
       <strong>ℹ Nota:</strong> Cotações via Yahoo Finance (delay de 15min), Banco Central, AwesomeAPI e FRED. Minério de ferro via Investing (SGX) ou Sina (Dalian).
       Com <strong>Ao vivo</strong> ligado, atualização automática a cada 5 minutos. Desligado, usa o último snapshot salvo.
@@ -723,7 +733,7 @@
 <div id="toast-container"></div>
 
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <script src="ajustes.js?v=5"></script>
 <script src="extras.js?v=5"></script>
 </body>

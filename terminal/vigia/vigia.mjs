@@ -49,6 +49,10 @@ const ROTAS = [
   ['Notícias (worker de notícias)', NEWS, null, (t) => (t.length > 50 ? '' : 'resposta vazia')],
   ['Fluxo de investidores B3 (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json',
     (j) => (!temLista(j.dias) ? 'sem pregões' : (Date.now() - Date.parse(j.dias[j.dias.length - 1].data)) / 86400000 > 8 ? 'último pregão com mais de 8 dias' : '')],
+  ['Posição dos especuladores CFTC (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/posicoes/cot.json',
+    (j) => { const ss = temLista(j.mercados) && j.mercados[0].semanas; return !temLista(ss) ? 'sem mercados' : (Date.now() - Date.parse(ss[ss.length - 1].d)) / 86400000 > 17 ? 'relatório com mais de 17 dias' : ''; }],
+  ['Carteiras 13F SEC (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/posicoes/13f.json',
+    (j) => (temLista(j.fundos) ? '' : 'sem fundos')],
   ['Fundamentos B3 (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fundamentos/index.json',
     (j) => (temLista(j.empresas) ? '' : 'índice sem empresas')]
 ];
