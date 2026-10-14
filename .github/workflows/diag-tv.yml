@@ -20,3 +20,4 @@ jobs:
           X
           node s.mjs
           echo B64START; base64 -w0 tv.jpg; echo; echo B64END
+# rodada 2

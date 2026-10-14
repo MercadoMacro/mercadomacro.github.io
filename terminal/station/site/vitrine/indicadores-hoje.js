@@ -45,7 +45,7 @@
         var u = s[s.length - 1], ant = s.length > 4 ? s[s.length - 5] : null; if (u[0] > data) data = u[0];
         var v = l[2] === '%' ? M.nf(u[1], l[3]) + '%' : l[2] + M.nf(u[1], l[3]);
         var seta = ant && u[1] !== ant[1] ? ' <small style="display:inline">' + (u[1] > ant[1] ? '▲' : '▼') + '</small>' : '';
-        return '<td data-l="' + a + '">' + v + seta + '</td>';
+        return '<td data-l="' + a + '"><span>' + v + seta + '</span></td>';
       }).join('') + '</tr>';
     }).join('');
     if (data) $('focus-nota').textContent = 'Mediana das projeções de economistas no Boletim Focus de ' + data.split('-').reverse().join('/') + ', do Banco Central. A seta compara com 4 semanas antes.';
