@@ -52,7 +52,7 @@ def fim_trimestre_anterior(d):
     return [date(d.year, 3, 31), date(d.year, 6, 30), date(d.year, 9, 30)][q - 1]
 
 
-def datas_no_texto(t):
+def datas_no_texto(t, entrega):
     """Lista de (data, posição no texto) de cada data escrita como dd/mm/aaaa ou "dd de mês de aaaa"."""
     t = t.lower()
     achadas = []
@@ -61,10 +61,24 @@ def datas_no_texto(t):
     for m in re.finditer(r"\b(\d{1,2})º?\s+de\s+([a-zç]+)\s+de\s+(\d{4})\b", t):
         if m.group(2) in MESES:
             achadas.append((int(m.group(3)), MESES[m.group(2)], int(m.group(1)), m.start()))
+    # sem ano ("29 de outubro", "29/10"): fica com o ano do comunicado (ou o seguinte, se já passou)
+    ocupadas = {pos for *_, pos in achadas}
+    for m in re.finditer(r"\b(\d{1,2})º?\s+de\s+([a-zç]+)\b(?!\s+de\s+\d{4})", t):
+        if m.group(2) in MESES and m.start() not in ocupadas:
+            achadas.append((0, MESES[m.group(2)], int(m.group(1)), m.start()))
+    for m in re.finditer(r"\b(\d{1,2})/(\d{1,2})\b(?!/\d)", t):
+        if m.start() not in ocupadas and 1 <= int(m.group(2)) <= 12:
+            achadas.append((0, int(m.group(2)), int(m.group(1)), m.start()))
     res = []
     for a, mes, d, pos in achadas:
         try:
-            res.append((date(a, mes, d), pos))
+            if a == 0:
+                x = date(entrega.year, mes, d)
+                if x < entrega:
+                    x = date(entrega.year + 1, mes, d)
+            else:
+                x = date(a, mes, d)
+            res.append((x, pos))
         except ValueError:
             pass
     return res
@@ -76,9 +90,15 @@ def data_da_divulgacao(texto, entrega, alvo):
     baixo = texto.lower()
     chaves = [m.start() for m in re.finditer(r"divulga|resultado|release|teleconfer|webcast", baixo)]
     melhores = []
-    for d, pos in datas_no_texto(texto):
+    mudou = re.search(r"antecipad|adiad|alterad|posterg|remarcad|nova data", baixo)
+    for d, pos in datas_no_texto(texto, entrega):
         if not (entrega < d <= entrega + timedelta(days=75)) or d <= alvo:
             continue
+        antes, depois = baixo[max(0, pos - 12):pos], baixo[pos:pos + 70]
+        if re.search(r"(\bde|desde|a partir de)\s*$", antes) and re.search(r"\baté\b", depois):
+            continue  # início de um período ("de 6 de outubro até a divulgação"): período de silêncio
+        if mudou and re.search(r"\bde\s*$", antes) and re.search(r"\bpara\b", depois[:60]):
+            continue  # data antiga em "de X para Y"
         dist = min((abs(pos - c) for c in chaves), default=10 ** 6)
         melhores.append((dist, d, pos))
     if not melhores:
