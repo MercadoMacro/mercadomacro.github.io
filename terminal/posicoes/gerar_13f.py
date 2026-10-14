@@ -84,6 +84,13 @@ def le_tabela(xml_bytes, mil):
                                  "v": 0.0, "q": 0.0})
         p["v"] += valor
         p["q"] += qtd
+    # alguns gestores continuam mandando o valor em milhares mesmo depois de 2023:
+    # se o preço médio implícito das ações for menor que US$ 1, o valor está em milhares
+    precos = sorted(p["v"] / p["q"] for p in pos.values() if p["tipo"] == "SH" and not p["pc"] and p["q"] > 0)
+    if not mil and precos and precos[len(precos) // 2] < 1:
+        print("    valores em milhares de dólares, corrigindo")
+        for p in pos.values():
+            p["v"] *= 1000
     return pos
 
 
@@ -126,7 +133,7 @@ def arred(x):
 
 def main():
     saida = sys.argv[1] if len(sys.argv) > 1 else "."
-    limite = (datetime.now(timezone.utc) - timedelta(days=470)).strftime("%Y-%m-%d")
+    limite = (datetime.now(timezone.utc) - timedelta(days=300)).strftime("%Y-%m-%d")
     fundos = []
     for cik, apelido, gestor, palavra in FUNDOS:
         nome, fs = filings(cik)

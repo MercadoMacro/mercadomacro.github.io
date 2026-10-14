@@ -23,7 +23,7 @@ MERCADOS = [
     ("096742", "gbp", "Libra", "Moedas", "BRITISH POUND"),
     ("13874A", "spx", "S&P 500 (E-mini)", "Bolsas e juros", "S&P 500"),
     ("209742", "ndx", "Nasdaq 100 (E-mini)", "Bolsas e juros", "NASDAQ"),
-    ("043602", "t10", "Treasury 10 anos", "Bolsas e juros", "10-YEAR"),
+    ("043602", "t10", "Treasury 10 anos", "Bolsas e juros", "10Y"),
     ("133741", "btc", "Bitcoin (CME)", "Bolsas e juros", "BITCOIN"),
     ("088691", "ouro", "Ouro", "Commodities", "GOLD"),
     ("084691", "prata", "Prata", "Commodities", "SILVER"),
