@@ -192,8 +192,8 @@
 
   /* ---------------- por dentro do painel ---------------- */
   var TOUR = [
-    ['mercado', 'fa-chart-bar', 'Mercado', 'O panorama completo em cartões: índices do mundo todo, Brasil, moedas, cripto, juros, commodities e o fluxo na B3.',
-      ['Gráfico do dia em cada cartão e histórico de 3 meses', 'Selic e IPCA com a próxima reunião do Copom', 'Fluxo diário do estrangeiro, das instituições e da pessoa física']],
+    ['mercado', 'fa-chart-bar', 'Mercado', 'O panorama completo em cartões: índices do mundo todo, Brasil, moedas, cripto, juros e commodities.',
+      ['Gráfico do dia em cada cartão e histórico de 3 meses', 'Selic e IPCA com a próxima reunião do Copom', 'Clique em qualquer cartão para abrir o gráfico completo']],
     ['mesa', 'fa-th-large', 'Mesa', 'Uma tela só, densa como a de uma mesa de operações, para bater o olho e entender o dia.',
       ['Tabelas de índices, moedas e commodities lado a lado', 'Curva de juros do Tesouro, prefixada e IPCA+, com comparação de datas', 'Juros do Fed e Selic, risco-país (CDS) e as últimas notícias']],
     ['mapa', 'fa-th', 'Mapa de calor', 'Veja de uma vez quem sobe e quem cai, do Ibovespa ao Nasdaq e às criptomoedas.',
@@ -203,7 +203,7 @@
     ['fundamentos', 'fa-building', 'Fundamentos', 'Balanços das empresas da B3, direto da CVM, e das empresas americanas.',
       ['Receita, lucro, margens, dívida e indicadores de valor', 'Séries anuais para ver a evolução da empresa', 'Busca de ações dos EUA']],
     ['calendario', 'fa-calendar-alt', 'Calendário', 'A agenda que move o mercado, com o que já saiu e o que vem por aí.',
-      ['Agenda econômica do Brasil e do mundo, com o que saiu acima ou abaixo do esperado', 'Balanços das empresas dos EUA e proventos', 'Boletim Focus semana a semana']],
+      ['Agenda econômica do Brasil e do mundo, com o que saiu acima ou abaixo do esperado', 'Datas de balanço das empresas da B3 e dos EUA, e proventos', 'Boletim Focus semana a semana']],
     ['calculadora', 'fa-calculator', 'Calculadoras', 'Simuladores que recalculam na hora, enquanto você digita.',
       ['Renda fixa líquida de IR, com taxas do Tesouro Direto', 'Juros compostos, aposentadoria e financiamento SAC ou Price', 'Preço médio, risco por operação e inflação acumulada']],
     ['opcoes', 'fa-bullseye', 'Opções', 'Um laboratório completo para montar e entender estratégias com opções.',
@@ -266,8 +266,8 @@
     ['fa-th', 'Mapa de calor', 'Ibovespa, bolsas americanas e cripto coloridos por desempenho.'],
     ['fa-newspaper', 'Notícias', 'Fontes do Brasil e do mundo, com destaque para o que move preço.'],
     ['fa-book-open', 'Resumo semanal', 'O que aconteceu na semana, contado de forma direta.'],
-    ['fa-calendar-alt', 'Calendário', 'Agenda econômica, balanços dos EUA e Boletim Focus.'],
-    ['fa-chart-line', 'Análises', 'Humor do mercado, destaques do dia, tendência, volatilidade e comparador.'],
+    ['fa-calendar-alt', 'Calendário', 'Agenda econômica, datas de balanço do Brasil e dos EUA, proventos e Boletim Focus.'],
+    ['fa-chart-line', 'Análises', 'Humor do mercado, comparador, fluxo na B3, posição dos especuladores e carteiras dos grandes fundos.'],
     ['fa-building', 'Fundamentos', 'Balanços da B3 pela CVM e das empresas americanas.'],
     ['fa-percentage', 'Indicadores', 'Brasil e EUA com séries oficiais e 20 anos de comparação.'],
     ['fa-calculator', 'Calculadoras', 'Renda fixa, juros compostos, aposentadoria, financiamento e mais.'],
