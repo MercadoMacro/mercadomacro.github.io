@@ -1,0 +1,13 @@
+name: diag-vt
+on:
+  push:
+    paths: ['.github/workflows/diag-vt.yml']
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          B=https://mercadomacro-vitrine.cota-cotacao10.workers.dev
+          curl -sS -m 30 -H "Origin: https://mercadomacro.com.br" -w "\nHTTP %{http_code}\n" "$B/quotes?symbols=%5EBVSP,BRL%3DX" | head -c 300; echo
+          curl -sS -m 30 -H "Origin: https://mercadomacro.com.br" -w "\nHTTP %{http_code}\n" "$B/bcb?c=432&n=1"; echo
+          curl -sS -m 30 -H "Origin: https://evil.com" -w "\nHTTP %{http_code}\n" "$B/quotes?symbols=%5EBVSP"; echo
