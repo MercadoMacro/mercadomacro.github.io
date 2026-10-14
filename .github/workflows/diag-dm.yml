@@ -1,0 +1,11 @@
+name: diag-dm
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          curl -sS -m 60 -A 'Mozilla/5.0' https://www.dadosdemercado.com.br/fluxo -o p.html
+          sed 's/<script.*//' p.html | sed 's/<[^>]*>/ /g' | tr -s ' \n' | grep -v '^\s*$' | grep -i -n -E "fonte|B3|estrangeiro|09/10/2026|atualiz" | head -40
+          echo ----; grep -o -E 'https?://[^"'"'"' ]*b3[^"'"'"' ]*' p.html | sort -u | head
+          echo ----; sed 's/<[^>]*>/ /g' p.html | tr -s ' \n' | grep -A12 "09/10/2026" | head -14
