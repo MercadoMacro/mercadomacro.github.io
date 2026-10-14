@@ -239,9 +239,11 @@ async function noticiasDoDia() {
     .sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
   for (const n of cands) {
     const w = palavras(n.titulo);
-    const parecida = escolhidas.some((e) => { let c = 0; for (const x of w) if (e.w.has(x)) c++; return c / Math.max(1, Math.min(w.size, e.w.size)) >= 0.5; });
-    if (parecida) continue;
-    escolhidas.push({ w, t: n.titulo.trim(), f: (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '', link: n.link });
+    const parecida = escolhidas.some((e) => { let c = 0; for (const x of w) if (e.w.has(x)) c++; return c / Math.max(1, Math.min(w.size, e.w.size)) >= 0.4; });
+    const f = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
+    // no máximo 2 do mesmo veículo, para variar as fontes
+    if (parecida || escolhidas.filter((e) => e.f === f).length >= 2) continue;
+    escolhidas.push({ w, t: n.titulo.trim(), f, link: n.link });
     if (escolhidas.length === 4) break;
   }
   return escolhidas.map(({ t, f, link }) => ({ t, f, link }));
