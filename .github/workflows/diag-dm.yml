@@ -6,9 +6,7 @@ jobs:
     steps:
       - run: |
           set +e
-          curl -sS -m 60 -A 'Mozilla/5.0' https://arquivos.b3.com.br/bdi/ -o i.html; wc -c i.html; grep -o -E 'src="[^"]+\.js"' i.html | head
-          for js in $(grep -o -E 'src="[^"]+\.js"' i.html | sed 's/src="//;s/"$//'); do
-            u="$js"; case "$u" in http*) ;; /*) u="https://arquivos.b3.com.br$u";; *) u="https://arquivos.b3.com.br/bdi/$u";; esac
-            curl -sS -m 60 "$u" -o j.js; echo "== $u $(wc -c < j.js)"
-            grep -o -E '.{0,80}(table/|Investor|Participa|investor)[^"]{0,80}' j.js | head -20
-          done
+          curl -sS -m 60 https://arquivos.b3.com.br/bdi/config.js | grep -i -E "serverUrl|url" | head
+          curl -sS -m 60 https://arquivos.b3.com.br/bdi/static/js/main.e591a35328ff179145c0.js -o j.js
+          grep -o -E 'config\.serverUrl \+ \\"/table/\\" \+[^;]{0,300}' j.js | head -3
+          grep -o -E '.{0,200}/table/\\".{0,400}' j.js | head -4
