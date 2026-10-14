@@ -44,7 +44,9 @@ const linha = (nome, s, fmt) => `${nome}: ${cot[s] ? fmt(cot[s].v) + pct(cot[s].
 
 // ---- juros
 let selic = '—';
-for (const u of [[API + '/bcb?c=432&q=' + encodeURIComponent('/ultimos/1'), true], ['https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json', false]]) {
+// o SGS do Banco Central às vezes recusa a Cloudflare ou demora; tenta pelo Worker e depois direto, algumas vezes
+const SGS = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
+for (const u of [[API + '/bcb?c=432&q=' + encodeURIComponent('/ultimos/1'), true], [SGS, false], [SGS, false], [API + '/bcb?c=432&q=' + encodeURIComponent('/ultimos/1'), true], [SGS, false]]) {
   try { const j = await pega(...u); const v = parseFloat(j?.[0]?.valor); if (isFinite(v)) { selic = br(v, 2) + '%'; break; } } catch (e) { console.error('selic:', e.message); }
 }
 let pre = null, ipca = null;
