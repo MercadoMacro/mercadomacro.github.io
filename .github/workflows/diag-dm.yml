@@ -7,8 +7,11 @@ jobs:
       - run: |
           set +e
           B=https://arquivos.b3.com.br/bdi
-          curl -sS -m 60 -w "\nHTTP %{http_code}\n" "$B/table/all" -o all.json; head -c 300 all.json; echo
-          jq -c '..|objects|select((tostring|test("nvestid|Participa";"i")))' all.json 2>/dev/null | head -c 2500; echo
-          curl -sS -m 60 "$B/table/classifications" | head -c 1500; echo
-          curl -sS -m 60 -o j.js $B/static/js/main.e591a35328ff179145c0.js
-          grep -o -E 'function fetchAPI.{0,600}' j.js | head -2
+          curl -sS -m 60 "$B/table/classifications" -o c.json
+          jq -r '..|objects|select(has("tables"))|.tables|to_entries[]|.value|select((.friendlyNamePt+.name)|test("nvestid|articipa";"i"))|[.name,.friendlyNamePt,.defaultDate,.limitDate]|@tsv' c.json
+          for N in $(jq -r '..|objects|select(has("tables"))|.tables|to_entries[]|.value|select((.friendlyNamePt+.name)|test("nvestid|articipa";"i"))|.name' c.json | sort -u); do
+            for d in 2026-10-14 2026-10-13; do
+              echo "== $N $d GET"; curl -sS -m 60 "$B/table/$N/$d/$d/1/50" | head -c 1500; echo
+              echo "== $N $d POST"; curl -sS -m 60 -X POST -H 'Content-Type: application/json' -d '{}' "$B/table/$N/$d/$d/1/50" | head -c 1500; echo
+            done
+          done
