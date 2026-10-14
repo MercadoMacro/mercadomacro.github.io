@@ -71,7 +71,7 @@
       const r = await fetch('/api/admin/fechamento', { credentials: 'same-origin', cache: 'no-store' });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erro || 'Não foi possível buscar os números.');
-      dados = j; desenha(j); msg('');
+      dados = j; desenha(j); $('texto').textContent = j.texto || ''; $('f-modo').value = j.modo || 'imagem'; msg('');
     } catch (e) { msg(e.message, true); }
     finally { $('f-atualizar').disabled = false; }
   }
@@ -84,7 +84,35 @@
   }
   const nome = () => 'fechamento-' + (dados ? dados.data : 'mercado') + '.png';
 
+  async function post(rota, corpo) {
+    const r = await fetch('/api/admin/' + rota, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || 'Não foi possível.');
+    return j;
+  }
+  function ver(qual) {
+    document.querySelectorAll('.abas button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ver === qual)));
+    $('texto').hidden = qual !== 'texto';
+    document.querySelector('.palco').hidden = qual === 'texto';
+  }
   function liga() {
+    document.querySelectorAll('.abas button').forEach((b) => { b.onclick = () => ver(b.dataset.ver); });
+    $('f-telegram-txt').onclick = async function () {
+      if (!dados) return;
+      this.disabled = true; msg('Mandando no Telegram…');
+      try { await post('fechamento-texto', { texto: dados.texto }); msg('Texto enviado. Confira o Telegram.'); }
+      catch (e) { msg(e.message, true); } finally { this.disabled = false; }
+    };
+    $('f-copiar').onclick = async function () {
+      if (!dados) return;
+      try { await navigator.clipboard.writeText(dados.texto || ''); msg('Texto copiado. É só colar no WhatsApp ou onde quiser.'); }
+      catch (e) { ver('texto'); msg('Não deu para copiar sozinho: o texto está aberto abaixo para você selecionar.', true); }
+    };
+    $('f-modo').onchange = async function () {
+      const v = this.value;
+      try { await post('fechamento-modo', { modo: v }); msg(v === 'texto' ? 'Às 18h vai só o texto.' : 'Às 18h vai a imagem com legenda.'); }
+      catch (e) { msg(e.message, true); this.value = v === 'texto' ? 'imagem' : 'texto'; }
+    };
     $('f-atualizar').onclick = carrega;
     $('f-baixar').onclick = async function () {
       if (!dados) return;

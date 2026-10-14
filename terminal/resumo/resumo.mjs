@@ -28,7 +28,9 @@ if (!dados.pregao && !FORCAR) {
 }
 
 let foto = null;
-try {
+// em /fechamento o administrador escolhe se o envio automático vai com imagem ou só em texto
+if (dados.modo === 'texto') console.log('\nModo escolhido: só texto.');
+else try {
   const { chromium } = await import('playwright');
   const TIPOS = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
   const br = await chromium.launch();

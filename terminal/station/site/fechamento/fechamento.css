@@ -8,6 +8,12 @@ body { margin: 0; background: #04070d; color: #e6ecf5; font-family: Inter, syste
 .fb:disabled { opacity: .55; cursor: default; }
 #f-msg { font-size: 13px; color: #a8b3c7; }
 #f-msg.erro { color: #ff6b74; }
+.fmodo { font-size: 13px; color: #a8b3c7; display: inline-flex; gap: 6px; align-items: center; }
+.fmodo select { font: 600 13px Inter, sans-serif; background: #121a2b; color: #e6ecf5; border: 1px solid #24304d; border-radius: 8px; padding: 7px 8px; }
+.abas { display: flex; justify-content: center; gap: 6px; padding: 4px 16px 10px; }
+.abas button { font: 600 13px Inter, sans-serif; color: #a8b3c7; background: transparent; border: 1px solid #24304d; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.abas button[aria-selected="true"] { color: #070b14; background: #f0b90b; border-color: #f0b90b; }
+.texto { max-width: 540px; margin: 0 auto 40px; padding: 16px; background: #0e1524; border: 1px solid #1c2740; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font: 14px/1.5 Inter, sans-serif; color: #e6ecf5; }
 .palco { display: flex; justify-content: center; padding: 8px 16px 40px; overflow-x: auto; }
 
 .card { width: 540px; flex: 0 0 540px; background: #070b14; border-radius: 18px; overflow: hidden; border: 1px solid #1c2740; }
@@ -56,4 +62,4 @@ body { margin: 0; background: #04070d; color: #e6ecf5; font-family: Inter, syste
 .rod { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 16px 14px; border-top: 1px solid #1c2740; background: #0b1220; }
 .rod b { font: 700 13px Inter, sans-serif; color: #f0b90b; }
 .rod span { font-size: 9.5px; color: #8591a8; text-align: right; line-height: 1.4; }
-.robo .ferr { display: none; } .robo .palco { padding: 0; } .robo .card { border-radius: 0; border: 0; }
+.robo .ferr, .robo .abas { display: none; } .robo .palco { padding: 0; } .robo .card { border-radius: 0; border: 0; }

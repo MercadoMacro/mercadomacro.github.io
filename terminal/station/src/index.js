@@ -451,8 +451,26 @@ async function apiAuth(req, env, acao, ctx) {
 /* ---------------- administração ---------------- */
 async function apiAdmin(req, env, acao, eu) {
   if (acao === 'fechamento' && req.method === 'GET') {
-    const d = await dadosFechamento(env);
-    return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true) }, 200, { 'Cache-Control': 'no-store' });
+    const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
+    return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+  }
+  if (acao === 'fechamento-modo' && req.method === 'POST') {
+    // como o robô das 18h manda o fechamento: 'imagem' (cartão com legenda) ou 'texto' (só a mensagem)
+    if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+    const b = await req.json().catch(() => ({}));
+    if (!['imagem', 'texto'].includes(b.modo)) return json({ erro: 'Modo inválido.' }, 400);
+    await salvarConfig(env, { fech_modo: b.modo });
+    return json({ ok: true, modo: b.modo });
+  }
+  if (acao === 'fechamento-texto' && req.method === 'POST') {
+    if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+    const b = await req.json().catch(() => ({}));
+    const t = String(b.texto || '').slice(0, 3500);
+    if (!t) return json({ erro: 'Sem texto.' }, 400);
+    const c = await config(env);
+    if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
+    const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: t, disable_web_page_preview: true });
+    return r.ok ? json({ ok: true }) : json({ erro: 'O Telegram não recebeu.' }, 502);
   }
   if (acao === 'fechamento-foto' && req.method === 'POST') {
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
@@ -603,7 +621,7 @@ async function avisoDoVigia(req, env) {
     const r = await telegramFoto(env, png, b.texto);
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
-  const texto = String(b.texto || '').slice(0, 1500);
+  const texto = String(b.texto || '').slice(0, 3500);
   if (!texto) return json({ erro: 'Sem texto.' }, 400);
   const c = await config(env);
   if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Telegram não conectado.' }, 409);
@@ -614,8 +632,8 @@ async function avisoDoVigia(req, env) {
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
-  const d = await dadosFechamento(env);
-  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true) }, 200, { 'Cache-Control': 'no-store' });
+  const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
+  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
 }
 
 /* ---------------- utilidades ---------------- */
