@@ -147,6 +147,91 @@ async function resumoSemanal(env) {
   return enviado;
 }
 
+/* ---------------- resumo do fechamento (botão em /admin) ----------------
+   Mesmo texto do robô terminal/resumo/resumo.mjs (que manda sozinho às 18h pelo GitHub Actions).
+   As cotações vêm do worker shrill-meadow pela ligação de serviço API (wrangler.jsonc). */
+const ORIGEM_SITE = 'https://station.danilo-nillo.workers.dev';
+async function resumoFechamento(env) {
+  const api = async (rota) => {
+    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
+    const r = env.API ? await env.API.fetch(req) : await fetch(req);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  };
+  const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
+  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
+  const hojeBR = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const SIMB = ['^BVSP', 'BRL=X', 'EURBRL=X', '^GSPC', 'BZ=F', '^TNX', 'BTC-USD'];
+  const cot = {};
+  try {
+    const j = await api('/quotes?symbols=' + SIMB.map(encodeURIComponent).join(','));
+    for (const s of SIMB) {
+      const m = j?.[s]?.chart?.result?.[0]?.meta;
+      if (!m || typeof m.regularMarketPrice !== 'number') continue;
+      const ant = m.chartPreviousClose ?? m.previousClose;
+      const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
+      cot[s] = { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
+    }
+  } catch (e) { /* fica "—" */ }
+  const linha = (nome, s, fmt) => `${nome}: ${cot[s] ? fmt(cot[s].v) + pct(cot[s].ch) : '—'}`;
+  let selic = '—';
+  const SGS = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
+  for (const via of ['api', 'bcb', 'api']) {
+    try {
+      const j = via === 'api' ? await api('/bcb?c=432&q=' + encodeURIComponent('/ultimos/1')) : await (await fetch(SGS)).json();
+      const v = parseFloat(j?.[0]?.valor);
+      if (isFinite(v)) { selic = brn(v, 2) + '%'; break; }
+    } catch (e) { /* tenta a próxima */ }
+  }
+  let pre = null, ipca = null;
+  try {
+    const j = await api('/tesouro');
+    const ano = (t) => +String(t.vencimento || '').slice(6);
+    const maisLongo = (re) => (j.titulos || []).filter((t) => re.test(t.nome) && ano(t)).sort((a, b) => ano(b) - ano(a))[0];
+    pre = maisLongo(/^tesouro prefixado \d{4}$/i);
+    ipca = maisLongo(/^tesouro ipca\+ \d{4}$/i);
+  } catch (e) { /* fica "—" */ }
+  let fluxo = ['Estrangeiro na B3: —'];
+  try {
+    const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 300 } })).json();
+    const ult = f.dias[f.dias.length - 1];
+    const bi = (mil) => `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${brn(Math.abs(mil) / 1e6, 2)} bi`;
+    const mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
+    const noMes = f.meses?.[mes]?.tipos?.estrangeiro?.saldo;
+    const noAno = Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0);
+    const nomeMes = new Date(ult.data + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'long', timeZone: 'UTC' });
+    fluxo = [`Estrangeiro na B3 (dados até ${ddmm(ult.data)}; a B3 publica com atraso)`, `No dia: ${bi(ult.tipos.estrangeiro.saldo)}`,
+      `Em ${nomeMes}: ${noMes != null ? bi(noMes) : '—'}`, `Em ${ano}: ${bi(noAno)}`];
+  } catch (e) { /* fica "—" */ }
+  const n0 = (v) => brn(v, 0), n2 = (v) => brn(v, 2), n4 = (v) => brn(v, 4);
+  const ibovDia = cot['^BVSP']?.dia;
+  const texto = [
+    `Mercado Macro | Fechamento de ${ddmm(hojeBR)}${ibovDia && ibovDia !== hojeBR ? ` (sem pregão hoje; Ibovespa de ${ddmm(ibovDia)})` : ''}`,
+    '',
+    linha('Ibovespa', '^BVSP', (v) => n0(v) + ' pts'),
+    linha('Dólar', 'BRL=X', (v) => 'R$ ' + n4(v)),
+    linha('Euro', 'EURBRL=X', (v) => 'R$ ' + n4(v)),
+    linha('S&P 500', '^GSPC', n2),
+    linha('Petróleo Brent', 'BZ=F', (v) => 'US$ ' + n2(v)),
+    linha('Bitcoin', 'BTC-USD', (v) => 'US$ ' + n0(v)),
+    '',
+    'Juros',
+    `Selic: ${selic}`,
+    `${pre ? pre.nome : 'Tesouro Prefixado'}: ${pre ? n2(pre.taxa) + '% a.a.' : '—'}`,
+    `${ipca ? ipca.nome : 'Tesouro IPCA+'}: ${ipca ? 'IPCA + ' + n2(ipca.taxa) + '%' : '—'}`,
+    `Treasury 10 anos (EUA): ${cot['^TNX'] ? n2(cot['^TNX'].v) + '%' : '—'}`,
+    '',
+    ...fluxo,
+    '',
+    'Painel completo: https://mercadomacro.com.br',
+  ].join('\n');
+  const c = await config(env);
+  if (!(c.tg_token && c.tg_chat)) return false;
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: texto });
+  return !!r.ok;
+}
+
 /* ---------------- sessões ---------------- */
 function lerCookie(req) {
   const m = (req.headers.get('Cookie') || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([a-f0-9]{64})'));
@@ -369,6 +454,12 @@ async function apiAdmin(req, env, acao, eu) {
       if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
       if (!ok) return json({ erro: 'O Telegram não entregou o aviso. Tente conectar de novo.' }, 502);
+      return json({ ok: true });
+    }
+    if (b.acao === 'fechamento') {
+      if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
+      const ok = await resumoFechamento(env).catch(() => false);
+      if (!ok) return json({ erro: 'O Telegram não entregou o fechamento. Tente de novo.' }, 502);
       return json({ ok: true });
     }
     if (b.acao === 'resumo') {
@@ -676,7 +767,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var h;
       if (j.conectado) {
         h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
-          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O resumo da semana chega sozinho toda segunda às 8h.</p></div>';
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-fech" style="' + bt + '">Enviar fechamento do mercado agora</button><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
@@ -699,6 +790,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if ((el = document.getElementById('av-salvar'))) el.onclick = function(){ acao({ acao: 'token', token: document.getElementById('av-token').value }, this, avisos); };
       if ((el = document.getElementById('av-con'))) el.onclick = function(){ acao({ acao: 'conectar' }, this, avisos); };
       if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
+      if ((el = document.getElementById('av-fech'))) el.onclick = function(){ acao({ acao: 'fechamento' }, this, function(){ diz(true, 'Fechamento enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-resumo'))) el.onclick = function(){ acao({ acao: 'resumo' }, this, function(){ diz(true, 'Resumo enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });

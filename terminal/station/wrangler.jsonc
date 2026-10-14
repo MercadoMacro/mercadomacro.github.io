@@ -17,6 +17,8 @@
   ],
   // resumo semanal no Telegram: segunda 11:00 UTC (8h em Brasília)
   "triggers": { "crons": ["0 11 * * 1"] },
+  // cotações para o fechamento enviado pelo botão de /admin (worker da API, sem passar pela internet)
+  "services": [{ "binding": "API", "service": "shrill-meadow-89c1" }],
   "d1_databases": [
     { "binding": "DB", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
   ]
