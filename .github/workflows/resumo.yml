@@ -1,0 +1,44 @@
+# Resumo do fechamento: em dia de pregão, às 18h de Brasília, manda no Telegram do administrador
+# Ibovespa, dólar, juros e o fluxo do estrangeiro, com os números do próprio site (terminal/resumo/resumo.mjs).
+# Em feriado da B3 não manda nada. A mensagem passa pelo site (https://mercadomacro.com.br/api/vigia),
+# que confere o token OIDC que o GitHub assina para este robô; não há senha guardada.
+name: Resumo do fechamento
+
+on:
+  schedule:
+    - cron: '0 21 * * 1-5'      # 18:00 de Brasília, segunda a sexta
+  workflow_dispatch:
+    inputs:
+      forcar:
+        description: 'Mandar mesmo sem pregão hoje (teste)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  resumo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Montar o resumo
+        env:
+          FORCAR: ${{ inputs.forcar }}
+          RESUMO_OUT: ${{ runner.temp }}/resumo.txt
+        run: node terminal/resumo/resumo.mjs
+      - name: Mandar no Telegram
+        env:
+          RESUMO_OUT: ${{ runner.temp }}/resumo.txt
+        run: |
+          [ -s "$RESUMO_OUT" ] || { echo "Nada para mandar."; exit 0; }
+          TOK=$(curl -sS -m 20 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mercadomacro-vigia" | jq -r '.value // empty')
+          R=$(curl -sS -m 30 -X POST https://mercadomacro.com.br/api/vigia -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+            --data "$(jq -n --rawfile t "$RESUMO_OUT" '{texto: $t}')")
+          echo "$R"
+          echo "$R" | grep -q '"ok":true'

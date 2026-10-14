@@ -18,3 +18,5 @@ Mudanças em `station/` e `worker/` são publicadas sozinhas na Cloudflare.
 
 O site antigo (mercadomacro.github.io) foi guardado na pasta `site-antigo/` na raiz do repositório.
 O endereço mercadomacro.github.io agora só manda as pessoas para https://mercadomacro.com.br/.
+
+`resumo/`: robô do resumo do fechamento no Telegram (roda pelo .github/workflows/resumo.yml, dias de pregão às 18h).

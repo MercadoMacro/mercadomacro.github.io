@@ -254,11 +254,12 @@ async function avisar(env, titulo, texto) {
 }
 
 /* ---------------- aviso do vigia (GitHub Actions) ----------------
-   O robô vigia.yml manda o texto do alerta com um token OIDC do GitHub. O token é assinado pelo GitHub
-   e só vale para este repositório, ramo main e o arquivo vigia.yml, então não há senha guardada em lugar nenhum. */
+   Os robôs vigia.yml e resumo.yml mandam o texto com um token OIDC do GitHub. O token é assinado pelo GitHub
+   e só vale para este repositório, ramo main e esses arquivos, então não há senha guardada em lugar nenhum. */
 const GH_ISS = 'https://token.actions.githubusercontent.com';
 const GH_AUD = 'mercadomacro-vigia';
 const GH_REPO = 'MercadoMacro/mercadomacro.github.io';
+const ROBOS_AVISO = ['vigia.yml', 'resumo.yml']; // robôs que podem mandar mensagem no Telegram
 let jwksCache = null; // { chaves, ate }
 const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
 async function tokenDoGitHub(tok) {
@@ -277,7 +278,7 @@ async function tokenDoGitHub(tok) {
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, b64url(sig), new TextEncoder().encode(h + '.' + p));
   const agora = Date.now() / 1000;
   if (!ok || dados.iss !== GH_ISS || dados.aud !== GH_AUD || dados.repository !== GH_REPO || dados.ref !== 'refs/heads/main'
-    || !String(dados.workflow_ref || '').startsWith(GH_REPO + '/.github/workflows/vigia.yml@') || !(dados.exp > agora) || (dados.nbf && dados.nbf > agora + 60)) return null;
+    || !ROBOS_AVISO.some((w) => String(dados.workflow_ref || '').startsWith(GH_REPO + '/.github/workflows/' + w + '@')) || !(dados.exp > agora) || (dados.nbf && dados.nbf > agora + 60)) return null;
   return dados;
 }
 async function avisoDoVigia(req, env) {
