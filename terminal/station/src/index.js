@@ -16,7 +16,7 @@ const PUBLICAS = {
   '/indicadores-hoje': ['/vitrine/indicadores', 'indicadores'],
 };
 // páginas que existem só para quem entrou (não são arquivos)
-const ROTAS_LOGADO = /^\/(admin|conta)$/;
+const ROTAS_LOGADO = /^\/(admin|conta|fechamento)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 
 export default {
@@ -32,6 +32,7 @@ export default {
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
+      if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
@@ -52,6 +53,7 @@ export default {
         return json({ erro: 'Faça login para continuar.' }, 401);
       }
       if (p === '/admin') return u.admin ? html(PAGINA_ADMIN) : redirect('/');
+      if (p === '/fechamento' || p.startsWith('/fechamento/')) { if (!u.admin) return redirect('/'); }
       if (p === '/conta') return html(PAGINA_CONTA);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p.startsWith('/api/admin/')) {
@@ -147,89 +149,141 @@ async function resumoSemanal(env) {
   return enviado;
 }
 
-/* ---------------- resumo do fechamento (botão em /admin) ----------------
-   Mesmo texto do robô terminal/resumo/resumo.mjs (que manda sozinho às 18h pelo GitHub Actions).
-   As cotações vêm do worker shrill-meadow pela ligação de serviço API (wrangler.jsonc). */
+/* ---------------- fechamento do mercado ----------------
+   dadosFechamento() junta os números (cotações do worker shrill-meadow pela ligação de serviço API,
+   Selic do Banco Central, Tesouro, fluxo.json do robô da B3). Usado por:
+   - /fechamento (página com o cartão em imagem; o admin baixa ou manda no Telegram)
+   - /api/robo/fechamento (robô resumo.yml, às 18h, que fotografa o mesmo cartão)
+   Valor que falhar fica null e aparece como "—"; nada é inventado. */
 const ORIGEM_SITE = 'https://station.danilo-nillo.workers.dev';
-async function resumoFechamento(env) {
+const FECH_CARDS = [
+  ['ibov', 'Ibovespa', '^BVSP'], ['dolar', 'Dólar', 'BRL=X'], ['sp', 'S&P 500', '^GSPC'], ['nasdaq', 'Nasdaq', '^IXIC'],
+  ['dow', 'Dow Jones', '^DJI'], ['brent', 'Petróleo Brent', 'BZ=F'], ['ouro', 'Ouro', 'GC=F'], ['btc', 'Bitcoin', 'BTC-USD'],
+  ['euro', 'Euro', 'EURBRL=X'], ['tnx', 'Treasury 10 anos', '^TNX'],
+];
+// as mesmas 45 ações do Ibovespa de "maiores altas e baixas" do site (app.js, IBOV_STOCKS)
+const FECH_ACOES = ['PETR4', 'PETR3', 'VALE3', 'ITUB4', 'BBDC4', 'BBAS3', 'B3SA3', 'ABEV3', 'WEGE3', 'ITSA4', 'SUZB3', 'RENT3', 'PRIO3',
+  'GGBR4', 'BPAC11', 'EQTL3', 'RDOR3', 'RADL3', 'SBSP3', 'VIVT3', 'CMIG4', 'LREN3', 'HAPV3', 'CSAN3', 'UGPA3', 'KLBN11', 'TOTS3', 'ENEV3',
+  'BBSE3', 'CSNA3', 'USIM5', 'MGLU3', 'CYRE3', 'ASAI3', 'HYPE3', 'VBBR3', 'BRAP4', 'SANB11', 'TIMS3', 'EGIE3', 'CPFE3', 'GOAU4', 'RAIL3',
+  'MULT3', 'CXSE3'];
+async function dadosFechamento(env) {
   const api = async (rota) => {
     const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
     const r = env.API ? await env.API.fetch(req) : await fetch(req);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   };
-  const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
-  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
-  const hojeBR = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-  const SIMB = ['^BVSP', 'BRL=X', 'EURBRL=X', '^GSPC', 'BZ=F', '^TNX', 'BTC-USD'];
-  const cot = {};
-  try {
-    const j = await api('/quotes?symbols=' + SIMB.map(encodeURIComponent).join(','));
-    for (const s of SIMB) {
-      const m = j?.[s]?.chart?.result?.[0]?.meta;
-      if (!m || typeof m.regularMarketPrice !== 'number') continue;
-      const ant = m.chartPreviousClose ?? m.previousClose;
-      const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
-      cot[s] = { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
-    }
-  } catch (e) { /* fica "—" */ }
-  const linha = (nome, s, fmt) => `${nome}: ${cot[s] ? fmt(cot[s].v) + pct(cot[s].ch) : '—'}`;
-  let selic = '—';
+  const meta = (j, s) => {
+    const m = j?.[s]?.chart?.result?.[0]?.meta;
+    if (!m || typeof m.regularMarketPrice !== 'number') return null;
+    const ant = m.chartPreviousClose ?? m.previousClose;
+    const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
+    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
+  };
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  const out = { data: hoje, gerado: new Date().toISOString(), cards: {}, altas: [], baixas: [], juros: {}, fluxo: null };
+  const [jc, ja] = await Promise.all([
+    api('/quotes?symbols=' + FECH_CARDS.map((c) => encodeURIComponent(c[2])).join(',')).catch(() => ({})),
+    api('/quotes?symbols=' + FECH_ACOES.map((t) => encodeURIComponent(t + '.SA')).join(',')).catch(() => ({})),
+  ]);
+  for (const [k, nome, s] of FECH_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, dia: null }) };
+  out.pregaoDia = out.cards.ibov.dia;
+  out.pregao = out.cards.ibov.dia === hoje;
+  // altas e baixas: só ações com cotação do mesmo pregão do Ibovespa
+  const acoes = FECH_ACOES.map((t) => ({ t, ...(meta(ja, t + '.SA') || {}) })).filter((a) => a.v != null && a.ch != null && a.dia === out.pregaoDia);
+  acoes.sort((x, y) => y.ch - x.ch);
+  out.altas = acoes.filter((a) => a.ch > 0).slice(0, 5).map(({ t, v, ch }) => ({ t, v, ch }));
+  out.baixas = acoes.filter((a) => a.ch < 0).reverse().slice(0, 5).map(({ t, v, ch }) => ({ t, v, ch }));
+  out.nAcoes = acoes.length;
   const SGS = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
   for (const via of ['api', 'bcb', 'api']) {
     try {
       const j = via === 'api' ? await api('/bcb?c=432&q=' + encodeURIComponent('/ultimos/1')) : await (await fetch(SGS)).json();
       const v = parseFloat(j?.[0]?.valor);
-      if (isFinite(v)) { selic = brn(v, 2) + '%'; break; }
+      if (isFinite(v)) { out.juros.selic = v; break; }
     } catch (e) { /* tenta a próxima */ }
   }
-  let pre = null, ipca = null;
   try {
     const j = await api('/tesouro');
     const ano = (t) => +String(t.vencimento || '').slice(6);
     const maisLongo = (re) => (j.titulos || []).filter((t) => re.test(t.nome) && ano(t)).sort((a, b) => ano(b) - ano(a))[0];
-    pre = maisLongo(/^tesouro prefixado \d{4}$/i);
-    ipca = maisLongo(/^tesouro ipca\+ \d{4}$/i);
+    const pre = maisLongo(/^tesouro prefixado \d{4}$/i), ipca = maisLongo(/^tesouro ipca\+ \d{4}$/i);
+    if (pre) out.juros.pre = { nome: pre.nome, taxa: pre.taxa };
+    if (ipca) out.juros.ipca = { nome: ipca.nome, taxa: ipca.taxa };
   } catch (e) { /* fica "—" */ }
-  let fluxo = ['Estrangeiro na B3: —'];
   try {
-    const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 300 } })).json();
-    const ult = f.dias[f.dias.length - 1];
-    const bi = (mil) => `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${brn(Math.abs(mil) / 1e6, 2)} bi`;
-    const mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
-    const noMes = f.meses?.[mes]?.tipos?.estrangeiro?.saldo;
-    const noAno = Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0);
-    const nomeMes = new Date(ult.data + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'long', timeZone: 'UTC' });
-    fluxo = [`Estrangeiro na B3 (dados até ${ddmm(ult.data)}; a B3 publica com atraso)`, `No dia: ${bi(ult.tipos.estrangeiro.saldo)}`,
-      `Em ${nomeMes}: ${noMes != null ? bi(noMes) : '—'}`, `Em ${ano}: ${bi(noAno)}`];
+    const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 120 } })).json();
+    const ult = f.dias[f.dias.length - 1], mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
+    out.fluxo = {
+      data: ult.data,
+      dia: ult.tipos?.estrangeiro?.saldo ?? null,
+      mes: f.meses?.[mes]?.tipos?.estrangeiro?.saldo ?? null,
+      ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
+    };
   } catch (e) { /* fica "—" */ }
-  const n0 = (v) => brn(v, 0), n2 = (v) => brn(v, 2), n4 = (v) => brn(v, 4);
-  const ibovDia = cot['^BVSP']?.dia;
-  const texto = [
-    `Mercado Macro | Fechamento de ${ddmm(hojeBR)}${ibovDia && ibovDia !== hojeBR ? ` (sem pregão hoje; Ibovespa de ${ddmm(ibovDia)})` : ''}`,
+  out.destaques = destaquesFechamento(out);
+  return out;
+}
+const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
+// frases montadas só com os números do dia (sem explicar causas, que não temos como saber)
+function destaquesFechamento(d) {
+  const c = d.cards, f = [];
+  const mov = (x, m, f2) => (x > 0.005 ? `${m[0]} ${brn(x, 2)}%` : x < -0.005 ? `${m[1]} ${brn(-x, 2)}%` : m[2]) + (f2 || '');
+  if (c.ibov.ch != null) f.push(`O Ibovespa ${mov(c.ibov.ch, ['subiu', 'caiu', 'ficou estável'])}, aos ${brn(c.ibov.v, 0)} pontos.`);
+  if (c.dolar.ch != null) f.push(`O dólar ${mov(c.dolar.ch, ['subiu', 'caiu', 'ficou estável'])} frente ao real, a R$ ${brn(c.dolar.v, 4)}.`);
+  const ny = [['S&P 500', c.sp], ['Nasdaq', c.nasdaq], ['Dow Jones', c.dow]].filter((x) => x[1].ch != null);
+  if (ny.length) {
+    const sobe = ny.filter((x) => x[1].ch > 0).length;
+    const tom = sobe === ny.length ? 'as bolsas subiram' : sobe === 0 ? 'as bolsas caíram' : 'as bolsas fecharam sem direção única';
+    f.push(`Em Nova York, ${tom}: ${ny.map(([n, x]) => `${n} ${x.ch > 0 ? '+' : x.ch < 0 ? '−' : ''}${brn(Math.abs(x.ch), 2)}%`).join(', ')}.`);
+  }
+  if (c.brent.ch != null) f.push(`O petróleo Brent ${mov(c.brent.ch, ['subiu', 'caiu', 'ficou estável'])}, a US$ ${brn(c.brent.v, 2)}.`);
+  if (d.altas[0] && d.baixas[0]) f.push(`Entre as maiores ações do Ibovespa, ${d.altas[0].t} liderou as altas (+${brn(d.altas[0].ch, 2)}%) e ${d.baixas[0].t} as quedas (−${brn(-d.baixas[0].ch, 2)}%).`);
+  if (d.fluxo && d.fluxo.dia != null) {
+    const bi = brn(Math.abs(d.fluxo.dia) / 1e6, 2);
+    f.push(`Na B3, o investidor estrangeiro ${d.fluxo.dia >= 0 ? 'colocou' : 'retirou'} R$ ${bi} bi em ${d.fluxo.data.slice(8, 10)}/${d.fluxo.data.slice(5, 7)} (último dado divulgado).`);
+  }
+  return f.join(' ');
+}
+function textoFechamento(d, curto) {
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
+  const c = d.cards;
+  const l = (k, fmt) => `${c[k].nome}: ${c[k].v != null ? fmt(c[k].v) + pct(c[k].ch) : '—'}`;
+  const bi = (mil) => (mil == null ? '—' : `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${brn(Math.abs(mil) / 1e6, 2)} bi`);
+  const j = d.juros;
+  const linhas = [
+    `Mercado Macro | Fechamento de ${ddmm(d.data)}${!d.pregao && d.pregaoDia ? ` (sem pregão hoje; Ibovespa de ${ddmm(d.pregaoDia)})` : ''}`,
     '',
-    linha('Ibovespa', '^BVSP', (v) => n0(v) + ' pts'),
-    linha('Dólar', 'BRL=X', (v) => 'R$ ' + n4(v)),
-    linha('Euro', 'EURBRL=X', (v) => 'R$ ' + n4(v)),
-    linha('S&P 500', '^GSPC', n2),
-    linha('Petróleo Brent', 'BZ=F', (v) => 'US$ ' + n2(v)),
-    linha('Bitcoin', 'BTC-USD', (v) => 'US$ ' + n0(v)),
-    '',
-    'Juros',
-    `Selic: ${selic}`,
-    `${pre ? pre.nome : 'Tesouro Prefixado'}: ${pre ? n2(pre.taxa) + '% a.a.' : '—'}`,
-    `${ipca ? ipca.nome : 'Tesouro IPCA+'}: ${ipca ? 'IPCA + ' + n2(ipca.taxa) + '%' : '—'}`,
-    `Treasury 10 anos (EUA): ${cot['^TNX'] ? n2(cot['^TNX'].v) + '%' : '—'}`,
-    '',
-    ...fluxo,
-    '',
-    'Painel completo: https://mercadomacro.com.br',
-  ].join('\n');
+    l('ibov', (v) => brn(v, 0) + ' pts'), l('dolar', (v) => 'R$ ' + brn(v, 4)), l('euro', (v) => 'R$ ' + brn(v, 4)),
+    l('sp', (v) => brn(v, 2)), l('nasdaq', (v) => brn(v, 2)), l('dow', (v) => brn(v, 2)),
+    l('brent', (v) => 'US$ ' + brn(v, 2)), l('ouro', (v) => 'US$ ' + brn(v, 2)), l('btc', (v) => 'US$ ' + brn(v, 0)),
+  ];
+  if (!curto) {
+    if (d.altas.length) linhas.push('', 'Maiores altas: ' + d.altas.slice(0, 3).map((a) => `${a.t} +${brn(a.ch, 2)}%`).join(', '));
+    if (d.baixas.length) linhas.push('Maiores baixas: ' + d.baixas.slice(0, 3).map((a) => `${a.t} −${brn(-a.ch, 2)}%`).join(', '));
+  }
+  linhas.push('', 'Juros',
+    `Selic: ${j.selic != null ? brn(j.selic, 2) + '%' : '—'}`,
+    `${j.pre ? j.pre.nome : 'Tesouro Prefixado'}: ${j.pre ? brn(j.pre.taxa, 2) + '% a.a.' : '—'}`,
+    `${j.ipca ? j.ipca.nome : 'Tesouro IPCA+'}: ${j.ipca ? 'IPCA + ' + brn(j.ipca.taxa, 2) + '%' : '—'}`,
+    `Treasury 10 anos (EUA): ${c.tnx.v != null ? brn(c.tnx.v, 2) + '%' : '—'}`,
+    '');
+  if (d.fluxo) linhas.push(`Estrangeiro na B3 (dados até ${ddmm(d.fluxo.data)}; a B3 publica com atraso)`, `No dia: ${bi(d.fluxo.dia)}`, `No mês: ${bi(d.fluxo.mes)}`, `No ano: ${bi(d.fluxo.ano)}`);
+  else linhas.push('Estrangeiro na B3: —');
+  linhas.push('', 'Painel completo: https://mercadomacro.com.br');
+  return linhas.join('\n');
+}
+async function telegramFoto(env, png, legenda) {
   const c = await config(env);
-  if (!(c.tg_token && c.tg_chat)) return false;
-  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: texto });
-  return !!r.ok;
+  if (!(c.tg_token && c.tg_chat)) return { ok: false, erro: 'Conecte o Telegram primeiro.' };
+  const fd = new FormData();
+  fd.append('chat_id', c.tg_chat);
+  fd.append('caption', String(legenda || '').slice(0, 1024));
+  fd.append('photo', new Blob([png], { type: 'image/png' }), 'fechamento.png');
+  const r = await fetch(`https://api.telegram.org/bot${c.tg_token}/sendPhoto`, { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({ ok: false }));
+  return j.ok ? { ok: true } : { ok: false, erro: 'O Telegram recusou a imagem.' };
 }
 
 /* ---------------- sessões ---------------- */
@@ -391,6 +445,18 @@ async function apiAuth(req, env, acao, ctx) {
 
 /* ---------------- administração ---------------- */
 async function apiAdmin(req, env, acao, eu) {
+  if (acao === 'fechamento' && req.method === 'GET') {
+    const d = await dadosFechamento(env);
+    return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true) }, 200, { 'Cache-Control': 'no-store' });
+  }
+  if (acao === 'fechamento-foto' && req.method === 'POST') {
+    if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+    const fd = await req.formData().catch(() => null);
+    const foto = fd && fd.get('foto');
+    if (!foto || typeof foto === 'string' || foto.size > 5e6) return json({ erro: 'Imagem inválida.' }, 400);
+    const r = await telegramFoto(env, await foto.arrayBuffer(), fd.get('legenda'));
+    return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
+  }
   if (acao === 'usuarios' && req.method === 'GET') {
     const r = await env.DB.prepare(
       'SELECT id, nome, email, status, admin, criado, decidido, ultimo_acesso FROM usuarios ORDER BY criado DESC').all();
@@ -454,12 +520,6 @@ async function apiAdmin(req, env, acao, eu) {
       if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
       if (!ok) return json({ erro: 'O Telegram não entregou o aviso. Tente conectar de novo.' }, 502);
-      return json({ ok: true });
-    }
-    if (b.acao === 'fechamento') {
-      if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
-      const ok = await resumoFechamento(env).catch(() => false);
-      if (!ok) return json({ erro: 'O Telegram não entregou o fechamento. Tente de novo.' }, 502);
       return json({ ok: true });
     }
     if (b.acao === 'resumo') {
@@ -530,12 +590,27 @@ async function avisoDoVigia(req, env) {
   const quem = await tokenDoGitHub(tok).catch(() => null);
   if (!quem) return json({ erro: 'Não autorizado.' }, 401);
   const b = await req.json().catch(() => ({}));
+  if (b.foto) {
+    // fechamento das 18h: o robô manda o cartão em PNG (base64) com a legenda
+    let png;
+    try { png = Uint8Array.from(atob(String(b.foto)), (ch) => ch.charCodeAt(0)); } catch (e) { return json({ erro: 'Imagem inválida.' }, 400); }
+    if (png.length > 5e6) return json({ erro: 'Imagem grande demais.' }, 413);
+    const r = await telegramFoto(env, png, b.texto);
+    return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
+  }
   const texto = String(b.texto || '').slice(0, 1500);
   if (!texto) return json({ erro: 'Sem texto.' }, 400);
   const c = await config(env);
   if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Telegram não conectado.' }, 409);
   const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: texto, disable_web_page_preview: true });
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
+}
+
+async function roboFechamento(req, env) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
+  const d = await dadosFechamento(env);
+  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true) }, 200, { 'Cache-Control': 'no-store' });
 }
 
 /* ---------------- utilidades ---------------- */
@@ -767,7 +842,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var h;
       if (j.conectado) {
         h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
-          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-fech" style="' + bt + '">Enviar fechamento do mercado agora</button><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
@@ -790,7 +865,6 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if ((el = document.getElementById('av-salvar'))) el.onclick = function(){ acao({ acao: 'token', token: document.getElementById('av-token').value }, this, avisos); };
       if ((el = document.getElementById('av-con'))) el.onclick = function(){ acao({ acao: 'conectar' }, this, avisos); };
       if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
-      if ((el = document.getElementById('av-fech'))) el.onclick = function(){ acao({ acao: 'fechamento' }, this, function(){ diz(true, 'Fechamento enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-resumo'))) el.onclick = function(){ acao({ acao: 'resumo' }, this, function(){ diz(true, 'Resumo enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });

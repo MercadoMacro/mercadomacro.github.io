@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fechamento do mercado | Mercado Macro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fechamento.css?v=1">
+</head>
+<body>
+<div class="ferr">
+  <a href="/admin" class="fb">Voltar</a>
+  <button type="button" class="fb" id="f-atualizar">Atualizar números</button>
+  <button type="button" class="fb pri" id="f-baixar">Baixar imagem</button>
+  <button type="button" class="fb" id="f-compartilhar" hidden>Compartilhar</button>
+  <button type="button" class="fb" id="f-telegram">Mandar no Telegram</button>
+  <span id="f-msg" role="status"></span>
+</div>
+<div class="palco"><div id="card" class="card" aria-live="polite"><div class="car">Carregando os números do dia…</div></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="fechamento.js?v=1"></script>
+</body>
+</html>

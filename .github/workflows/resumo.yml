@@ -1,5 +1,5 @@
 # Resumo do fechamento: em dia de pregão, às 18h de Brasília, manda no Telegram do administrador
-# Ibovespa, dólar, juros e o fluxo do estrangeiro, com os números do próprio site (terminal/resumo/resumo.mjs).
+# o cartão em imagem (página /fechamento) com a legenda em texto (terminal/resumo/resumo.mjs).
 # Em feriado da B3 não manda nada. A mensagem passa pelo site (https://mercadomacro.com.br/api/vigia),
 # que confere o token OIDC que o GitHub assina para este robô; não há senha guardada.
 name: Resumo do fechamento
@@ -50,20 +50,13 @@ jobs:
         if: steps.ja.outputs.pular != '1'
         with:
           node-version: '22'
-      - name: Montar o resumo
+      - name: Instalar o navegador para fotografar o cartão
+        if: steps.ja.outputs.pular != '1'
+        run: |
+          npm i --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Montar e mandar o fechamento
         if: steps.ja.outputs.pular != '1'
         env:
           FORCAR: ${{ inputs.forcar }}
-          RESUMO_OUT: ${{ runner.temp }}/resumo.txt
         run: node terminal/resumo/resumo.mjs
-      - name: Mandar no Telegram
-        if: steps.ja.outputs.pular != '1'
-        env:
-          RESUMO_OUT: ${{ runner.temp }}/resumo.txt
-        run: |
-          [ -s "$RESUMO_OUT" ] || { echo "Nada para mandar."; exit 0; }
-          TOK=$(curl -sS -m 20 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mercadomacro-vigia" | jq -r '.value // empty')
-          R=$(curl -sS -m 30 -X POST https://mercadomacro.com.br/api/vigia -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
-            --data "$(jq -n --rawfile t "$RESUMO_OUT" '{texto: $t}')")
-          echo "$R"
-          echo "$R" | grep -q '"ok":true'
