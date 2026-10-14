@@ -131,9 +131,14 @@ SUFIXOS = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC
            "HOLDINGS", "HOLDING", "HLDGS", "GROUP", "GRP", "THE", "CL", "CLASS", "A", "B", "C", "NEW", "DEL", "COM", "ADR", "ADS"}
 
 
+ABREV = {"AMER": "AMERICA", "PETE": "PETROLEUM", "FINL": "FINANCIAL", "INTL": "INTERNATIONAL", "TECHNOLOGIES": "TECHNOLOGIES",
+         "SYS": "SYSTEMS", "PHARMACEUTICALS": "PHARMACEUTICALS", "COMMUNICATIONS": "COMMUNICATIONS", "BANCORPORATION": "BANCORP"}
+
+
 def chave_nome(n):
     """'APPLE INC' e 'Apple Inc.' viram 'APPLE'; usado só para achar o ticker pelo nome."""
-    pal = re.sub(r"[^A-Z0-9 ]", " ", (n or "").upper().replace("&", " AND ")).split()
+    pal = re.sub(r"[^A-Z0-9 ]", " ", (n or "").upper().replace("'", "").replace("&", " AND ")).split()
+    pal = [ABREV.get(w, w) for w in pal]
     while pal and pal[-1] in SUFIXOS:
         pal.pop()
     return " ".join(pal)
@@ -145,8 +150,8 @@ def tickers_sec():
     out = {}
     for x in j.values():
         k = chave_nome(x.get("title"))
-        if k and k not in out:
-            out[k] = x.get("ticker")
+        if k and x.get("ticker"):
+            out.setdefault(k, []).append(x["ticker"])
     print(f"  {len(out)} nomes com ticker na SEC")
     return out
 
@@ -239,7 +244,8 @@ def main():
     tk = tickers_sec()
     lista = []
     for (cusip, pc), a in acoes.items():
-        t = tk.get(chave_nome(a["nome"]))
+        # empresa com mais de uma classe (GOOGL e GOOG): ficam todos os tickers, sem chutar qual é qual
+        t = " ".join(tk.get(chave_nome(a["nome"]), [])[:3]) or None
         lista.append({"c": cusip, "n": a["nome"], "cl": a["classe"], "pc": pc, "t": t, "h": sorted(a["h"], key=lambda x: -(x[1] or 0))})
     lista.sort(key=lambda x: -sum(h[1] or 0 for h in x["h"]))
     com_t = sum(1 for x in lista if x["t"])
