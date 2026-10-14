@@ -6,7 +6,9 @@ jobs:
     steps:
       - run: |
           set +e
-          curl -sS -m 60 https://arquivos.b3.com.br/bdi/config.js | grep -i -E "serverUrl|url" | head
-          curl -sS -m 60 https://arquivos.b3.com.br/bdi/static/js/main.e591a35328ff179145c0.js -o j.js
-          grep -o -E 'config\.serverUrl \+ \\"/table/\\" \+[^;]{0,300}' j.js | head -3
-          grep -o -E '.{0,200}/table/\\".{0,400}' j.js | head -4
+          B=https://arquivos.b3.com.br/bdi
+          curl -sS -m 60 -w "\nHTTP %{http_code}\n" "$B/table/all" -o all.json; head -c 300 all.json; echo
+          jq -c '..|objects|select((tostring|test("nvestid|Participa";"i")))' all.json 2>/dev/null | head -c 2500; echo
+          curl -sS -m 60 "$B/table/classifications" | head -c 1500; echo
+          curl -sS -m 60 -o j.js $B/static/js/main.e591a35328ff179145c0.js
+          grep -o -E 'function fetchAPI.{0,600}' j.js | head -2
