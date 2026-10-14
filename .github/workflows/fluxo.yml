@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '30 11 * * 1-5'   # segunda a sexta, 08:30 em Brasília
     - cron: '30 23 * * 1-5'   # e às 20:30, quando sai o boletim do dia
+    # repescagens: o agendador do GitHub às vezes atrasa ou pula; sem boletim novo, não grava nada
+    - cron: '15 19 * * 1-5'
+    - cron: '45 1 * * 2-6'
   workflow_dispatch:
     inputs:
       dias:

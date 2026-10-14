@@ -7,6 +7,11 @@ name: Resumo do fechamento
 on:
   schedule:
     - cron: '0 21 * * 1-5'      # 18:00 de Brasília, segunda a sexta
+    # o agendador do GitHub às vezes atrasa horas ou pula a execução: estas são repescagens
+    # (só mandam se ainda não saiu nenhum resumo hoje)
+    - cron: '40 21 * * 1-5'
+    - cron: '30 22 * * 1-5'
+    - cron: '30 23 * * 1-5'
   workflow_dispatch:
     inputs:
       forcar:
@@ -16,23 +21,43 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
+
+concurrency:
+  group: resumo
+  cancel-in-progress: false
 
 jobs:
   resumo:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Já saiu hoje?
+        id: ja
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HOJE=$(TZ=America/Sao_Paulo date +%Y-%m-%d)
+          N=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/resumo.yml/runs?status=success&per_page=10" \
+            --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID) | select((.created_at | fromdateiso8601 - 10800 | strftime(\"%Y-%m-%d\")) == \"$HOJE\")] | length")
+          echo "Resumos já mandados hoje: $N"
+          [ "$N" = "0" ] || echo "pular=1" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v5
+        if: steps.ja.outputs.pular != '1'
       - uses: actions/setup-node@v5
+        if: steps.ja.outputs.pular != '1'
         with:
           node-version: '22'
       - name: Montar o resumo
+        if: steps.ja.outputs.pular != '1'
         env:
           FORCAR: ${{ inputs.forcar }}
           RESUMO_OUT: ${{ runner.temp }}/resumo.txt
         run: node terminal/resumo/resumo.mjs
       - name: Mandar no Telegram
+        if: steps.ja.outputs.pular != '1'
         env:
           RESUMO_OUT: ${{ runner.temp }}/resumo.txt
         run: |
