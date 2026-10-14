@@ -6,6 +6,7 @@ jobs:
   lh:
     runs-on: ubuntu-24.04
     steps:
+      - run: sleep 120
       - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - name: lighthouse
@@ -19,4 +20,4 @@ jobs:
             jq -r '.audits | to_entries[] | select(.value.score != null and .value.score < 0.9 and (.value.scoreDisplayMode|IN("binary","numeric","metricSavings"))) | "\(.key) \(.value.score) \(.value.displayValue // "") \(.value.title)"' lh-$s.json | head -40
           done
           echo "== detalhes mobile"
-          jq -r '.audits | to_entries[] | select(.key|IN("largest-contentful-paint-element","render-blocking-resources","render-blocking-insight","lcp-discovery-insight","image-delivery-insight","color-contrast","unused-css-rules","unused-javascript","uses-responsive-images","uses-optimized-images","modern-image-formats","font-display","font-display-insight","layout-shifts","cls-culprits-insight","network-dependency-tree-insight")) | "## \(.key)\n" + ((.value.details.items // []) | map(tostring[0:300]) | .[0:6] | join("\n"))' lh-mobile.json
+          jq -r '.audits | to_entries[] | select(.key|IN("aria-allowed-role","uses-long-cache-ttl","render-blocking-resources","render-blocking-insight","lcp-discovery-insight","image-delivery-insight","color-contrast","unused-css-rules","unused-javascript","uses-responsive-images","uses-optimized-images","modern-image-formats","font-display","font-display-insight","layout-shifts","cls-culprits-insight","network-dependency-tree-insight")) | "## \(.key)\n" + ((.value.details.items // []) | map(tostring[0:300]) | .[0:6] | join("\n"))' lh-mobile.json

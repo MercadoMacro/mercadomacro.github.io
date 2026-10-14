@@ -213,10 +213,16 @@
   ];
   var tabs = $('tour-tabs'), img = $('tour-img'), txt = $('tour-txt'), prog = $('tour-prog'), atual = -1, timer = null, t0 = 0, DUR = 7000, pausado = false, visivel = false;
   tabs.innerHTML = TOUR.map(function (t, i) { return '<button type="button" role="tab" aria-selected="false" data-i="' + i + '"><i class="fas ' + t[1] + '" aria-hidden="true"></i>' + t[2] + '</button>'; }).join('');
-  img.innerHTML = TOUR.map(function (t, i) { return '<img alt="Tela ' + esc(t[2]) + ' do Mercado Macro" data-src="/vitrine/fotos/' + t[0] + '.jpg" data-i="' + i + '" width="1440" height="900">'; }).join('') + '<div class="vazio" hidden>Imagem desta tela em preparação.</div>';
+  img.innerHTML = TOUR.map(function (t, i) { return '<img alt="Tela ' + esc(t[2]) + ' do Mercado Macro" data-src="/vitrine/fotos/' + t[0] + '.jpg" data-srcset="/vitrine/fotos/' + t[0] + '-720.webp 720w, /vitrine/fotos/' + t[0] + '.jpg 1440w" sizes="(max-width: 900px) 100vw, 860px" data-i="' + i + '" width="1440" height="900">'; }).join('') + '<div class="vazio" hidden>Imagem desta tela em preparação.</div>';
   img.querySelectorAll('img').forEach(function (im) { im.onerror = function () { im.dataset.erro = '1'; im.hidden = true; if (+im.dataset.i === atual) mostraVazio(true); }; });
   function mostraVazio(s) { img.querySelector('.vazio').hidden = !s; }
-  function carregaImg(i) { var im = img.querySelector('img[data-i="' + i + '"]'); if (im && !im.src) im.src = im.dataset.src; return im; }
+  // as fotos só baixam quando o tour chega perto da tela (a versão menor em webp vai para celulares)
+  var perto = false;
+  function carregaImg(i) {
+    var im = img.querySelector('img[data-i="' + i + '"]');
+    if (im && perto && !im.src) { im.srcset = im.dataset.srcset; im.src = im.dataset.src; }
+    return im;
+  }
   function ir(i) {
     atual = (i + TOUR.length) % TOUR.length;
     var t = TOUR[atual];
@@ -242,8 +248,14 @@
     timer = requestAnimationFrame(passo);
   }
   ir(0);
-  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visivel = es[0].isIntersecting; }, { threshold: .35 }).observe(tour);
-  else visivel = true;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) { visivel = es[0].isIntersecting; }, { threshold: .35 }).observe(tour);
+    var obPerto = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      perto = true; obPerto.disconnect(); carregaImg(atual); carregaImg(atual + 1 < TOUR.length ? atual + 1 : 0);
+    }, { rootMargin: '600px 0px' });
+    obPerto.observe(tour);
+  } else { visivel = true; perto = true; carregaImg(atual); }
   timer = requestAnimationFrame(passo);
 
   /* ---------------- ferramentas ---------------- */
@@ -266,7 +278,11 @@
   /* ---------------- celular ---------------- */
   var cel = new Image();
   cel.onload = function () { $('phone').style.backgroundImage = 'url(/vitrine/fotos/celular.jpg)'; };
-  cel.src = '/vitrine/fotos/celular.jpg';
+  // só baixa a foto do celular quando ela chega perto da tela
+  if ('IntersectionObserver' in window) {
+    var obCel = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { obCel.disconnect(); cel.src = '/vitrine/fotos/celular.jpg'; } }, { rootMargin: '600px 0px' });
+    obCel.observe($('phone'));
+  } else cel.src = '/vitrine/fotos/celular.jpg';
 
   /* ---------------- entrada suave das seções ---------------- */
   var alvos = document.querySelectorAll('.vt-sec-head, .vt-board, .vt-macro, .vt-tour, .ft, .vt-duo-txt, .vt-phone, .vt-fontes, .vt-cta');

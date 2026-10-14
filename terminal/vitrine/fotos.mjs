@@ -1,8 +1,8 @@
 // Fotografa o painel de verdade (com dados reais do momento) para a vitrine da tela de login.
 // Roda no GitHub Actions (.github/workflows/vitrine.yml) servindo station/site em http://localhost:8080.
-// Saída: station/site/vitrine/fotos/<nome>.jpg
+// Saída: station/site/vitrine/fotos/<nome>.jpg e <nome>-720.webp (versão menor para celular)
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE = 'http://localhost:8080/';
 const OUT = 'terminal/station/site/vitrine/fotos';
@@ -53,4 +53,20 @@ await pc.goto(BASE, { waitUntil: 'domcontentloaded' });
 await pc.waitForTimeout(12000);
 await pc.screenshot({ path: `${OUT}/celular.jpg`, type: 'jpeg', quality: 75 });
 console.log('ok celular');
+
+// versões de 720 px em webp para telas pequenas (o próprio navegador redimensiona)
+const conv = await (await br.newContext()).newPage();
+for (const [nome] of ABAS) {
+  try {
+    const b64 = readFileSync(`${OUT}/${nome}.jpg`).toString('base64');
+    const webp = await conv.evaluate(async (src) => {
+      const im = new Image(); im.src = src; await im.decode();
+      const c = document.createElement('canvas'); c.width = 720; c.height = Math.round(im.height * 720 / im.width);
+      const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, c.width, c.height);
+      return c.toDataURL('image/webp', 0.8).split(',')[1];
+    }, 'data:image/jpeg;base64,' + b64);
+    writeFileSync(`${OUT}/${nome}-720.webp`, Buffer.from(webp, 'base64'));
+    console.log('ok', nome, '720');
+  } catch (e) { console.log('falhou', nome, '720', e.message); }
+}
 await br.close();
