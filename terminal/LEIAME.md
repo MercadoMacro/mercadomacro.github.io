@@ -21,4 +21,4 @@ O endereço mercadomacro.github.io agora só manda as pessoas para https://merca
 
 `resumo/`: robô do resumo do fechamento no Telegram (roda pelo .github/workflows/resumo.yml, dias de pregão às 18h).
 
-`vitrine-worker/`: worker da vitrine na segunda conta da Cloudflare (autumn-thunder-c98b.cota-cotacao10). Publicado à mão no painel da Cloudflare.
+`vitrine-worker/`: worker da vitrine na segunda conta da Cloudflare (mercadomacro-vitrine.cota-cotacao10; o autumn-thunder antigo continua lá, sem uso pela vitrine). Publicado à mão no painel da Cloudflare.

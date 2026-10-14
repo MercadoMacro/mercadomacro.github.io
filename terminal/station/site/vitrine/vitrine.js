@@ -6,7 +6,7 @@
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   // visitantes sem login usam o worker da segunda conta da Cloudflare (terminal/vitrine-worker);
   // se ele falhar, cai no worker principal
-  var VT = 'https://autumn-thunder-c98b.cota-cotacao10.workers.dev';
+  var VT = 'https://mercadomacro-vitrine.cota-cotacao10.workers.dev';
   var okJson = function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
   var RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/';
   var reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
