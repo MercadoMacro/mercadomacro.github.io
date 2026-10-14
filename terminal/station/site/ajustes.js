@@ -97,7 +97,7 @@
         <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span></p>
         <div class="aj-btns">
           ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
-          <a class="btn-sm" href="/conta"><i class="fas fa-key"></i> Trocar senha</a>
+          <a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a>
           <button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>
         </div>
       </section>` : ''}

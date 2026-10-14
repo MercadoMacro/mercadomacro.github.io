@@ -13,6 +13,10 @@ const ROTAS_LOGADO = /^\/(admin|conta)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 
 export default {
+  // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
+  async scheduled(ev, env, ctx) {
+    ctx.waitUntil(resumoSemanal(env));
+  },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const p = url.pathname;
@@ -24,13 +28,14 @@ export default {
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
+      if (p === '/calculadora-renda-fixa') { if (navegacao(req)) contar(env, ctx, req, 'calculadora'); return paginaFixa(req, env, '/vitrine/calculadora', 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
       if (!u) {
         // a página inicial mostra a vitrine para quem não entrou (e para o Google), sem redirecionar
-        if ((p === '/' || p === '/index.html') && navegacao(req)) return paginaEntrar(req, env, true);
+        if ((p === '/' || p === '/index.html') && navegacao(req)) { contar(env, ctx, req, 'vitrine'); return paginaEntrar(req, env, true); }
         if (navegacao(req)) {
           // endereço que não existe mostra a página de erro (e não manda para o login)
           if (!ROTAS_LOGADO.test(p) && !(await existeArquivo(req, env))) return paginaFixa(req, env, '/vitrine/404', 404);
@@ -45,6 +50,7 @@ export default {
         if (!u.admin) return json({ erro: 'Sem permissão.' }, 403);
         return await apiAdmin(req, env, p.slice(11), u);
       }
+      if ((p === '/' || p === '/index.html') && navegacao(req)) contar(env, ctx, req, 'terminal');
       const r = await env.ASSETS.fetch(req);
       if (r.status === 404 && navegacao(req)) return paginaFixa(req, env, '/vitrine/404', 404);
       const out = new Response(r.body, r);
@@ -55,6 +61,46 @@ export default {
     }
   },
 };
+
+/* ---------------- contador de visitas (só números por dia, nada pessoal) ---------------- */
+const ROBO = /bot|crawl|spider|slurp|lighthouse|headless|preview|facebookexternalhit|whatsapp|telegram|curl|wget|python|node-fetch|vigia/i;
+function contar(env, ctx, req, tipo) {
+  if (ROBO.test(req.headers.get('User-Agent') || '')) return;
+  const dia = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10); // dia no horário de Brasília
+  ctx.waitUntil(env.DB.prepare('INSERT INTO visitas (dia, tipo, n) VALUES (?, ?, 1) ON CONFLICT(dia, tipo) DO UPDATE SET n = n + 1')
+    .bind(dia, tipo).run().catch(() => {}));
+}
+async function resumoSemanal(env) {
+  const hoje = new Date(Date.now() - 3 * 3600000);
+  const ate = new Date(hoje.getTime() - 86400000).toISOString().slice(0, 10); // ontem (domingo)
+  const de = new Date(hoje.getTime() - 7 * 86400000).toISOString().slice(0, 10); // segunda passada
+  const isoDe = new Date(Date.parse(de + 'T03:00:00Z')).toISOString(), isoAte = new Date(Date.parse(ate + 'T03:00:00Z') + 86400000).toISOString();
+  const v = await env.DB.prepare('SELECT tipo, SUM(n) n FROM visitas WHERE dia BETWEEN ? AND ? GROUP BY tipo').bind(de, ate).all();
+  const n = (t) => (v.results.find((x) => x.tipo === t) || {}).n || 0;
+  const um = (q, ...a) => env.DB.prepare(q).bind(...a).first().then((r) => r.n);
+  const pedidos = await um('SELECT COUNT(*) n FROM usuarios WHERE criado >= ? AND criado < ?', isoDe, isoAte);
+  const logins = await um('SELECT COUNT(*) n FROM usuarios WHERE ultimo_acesso >= ? AND ultimo_acesso < ?', isoDe, isoAte);
+  const pend = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`);
+  const ativos = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo'`);
+  const br = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const txt = [
+    `Semana de ${br(de)} a ${br(ate)}:`,
+    '',
+    `Vitrine (página de entrada) aberta: ${n('vitrine')} vezes`,
+    `Calculadora de renda fixa (pública) aberta: ${n('calculadora')} vezes`,
+    `Terminal aberto por quem tem acesso: ${n('terminal')} vezes`,
+    `Pessoas que fizeram login: ${logins}`,
+    `Pedidos de acesso novos: ${pedidos}`,
+    '',
+    `Aguardando liberação agora: ${pend}${pend ? ' (https://mercadomacro.com.br/admin)' : ''}`,
+    `Usuários liberados no total: ${ativos}`,
+    '',
+    'Mais detalhes (países, aparelhos): painel da Cloudflare > Web Analytics.',
+  ].join('\n');
+  const enviado = await avisar(env, 'Resumo semanal do Mercado Macro', txt);
+  await env.DB.prepare('DELETE FROM visitas WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run();
+  return enviado;
+}
 
 /* ---------------- sessões ---------------- */
 function lerCookie(req) {
@@ -137,6 +183,24 @@ async function apiAuth(req, env, acao, ctx) {
     ]);
     cacheSessao.clear();
     return json({ ok: true });
+  }
+
+  if (acao === 'excluir') {
+    // a própria pessoa apaga a conta (precisa estar logada e confirmar a senha)
+    const eu = await usuarioDaSessao(req, env);
+    if (!eu) return json({ erro: 'Faça login para continuar.' }, 401);
+    if (eu.admin) return json({ erro: 'A conta de administrador não pode ser excluída por aqui.' }, 400);
+    if (!(await dentroDoLimite(env, 'sen:' + eu.id, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
+    const r = await env.DB.prepare('SELECT senha FROM usuarios WHERE id = ?').bind(eu.id).first();
+    if (!r || !(await conferirSenha(senha, r.senha))) return json({ erro: 'A senha não confere.' }, 400);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(eu.id),
+      env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind('sen:' + eu.id),
+      env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(eu.id),
+    ]);
+    cacheSessao.clear();
+    ctx.waitUntil(avisar(env, 'Conta excluída', `${eu.nome} excluiu a própria conta no Mercado Macro.`).catch(() => {}));
+    return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao('', 0) });
   }
 
   if (acao === 'entrar') {
@@ -229,6 +293,12 @@ async function apiAdmin(req, env, acao, eu) {
       if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
       if (!ok) return json({ erro: 'O Telegram não entregou o aviso. Tente conectar de novo.' }, 502);
+      return json({ ok: true });
+    }
+    if (b.acao === 'resumo') {
+      if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
+      const ok = await resumoSemanal(env).catch(() => false);
+      if (!ok) return json({ erro: 'O Telegram não entregou o resumo. Tente de novo.' }, 502);
       return json({ ok: true });
     }
     return json({ erro: 'Ação inválida.' }, 400);
@@ -364,11 +434,15 @@ function redirect(to) {
 // a tela de entrada é a vitrine (station/site/vitrine/index.html)
 async function paginaEntrar(req, env, jaSemLogin) {
   if (!jaSemLogin && (await usuarioDaSessao(req, env))) return redirect('/');
-  const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url), { headers: req.headers }));
-  const out = new Response(r.body, r);
-  out.headers.set('Cache-Control', 'no-cache');
-  out.headers.set('X-Frame-Options', 'DENY');
-  return out;
+  const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url)));
+  let corpo = await r.text();
+  // o estilo vai dentro da página: o navegador desenha sem esperar outro arquivo
+  const m = corpo.match(/<link rel="stylesheet" href="(\/vitrine\/vitrine\.css[^"]*)">/);
+  if (m) {
+    const css = await env.ASSETS.fetch(new Request(new URL(m[1], req.url)));
+    if (css.ok) { const texto = await css.text(); corpo = corpo.replace(m[0], () => '<style>' + texto + '</style>'); }
+  }
+  return new Response(corpo, { status: r.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
 }
 
 // páginas públicas fixas da pasta vitrine (privacidade e erro)
@@ -398,6 +472,7 @@ Sitemap: https://mercadomacro.com.br/sitemap.xml
 const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://mercadomacro.com.br/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://mercadomacro.com.br/calculadora-renda-fixa</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
 `;
@@ -458,8 +533,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function data(s){ if (!s) return '—'; var d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
   var BT = {
-    pendente: [['liberar','Liberar','lib'],['recusar','Recusar','']],
-    ativo: [['senha','Nova senha',''],['bloquear','Bloquear','']],
+    pendente: [['liberar','Liberar','lib'],['recusar','Recusar',''],['excluir','Excluir','del']],
+    ativo: [['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
     recusado: [['liberar','Liberar','lib'],['excluir','Excluir','del']],
     bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']]
   };
@@ -485,7 +560,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     var b = ev.target.closest('button[data-a]'); if (!b) return;
     var a = b.dataset.a;
     if (a === 'senha') return novaSenha(b);
-    if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir o cadastro de ' : 'Bloquear o acesso de ') + b.dataset.n + '?')) return;
+    if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir de vez o cadastro de ' + b.dataset.n + '? Nome, e-mail e senha são apagados e não dá para desfazer.' : 'Bloquear o acesso de ' + b.dataset.n + '?'))) return;
     b.disabled = true;
     fetch('/api/admin/decidir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.dataset.id, acao: a }) })
       .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
@@ -522,7 +597,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var h;
       if (j.conectado) {
         h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
-          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div></div>';
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O resumo da semana chega sozinho toda segunda às 8h.</p></div>';
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
@@ -545,6 +620,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if ((el = document.getElementById('av-salvar'))) el.onclick = function(){ acao({ acao: 'token', token: document.getElementById('av-token').value }, this, avisos); };
       if ((el = document.getElementById('av-con'))) el.onclick = function(){ acao({ acao: 'conectar' }, this, avisos); };
       if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
+      if ((el = document.getElementById('av-resumo'))) el.onclick = function(){ acao({ acao: 'resumo' }, this, function(){ diz(true, 'Resumo enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
   }
@@ -555,7 +631,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 
 const PAGINA_CONTA = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trocar senha | Mercado Macro</title>
+<title>Minha conta | Mercado Macro</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -571,8 +647,12 @@ input:focus{outline:2px solid var(--accent);outline-offset:1px}
 button{margin-top:16px;width:100%;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;min-height:44px}
 button:disabled{opacity:.6;cursor:default}
 .nota{color:var(--text-3);font-size:12.5px;margin:12px 0 0}
+h2{font-size:15px;margin:22px 0 10px}
+.nota a{color:var(--text-2)}
+button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 </style></head><body><main>
-<header><h1>Trocar senha</h1><a class="vol" href="/">Voltar ao site</a></header>
+<header><h1>Minha conta</h1><a class="vol" href="/">Voltar ao site</a></header>
+<h2>Trocar senha</h2>
 <form id="f" novalidate>
   <label for="atual">Senha atual</label><input id="atual" type="password" autocomplete="current-password" required>
   <label for="nova">Senha nova (mínimo 8 caracteres)</label><input id="nova" type="password" autocomplete="new-password" required minlength="8">
@@ -580,6 +660,13 @@ button:disabled{opacity:.6;cursor:default}
   <button type="submit">Salvar senha nova</button>
   <p class="msg" id="msg" role="status" aria-live="polite"></p>
   <p class="nota">Ao trocar, os outros aparelhos onde você estava conectado saem da conta. Este continua conectado.</p>
+</form>
+<h2>Excluir minha conta</h2>
+<form id="fx" novalidate>
+  <p class="nota" style="margin-top:0">Apaga de vez seu nome, e-mail e senha do Mercado Macro e desconecta todos os aparelhos. Não dá para desfazer. Os ajustes guardados neste navegador não são afetados. Veja a <a href="/privacidade">política de privacidade</a>.</p>
+  <label for="sx">Digite sua senha para confirmar</label><input id="sx" type="password" autocomplete="current-password" required>
+  <button type="submit" class="del">Excluir minha conta</button>
+  <p class="msg" id="msgx" role="status" aria-live="polite"></p>
 </form>
 </main>
 <script>
@@ -598,6 +685,18 @@ button:disabled{opacity:.6;cursor:default}
       .then(function(){ f.reset(); diz(true, 'Senha trocada. Use a nova senha da próxima vez que entrar.'); })
       .catch(function(j){ diz(false, (j && j.erro) || 'Não foi possível. Tente de novo.'); })
       .then(function(){ b.disabled = false; });
+  });
+  var fx = document.getElementById('fx'), mx = document.getElementById('msgx');
+  fx.addEventListener('submit', function(e){
+    e.preventDefault();
+    var s = fx.sx.value;
+    if (!s) { mx.className = 'msg erro'; mx.textContent = 'Digite sua senha.'; return; }
+    if (!confirm('Excluir sua conta de vez? Não dá para desfazer.')) return;
+    var b = fx.querySelector('button'); b.disabled = true; mx.textContent = '';
+    fetch('/api/auth/excluir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: s }) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
+      .then(function(){ document.querySelector('main').innerHTML = '<h1>Conta excluída</h1><p class="nota">Seus dados foram apagados. Obrigado por ter usado o Mercado Macro.</p><p class="nota"><a href="/">Ir para o início</a></p>'; })
+      .catch(function(j){ mx.className = 'msg erro'; mx.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
   });
 })();
 </script></body></html>`;

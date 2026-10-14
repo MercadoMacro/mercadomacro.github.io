@@ -24,7 +24,7 @@
   }
   tE.onclick = function () { aba(false, true); };
   tC.onclick = function () { aba(true, true); };
-  if (location.hash === '#cadastrar') aba(true);
+  if (location.hash === '#cadastrar') { aba(true); setTimeout(function () { $('acesso').scrollIntoView({ block: 'start' }); }, 50); }
   document.querySelectorAll('[data-ir]').forEach(function (b) {
     b.addEventListener('click', function () {
       $('pronto').hidden = true; $('forms').hidden = false;

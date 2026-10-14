@@ -208,7 +208,7 @@
     else if (l.tipo === 'tselic') { if (!ok(mk.cdi)) need = 'CDI'; else f = ((1 + mk.cdi) * (1 + (ok(t) ? t : 0))) ** (du / 252); }
     else if (l.tipo === 'poup') {
       if (!ok(mk.selic)) need = 'Selic';
-      else { const m = mk.selic > 0.085 ? 0.005 : (1 + mk.selic * 0.7) ** (1 / 12) - 1; f = (1 + m) ** Math.floor(dc / 30.4375); }
+      else { const m = mk.selic > 0.085 ? 0.005 : (1 + mk.selic * 0.7) ** (1 / 12) - 1; f = (1 + m) ** Math.floor(dc / 30.4375 + 0.05); }
     }
     if (!ok(f)) return { need };
     const taxed = !(l.isento || l.tipo === 'poup');

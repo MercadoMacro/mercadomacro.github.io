@@ -1,0 +1,16 @@
+name: diag-novo
+on:
+  push:
+    paths: ['.github/workflows/diag-novo.yml']
+jobs:
+  ver:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: sleep 150
+      - run: |
+          H='-H Accept:text/html -H Sec-Fetch-Mode:navigate -H User-Agent:diag'
+          for u in / /calculadora-renda-fixa /privacidade /conta /nada; do curl -s -o p.html $H -w "$u %{http_code} %{redirect_url} " "https://mercadomacro.com.br$u"; grep -o '<title>[^<]*' p.html | head -1; done
+          curl -s $H https://mercadomacro.com.br/ | grep -c '<style>:root' || true
+          curl -s https://mercadomacro.com.br/sitemap.xml | grep -o '<loc>[^<]*'
+          curl -s -o /dev/null -w "calc-rf.js %{http_code}\n" https://mercadomacro.com.br/vitrine/calc-rf.js?v=1
+          curl -s -H "Origin: https://mercadomacro.com.br" "https://mercadomacro-vitrine.cota-cotacao10.workers.dev/bcb?c=4389&n=1"; echo
