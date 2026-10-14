@@ -4,6 +4,10 @@
 (function () {
   'use strict';
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
+  // visitantes sem login usam o worker da segunda conta da Cloudflare (terminal/vitrine-worker);
+  // se ele falhar, cai no worker principal
+  var VT = 'https://autumn-thunder-c98b.cota-cotacao10.workers.dev';
+  var okJson = function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
   var RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/';
   var reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
@@ -88,8 +92,9 @@
     return q ? pre + num(q.v, sym === 'BRL=X' || sym === 'EURBRL=X' ? 4 : casas(q.v)) : '—';
   }
   function carregarCotacoes() {
-    return fetch(API + '/quotes?symbols=' + encodeURIComponent(TODOS.map(function (a) { return a[0]; }).join(',')))
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    var lista = encodeURIComponent(TODOS.map(function (a) { return a[0]; }).join(','));
+    return fetch(VT + '/quotes?symbols=' + lista).then(okJson)
+      .catch(function () { return fetch(API + '/quotes?symbols=' + lista).then(okJson); })
       .then(function (d) {
         var novo = {};
         Object.keys(d).forEach(function (k) { var q = parse(d[k]); if (q) novo[k] = q; });
@@ -139,7 +144,9 @@
   function bcb(c, n) {
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/' + n + '?formato=json';
     var ok = function (r) { if (!r.ok) throw new Error(); return r.json(); };
-    return fetch(API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(ok).catch(function () { return fetch(direto).then(ok); })
+    return fetch(VT + '/bcb?c=' + c + '&n=' + n).then(ok)
+      .catch(function () { return fetch(API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(ok); })
+      .catch(function () { return fetch(direto).then(ok); })
       .then(function (d) { if (!Array.isArray(d) || !d.length) throw new Error(); return d; });
   }
   var MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
