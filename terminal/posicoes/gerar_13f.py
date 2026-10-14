@@ -246,7 +246,9 @@ def main():
     lista = []
     for (cusip, pc), a in acoes.items():
         # empresa com mais de uma classe (GOOGL e GOOG): ficam todos os tickers, sem chutar qual é qual
-        t = " ".join(tk.get(chave_nome(a["nome"]), [])[:3]) or None
+        ts = tk.get(chave_nome(a["nome"]), [])
+        ts = [x for x in ts if "-" not in x] or ts  # 'BAC BML-PG' -> 'BAC' (preferenciais e warrants fora)
+        t = " ".join(ts[:3]) or None
         lista.append({"c": cusip, "n": a["nome"], "cl": a["classe"], "pc": pc, "t": t, "h": sorted(a["h"], key=lambda x: -(x[1] or 0))})
     lista.sort(key=lambda x: -sum(h[1] or 0 for h in x["h"]))
     com_t = sum(1 for x in lista if x["t"])
