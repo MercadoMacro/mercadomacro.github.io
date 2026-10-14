@@ -53,20 +53,39 @@ def fim_trimestre_anterior(d):
 
 
 def datas_no_texto(t):
+    """Lista de (data, posição no texto) de cada data escrita como dd/mm/aaaa ou "dd de mês de aaaa"."""
     t = t.lower()
-    out = []
-    for d, m, a in re.findall(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", t):
-        out.append((int(a), int(m), int(d)))
-    for d, m, a in re.findall(r"\b(\d{1,2})º?\s+de\s+([a-zç]+)\s+de\s+(\d{4})\b", t):
-        if m in MESES:
-            out.append((int(a), MESES[m], int(d)))
+    achadas = []
+    for m in re.finditer(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", t):
+        achadas.append((int(m.group(3)), int(m.group(2)), int(m.group(1)), m.start()))
+    for m in re.finditer(r"\b(\d{1,2})º?\s+de\s+([a-zç]+)\s+de\s+(\d{4})\b", t):
+        if m.group(2) in MESES:
+            achadas.append((int(m.group(3)), MESES[m.group(2)], int(m.group(1)), m.start()))
     res = []
-    for a, m, d in out:
+    for a, mes, d, pos in achadas:
         try:
-            res.append(date(a, m, d))
+            res.append((date(a, mes, d), pos))
         except ValueError:
             pass
     return res
+
+
+def data_da_divulgacao(texto, entrega, alvo):
+    """A data mais perto das palavras "divulga"/"resultado", depois do dia do comunicado.
+    O cabeçalho ("São Paulo, 1 de outubro de 2026") tem a própria data de entrega e fica de fora."""
+    baixo = texto.lower()
+    chaves = [m.start() for m in re.finditer(r"divulga|resultado|release|teleconfer|webcast", baixo)]
+    melhores = []
+    for d, pos in datas_no_texto(texto):
+        if not (entrega < d <= entrega + timedelta(days=75)) or d <= alvo:
+            continue
+        dist = min((abs(pos - c) for c in chaves), default=10 ** 6)
+        melhores.append((dist, d, pos))
+    if not melhores:
+        return None, ""
+    dist, d, pos = min(melhores, key=lambda x: (x[0] // 200, x[1]))
+    trecho = re.sub(r"\s+", " ", texto[max(0, pos - 120):pos + 60])
+    return d, trecho
 
 
 def pdf_texto(dados):
@@ -146,11 +165,12 @@ def main():
             entrega = date.fromisoformat(l["Data_Entrega"])
             texto = pdf_texto(baixa(l["Link_Download"], tentativas=2, timeout=60))
             time.sleep(0.3)
-            futuras = sorted(d for d in datas_no_texto(texto) if entrega <= d <= entrega + timedelta(days=75) and d > alvo)
-            if not futuras:
+            d, trecho = data_da_divulgacao(texto, entrega, alvo)
+            if not d:
                 print(f"    {cvm} {l['Nome_Companhia']}: sem data no comunicado ({l['Assunto']})")
                 continue
-            confirmadas[cvm] = {"data": futuras[0].isoformat(), "link": l["Link_Download"], "comunicado": l["Data_Entrega"]}
+            print(f"    {cvm} {l['Nome_Companhia']}: {d} <- ...{trecho}...")
+            confirmadas[cvm] = {"data": d.isoformat(), "link": l["Link_Download"], "comunicado": l["Data_Entrega"]}
     print(f"  {len(confirmadas)} datas confirmadas por comunicado")
 
     proximos = []
@@ -165,7 +185,8 @@ def main():
             c = confirmadas.get(cvm) if ref_d == alvo else None
             if c:
                 item.update({"data": c["data"], "tipo": "confirmada", "link": c["link"], "comunicado": c["comunicado"]})
-            elif base:
+            elif base and (date.fromisoformat(base["data"]) - date.fromisoformat(ref_ant)).days <= (100 if ref_d.month == 12 else 75):
+                # mesmo dia da semana, 52 semanas depois (só se no ano passado entregou dentro do prazo normal)
                 prov = date.fromisoformat(base["data"]) + timedelta(days=364)
                 item.update({"data": prov.isoformat(), "tipo": "provavel", "base": base["data"]})
             else:
