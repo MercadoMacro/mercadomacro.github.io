@@ -82,17 +82,17 @@
           <h2 class="vt-auth-t" id="auth-t">Entre no painel</h2>
           <p class="vt-auth-s" id="auth-s">Acesso exclusivo para usuários liberados.</p>
           <div class="vt-abas" role="tablist" aria-label="Entrar ou cadastrar">
-            <button type="button" role="tab" id="t-entrar" aria-selected="true" aria-controls="f-entrar">Entrar</button>
-            <button type="button" role="tab" id="t-cad" aria-selected="false" aria-controls="f-cad">Pedir acesso</button>
+            <button type="button" role="tab" id="t-entrar" aria-selected="true" aria-controls="p-entrar">Entrar</button>
+            <button type="button" role="tab" id="t-cad" aria-selected="false" aria-controls="p-cad">Pedir acesso</button>
           </div>
-          <form id="f-entrar" role="tabpanel" aria-labelledby="t-entrar">
+          <div id="p-entrar" role="tabpanel" aria-labelledby="t-entrar"><form id="f-entrar">
             <label for="e-email">E-mail</label><input id="e-email" name="email" type="email" autocomplete="email" required>
             <label for="e-senha">Senha</label><input id="e-senha" name="senha" type="password" autocomplete="current-password" required>
             <button class="vt-enviar" type="submit">Entrar no painel <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
             <p class="vt-msg" role="status" aria-live="polite"></p>
             <p class="vt-esqueci">Esqueceu a senha? Fale com quem liberou seu acesso para receber uma senha nova.</p>
-          </form>
-          <form id="f-cad" role="tabpanel" aria-labelledby="t-cad" hidden>
+          </form></div>
+          <div id="p-cad" role="tabpanel" aria-labelledby="t-cad" hidden><form id="f-cad">
             <label for="c-nome">Nome</label><input id="c-nome" name="nome" autocomplete="name" required maxlength="80">
             <label for="c-email">E-mail</label><input id="c-email" name="email" type="email" autocomplete="email" required>
             <label for="c-senha">Senha (mínimo 8 caracteres)</label><input id="c-senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
@@ -100,7 +100,7 @@
             <p class="vt-msg" role="status" aria-live="polite"></p>
             <p class="vt-nota"><i class="fas fa-shield-alt" aria-hidden="true"></i> Cada cadastro é analisado e liberado pelo administrador.</p>
             <p class="vt-cad-priv">Ao pedir acesso você concorda com a <a href="/privacidade">política de privacidade</a>.</p>
-          </form>
+          </form></div>
         </div>
         <div class="vt-pronto" id="pronto" hidden>
           <span class="vt-pronto-ic"><i class="fas fa-check" aria-hidden="true"></i></span>
@@ -200,6 +200,6 @@
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
 </footer>
 
-<script src="/vitrine/vitrine.js?v=5"></script>
+<script src="/vitrine/vitrine.js?v=6"></script>
 </body>
 </html>

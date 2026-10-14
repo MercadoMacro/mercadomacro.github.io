@@ -17,7 +17,7 @@
   var tE = $('t-entrar'), tC = $('t-cad'), fE = $('f-entrar'), fC = $('f-cad');
   function aba(cad, foco) {
     tE.setAttribute('aria-selected', !cad); tC.setAttribute('aria-selected', cad);
-    fE.hidden = cad; fC.hidden = !cad;
+    $('p-entrar').hidden = cad; $('p-cad').hidden = !cad;
     $('auth-t').textContent = cad ? 'Peça seu acesso' : 'Entre no painel';
     $('auth-s').textContent = cad ? 'Leva menos de um minuto. A liberação é feita pelo administrador.' : 'Acesso exclusivo para usuários liberados.';
     if (foco) (cad ? fC : fE).querySelector('input').focus({ preventScroll: true });
