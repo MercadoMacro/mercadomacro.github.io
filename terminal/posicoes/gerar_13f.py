@@ -132,13 +132,14 @@ SUFIXOS = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC
 
 
 ABREV = {"AMER": "AMERICA", "PETE": "PETROLEUM", "FINL": "FINANCIAL", "INTL": "INTERNATIONAL", "TECHNOLOGIES": "TECHNOLOGIES",
-         "SYS": "SYSTEMS", "PHARMACEUTICALS": "PHARMACEUTICALS", "COMMUNICATIONS": "COMMUNICATIONS", "BANCORPORATION": "BANCORP"}
+         "SYS": "SYSTEMS", "NY": "NEW YORK", "MTRS": "MOTORS", "SVCS": "SERVICES", "HLDG": "HOLDING", "MGMT": "MANAGEMENT", "PHARMACEUTICALS": "PHARMACEUTICALS", "COMMUNICATIONS": "COMMUNICATIONS", "BANCORPORATION": "BANCORP"}
 
 
 def chave_nome(n):
     """'APPLE INC' e 'Apple Inc.' viram 'APPLE'; usado só para achar o ticker pelo nome."""
-    pal = re.sub(r"[^A-Z0-9 ]", " ", (n or "").upper().replace("'", "").replace("&", " AND ")).split()
-    pal = [ABREV.get(w, w) for w in pal]
+    n = re.sub(r"/[A-Z ]{2,4}/?", " ", (n or "").upper())  # 'OCCIDENTAL PETROLEUM CORP /DE/'
+    pal = re.sub(r"[^A-Z0-9 ]", " ", n.replace("'", "").replace("&", " AND ")).split()
+    pal = [ABREV.get(w, w) for w in pal if w not in ("OF", "THE", "AND")]
     while pal and pal[-1] in SUFIXOS:
         pal.pop()
     return " ".join(pal)
