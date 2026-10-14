@@ -1,0 +1,36 @@
+# Agenda de balanços da B3: todo dia útil lê na CVM quem já entregou ITR/DFP e as datas
+# de divulgação anunciadas pelas empresas, e grava terminal/balancos-br/agenda.json.
+name: Agenda de balanços (B3)
+
+on:
+  schedule:
+    - cron: '0 10 * * 1-5'   # 07h em Brasília
+    - cron: '30 23 * * 1-5'  # 20h30, depois dos balanços divulgados após o fechamento
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: balancos-br
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Instalar o leitor de PDF
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null
+      - name: Ler a CVM
+        run: python3 terminal/balancos-br/gerar_agenda.py terminal/balancos-br terminal/fundamentos/index.json
+      - name: Salvar no repositório
+        run: |
+          git config user.name "balancos-bot"
+          git config user.email "actions@users.noreply.github.com"
+          p=terminal/balancos-br/agenda.json
+          if git cat-file -e HEAD:$p 2>/dev/null && [ "$(git show HEAD:$p | python3 -c 'import json,sys;d=json.load(sys.stdin);d.pop("gerado",None);print(json.dumps(d,sort_keys=True))')" = "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d.pop("gerado",None);print(json.dumps(d,sort_keys=True))' $p)" ]; then echo "Sem mudanças"; exit 0; fi
+          git add $p
+          git commit -m "Agenda de balanços B3: $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1
