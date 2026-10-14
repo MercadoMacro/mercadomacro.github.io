@@ -1,0 +1,10 @@
+name: diag-resumo
+on:
+  push:
+    paths: ['.github/workflows/diag-resumo.yml']
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: FORCAR=true RESUMO_OUT=/tmp/r.txt node terminal/resumo/resumo.mjs 2>&1 | grep -iE "selic|Juros" 
