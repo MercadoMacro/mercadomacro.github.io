@@ -2521,3 +2521,45 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
 @media (min-width: 901px) and (hover: hover) {
   body.side-collapsed .side-item:not(#side-collapse) .si-ico { transform:scale(var(--mag, 1)); transform-origin:center; transition:transform .12s ease-out; will-change:transform; }
 }
+
+/* =====================================================================
+   CABEÇALHO EM DUAS FAIXAS (cabecalho.js; só computador, a partir de 1101 px)
+   ===================================================================== */
+@media (min-width: 1101px) {
+  body.hdr2 .topbar .brand-text .sub, body.hdr2 .tk-updated { display:none !important; }
+  html body.hdr2 .topbar.topbar:has(> .qbanner) { grid-template-areas:"logo qb right" "ticker ticker ticker"; row-gap:12px; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) { grid-template-areas:"logo right" "ticker ticker"; }
+  body.hdr2 .topbar .ticker { grid-area:ticker; margin-top:0 !important; padding:0 !important; height:40px; gap:0; overflow:hidden; }
+  /* bloco fixo: relógio, data, bolsas */
+  body.hdr2 .tk-status { flex:0 0 auto; display:flex; align-items:center; gap:8px; height:100%; padding:0 14px; border-right:1px solid var(--line);
+    background:var(--surface-2); font-size:11px; letter-spacing:.04em; color:var(--text-3); white-space:nowrap; text-transform:uppercase; }
+  body.hdr2 .tks-dot { width:7px; height:7px; border-radius:50%; background:var(--pos); box-shadow:0 0 0 3px color-mix(in srgb, var(--pos) 20%, transparent); }
+  body.hdr2 .tks-clock { font-family:'JetBrains Mono', monospace; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; letter-spacing:0; }
+  body.hdr2 .tks-sep { opacity:.6; }
+  body.hdr2 .tk-status #current-date { margin:0; color:var(--text-2); }
+  body.hdr2 .tk-status #market-status { display:inline-flex; gap:6px; margin-left:4px; }
+  body.hdr2 .tk-status .ms-pill { margin:0; font-size:10px; padding:1px 7px; border-radius:6px; }
+  body.hdr2 .ticker .tk-vp { height:100%; display:flex; align-items:center; }
+  body.hdr2 .ticker .refresh-btn { height:100%; width:42px; border-radius:0; border-left:1px solid var(--line); background:var(--surface-2); }
+  /* Ao vivo na linha de cima, no mesmo formato dos botões */
+  body.hdr2 .topbar-right #live-toggle { height:42px; padding:0 12px; border:1px solid var(--line); border-radius:11px; background:var(--surface);
+    box-shadow:var(--shadow-sm); font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+  body.hdr2 .cmdk-hint { min-width:200px !important; }
+  body.hdr2 .cmdk-hint .tx { display:inline !important; }
+  /* frase com o botão "Nova frase" sempre à vista */
+  body.hdr2 .qbanner { height:42px; position:relative; overflow:hidden; }
+  body.hdr2 .qbanner::before { content:''; position:absolute; top:0; left:25%; right:25%; height:1px;
+    background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, transparent), transparent); }
+  body.hdr2 .qbanner:hover .qb-txt { display:block; white-space:nowrap; -webkit-line-clamp:unset; }
+  body.hdr2 .qbanner .qb-btn[data-q="prev"], body.hdr2 .qbanner .qb-btn[data-q="next"] { display:none; }
+}
+.qb-new { display:none; }
+@media (min-width: 1101px) {
+  body.hdr2 .qb-new { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; height:26px; padding:0 10px; border:1px solid var(--line); border-radius:8px;
+    background:var(--surface-2); color:var(--text-3); font:inherit; font-size:11px; cursor:pointer; white-space:nowrap; }
+  body.hdr2 .qb-new:hover { color:var(--accent); border-color:var(--accent-line); }
+  body.hdr2 .qb-new i { font-size:10px; }
+}
+@media (min-width: 1101px) and (max-width: 1400px) { body.hdr2 .qb-new span, body.hdr2 .cmdk-hint .tx { display:none !important; } body.hdr2 .cmdk-hint { min-width:0 !important; } }
+/* com o Ao vivo lá em cima, a linha do Mercado só repetiria o horário */
+@media (min-width: 1101px) { body.hdr2 #market-panel .refresh-bar { display:none; } }
