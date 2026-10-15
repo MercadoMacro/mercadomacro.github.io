@@ -89,7 +89,9 @@ def main(pasta):
     if not reun:
         sys.exit('calendário do FOMC não encontrado')
     futuras = [r for r in reun if r['data'] >= hoje.isoformat()]
-    alto, baixo = fred('DFEDTARU'), fred('DFEDTARL')
+    alto = fred('DFEDTARU')
+    baixo_h = fred_serie('DFEDTARL')
+    baixo = {'v': baixo_h[-1][1], 'data': baixo_h[-1][0]} if baixo_h else None
     effr_h = fred_serie('EFFR')
     effr = {'v': effr_h[-1][1], 'data': effr_h[-1][0]} if effr_h else None
     if not (alto and baixo and effr):
@@ -117,6 +119,7 @@ def main(pasta):
         'alvo': {'min': baixo['v'], 'max': alto['v'], 'data': alto['data']},
         'effr': effr,
         'effr_hist': effr_h[-70:],
+        'alvo_min_hist': [x for i, x in enumerate(baixo_h) if i == 0 or x[1] != baixo_h[i - 1][1]][-6:],
         'contratos': contratos,
     }
     os.makedirs(pasta, exist_ok=True)
