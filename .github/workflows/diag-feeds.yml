@@ -1,0 +1,30 @@
+name: diag-feeds
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cp terminal/station/src/noticias.js /tmp/n.mjs
+          echo 'export { fetchOneFeed };' >> /tmp/n.mjs
+          cat > /tmp/t.mjs <<'X'
+          const { fetchOneFeed } = await import('/tmp/n.mjs');
+          const L = [
+            ['O Antagonista', 'https://oantagonista.com.br/feed/'],
+            ['BBC Brasil', 'https://feeds.bbci.co.uk/portuguese/rss.xml'],
+            ['Poder360', 'https://www.poder360.com.br/feed/'],
+            ['Agência Brasil Política', 'https://agenciabrasil.ebc.com.br/rss/politica/feed.xml'],
+            ['CNN Brasil Política', 'https://www.cnnbrasil.com.br/politica/feed/'],
+            ['G1 Política', 'https://g1.globo.com/rss/g1/politica/'],
+            ['Folha Poder', 'https://feeds.folha.uol.com.br/poder/rss091.xml'],
+          ];
+          const agora = Date.now();
+          for (const [name, url] of L) {
+            const it = await fetchOneFeed({ name, url, source: name, weight: 5 });
+            const novo = it.length ? ((agora - Math.max(...it.map(n => n.data))) / 36e5).toFixed(1) : '-';
+            const h48 = it.filter(n => agora - n.data < 48 * 36e5).length;
+            console.log(`FEED|${name}|${it.length}|${h48}|${novo}|img ${it.filter(n => n.imagem).length}|${(it[0]||{}).titulo||''}`.slice(0, 200));
+          }
+          X
+          node /tmp/t.mjs
