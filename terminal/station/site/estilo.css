@@ -2495,3 +2495,25 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
   body.has-side .topbar-right #summary-btn, body.has-side .topbar-right #backup-btn, body.has-side .topbar-right #theme-toggle { display:none; }
   body.has-side .qbanner { max-width:none; }
 }
+
+/* =====================================================================
+   COMPUTADOR: topo organizado em 3 linhas
+   1) logo | frase | horário + busca + ajustes (tudo na mesma altura)
+   2) "Mercado em tempo real · data · B3 · NYSE" numa linha só
+   3) faixa de cotações
+   ===================================================================== */
+@media (min-width: 1101px) {
+  html body .topbar.topbar:has(> .qbanner) { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"logo qb right" "sub sub sub" "ticker ticker ticker";
+    align-items:center; column-gap:24px; row-gap:6px; }
+  html body .topbar.topbar:has(> .qbanner) .brand, html body .topbar.topbar:has(> .qbanner) .brand-text { display:contents; }
+  html body .topbar.topbar:has(> .qbanner) .mm-logo { grid-area:logo; margin:0; line-height:0; }
+  html body .topbar.topbar:has(> .qbanner) .qbanner { grid-area:qb; height:42px; max-width:none; padding-top:0; padding-bottom:0; }
+  html body .topbar.topbar:has(> .qbanner) .topbar-right { grid-area:right; height:42px; gap:8px; }
+  html body .topbar.topbar:has(> .qbanner) .topbar-right .icon-btn, html body .topbar.topbar:has(> .qbanner) .cmdk-hint { height:42px; }
+  html body .topbar.topbar:has(> .qbanner) .tk-updated { padding:0 6px 0 0; }
+  html body .topbar.topbar:has(> .qbanner) .brand-text .sub { grid-area:sub; margin:0; display:flex; flex-wrap:nowrap; align-items:center; gap:0; white-space:nowrap; }
+  html body .topbar.topbar:has(> .qbanner) .brand-text .sub .dot-live { margin-right:8px; }
+  html body .topbar.topbar:has(> .qbanner) #current-date { margin-left:5px; }
+  html body .topbar.topbar:has(> .qbanner) #market-status { display:inline-flex; gap:0; margin:0 0 0 6px; }
+  html body .topbar.topbar:has(> .qbanner) .ticker { grid-area:ticker; margin-top:8px; }
+}
