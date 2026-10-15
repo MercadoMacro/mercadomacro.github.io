@@ -4712,7 +4712,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'fed.js?v=1';
+    sc.src = 'fed.js?v=2';
     sc.onload = () => window.__fedRender && window.__fedRender(el);
     sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fed.js</b>.</div>'; };
     document.body.appendChild(sc);

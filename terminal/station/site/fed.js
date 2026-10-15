@@ -104,10 +104,10 @@
   }
 
   // a conta: taxa esperada depois de cada reunião e a árvore de probabilidades
-  function calcula(reun, todas, px, effr) {
+  function calcula(reun, todas, px, effr, ref = hojeNY()) {
     const comReuniao = new Set(todas.map((r) => mes(r.data)));
     const r = (m) => (ok(px[m]) ? 100 - px[m] : null);
-    const atual = mes(hojeNY());
+    const atual = mes(ref);
     let antFim = effr, dist = new Map([[0, 1]]);
     const out = [];
     for (let i = 0; i < reun.length; i++) {
@@ -115,8 +115,8 @@
       // começo do mês: o mês anterior sem reunião já dá a taxa; senão vale o fim da reunião anterior (ou a efetiva de hoje)
       let ini = antFim;
       if (!comReuniao.has(ant) && r(ant) != null && ant >= atual) ini = r(ant);
-      let fim;
-      if (!comReuniao.has(prox) && r(prox) != null) fim = r(prox);
+      let fim, usado = M;
+      if (!comReuniao.has(prox) && r(prox) != null) { fim = r(prox); usado = prox; }
       else {
         if (r(M) == null) break;
         const [y, mm, dd] = re.data.split('-').map(Number);
@@ -134,7 +134,7 @@
       dist = nd; antFim = fim;
       const d = {};
       for (const [s, p] of dist) if (p > 0.0004) d[s] = p * 100;
-      out.push({ data: re.data, sep: re.sep, fim, dist: d });
+      out.push({ data: re.data, sep: re.sep, fim, dist: d, usado });
     }
     return out;
   }
@@ -143,6 +143,76 @@
     const a = base.alvo;
     return `${num(a.min + s * 0.25)}–${num(a.max + s * 0.25)}%`;
   };
+  const tick = (m) => (base.contratos?.[m]?.s || '').replace('.CBT', '');
+  const nomeMes = (m) => `${MES[+m.slice(5, 7) - 1]}/${m.slice(2, 4)}`;
+  const varia = (a, b) => (ok(a) && ok(b) ? `${a - b >= 0 ? '+' : '−'}${num(Math.abs(a - b), 3)}` : '—');
+  const corDe = (k) => {
+    const s = Math.round((+k - base.alvo.min) / 0.25);
+    return { 0: '#60a5fa', 1: '#f87171', 2: '#fb923c', 3: '#facc15', 4: '#e879f9', '-1': '#34d399', '-2': '#2dd4bf', '-3': '#a3e635', '-4': '#22d3ee' }[s] || '#94a3b8';
+  };
+  const faixaAbs = (k) => `${num(+k)}–${num(+k + 0.25)}%`;
+  const at = (arr, d) => { let v = null; for (const x of arr || []) { if (x[0] <= d) v = x[1]; else break; } return v; };
+
+  // chance de cada faixa da reunião escolhida em cada um dos últimos pregões (e agora)
+  function historico(selData, todas, R) {
+    const hoje = hojeNY();
+    // começa depois da última reunião que já passou (antes dela a faixa era outra)
+    const ultima = todas.map((r) => r.data).filter((d) => d < hoje).sort().pop() || '';
+    const datas = [...new Set(Object.values(base.contratos || {}).flatMap((c) => (c.fech || []).map((x) => x[0])))].sort()
+      .filter((d) => d < hoje && d < selData && d > ultima).slice(-30);
+    const pts = [];
+    for (const d of datas) {
+      const px = {};
+      for (const [m, c] of Object.entries(base.contratos)) { const v = at(c.fech, d); if (ok(v)) px[m] = v; }
+      const effr = at(base.effr_hist, d) ?? base.effr.v;
+      const lo = at(base.alvo_min_hist, d) ?? base.alvo.min;
+      // a decisão do próprio dia d já sai antes do fechamento
+      const res = calcula(todas.filter((r) => r.data > d), todas, px, effr, d).find((x) => x.data === selData);
+      if (!res) continue;
+      const abs = {};
+      for (const [st, p] of Object.entries(res.dist)) abs[(lo + st * 0.25).toFixed(2)] = p;
+      pts.push({ d, abs });
+    }
+    const abs = {};
+    for (const [st, p] of Object.entries(R.dist)) abs[(base.alvo.min + st * 0.25).toFixed(2)] = p;
+    pts.push({ d: 'agora', abs });
+    return pts;
+  }
+  let hist = null;
+  function desenhaHist() {
+    const box = root?.querySelector('.fw-hbox');
+    if (!box || !hist || hist.length < 2) { if (box) box.innerHTML = '<div class="fw-msg">Ainda sem histórico suficiente.</div>'; return; }
+    const W = Math.max(300, Math.floor(box.clientWidth || 700)), H = 220, L = 40, Rm = 12, T = 10, B = 24;
+    const pw = W - L - Rm, ph = H - T - B, n = hist.length;
+    const xs = (i) => L + (n === 1 ? pw / 2 : (i * pw) / (n - 1));
+    const ys = (v) => T + ph - (v / 100) * ph;
+    const chaves = [...new Set(hist.flatMap((p) => Object.keys(p.abs)))].filter((k) => Math.max(...hist.map((p) => p.abs[k] || 0)) >= 3).sort((a, b) => a - b);
+    const grade = [0, 25, 50, 75, 100].map((v) => `<line x1="${L}" x2="${W - Rm}" y1="${ys(v)}" y2="${ys(v)}" class="g"/><text x="${L - 6}" y="${ys(v) + 3.5}" text-anchor="end">${v}%</text>`).join('');
+    const passo = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / 70))));
+    const rot = hist.map((p, i) => (i % passo === 0 || i === n - 1) && !(i !== n - 1 && n - 1 - i < passo * 0.6)
+      ? `<text x="${xs(i)}" y="${H - 6}" text-anchor="${i === n - 1 ? 'end' : i === 0 ? 'start' : 'middle'}">${p.d === 'agora' ? 'agora' : dm(p.d)}</text>` : '').join('');
+    const linhas = chaves.map((k) => `<polyline fill="none" stroke="${corDe(k)}" stroke-width="2" stroke-linejoin="round" points="${hist.map((p, i) => `${xs(i).toFixed(1)},${ys(p.abs[k] || 0).toFixed(1)}`).join(' ')}"/>`).join('');
+    box.innerHTML = `<svg class="fw-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Histórico das probabilidades">${grade}${rot}${linhas}<line class="fw-cx" x1="0" x2="0" y1="${T}" y2="${T + ph}" style="display:none"/></svg><div class="fw-tip" hidden></div>`;
+    root.querySelector('.fw-hleg').innerHTML = chaves.map((k) => `<span><i style="background:${corDe(k)}"></i>${faixaAbs(k)}</span>`).join('');
+    const svg = box.querySelector('svg'), tip = box.querySelector('.fw-tip'), cx = box.querySelector('.fw-cx');
+    svg.addEventListener('mousemove', (e) => {
+      const r = svg.getBoundingClientRect(), x = e.clientX - r.left;
+      const i = Math.max(0, Math.min(n - 1, Math.round(((x - L) / pw) * (n - 1))));
+      const p = hist[i];
+      cx.setAttribute('x1', xs(i)); cx.setAttribute('x2', xs(i)); cx.style.display = '';
+      tip.innerHTML = `<b>${p.d === 'agora' ? 'Agora' : dmy(p.d)}</b>` + chaves.map((k) => `<div><i style="background:${corDe(k)}"></i>${faixaAbs(k)}<span>${pct(p.abs[k] || 0)}</span></div>`).join('');
+      tip.hidden = false;
+      const tw = tip.offsetWidth;
+      tip.style.left = `${Math.max(0, Math.min(W - tw, xs(i) + 12 > W - tw ? xs(i) - tw - 12 : xs(i) + 12))}px`;
+    });
+    svg.addEventListener('mouseleave', () => { tip.hidden = true; cx.style.display = 'none'; });
+  }
+  let rzT = null, larg = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(rzT);
+    rzT = setTimeout(() => { const b = root?.querySelector('.fw-hbox'); if (b && Math.abs(b.clientWidth - larg) > 8) { larg = b.clientWidth; desenhaHist(); } }, 150);
+  });
+
   const nomeMov = (s) => (s === 0 ? 'Manter' : s > 0 ? `Alta de ${s * 25} bp` : `Corte de ${-s * 25} bp`);
   const tomMov = (s) => (s === 0 ? 'fw-man' : s > 0 ? 'fw-alta' : 'fw-corte');
 
@@ -189,13 +259,13 @@
 
     // tabela: todas as reuniões x faixas
     const cols = [...new Set(agora.flatMap((x) => Object.keys(x.dist).filter((k) => x.dist[k] >= 0.5).map(Number)))].sort((a, b) => a - b);
-    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((s) => `<th>${faixa(s)}</th>`).join('')}<th>Taxa esperada</th></tr></thead><tbody>${agora.map((x, i) => {
+    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((s) => `<th>${faixa(s)}</th>`).join('')}<th>Contrato</th><th>Taxa esperada</th></tr></thead><tbody>${agora.map((x, i) => {
       const mx = Math.max(...Object.values(x.dist));
       return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}${x.sep ? ' *' : ''}</td>${cols.map((s) => {
         const p = x.dist[s];
         if (!ok(p) || p < 0.05) return '<td class="z">—</td>';
         return `<td class="${p === mx ? 'mx' : ''}" style="--a:${Math.min(1, p / 100).toFixed(3)}">${num(p, 1)}%</td>`;
-      }).join('')}<td class="fw-tx">${num(x.fim)}%</td></tr>`;
+      }).join('')}<td class="fw-ct" title="Contrato de Fed Funds usado na conta">${esc(tick(x.usado))} <b>${num(px.agora[x.usado], 3)}</b></td><td class="fw-tx">${num(x.fim)}%</td></tr>`;
     }).join('')}</tbody></table>`;
 
     const hora = px.hora ? new Date(px.hora * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -212,13 +282,28 @@
         <div><span>Taxa esperada depois</span><b>${num(R.fim)}%</b><small>${mudanca >= 0 ? '+' : '−'}${num(Math.abs(mudanca), 1)} bp sobre a efetiva</small></div>
       </div>
       <div class="fw-sec">Chance de cada faixa da taxa depois da reunião de ${dmy(R.data)}</div>
+      <div class="fw-ctr">
+        <span class="fw-ctr-t">Contrato usado</span>
+        <b>${esc(tick(R.usado))}</b><span>${nomeMes(R.usado)}</span>
+        <span class="fw-ctr-p">${num(px.agora[R.usado], 3)}</span>
+        <span>taxa implícita ${num(100 - px.agora[R.usado], 3)}%</span>
+        <span>ontem ${num(px.ontem[R.usado], 3)} (${varia(px.agora[R.usado], px.ontem[R.usado])})</span>
+        <span>1 semana ${num(px.semana[R.usado], 3)} (${varia(px.agora[R.usado], px.semana[R.usado])})</span>
+      </div>
       <div class="fw-bars">${barras}</div>
+      <div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div>
+      <div class="fw-hleg"></div>
+      <div class="fw-hwrap"><div class="fw-hbox"></div></div>
       <div class="fw-sec">Todas as reuniões <small>(chance da faixa da taxa depois de cada reunião)</small></div>
       <div class="fw-tabw">${tabela}</div>
       <div class="fw-foot">Preço dos contratos: ${esc(hora)}${vivo ? '' : ' (do último registro do robô)'}. * reunião com projeções econômicas.
         Conta feita aqui com o preço dos futuros de Fed Funds de 30 dias (CBOT), no mesmo método da ferramenta FedWatch da CME; os números podem diferir um pouco dos dela.
+        O contrato usado é o do mês seguinte à reunião quando esse mês não tem reunião; senão, o do próprio mês. O gráfico refaz a conta com o fechamento de cada pregão.
         Fontes: CME/CBOT via Yahoo, Federal Reserve (calendário) e FRED (faixa e taxa efetiva).${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
     </div>`;
+    hist = historico(R.data, todas, R);
+    larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
+    desenhaHist();
   }
 
   function bind(el) {
@@ -276,6 +361,25 @@
   #fed-root .fw-tab tr { cursor:pointer; }
   #fed-root .fw-tab tr:hover td:first-child, #fed-root .fw-tab tr.sel td:first-child { color:var(--accent); font-weight:600; }
   #fed-root .fw-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; border-top:1px solid var(--line); margin-top:8px; }
+  #fed-root .fw-ctr { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:2px 14px 8px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); font-size:11.5px; color:var(--text-3); }
+  #fed-root .fw-ctr b { font:700 13px 'JetBrains Mono', monospace; color:var(--text); margin-right:-8px; }
+  #fed-root .fw-ctr-t { text-transform:uppercase; letter-spacing:.06em; font-size:10px; font-weight:700; }
+  #fed-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent); }
+  #fed-root .fw-tab td.fw-ct { background:none; color:var(--text-3); font-size:11px; }
+  #fed-root .fw-tab td.fw-ct b { color:var(--text-2); font-weight:600; }
+  #fed-root .fw-hleg { display:flex; flex-wrap:wrap; gap:4px 14px; padding:0 14px 4px; font-size:11.5px; color:var(--text-2); }
+  #fed-root .fw-hleg span { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; }
+  #fed-root .fw-hleg i, #fed-root .fw-tip i { width:10px; height:3px; border-radius:2px; display:inline-block; }
+  #fed-root .fw-hwrap { padding:0 14px 8px; }
+  #fed-root .fw-hbox { position:relative; width:100%; min-height:220px; }
+  #fed-root .fw-svg { display:block; }
+  #fed-root .fw-svg text { fill:var(--text-3); font:10px 'JetBrains Mono', monospace; }
+  #fed-root .fw-svg .g { stroke:var(--line); stroke-width:1; }
+  #fed-root .fw-svg .fw-cx { stroke:var(--text-3); stroke-dasharray:3 3; }
+  #fed-root .fw-tip { position:absolute; top:6px; z-index:2; pointer-events:none; background:var(--surface); border:1px solid var(--line-2); border-radius:9px; box-shadow:var(--shadow-lg); padding:8px 10px; font-size:11.5px; color:var(--text-2); min-width:170px; }
+  #fed-root .fw-tip b { display:block; color:var(--text); margin-bottom:4px; }
+  #fed-root .fw-tip div { display:flex; align-items:center; gap:7px; line-height:1.7; font-family:'JetBrains Mono', monospace; }
+  #fed-root .fw-tip span { margin-left:auto; padding-left:10px; color:var(--text); font-weight:600; }
   @media (max-width: 900px) {
     #fed-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
     #fed-root .fw-kpis > div:nth-child(3) { border-left:0; }
