@@ -47,6 +47,11 @@ export default {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
+      if (p === '/__teste-disparo') { // temporário: confere o GH_TOKEN disparando o vigia (inofensivo)
+        if (!env.GH_TOKEN) return json({ token: false });
+        const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/vigia.yml/dispatches`, { method: 'POST', headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'User-Agent': 'mercadomacro-station' }, body: JSON.stringify({ ref: 'main' }) });
+        return json({ token: true, status: r.status }, 200, { 'Cache-Control': 'no-store' });
+      }
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, () => paginaFixa(req, env, '/vitrine/404', 404));
