@@ -1,0 +1,14 @@
+name: diag-news
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -s https://news.cota-cotacao10.workers.dev/ -o n.json
+          python3 -c "
+          import json,collections,time
+          d=json.load(open('n.json')); now=time.time()*1000
+          print('total',len(d)); print(collections.Counter(n['fonte'] for n in d).most_common())
+          print([ (n['titulo'][:60], round((now-n['data'])/36e5,1)) for n in d if n['fonte']=='Bloomberg'])"
+          curl -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' https://feeds.bloomberg.com/markets/news.rss | grep -o '<pubDate>[^<]*' | head -5
