@@ -2490,3 +2490,8 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
 .ns-pol-switch.on .ns-pol-sw { background:var(--accent); }
 .ns-pol-switch.on .ns-pol-sw::after { transform:translateX(12px); background:#0b1220; }
 @media (max-width: 900px) { .ns-pol-switch { width:auto; } }
+/* Topo no computador: Resumo, Backup e Tema já estão na barra lateral (e Backup em Ajustes); a faixa de frases ocupa o espaço */
+@media (min-width: 901px) {
+  body.has-side .topbar-right #summary-btn, body.has-side .topbar-right #backup-btn, body.has-side .topbar-right #theme-toggle { display:none; }
+  body.has-side .qbanner { max-width:none; }
+}
