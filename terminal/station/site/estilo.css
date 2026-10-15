@@ -2564,3 +2564,29 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
 /* com o Ao vivo lá em cima, a linha do Mercado só repetiria o horário */
 @media (min-width: 1101px) { body.hdr2 #market-panel .refresh-bar { display:none; } }
 @media (min-width: 1101px) { html body.hdr2 .mm-brand .mm-img { height:36px; } }
+
+/* =====================================================================
+   NOTÍCIAS NO MODELO NOVO (noticias2.js; teste de 15/10/2026)
+   ===================================================================== */
+body.nw2 #news-panel .refresh-bar { display:none; }
+body.nw2 .news-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; margin-bottom:12px;
+  border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow-sm); }
+body.nw2 .news-toolbar .news-search { flex:1 1 220px; min-width:0; margin:0; }
+body.nw2 .news-toolbar #news-info { font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-3); white-space:nowrap; margin:0; padding:0 4px; }
+body.nw2 .news-toolbar #briefing-btn { color:var(--accent); border-color:var(--accent-line); background:var(--accent-soft); font-weight:600; }
+body.nw2 .news-toolbar #news-refresh-btn { width:34px; justify-content:center; padding:0; }
+body.nw2 .nw2-n { margin-left:6px; padding:0 6px; border-radius:6px; font:600 10.5px 'JetBrains Mono', monospace; background:color-mix(in srgb, currentColor 16%, transparent); }
+body.nw2 .nw2-n:empty { display:none; }
+body.nw2 #news-picks:has(.np-dica) { display:none; }
+/* lateral */
+body.nw2 .nw2-head { display:flex; justify-content:space-between; align-items:center; padding:2px 4px 4px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); }
+body.nw2 .nw2-head b { font-family:'JetBrains Mono', monospace; font-weight:600; }
+body.nw2 .ns-sub-bubble { width:100%; }
+body.nw2 .ns-sub-bubble .ns-sub-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+body.nw2 .nw2-c { margin-left:auto; font:500 10px 'JetBrains Mono', monospace; color:var(--text-3); }
+body.nw2 .ns-sub-bubble.nw2-vazio { opacity:.35; }
+@media (min-width: 901px) {
+  body.nw2 .news-layout { grid-template-columns:220px minmax(0,1fr); }
+  body.nw2 .nc-grid { grid-template-columns:repeat(auto-fill, minmax(232px, 1fr)); grid-auto-flow:row dense; }
+}
+@media (max-width: 900px) { body.nw2 .nw2-head { flex:1 0 100%; } }
