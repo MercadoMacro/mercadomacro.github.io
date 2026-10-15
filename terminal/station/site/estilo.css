@@ -2461,3 +2461,23 @@ body.light :is(.ecal-view-btn.active, .side-item.active, .nm-toggle button.activ
 html body .sx-r { -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent); }
 html body .sx-l { -webkit-mask-image:linear-gradient(90deg,transparent,#000 32px); mask-image:linear-gradient(90deg,transparent,#000 32px); }
 html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent); mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent); }
+
+/* ---------- Notícias: foto, falas agrupadas, celular (2026-10-15) ---------- */
+.nc-img { display:block; width:calc(100% + 32px); margin:-15px -16px 2px; height:150px; object-fit:cover; border-radius:10px 10px 0 0; background:var(--surface-2); }
+.nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 4px; height:220px; }
+.nc-card.com-img::before { top:160px; }
+.nc-card.nc-lead.com-img::before { top:236px; }
+.nc-falas { margin:0; padding-left:16px; color:var(--text-2); font-size:13px; line-height:1.55; }
+.nc-falas li { margin:2px 0; }
+.nc-falas .nc-falas-mais { list-style:none; margin-left:-16px; color:var(--text-3); font-size:12px; }
+.np-star { color:#f5b301; }
+@media (max-width: 700px) {
+  .news-picks .np-dica { display:none; }
+  .news-picks { min-height:0; margin:0 0 8px; }
+  .news-toolbar { gap:8px; margin-bottom:10px; }
+  .news-toolbar .news-search { order:3; flex-basis:100%; }
+  .news-assets { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  .source-sidebar { padding:6px; gap:6px; }
+  .nc-img { height:140px; }
+  .nc-card.nc-lead .nc-img { height:170px; }
+}

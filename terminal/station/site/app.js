@@ -1076,6 +1076,103 @@ function newsRank(n) {
   const ageH = Math.max(0, (Date.now() - (n.data || 0)) / 3600000);
   return (n.finalScore || 0) - ageH * 4;
 }
+// fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
+const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Dukascopy']);
+const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias de meses atrás
+const NEWS_TR_KEY = 'news_tr_v1';
+let newsTr = {};
+try { newsTr = JSON.parse(localStorage.getItem(NEWS_TR_KEY) || '{}') || {}; } catch (e) { newsTr = {}; }
+function newsAplicaTraducao(n) {
+  const t = newsTr[n.link];
+  if (!t || n.traduzido) return;
+  if (t[0]) { n.tituloOriginal = n.titulo; n.titulo = t[0]; n.traduzido = true; }
+  if (t[1]) n.trechoPt = t[1];
+}
+// tira notícias velhas, o "FinancialJuice:" do começo e aplica as traduções já guardadas
+function newsPrepara(list) {
+  const agora = Date.now();
+  const out = newsFixIds(list).filter(n => n && n.titulo && n.data && agora - n.data < NEWS_MAX_IDADE);
+  out.forEach(n => {
+    n.titulo = String(n.titulo).replace(/^FinancialJuice:\s*/i, '');
+    n._br = NEWS_BR.has(n.fonte);
+    newsAplicaTraducao(n);
+  });
+  return out;
+}
+async function newsTraduzLote(textos) {
+  const r = await fetchT('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=' + encodeURIComponent(textos.join('\n')), {}, 12000);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  const out = (d[0] || []).map(seg => seg[0]).join('').split('\n').map(x => x.trim());
+  if (out.length !== textos.length) throw new Error('tradução desalinhada');
+  return out;
+}
+function newsLotes(itens, campo) {
+  const lotes = []; let atual = [], tam = 0;
+  for (const n of itens) {
+    const len = n[campo].length + 1;
+    if (tam + len > 1500 && atual.length) { lotes.push(atual); atual = []; tam = 0; }
+    atual.push(n); tam += len;
+  }
+  if (atual.length) lotes.push(atual);
+  return lotes;
+}
+let newsTraduzindo = false;
+// traduz no navegador de quem lê (só o que ainda não foi traduzido; fica guardado neste aparelho)
+async function newsTraduzir() {
+  if (newsTraduzindo) return;
+  const falta = newsAll.filter(n => NEWS_EN.has(n.fonte) && !n.traduzido && !(newsTr[n.link] && newsTr[n.link][0]));
+  if (!falta.length) return;
+  newsTraduzindo = true;
+  try {
+    falta.sort((a, b) => newsRank(b) - newsRank(a));
+    const sel = falta.slice(0, 160);
+    for (const lote of newsLotes(sel, 'titulo').slice(0, 10)) {
+      try {
+        const tr = await newsTraduzLote(lote.map(n => n.titulo.replace(/\n+/g, ' ')));
+        lote.forEach((n, i) => { if (tr[i]) newsTr[n.link] = [tr[i], (newsTr[n.link] || [])[1] || '']; });
+      } catch (e) { console.warn('[News] tradução:', e.message); break; }
+    }
+    const comTrecho = sel.filter(n => n.trecho && !(newsTr[n.link] && newsTr[n.link][1])).slice(0, 50)
+      .map(n => ({ n, trecho: n.trecho.replace(/\n+/g, ' ').slice(0, 400) }));
+    for (const lote of newsLotes(comTrecho, 'trecho').slice(0, 8)) {
+      try {
+        const tr = await newsTraduzLote(lote.map(x => x.trecho));
+        lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; });
+      } catch (e) { console.warn('[News] tradução:', e.message); break; }
+    }
+    // guarda só o que ainda está na lista
+    const vivos = new Set(newsAll.map(n => n.link));
+    Object.keys(newsTr).forEach(k => { if (!vivos.has(k)) delete newsTr[k]; });
+    try { localStorage.setItem(NEWS_TR_KEY, JSON.stringify(newsTr)); } catch (e) { /* silencioso */ }
+    newsAll.forEach(newsAplicaTraducao);
+    renderNewsView();
+    if (newsCurrentMode === 'live') renderLiveView();
+  } finally { newsTraduzindo = false; }
+}
+// Financial Juice e ForexLive mandam cada frase de um discurso como uma notícia ("Fed's Goolsbee: ...").
+// Junta as frases da mesma pessoa (até 6 h) num cartão só.
+function newsJuntaFalas(list) {
+  const grupos = new Map(), out = [];
+  list.slice().sort((a, b) => b.data - a.data).forEach(n => {
+    const orig = n.tituloOriginal || n.titulo;
+    const m = /^([A-Z][^:]{2,40}):\s+\S/.exec(orig);
+    if (!m || !NEWS_EN.has(n.fonte) || /^(ICYMI|BREAKING|WATCH|UPDATE)/i.test(m[1])) { out.push(n); return; }
+    const chave = m[1].toLowerCase();
+    const g = grupos.get(chave);
+    if (g && g.data - n.data < 6 * 3600 * 1000) {
+      g.falas.push(n.titulo.replace(/^[^:]{2,60}:\s*/, ''));
+      g.impactScore = Math.max(g.impactScore || 0, n.impactScore || 0);
+      g.finalScore = Math.max(g.finalScore || 0, n.finalScore || 0) + (g.falas.length <= 3 ? 2 : 0);
+      return;
+    }
+    const lider = { ...n, falas: [] };
+    grupos.set(chave, lider);
+    out.push(lider);
+  });
+  return out;
+}
 function newsSourceLabel(n) {
   return n.fonte === 'Google News' ? (n.veiculo || '') : (NEWS_SOURCES[n.fonte]?.name || n.fonte);
 }
@@ -1086,7 +1183,7 @@ function newsTokens(t) {
 // Agrupa manchetes sobre o mesmo fato (palavras em comum, até 12 h de distância)
 function clusterNews(list) {
   const leads = [];
-  list.slice().sort((a, b) => newsRank(b) - newsRank(a)).forEach(n => {
+  newsJuntaFalas(list).sort((a, b) => newsRank(b) - newsRank(a)).forEach(n => {
     const tk = newsTokens(n.titulo);
     const set = new Set(tk);
     const lead = leads.find(l => {
@@ -1131,15 +1228,15 @@ function renderPicksBar() {
   if (!el) return;
   const n = getNewsPicks().length;
   el.innerHTML = n
-    ? `<span>⭐ ${n} ${n > 1 ? 'notícias escolhidas' : 'notícia escolhida'} para o resumo do cliente</span><button class="btn-sm" id="news-picks-clear">Limpar</button>`
-    : '<span>Toque na ⭐ de uma notícia para colocá-la nos Destaques do resumo do cliente.</span>';
+    ? `<span><span class="np-star">★</span> ${n} ${n > 1 ? 'notícias escolhidas' : 'notícia escolhida'} para o resumo do cliente</span><button class="btn-sm" id="news-picks-clear">Limpar</button>`
+    : '<span class="np-dica">Toque na <span class="np-star">★</span> de uma notícia para colocá-la nos Destaques do resumo do cliente.</span>';
   $('#news-picks-clear')?.addEventListener('click', () => { setNewsPicks([]); renderNewsView(); });
 }
 
 /* ---- Filtros por ativo ---- */
 const NEWS_ASSETS = [
   ['all', 'Todos', null],
-  ['movers', '🔥 Ações do dia', null],
+  ['movers', 'Ações do dia', null],
   ['petr', 'Petrobras', /petrobras|PETR[34]/i],
   ['vale', 'Vale', /(?<![\p{L}])Vale(?![\p{L}-])(?! (a pena|do |dos |da |o ))|VALE3/u],
   ['bancos', 'Bancos', /ita[uú]|bradesco|banco do brasil|santander|btg|nubank|ITUB4|BBDC4|BBAS3/i],
@@ -1405,8 +1502,8 @@ async function fetchNewsFromWorker(silent = false) {
     if (seq !== newsFetchSeq) return;
     if (!Array.isArray(data)) throw new Error('Formato inválido');
 
-    newsAll = newsFixIds(data);
-    checkNewsAlerts(data);
+    newsAll = newsPrepara(data);
+    checkNewsAlerts(newsAll);
     try {
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
     } catch (e) { /* silencioso */ }
@@ -1420,6 +1517,7 @@ async function fetchNewsFromWorker(silent = false) {
 
     renderNewsView();
     if (newsCurrentMode === 'live') renderLiveView();
+    newsTraduzir();
     if (!silent) toast('Notícias atualizadas', 'success');
   } catch (e) {
     if (seq !== newsFetchSeq) return;
@@ -1433,6 +1531,7 @@ async function fetchNewsFromWorker(silent = false) {
       if (cached) {
         newsAll = cached;
         renderNewsView();
+        newsTraduzir();
       } else {
         document.getElementById('news-view').innerHTML = '<div class="nl-empty">Não foi possível carregar as notícias.</div>';
       }
@@ -1446,7 +1545,7 @@ function loadNewsFromCache() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Date.now() - parsed.timestamp > NEWS_CACHE_TTL) return null;
-    return newsFixIds(parsed.data);
+    return newsPrepara(parsed.data);
   } catch (e) { return null; }
 }
 
@@ -1482,6 +1581,23 @@ function timeAgoShort(ts) {
   return Math.floor(diff / 86400) + 'd';
 }
 
+// Brasil e exterior intercalados: no máximo 2 seguidas do mesmo lado quando há do outro
+function newsMistura(list) {
+  if (newsActiveSources.size || newsAsset !== 'all') return list;
+  const br = list.filter(n => n._br), fora = list.filter(n => !n._br), out = [];
+  while (br.length || fora.length) {
+    const ult = out.slice(-2);
+    const ladoUlt = ult.length === 2 && ult[0]._br === ult[1]._br ? ult[0]._br : null;
+    let pega;
+    if (ladoUlt === true && fora.length) pega = fora;
+    else if (ladoUlt === false && br.length) pega = br;
+    else if (!br.length) pega = fora;
+    else if (!fora.length) pega = br;
+    else pega = newsRank(br[0]) >= newsRank(fora[0]) ? br : fora;
+    out.push(pega.shift());
+  }
+  return out;
+}
 function renderNewsView() {
   const view = document.getElementById('news-view');
   if (!view) return;
@@ -1494,7 +1610,7 @@ function renderNewsView() {
     const outras = leads.filter(n => n.impactScore < 4);
     destaques = [...destaques, ...outras];
   }
-  destaques = destaques.slice(0, 40);
+  destaques = newsMistura(destaques).slice(0, 40);
 
   if (!destaques.length) {
     view.innerHTML = `<div class="nl-empty">${newsAsset === 'movers' ? 'Nenhuma notícia sobre as maiores altas e baixas de hoje.' : 'Nenhuma notícia para esta seleção.'}</div>`;
@@ -1505,20 +1621,29 @@ function renderNewsView() {
   window.__newsLeads = destaques;
   // manchete principal: a mais relevante que tenha texto
   const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
+  // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
+  let criticos = 0;
   view.innerHTML = '<div class="nc-grid">' + destaques.map((n, idx) => {
-    const impactBadge = n.impactScore >= 10 ? '<span class="nc-impact critico">Alto Impacto</span>'
-                      : n.impactScore >= 7 ? '<span class="nc-impact alto">Relevante</span>'
+    let nivel = n.nivel.toLowerCase();
+    if (nivel === 'critico' && ++criticos > 5) nivel = 'alto';
+    const impactBadge = nivel === 'critico' ? '<span class="nc-impact critico">Alto impacto</span>'
+                      : nivel === 'alto' ? '<span class="nc-impact alto">Relevante</span>'
                       : n.impactScore >= 4 ? '<span class="nc-impact medio">Mercado</span>' : '';
     const srcName = n.fonte === 'Google News' && n.veiculo ? n.veiculo : n.fonte;
     const rel = n.related.length
       ? `<span class="nc-more" title="${escapeHTML([...new Set(n.related.map(r => newsSourceLabel(r) || r.fonte))].join(', '))}">+${n.related.length} ${n.related.length > 1 ? 'fontes' : 'fonte'}</span>` : '';
     const tr = n.traduzido ? `<span class="nc-tr" title="${escapeHTML(n.tituloOriginal || '')}">traduzido</span>` : '';
     const isLead = idx === leadIdx;
-    const exc = newsExcerpt(n, isLead ? 520 : 230);
+    const falas = n.falas && n.falas.length
+      ? `<ul class="nc-falas">${n.falas.slice(0, 4).map(f => `<li>${escapeHTML(f)}</li>`).join('')}${n.falas.length > 4 ? `<li class="nc-falas-mais">mais ${n.falas.length - 4}</li>` : ''}</ul>` : '';
+    const exc = falas ? '' : newsExcerpt(n, isLead ? 520 : 230);
+    const img = n.imagem && /^https:\/\//.test(n.imagem)
+      ? `<img class="nc-img" src="${escapeHTML(n.imagem)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
     const mins = newsReadMins(n);
     const read = AppState.readArticles.has(n.link) ? ' read' : '';
     return `
-      <a href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer" class="nc-card ${n.nivel.toLowerCase()}${isLead ? ' nc-lead' : ''}${read}" data-id="${escapeHTML(n.id)}">
+      <a href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer" class="nc-card ${nivel}${isLead ? ' nc-lead' : ''}${img ? ' com-img' : ''}${read}" data-id="${escapeHTML(n.id)}">
+        ${img}
         <div class="nc-top">
           <span class="nc-source" style="${newsSourceBadgeStyle(n.fonte)}">${escapeHTML(srcName)}</span>
           <span class="nc-time">${timeAgoShort(n.data)}</span>
@@ -1527,7 +1652,7 @@ function renderNewsView() {
         </div>
         ${isLead ? '<div class="nc-kicker">Manchete principal</div>' : ''}
         <div class="nc-title">${escapeHTML(n.titulo)}</div>
-        ${exc ? `<p class="nc-excerpt">${escapeHTML(exc)}</p>` : ''}
+        ${exc ? `<p class="nc-excerpt">${escapeHTML(exc)}</p>` : ''}${falas}
         <div class="nc-footer">
           ${impactBadge}
           ${(n.tags || []).map(t => `<span class="nc-tag ${t.toLowerCase()}">${t}</span>`).join('')}
