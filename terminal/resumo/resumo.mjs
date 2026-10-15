@@ -18,6 +18,12 @@ async function tokenOIDC() {
 }
 const TOK = await tokenOIDC();
 
+// antes, traduz as notícias de fora que faltam (Bloomberg, CNBC...) para o cartão poder usá-las
+try {
+  const t = await fetch(SITE + '/api/robo/traduzir', { headers: { Authorization: 'Bearer ' + TOK }, signal: AbortSignal.timeout(90000) });
+  console.log('tradução:', t.status, await t.text());
+} catch (e) { console.log('tradução falhou:', e.message); }
+
 const r = await fetch(SITE + '/api/robo/fechamento', { headers: { Authorization: 'Bearer ' + TOK }, signal: AbortSignal.timeout(60000) });
 if (!r.ok) throw new Error('fechamento: HTTP ' + r.status + ' ' + (await r.text()));
 const dados = await r.json();
