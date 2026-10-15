@@ -12,8 +12,6 @@ const FEEDS = [
   { name: 'ING Think', url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', source: 'ING Think', weight: 7 },
   { name: 'Dukascopy', url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', source: 'Dukascopy', weight: 6 },
   { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC', weight: 7 },
-  { name: 'MarketWatch', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'MarketWatch', weight: 7 },
-  { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', source: 'Yahoo Finance', weight: 6 },
 
   // ============ BRASIL ============
   { name: 'Valor', url: 'https://www.valor.com.br/rss', source: 'Valor Econômico', weight: 8 },
@@ -25,12 +23,12 @@ const FEEDS = [
   { name: 'Cointelegraph BR', url: 'https://cointelegraph.com.br/rss', source: 'Cointelegraph BR', weight: 5 },
 
   // ============ GOOGLE NEWS (TERMOS DE IMPACTO) ============
-  { name: 'Google Copom', url: 'https://news.google.com/rss/search?q=Copom+Selic+impacto&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
-  { name: 'Google Payroll', url: 'https://news.google.com/rss/search?q=Payroll+EUA+impacto&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
-  { name: 'Google Inflação', url: 'https://news.google.com/rss/search?q=inflação+EUA+bolsa&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
-  { name: 'Google Tarifas', url: 'https://news.google.com/rss/search?q=tarifas+Trump+mercado&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
-  { name: 'Google Brasil', url: 'https://news.google.com/rss/search?q=mercado+financeiro+brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
-  { name: 'Google Cripto', url: 'https://news.google.com/rss/search?q=bitcoin+cripto+mercado&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 }
+  { name: 'Google Copom', url: 'https://news.google.com/rss/search?q=Copom+Selic+impacto+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
+  { name: 'Google Payroll', url: 'https://news.google.com/rss/search?q=Payroll+EUA+impacto+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
+  { name: 'Google Inflação', url: 'https://news.google.com/rss/search?q=inflação+EUA+bolsa+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
+  { name: 'Google Tarifas', url: 'https://news.google.com/rss/search?q=tarifas+Trump+mercado+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
+  { name: 'Google Brasil', url: 'https://news.google.com/rss/search?q=mercado+financeiro+brasil+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
+  { name: 'Google Cripto', url: 'https://news.google.com/rss/search?q=bitcoin+cripto+mercado+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 }
 ];
 
 const DICIONARIO = {
