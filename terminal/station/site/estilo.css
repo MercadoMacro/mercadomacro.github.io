@@ -222,9 +222,9 @@
     min-height: 0;
   }
   .market-section { margin-bottom: 28px; }
-  .ana-extra { margin-top: 26px; }
+  .ana-extra { margin-top: 26px; min-width: 0; max-width: 100%; }
   /* Análises não estica em monitor largo */
-  #analysis-panel { max-width: 1320px; margin-left: auto; margin-right: auto; }
+  #analysis-panel { width: 100%; max-width: 1320px; margin-left: auto; margin-right: auto; }
   .market-section-head {
     display: flex;
     align-items: center;
@@ -1825,7 +1825,7 @@
     .summary-textarea { min-height:52vh; font-size:12px; }
   }
   /* ===== Análise avançada ===== */
-  .ana-wrap { display:flex; flex-direction:column; gap:14px; }
+  .ana-wrap { display:flex; flex-direction:column; gap:14px; min-width:0; max-width:100%; }
   .ana-toggle { display:flex; align-items:center; gap:14px; width:100%; text-align:left; cursor:pointer;
     background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; color:var(--text); font:inherit;
     transition:border-color .15s, background .15s; }
