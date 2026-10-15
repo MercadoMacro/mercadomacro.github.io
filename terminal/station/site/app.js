@@ -4049,6 +4049,29 @@ window.__onTabSwitch = (tabId) => {
 
   $('#side-summary').addEventListener('click', () => openSummaryModal());
   $('#side-theme').addEventListener('click', () => $('#theme-toggle')?.click());
+  // Efeito "lupa" do Dock do Mac: com a barra recolhida, os ícones perto do mouse crescem
+  (() => {
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const ALCANCE = 110, MAX = 0.75; // até 75% maior no ícone embaixo do mouse
+    let raf = 0, y = null;
+    const itens = () => side.querySelectorAll('.side-item:not(#side-collapse)');
+    const desliga = () => document.documentElement.dataset.motion === 'off' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const aplica = () => {
+      raf = 0;
+      const ativo = y != null && document.body.classList.contains('side-collapsed') && !desliga();
+      itens().forEach(el => {
+        let m = 1;
+        if (ativo) {
+          const r = el.getBoundingClientRect();
+          const d = Math.abs(y - (r.top + r.height / 2));
+          if (d < ALCANCE) m = 1 + MAX * Math.cos((d / ALCANCE) * Math.PI / 2) ** 2;
+        }
+        el.style.setProperty('--mag', m.toFixed(3));
+      });
+    };
+    side.addEventListener('mousemove', (e) => { y = e.clientY; if (!raf) raf = requestAnimationFrame(aplica); });
+    side.addEventListener('mouseleave', () => { y = null; if (!raf) raf = requestAnimationFrame(aplica); });
+  })();
   $('#side-collapse').addEventListener('click', () => {
     collapsed = !collapsed;
     applyCollapsed();

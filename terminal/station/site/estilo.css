@@ -2517,3 +2517,7 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
   html body .topbar.topbar:has(> .qbanner) #market-status { display:inline-flex; gap:0; margin:0 0 0 6px; }
   html body .topbar.topbar:has(> .qbanner) .ticker { grid-area:ticker; margin-top:8px; }
 }
+/* Barra lateral recolhida: ícones crescem perto do mouse (efeito do Dock do Mac, app.js) */
+@media (min-width: 901px) and (hover: hover) {
+  body.side-collapsed .side-item:not(#side-collapse) .si-ico { transform:scale(var(--mag, 1)); transform-origin:center; transition:transform .12s ease-out; will-change:transform; }
+}
