@@ -6,6 +6,8 @@ name: Resumo do fechamento
 
 on:
   schedule:
+    # o envio das 18h em ponto é disparado pelo site (worker station, cron 0 21 * * 1-5, segredo GH_TOKEN);
+    # estes horários ficam de reserva
     - cron: '0 21 * * 1-5'      # 18:00 de Brasília, segunda a sexta
     # o agendador do GitHub às vezes atrasa horas ou pula a execução: estas são repescagens
     # (só mandam se ainda não saiu nenhum resumo hoje)
@@ -16,6 +18,10 @@ on:
     inputs:
       forcar:
         description: 'Mandar mesmo sem pregão hoje (teste)'
+        type: boolean
+        default: false
+      site:
+        description: 'Disparado pelo site às 18h (confere se já saiu hoje)'
         type: boolean
         default: false
 
@@ -35,7 +41,7 @@ jobs:
     steps:
       - name: Já saiu hoje?
         id: ja
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || inputs.site
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

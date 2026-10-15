@@ -24,8 +24,13 @@ const cacheSessao = new Map(); // token -> { u, ate }
 export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
-    // 18:30 (Brasília) nos dias úteis: guarda o fechamento do dia para a página pública /fechamento-do-mercado
-    if (ev.cron === '30 21 * * 1-5') { ctx.waitUntil(dadosFechamento(env).then((d) => salvarFechamento(env, d)).catch(() => {})); return; }
+    // 18:00 (Brasília) nos dias úteis: dispara o robô do fechamento (resumo.yml) na hora certa, porque o agendador
+    // do GitHub às vezes atrasa, e guarda o fechamento do dia para a página pública /fechamento-do-mercado
+    if (ev.cron === '0 21 * * 1-5') {
+      ctx.waitUntil(dispararFechamento(env));
+      ctx.waitUntil(dadosFechamento(env).then((d) => salvarFechamento(env, d)).catch(() => {}));
+      return;
+    }
     ctx.waitUntil(resumoSemanal(env));
   },
   async fetch(req, env, ctx) {
@@ -648,6 +653,19 @@ async function avisoDoVigia(req, env) {
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
+// precisa do segredo GH_TOKEN no worker (token do GitHub só com Actions: leitura e escrita neste repositório).
+// Sem ele, fica valendo só o agendador do próprio GitHub.
+async function dispararFechamento(env) {
+  if (!env.GH_TOKEN) return;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/resumo.yml/dispatches`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'User-Agent': 'mercadomacro-station', 'X-GitHub-Api-Version': '2022-11-28' },
+      body: JSON.stringify({ ref: 'main', inputs: { site: true } }),
+    });
+    if (r.status !== 204) console.error('disparo do fechamento:', r.status, await r.text());
+  } catch (e) { console.error('disparo do fechamento:', e.message); }
+}
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
