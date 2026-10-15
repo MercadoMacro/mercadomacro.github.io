@@ -29,6 +29,8 @@ export default {
     const p = url.pathname;
     // um endereço só para o Google: www vai para o endereço sem www
     // endereços do site antigo que o Google ainda conhece vão para a página nova equivalente
+    // os PDFs de relatórios antigos não existem mais: 410 avisa o Google para tirar da busca
+    if (/^\/reports\/[\w-]+\.pdf$/.test(p)) return new Response('Este relatório não está mais disponível.', { status: 410, headers: { 'content-type': 'text/plain; charset=utf-8' } });
     const antigo = enderecoAntigo(p);
     if (antigo) return Response.redirect(antigo, 301);
     if (url.hostname === 'www.mercadomacro.com.br') return Response.redirect('https://mercadomacro.com.br' + p + url.search, 301);
@@ -702,18 +704,16 @@ function json(o, status = 200, extra = {}) {
 function html(s) {
   return new Response(s, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin' } });
 }
-const SITE_ANTIGO = 'https://mercadomacro.github.io/site-antigo/';
 const ANTIGOS = {
   'termo/politica': '/privacidade', 'termo/termos': '/privacidade', 'termo/contato': '/', 'termo/sobre': '/',
   'contato': '/', 'obrigado': '/', 'analises': '/', 'terminal-news': '/', 'opcoes2': '/', 'api': '/',
   'indicadores': '/indicadores-hoje', 'calculadoras': '/calculadora-renda-fixa', 'calculadoras/calculadoras': '/calculadora-renda-fixa',
-  'relatorios': SITE_ANTIGO + 'relatorios.html',
+  'relatorios': '/',
 };
 function enderecoAntigo(p) {
   const k = p.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
-  if (/^reports\/[\w-]+\.pdf$/.test(k)) return SITE_ANTIGO + k;
   const d = ANTIGOS[k];
-  return d ? (d.startsWith('http') ? d : 'https://mercadomacro.com.br' + d) : null;
+  return d ? 'https://mercadomacro.com.br' + d : null;
 }
 
 function redirect(to) {
