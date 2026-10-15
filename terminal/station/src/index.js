@@ -662,7 +662,13 @@ function mesmaOrigem(req) {
   return !o || o === new URL(req.url).origin;
 }
 function navegacao(req) {
-  return req.method === 'GET' && (req.headers.get('Sec-Fetch-Mode') === 'navigate' || (req.headers.get('Accept') || '').includes('text/html'));
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  const modo = req.headers.get('Sec-Fetch-Mode');
+  if (modo === 'navigate' || (req.headers.get('Accept') || '').includes('text/html')) return true;
+  // robôs de busca (Google na "inspeção de URL", curl...) nem sempre mandam esses cabeçalhos: endereço de página
+  // (sem extensão de arquivo e fora de /api/) também conta como abrir uma página
+  const p = new URL(req.url).pathname;
+  return !modo && !p.startsWith('/api/') && !/\.[a-z0-9]+$/i.test(p);
 }
 const hex = (a) => [...a].map((x) => x.toString(16).padStart(2, '0')).join('');
 const b64 = (a) => btoa(String.fromCharCode(...a));

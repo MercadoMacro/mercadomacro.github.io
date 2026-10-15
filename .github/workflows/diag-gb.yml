@@ -5,10 +5,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          set +e
-          for UA in 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' 'Mozilla/5.0'; do
-            echo "=== $UA"
-            curl -sS -m 30 -A "$UA" -D h.txt -o b.html https://mercadomacro.com.br/ -w "HTTP %{http_code} %{size_download}\n"; cat h.txt | grep -i -v "^set-cookie\|^report-to\|^nel"
-            grep -o -i '<meta[^>]*robots[^>]*>\|<link[^>]*canonical[^>]*>\|<title>[^<]*' b.html | head
+          for u in / /calculadora-renda-fixa /calculadora-juros-compostos /calculadora-aposentadoria /indicadores-hoje /privacidade; do
+            curl -sS -m 30 -A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' -o b.html "https://mercadomacro.com.br$u" -w "$u HTTP %{http_code} %{content_type} " ; grep -o -i '<meta name="robots"[^>]*>' b.html | head -1; echo
           done
-          curl -sS -m 30 -A Googlebot -D - https://mercadomacro.com.br/robots.txt
