@@ -5,14 +5,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          S="ZQ=F,ZQV26.CBT,ZQX26.CBT,ZQZ26.CBT,ZQF27.CBT,ZQG27.CBT,ZQH27.CBT,ZQJ27.CBT,ZQK27.CBT,ZQM27.CBT,ZQN27.CBT,ZQQ27.CBT,ZQU27.CBT,ZQZ27.CBT"
-          curl -s "https://shrill-meadow-89c1.danilo-nillo.workers.dev/quotes?symbols=$S" -H "Origin: https://mercadomacro.com.br" | python3 -c "
-          import sys,json; d=json.load(sys.stdin)
-          for k,v in d.items():
-            if 'error' in v: print(k,v); continue
-            m=v['chart']['result'][0]['meta']; print(k,m.get('regularMarketPrice'),m.get('chartPreviousClose'),m.get('shortName'),m.get('regularMarketTime'),m.get('exchangeName'))"
-          echo ---- direto do runner
-          curl -s -A "Mozilla/5.0" "https://query1.finance.yahoo.com/v8/finance/chart/ZQZ26.CBT?range=5d&interval=1d" | head -c 400; echo
-          echo ---- fed funds efetiva FRED
-          curl -s "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EFFR" | tail -3
-          curl -s "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARU" | tail -2
+          curl -s -A "Mozilla/5.0 (MercadoMacro contato@mercadomacro.com.br)" https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm -o c.html; wc -c c.html
+          python3 - <<'P'
+          import re,html
+          s=open('c.html',encoding='utf-8',errors='replace').read()
+          i=s.find('2026 FOMC Meetings'); print(s[i-300:i+2600])
+          print("=====")
+          i=s.find('2027 FOMC Meetings'); print(i, s[i:i+1500] if i>0 else '')
+          P
