@@ -1,9 +1,0 @@
-name: diag-red
-on: workflow_dispatch
-jobs:
-  d:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          for u in https://www.mercadomacro.com.br/relatorios https://www.mercadomacro.com.br/contato https://www.mercadomacro.com.br/termo/politica https://www.mercadomacro.com.br/termo/termos https://www.mercadomacro.com.br/reports/ia_analise_acoes_v2.pdf https://mercadomacro.com.br/; do
-            echo "== $u"; curl -sIL -A Googlebot "$u" | grep -iE "^(HTTP|location)"; done
