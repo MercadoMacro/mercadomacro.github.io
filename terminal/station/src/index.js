@@ -1,5 +1,4 @@
 import { noticiasCache, noticiasSoCache } from './noticias.js';
-import { aplicarTraducoes, traduzirFaltantes } from './traducao.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
@@ -43,7 +42,6 @@ export default {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
-      if (p === '/api/robo/traduzir') return await roboTraduzir(req, env, ctx);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, () => paginaFixa(req, env, '/vitrine/404', 404));
@@ -69,12 +67,8 @@ export default {
       if (p === '/conta') return html(PAGINA_CONTA);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p === '/api/noticias') {
-        const { lista: bruta, cache, falharam } = await noticiasCache(ctx);
-        if (!bruta.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
-        // as de fora já traduzidas vão em português; as que faltam são traduzidas em segundo plano
-        // (só quando a lista veio do cache, para não passar do limite de pedidos de quem leu os feeds agora)
-        const lista = await aplicarTraducoes(env, bruta);
-        if (cache === 'HIT') ctx.waitUntil(traduzirFaltantes(env, bruta).catch((e) => console.error('tradução:', e.message)));
+        const { lista, cache, falharam } = await noticiasCache(ctx);
+        if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
         return new Response(JSON.stringify(lista), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
       }
       if (p.startsWith('/api/admin/')) {
@@ -242,12 +236,12 @@ async function dadosFechamento(env) {
       ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
     };
   } catch (e) { /* fica "—" */ }
-  out.noticias = await noticiasDoDia(env).catch(() => []);
+  out.noticias = await noticiasDoDia().catch(() => []);
   return out;
 }
 // principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
 // publicadas nas últimas 16 horas, sem repetir assunto e só em português (título traduzido ou fonte brasileira)
-async function noticiasDoDia(env) {
+async function noticiasDoDia() {
   // usa a lista do site se estiver no cache (ler os 25 feeds aqui passaria do limite de pedidos do fechamento)
   let lista = await noticiasSoCache();
   if (!lista) {
@@ -256,7 +250,6 @@ async function noticiasDoDia(env) {
     lista = await r.json();
   }
   if (!Array.isArray(lista)) return [];
-  lista = await aplicarTraducoes(env, lista); // Bloomberg, CNBC etc. entram quando já traduzidas no site
   const desde = Date.now() - 16 * 3600000;
   const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
   const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
@@ -269,7 +262,7 @@ async function noticiasDoDia(env) {
     const f = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
     // no máximo 2 do mesmo veículo, para variar as fontes
     if (parecida || escolhidas.filter((e) => e.f === f).length >= 2) continue;
-    escolhidas.push({ w, t: n.titulo.replace(/^FinancialJuice:\s*/i, '').trim(), f, link: n.link });
+    escolhidas.push({ w, t: n.titulo.trim(), f, link: n.link });
     if (escolhidas.length === 4) break;
   }
   return escolhidas.map(({ t, f, link }) => ({ t, f, link }));
@@ -655,15 +648,6 @@ async function avisoDoVigia(req, env) {
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
-// o robô das 18h chama antes do fechamento: traduz as notícias de fora que faltam, para o cartão poder usá-las
-async function roboTraduzir(req, env, ctx) {
-  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
-  const { lista } = await noticiasCache(ctx);
-  await traduzirFaltantes(env, lista, true);
-  const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM traducoes WHERE criado > ?').bind(Date.now() - 86400000).first('n').catch(() => null);
-  return json({ ok: true, noticias: lista.length, traduzidas24h: n }, 200, { 'Cache-Control': 'no-store' });
-}
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
