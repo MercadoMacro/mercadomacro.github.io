@@ -26,6 +26,11 @@ const FEEDS = [
   { name: 'Valor Investe', url: 'https://pox.globo.com/rss/valorinveste/', source: 'Valor Investe', weight: 6 },
   { name: 'Bloomberg Línea', url: 'https://www.bloomberglinea.com.br/arc/outboundfeeds/rss.xml', source: 'Bloomberg Línea', weight: 7 },
   { name: 'Suno', url: 'https://www.suno.com.br/noticias/feed/', source: 'Suno', weight: 6 },
+  // ============ POLÍTICA (o site só mostra se a pessoa ligar "Política" nas Notícias) ============
+  { name: 'O Antagonista', url: 'https://oantagonista.com.br/feed/', source: 'O Antagonista', weight: 4 },
+  { name: 'Poder360', url: 'https://www.poder360.com.br/feed/', source: 'Poder360', weight: 4 },
+  { name: 'G1 Política', url: 'https://g1.globo.com/rss/g1/politica/', source: 'G1 Política', weight: 4 },
+  { name: 'Agência Brasil', url: 'https://agenciabrasil.ebc.com.br/rss/politica/feed.xml', source: 'Agência Brasil', weight: 4 },
   { name: 'BMC News', url: 'https://bmcnews.com.br/feed/', source: 'BMC News', weight: 5 },
 
   // ============ GOOGLE NEWS (TERMOS DE IMPACTO) ============

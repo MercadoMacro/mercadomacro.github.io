@@ -113,6 +113,10 @@ const NEWS_SOURCES = {
   'Bloomberg Línea':  { letter: 'BL',  color: '#6366f1', scope: 'br', name: 'Bloomberg Línea' },
   'Suno':             { letter: 'SU',  color: '#84cc16', scope: 'br', name: 'Suno' },
   'BMC News':         { letter: 'BM',  color: '#14b8a6', scope: 'br', name: 'BMC News' },
+  'O Antagonista':    { letter: 'OA',  color: '#dc2626', scope: 'pol', name: 'O Antagonista' },
+  'Poder360':         { letter: 'P3',  color: '#2563eb', scope: 'pol', name: 'Poder360' },
+  'G1 Política':      { letter: 'G1',  color: '#c4170c', scope: 'pol', name: 'G1 Política' },
+  'Agência Brasil':   { letter: 'AB',  color: '#16a34a', scope: 'pol', name: 'Agência Brasil' },
   'Bloomberg':        { letter: 'B',   color: '#4c8dff', scope: 'int', name: 'Bloomberg' },
   'Financial Juice':  { letter: 'FJ',  color: '#f0b90b', scope: 'int', name: 'Financial Juice' },
   'ForexLive':        { letter: 'FL',  color: '#22d3ee', scope: 'int', name: 'ForexLive' },
@@ -1082,7 +1086,24 @@ function newsRank(n) {
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
 const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
-const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Dukascopy', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Dukascopy', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News',
+  'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
+// Política fica desligada até a pessoa ligar (botão na lateral das Notícias); escolha guardada neste aparelho
+const NEWS_POL_KEY = 'news_politica_v1';
+let newsPolitica = false;
+try { newsPolitica = localStorage.getItem(NEWS_POL_KEY) === '1'; } catch (e) { /* silencioso */ }
+let newsBruto = [];
+const newsEhPolitica = (n) => (NEWS_SOURCES[n.fonte] || {}).scope === 'pol';
+function toggleNewsPolitica() {
+  newsPolitica = !newsPolitica;
+  try { localStorage.setItem(NEWS_POL_KEY, newsPolitica ? '1' : '0'); } catch (e) { /* silencioso */ }
+  if (!newsPolitica) Object.keys(NEWS_SOURCES).forEach(k => { if (NEWS_SOURCES[k].scope === 'pol') newsActiveSources.delete(k); });
+  newsAll = newsBruto.filter(n => newsPolitica || !newsEhPolitica(n));
+  buildNewsSidebar();
+  updateNewsBubbleStates();
+  renderNewsView();
+  if (newsCurrentMode === 'live') renderLiveView();
+}
 const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias de meses atrás
 const NEWS_TR_KEY = 'news_tr_v1';
 let newsTr = {};
@@ -1102,7 +1123,8 @@ function newsPrepara(list) {
     n._br = NEWS_BR.has(n.fonte);
     newsAplicaTraducao(n);
   });
-  return out;
+  newsBruto = out;
+  return newsPolitica ? out : out.filter(n => !newsEhPolitica(n));
 }
 async function newsTraduzLote(textos) {
   const r = await fetchT('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=' + encodeURIComponent(textos.join('\n')), {}, 12000);
@@ -1341,6 +1363,7 @@ function buildNewsSidebar() {
 
   const brSources = Object.entries(NEWS_SOURCES).filter(([_, v]) => v.scope === 'br');
   const intSources = Object.entries(NEWS_SOURCES).filter(([_, v]) => v.scope === 'int');
+  const polSources = Object.entries(NEWS_SOURCES).filter(([_, v]) => v.scope === 'pol');
 
   const makeSubBubbles = (list) => list.map(([key, cfg]) => `
     <button class="ns-sub-bubble" data-source="${escapeHTML(key)}" onclick="toggleNewsSource('${key.replace(/'/g, "\\'")}')">
@@ -1393,6 +1416,24 @@ function buildNewsSidebar() {
       </button>
       <div class="ns-sub-list" data-list="int">${makeSubBubbles(intSources)}</div>
     </div>
+
+    <button class="ns-pol-switch${newsPolitica ? ' on' : ''}" onclick="toggleNewsPolitica()" aria-pressed="${newsPolitica}" title="Mostrar notícias de política">
+      <span>Política</span><span class="ns-pol-sw" aria-hidden="true"></span>
+    </button>
+    ${newsPolitica ? `
+    <div class="ns-category" data-category="pol">
+      <button class="ns-cat-btn" onclick="toggleNewsCategory('pol')">
+        <span class="ns-cat-left">
+          <svg class="ns-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M19 21V10M9 21V10M15 21V10M2 10l10-6 10 6"/></svg>
+          <span class="ns-cat-label">Fontes</span>
+        </span>
+        <span class="ns-cat-right">
+          <span class="ns-cat-count" data-count="pol">0</span>
+          <span class="ns-cat-chevron">▶</span>
+        </span>
+      </button>
+      <div class="ns-sub-list" data-list="pol">${makeSubBubbles(polSources)}</div>
+    </div>` : ''}
   `;
 }
 
@@ -1446,7 +1487,7 @@ function updateNewsBubbleStates() {
     if (cfg) b.querySelector('.ns-dot').style.color = cfg.color;
   });
 
-  ['br', 'int'].forEach(cat => {
+  ['br', 'int', 'pol'].forEach(cat => {
     const count = Object.entries(NEWS_SOURCES)
       .filter(([k, v]) => v.scope === cat && newsActiveSources.has(k)).length;
     const el = document.querySelector(`[data-count="${cat}"]`);
