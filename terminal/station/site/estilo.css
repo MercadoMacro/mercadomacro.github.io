@@ -2563,3 +2563,4 @@ html body .sx-l.sx-r { -webkit-mask-image:linear-gradient(90deg,transparent,#000
 @media (min-width: 1101px) and (max-width: 1400px) { body.hdr2 .qb-new span, body.hdr2 .cmdk-hint .tx { display:none !important; } body.hdr2 .cmdk-hint { min-width:0 !important; } }
 /* com o Ao vivo lá em cima, a linha do Mercado só repetiria o horário */
 @media (min-width: 1101px) { body.hdr2 #market-panel .refresh-bar { display:none; } }
+@media (min-width: 1101px) { html body.hdr2 .mm-brand .mm-img { height:36px; } }
