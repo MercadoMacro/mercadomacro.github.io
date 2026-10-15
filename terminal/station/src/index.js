@@ -1,3 +1,4 @@
+import { noticiasCache, noticiasSoCache } from './noticias.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -61,6 +62,11 @@ export default {
       if (p === '/fechamento' || p.startsWith('/fechamento/')) { if (!u.admin) return redirect('/'); }
       if (p === '/conta') return html(PAGINA_CONTA);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      if (p === '/api/noticias') {
+        const { lista, cache, falharam } = await noticiasCache(ctx);
+        if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
+        return new Response(JSON.stringify(lista), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
+      }
       if (p.startsWith('/api/admin/')) {
         if (!u.admin) return json({ erro: 'Sem permissão.' }, 403);
         return await apiAdmin(req, env, p.slice(11), u);
@@ -232,9 +238,13 @@ async function dadosFechamento(env) {
 // principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
 // publicadas nas últimas 16 horas, sem repetir assunto e só em português (título traduzido ou fonte brasileira)
 async function noticiasDoDia() {
-  const r = await fetch('https://news.cota-cotacao10.workers.dev/', { cf: { cacheTtl: 120 } });
-  if (!r.ok) return [];
-  const lista = await r.json();
+  // usa a lista do site se estiver no cache (ler os 25 feeds aqui passaria do limite de pedidos do fechamento)
+  let lista = await noticiasSoCache();
+  if (!lista) {
+    const r = await fetch('https://news.cota-cotacao10.workers.dev/', { cf: { cacheTtl: 120 } });
+    if (!r.ok) return [];
+    lista = await r.json();
+  }
   if (!Array.isArray(lista)) return [];
   const desde = Date.now() - 16 * 3600000;
   const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News']);

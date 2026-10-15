@@ -1496,7 +1496,9 @@ async function fetchNewsFromWorker(silent = false) {
   const seq = ++newsFetchSeq; // se outra busca começar depois, esta é descartada
 
   try {
-    const res = await fetchT(NEWS_WORKER_URL, {}, 25000);
+    // lista do próprio site (lê os feeds aqui); se falhar, a do worker de notícias antigo
+    let res = await fetchT('/api/noticias', {}, 25000).catch(() => null);
+    if (!res || !res.ok) res = await fetchT(NEWS_WORKER_URL, {}, 25000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (seq !== newsFetchSeq) return;
