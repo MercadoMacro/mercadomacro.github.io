@@ -247,7 +247,7 @@ async function noticiasDoDia() {
   }
   if (!Array.isArray(lista)) return [];
   const desde = Date.now() - 16 * 3600000;
-  const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News']);
+  const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
   const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
   const escolhidas = [];
   const cands = lista.filter((n) => n && n.titulo && n.link && +n.data >= desde && (n.traduzido || PT.has(n.fonte)))

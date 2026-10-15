@@ -107,6 +107,12 @@ const NEWS_SOURCES = {
   'Notícia Brasil':   { letter: 'NB',  color: '#22c55e', scope: 'br', name: 'Notícia Brasil' },
   'BeInCrypto BR':    { letter: 'BC',  color: '#f7931a', scope: 'br', name: 'BeInCrypto' },
   'Cointelegraph BR': { letter: 'CT',  color: '#facc15', scope: 'br', name: 'Cointelegraph' },
+  'Money Times':      { letter: 'MT',  color: '#e11d48', scope: 'br', name: 'Money Times' },
+  'InvestNews':       { letter: 'IV',  color: '#0ea5e9', scope: 'br', name: 'InvestNews' },
+  'Valor Investe':    { letter: 'VI',  color: '#d97706', scope: 'br', name: 'Valor Investe' },
+  'Bloomberg Línea':  { letter: 'BL',  color: '#6366f1', scope: 'br', name: 'Bloomberg Línea' },
+  'Suno':             { letter: 'SU',  color: '#84cc16', scope: 'br', name: 'Suno' },
+  'BMC News':         { letter: 'BM',  color: '#14b8a6', scope: 'br', name: 'BMC News' },
   'Bloomberg':        { letter: 'B',   color: '#4c8dff', scope: 'int', name: 'Bloomberg' },
   'Financial Juice':  { letter: 'FJ',  color: '#f0b90b', scope: 'int', name: 'Financial Juice' },
   'ForexLive':        { letter: 'FL',  color: '#22d3ee', scope: 'int', name: 'ForexLive' },
@@ -116,8 +122,6 @@ const NEWS_SOURCES = {
   'ING Think':        { letter: 'ING', color: '#f97316', scope: 'int', name: 'ING Think' },
   'Dukascopy':        { letter: 'DK',  color: '#3b82f6', scope: 'int', name: 'Dukascopy' },
   'CNBC':             { letter: 'C',   color: '#a78bfa', scope: 'int', name: 'CNBC' },
-  'MarketWatch':      { letter: 'MW',  color: '#16c784', scope: 'int', name: 'MarketWatch' },
-  'Yahoo Finance':    { letter: 'Y',   color: '#c084fc', scope: 'int', name: 'Yahoo' },
   'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' }
 };
 
@@ -1078,7 +1082,7 @@ function newsRank(n) {
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
 const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
-const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Dukascopy']);
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Dukascopy', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
 const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias de meses atrás
 const NEWS_TR_KEY = 'news_tr_v1';
 let newsTr = {};

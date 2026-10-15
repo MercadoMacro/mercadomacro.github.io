@@ -21,6 +21,12 @@ const FEEDS = [
   { name: 'Notícia Brasil', url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', source: 'Notícia Brasil', weight: 5 },
   { name: 'BeInCrypto BR', url: 'https://br.beincrypto.com/feed/', source: 'BeInCrypto BR', weight: 5 },
   { name: 'Cointelegraph BR', url: 'https://cointelegraph.com.br/rss', source: 'Cointelegraph BR', weight: 5 },
+  { name: 'Money Times', url: 'https://www.moneytimes.com.br/feed/', source: 'Money Times', weight: 7 },
+  { name: 'InvestNews', url: 'https://investnews.com.br/feed/', source: 'InvestNews', weight: 6 },
+  { name: 'Valor Investe', url: 'https://pox.globo.com/rss/valorinveste/', source: 'Valor Investe', weight: 6 },
+  { name: 'Bloomberg Línea', url: 'https://www.bloomberglinea.com.br/arc/outboundfeeds/rss.xml', source: 'Bloomberg Línea', weight: 7 },
+  { name: 'Suno', url: 'https://www.suno.com.br/noticias/feed/', source: 'Suno', weight: 6 },
+  { name: 'BMC News', url: 'https://bmcnews.com.br/feed/', source: 'BMC News', weight: 5 },
 
   // ============ GOOGLE NEWS (TERMOS DE IMPACTO) ============
   { name: 'Google Copom', url: 'https://news.google.com/rss/search?q=Copom+Selic+impacto+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 },
