@@ -223,6 +223,8 @@
   }
   .market-section { margin-bottom: 28px; }
   .ana-extra { margin-top: 26px; }
+  /* Análises não estica em monitor largo */
+  #analysis-panel { max-width: 1320px; margin-left: auto; margin-right: auto; }
   .market-section-head {
     display: flex;
     align-items: center;

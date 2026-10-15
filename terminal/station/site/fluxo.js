@@ -133,11 +133,14 @@
     return out.map((i) => `<text class="fx-tx" x="${xc(i).toFixed(1)}" y="0" text-anchor="${i === n - 1 ? 'end' : i === 0 ? 'start' : 'middle'}">${dm(dias[i].data)}</text>`).join('');
   }
 
+  // altura acompanha a largura para o gráfico não ficar achatado em tela larga
+  const altura = (W) => Math.round(Math.min(440, Math.max(300, W * 0.34)));
+
   // gráfico do tipo escolhido: barras do saldo diário (eixo esquerdo) + linha do acumulado (eixo direito) + média móvel
   function svgGrafico(todos, i0, tipo, W) {
     const dias = todos.slice(i0);
     const n = dias.length;
-    const H = 300, T = 14, B = 26, L = 58, R = prefs.modo === 'barras' ? 62 : 16;
+    const H = altura(W), T = 14, B = 26, L = 58, R = prefs.modo === 'barras' ? 62 : 16;
     const pw = W - L - R, ph = H - T - B;
     const sal = dias.map((d) => d.tipos?.[tipo]?.saldo).map((v) => (ok(v) ? v : null));
     let acc = 0;
@@ -202,7 +205,7 @@
   // comparação: acumulado de cada tipo de investidor no período
   function svgComparacao(todos, i0, W) {
     const dias = todos.slice(i0), n = dias.length;
-    const H = 300, T = 14, B = 26, L = 58, R = 16, pw = W - L - R, ph = H - T - B;
+    const H = altura(W), T = 14, B = 26, L = 58, R = 16, pw = W - L - R, ph = H - T - B;
     const vis = TIPOS.filter(([k]) => !prefs.ocultos.includes(k));
     const series = vis.map(([k, nome, cor]) => { let a = 0; return { k, nome, cor, v: dias.map((d) => (a += d.tipos?.[k]?.saldo || 0)) }; });
     const all = series.flatMap((s) => s.v);
