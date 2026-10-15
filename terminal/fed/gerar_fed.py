@@ -49,19 +49,25 @@ def reunioes():
     return out
 
 
-def fred(serie):
+def fred_serie(serie):
     linhas = baixa(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={serie}').strip().splitlines()[1:]
-    for ln in reversed(linhas):
+    out = []
+    for ln in linhas:
         d, _, v = ln.partition(',')
         try:
-            return {'v': float(v), 'data': d}
+            out.append([d, float(v)])
         except ValueError:
             continue
-    return None
+    return out
+
+
+def fred(serie):
+    s = fred_serie(serie)
+    return {'v': s[-1][1], 'data': s[-1][0]} if s else None
 
 
 def contrato(sym):
-    s = json.loads(baixa(f'https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=1mo&interval=1d'))
+    s = json.loads(baixa(f'https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=3mo&interval=1d'))
     res = s['chart']['result'][0]
     meta = res['meta']
     ts = res.get('timestamp') or []
@@ -74,7 +80,7 @@ def contrato(sym):
     p = meta.get('regularMarketPrice')
     if p is None:
         return None
-    return {'s': sym, 'p': round(p, 4), 't': meta.get('regularMarketTime'), 'fech': fech[-12:]}
+    return {'s': sym, 'p': round(p, 4), 't': meta.get('regularMarketTime'), 'fech': fech[-45:]}
 
 
 def main(pasta):
@@ -83,7 +89,9 @@ def main(pasta):
     if not reun:
         sys.exit('calendário do FOMC não encontrado')
     futuras = [r for r in reun if r['data'] >= hoje.isoformat()]
-    alto, baixo, effr = fred('DFEDTARU'), fred('DFEDTARL'), fred('EFFR')
+    alto, baixo = fred('DFEDTARU'), fred('DFEDTARL')
+    effr_h = fred_serie('EFFR')
+    effr = {'v': effr_h[-1][1], 'data': effr_h[-1][0]} if effr_h else None
     if not (alto and baixo and effr):
         sys.exit('FRED não respondeu')
     contratos = {}
@@ -105,9 +113,10 @@ def main(pasta):
         'gerado': dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'fonte': 'CME/CBOT (futuros de Fed Funds de 30 dias, via Yahoo), Federal Reserve e FRED',
         'reunioes': futuras[:10],
-        'passadas': [r for r in reun if r['data'] < hoje.isoformat()][-3:],
+        'passadas': [r for r in reun if r['data'] < hoje.isoformat()][-4:],
         'alvo': {'min': baixo['v'], 'max': alto['v'], 'data': alto['data']},
         'effr': effr,
+        'effr_hist': effr_h[-70:],
         'contratos': contratos,
     }
     os.makedirs(pasta, exist_ok=True)
