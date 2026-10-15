@@ -40,7 +40,7 @@
   const hojeNY = () => new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
   const diasAte = (iso) => Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(hojeNY() + 'T12:00:00Z')) / 86400000);
 
-  let prefs = { sel: 0 };
+  let prefs = { sel: 0, graf: false };
   try { prefs = { ...prefs, ...(JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}) }; } catch (e) { /* padrão */ }
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* cheio */ } };
   let base = null;
@@ -291,9 +291,9 @@
         <span>1 semana ${num(px.semana[R.usado], 3)} (${varia(px.agora[R.usado], px.semana[R.usado])})</span>
       </div>
       <div class="fw-bars">${barras}</div>
-      <div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div>
-      <div class="fw-hleg"></div>
-      <div class="fw-hwrap"><div class="fw-hbox"></div></div>
+      <div class="fw-sec fw-sec-b">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small>
+        <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}">${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
+      ${prefs.graf ? '<div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>' : ''}
       <div class="fw-sec">Todas as reuniões <small>(chance da faixa da taxa depois de cada reunião)</small></div>
       <div class="fw-tabw">${tabela}</div>
       <div class="fw-foot">Preço dos contratos: ${esc(hora)}${vivo ? '' : ' (do último registro do robô)'}. * reunião com projeções econômicas.
@@ -301,15 +301,18 @@
         O contrato usado é o do mês seguinte à reunião quando esse mês não tem reunião; senão, o do próprio mês. O gráfico refaz a conta com o fechamento de cada pregão.
         Fontes: CME/CBOT via Yahoo, Federal Reserve (calendário) e FRED (faixa e taxa efetiva).${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
     </div>`;
-    hist = historico(R.data, todas, R);
-    larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
-    desenhaHist();
+    if (prefs.graf) {
+      hist = historico(R.data, todas, R);
+      larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
+      desenhaHist();
+    }
   }
 
   function bind(el) {
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-r]');
       if (b) { prefs.sel = +b.dataset.r; savePrefs(); draw(); return; }
+      if (e.target.closest('[data-act="graf"]')) { prefs.graf = !prefs.graf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="reload"]') && !busy) load(true);
     });
   }
@@ -367,6 +370,9 @@
   #fed-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent); }
   #fed-root .fw-tab td.fw-ct { background:none; color:var(--text-3); font-size:11px; }
   #fed-root .fw-tab td.fw-ct b { color:var(--text-2); font-weight:600; }
+  #fed-root .fw-sec-b { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  #fed-root .fw-tg { margin-left:auto; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; font-weight:500; padding:5px 12px; border-radius:8px; cursor:pointer; }
+  #fed-root .fw-tg:hover { color:var(--text); border-color:var(--line-2); }
   #fed-root .fw-hleg { display:flex; flex-wrap:wrap; gap:4px 14px; padding:0 14px 4px; font-size:11.5px; color:var(--text-2); }
   #fed-root .fw-hleg span { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; }
   #fed-root .fw-hleg i, #fed-root .fw-tip i { width:10px; height:3px; border-radius:2px; display:inline-block; }
