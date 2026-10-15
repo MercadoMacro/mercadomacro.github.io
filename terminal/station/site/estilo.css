@@ -2626,9 +2626,19 @@ body.nw2 .nc-source { border-color:color-mix(in srgb, currentColor 35%, transpar
 body.nw2 .nc-title, body.nw2 .nc-card.critico .nc-title { color:var(--text); font-size:14px; font-weight:700; line-height:1.42; letter-spacing:-.005em; }
 body.nw2 .nc-card.read .nc-title { color:var(--text-2); font-weight:600; }
 body.nw2 .nc-excerpt, body.nw2 .nc-falas { color:var(--text-3); font-size:12.5px; line-height:1.55; }
+/* cartões com altura parecida: texto cortado em poucas linhas, falas com esmaecido no fim */
+body.nw2 .nc-title { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+body.nw2 .nc-excerpt { -webkit-line-clamp:3; }
+body.nw2 .nc-falas { max-height:calc(1.55em * 6); overflow:hidden; -webkit-mask-image:linear-gradient(180deg,#000 70%,transparent); mask-image:linear-gradient(180deg,#000 70%,transparent); }
+body.nw2 .nc-falas li { margin:0 0 3px; }
+body.nw2 .nc-card.nc-lead .nc-title { -webkit-line-clamp:3; }
+body.nw2 .nc-card.nc-lead .nc-excerpt { -webkit-line-clamp:3; }
 body.nw2 .nc-footer { border-top:1px solid var(--line); padding-top:12px; gap:6px; }
 body.nw2 .nc-readhere { color:var(--text-2); font-weight:500; font-size:11.5px; }
 body.nw2 .nc-mins { border:0; padding:0; }
+body.nw2 .nc-top { flex-wrap:nowrap; }
+body.nw2 .nc-source { display:block; min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+body.nw2 .nc-time, body.nw2 .nc-mins, body.nw2 .nc-star { flex:none; }
 body.nw2 .nc-mins::before { content:'· '; }
 body.nw2 .nc-kicker { color:var(--accent); font-size:10px; letter-spacing:.1em; }
 body.nw2 .nc-img { width:calc(100% + 32px); margin:-16px -16px 0; height:112px; border-radius:0; opacity:.8;
@@ -2643,7 +2653,7 @@ body.nw2 .nc-card.nc-lead.alto::before { background:var(--accent); }
 body.nw2 .nc-card.nc-lead .nc-title { font-size:20px; font-weight:800; line-height:1.35; }
 body.nw2 .nc-card.nc-lead .nc-excerpt { color:var(--text-2); font-size:14px; line-height:1.6; }
 body.nw2 .nc-card.nc-lead .nc-readhere { color:var(--info); font-weight:600; font-size:12.5px; }
-body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 0; height:150px; }
+body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 0; height:120px; }
 @media (min-width: 901px) {
   body.nw2 .news-layout { grid-template-columns:224px minmax(0,1fr); gap:20px; }
   body.nw2 .nc-grid { grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); grid-auto-flow:row dense; }
