@@ -1,0 +1,23 @@
+name: diag-feeds
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cp terminal/station/src/noticias.js /tmp/n.mjs
+          echo 'export { FEEDS, fetchOneFeed };' >> /tmp/n.mjs
+          cat > /tmp/t.mjs <<'X'
+          const { FEEDS, fetchOneFeed } = await import('/tmp/n.mjs');
+          const agora = Date.now();
+          for (const f of FEEDS.filter(f => f.source === 'Google News')) {
+            let st = '-';
+            try { const r = await fetch(f.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }); st = r.status; } catch (e) { st = 'ERRO ' + e.message; }
+            const t0 = Date.now(); const it = await fetchOneFeed(f); const ms = Date.now() - t0;
+            const novo = it.length ? ((agora - Math.max(...it.map(n => n.data))) / 36e5).toFixed(1) : '-';
+            const h48 = it.filter(n => agora - n.data < 48 * 36e5).length;
+            console.log(`FEED|${f.name}|${st}|${it.length}|${h48}|${novo}|${ms}`);
+          }
+          X
+          node /tmp/t.mjs
