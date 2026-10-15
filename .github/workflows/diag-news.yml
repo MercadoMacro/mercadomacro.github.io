@@ -1,0 +1,10 @@
+name: diag-news
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -s https://news.cota-cotacao10.workers.dev/ -o n.json; wc -c n.json
+          python3 -c "import json;d=json.load(open('n.json'));print(len(d));print(json.dumps(d[0],ensure_ascii=False)[:1500])"
+          gzip -9c n.json | base64 -w 3000 | sed 's/^/B64:/'
