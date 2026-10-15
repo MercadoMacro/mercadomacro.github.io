@@ -1,4 +1,5 @@
 import { noticiasCache, noticiasSoCache } from './noticias.js';
+import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -23,6 +24,8 @@ const cacheSessao = new Map(); // token -> { u, ate }
 export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
+    // 18:30 (Brasília) nos dias úteis: guarda o fechamento do dia para a página pública /fechamento-do-mercado
+    if (ev.cron === '30 21 * * 1-5') { ctx.waitUntil(dadosFechamento(env).then((d) => salvarFechamento(env, d)).catch(() => {})); return; }
     ctx.waitUntil(resumoSemanal(env));
   },
   async fetch(req, env, ctx) {
@@ -40,7 +43,8 @@ export default {
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
-      if (p === '/sitemap.xml') return texto(SITEMAP, 'application/xml');
+      if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
+      if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, () => paginaFixa(req, env, '/vitrine/404', 404));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
@@ -648,6 +652,7 @@ async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
   const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
+  await salvarFechamento(env, d).catch(() => {}); // também vira página pública
   return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
 }
 
@@ -775,8 +780,14 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://mercadomacro.com.br/calculadora-aposentadoria</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
 </urlset>
 `;
+// sitemap com uma página por fechamento guardado
+async function sitemap(env) {
+  const dias = await diasParaSitemap(env);
+  return SITEMAP.replace('</urlset>', dias.map((d) => `  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado/${d}</loc><lastmod>${d}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>\n`).join('') + '</urlset>');
+}
 
 /* ---------------- páginas ---------------- */
 const BASE_CSS = `
