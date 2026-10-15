@@ -269,7 +269,7 @@ async function noticiasDoDia(env) {
     const f = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
     // no máximo 2 do mesmo veículo, para variar as fontes
     if (parecida || escolhidas.filter((e) => e.f === f).length >= 2) continue;
-    escolhidas.push({ w, t: n.titulo.trim(), f, link: n.link });
+    escolhidas.push({ w, t: n.titulo.replace(/^FinancialJuice:\s*/i, '').trim(), f, link: n.link });
     if (escolhidas.length === 4) break;
   }
   return escolhidas.map(({ t, f, link }) => ({ t, f, link }));
@@ -611,7 +611,7 @@ async function avisar(env, titulo, texto) {
 const GH_ISS = 'https://token.actions.githubusercontent.com';
 const GH_AUD = 'mercadomacro-vigia';
 const GH_REPO = 'MercadoMacro/mercadomacro.github.io';
-const ROBOS_AVISO = ['vigia.yml', 'resumo.yml', 'diag-trad.yml']; // robôs que podem mandar mensagem no Telegram
+const ROBOS_AVISO = ['vigia.yml', 'resumo.yml']; // robôs que podem mandar mensagem no Telegram
 let jwksCache = null; // { chaves, ate }
 const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
 async function tokenDoGitHub(tok) {

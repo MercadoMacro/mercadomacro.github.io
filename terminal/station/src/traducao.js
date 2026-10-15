@@ -32,7 +32,7 @@ export async function aplicarTraducoes(env, lista) {
 async function traduzLote(env, textos) {
   const r = await env.AI.run(MODELO, {
     messages: [
-      { role: 'system', content: 'Você traduz manchetes e resumos de notícias do mercado financeiro do inglês para o português do Brasil, em linguagem jornalística. Mantenha nomes de empresas, pessoas, siglas, tickers e números. Responda apenas com um array JSON de strings, na mesma ordem e com a mesma quantidade de itens recebidos.' },
+      { role: 'system', content: 'Você traduz manchetes e resumos de notícias do mercado financeiro do inglês para o português do Brasil, em linguagem jornalística. Use português do Brasil correto (nada de espanhol) e maiúscula só no início da frase e em nomes próprios. Mantenha nomes de empresas, pessoas, siglas, tickers e números. Responda apenas com um array JSON de strings, na mesma ordem e com a mesma quantidade de itens recebidos.' },
       { role: 'user', content: JSON.stringify(textos) },
     ],
     max_tokens: 4096, temperature: 0.1,
@@ -61,7 +61,7 @@ export async function traduzirFaltantes(env, lista, semTrava) {
   for (let i = 0; i < titulos.length; i += POR_LOTE) {
     const lote = titulos.slice(i, i + POR_LOTE);
     try {
-      const tr = await traduzLote(env, lote.map((n) => n.titulo));
+      const tr = await traduzLote(env, lote.map((n) => n.titulo.replace(/^FinancialJuice:\s*/i, '')));
       await env.DB.batch(lote.map((n, k) => grava(n.link, tr[k] || null, null)));
     } catch (e) { console.error('tradução de títulos:', e.message); break; }
   }

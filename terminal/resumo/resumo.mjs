@@ -20,7 +20,7 @@ const TOK = await tokenOIDC();
 
 // antes, traduz as notícias de fora que faltam (Bloomberg, CNBC...) para o cartão poder usá-las
 try {
-  const t = await fetch(SITE + '/api/robo/traduzir', { headers: { Authorization: 'Bearer ' + TOK }, signal: AbortSignal.timeout(90000) });
+  const t = await fetch(SITE + '/api/robo/traduzir', { headers: { Authorization: 'Bearer ' + TOK }, signal: AbortSignal.timeout(150000) });
   console.log('tradução:', t.status, await t.text());
 } catch (e) { console.log('tradução falhou:', e.message); }
 
