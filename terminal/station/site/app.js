@@ -4156,6 +4156,52 @@ window.__onTabSwitch = (tabId) => {
   setInterval(decorateTicker, 60 * 1000);
 })();
 
+/* ---- Cabeçalho: relógio de Brasília e 4 mini-cartões (Ibovespa, dólar, S&P 500, Selic/IPCA) com o gráfico do dia ---- */
+(() => {
+  const relogio = () => {
+    const el = $('#hdr-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  };
+  relogio();
+  setInterval(() => { relogio(); renderMarketStatus(); }, 20 * 1000);
+
+  const box = $('#hdr-cards');
+  if (!box) return;
+  const ok = (d) => d && d.value != null && isFinite(d.value);
+  const pct = (c) => (c == null || !isFinite(c)) ? '' : `${c >= 0 ? '+' : '−'}${Math.abs(c).toFixed(2).replace('.', ',')}%`;
+  const linha = (vals, up) => {
+    if (!Array.isArray(vals) || vals.length < 2) return '';
+    const w = 72, h = 26, min = Math.min(...vals), max = Math.max(...vals), r = max - min || 1;
+    const pts = vals.map((v, i) => `${(i / (vals.length - 1) * (w - 2) + 1).toFixed(1)},${(h - 2 - (v - min) / r * (h - 4)).toFixed(1)}`).join(' ');
+    return `<svg class="hc-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(${up ? '--pos' : '--neg'})" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+  };
+  const CARDS = [
+    { nome: 'IBOVESPA', d: () => yahooMemo['^BVSP'] || tickerLast.ibov, fmt: v => `${fmtNumber(v, { min: 0, max: 0 })} <small>pts</small>` },
+    { nome: 'DÓLAR', d: () => tickerLast.usd || yahooMemo['BRL=X'], spark: () => yahooMemo['BRL=X'], fmt: v => `R$ ${fmtNumber(v, { min: 4, max: 4 })}` },
+    { nome: 'S&amp;P 500', d: () => yahooMemo['^GSPC'] || tickerLast.sp500, fmt: v => fmtNumber(v, { min: 2, max: 2 }) },
+  ];
+  const juros = (nome, d, title) => `<div class="hc-half" title="${title}"><span class="hc-nome">${nome}</span>
+      <span class="hc-val">${ok(d) ? `${d.value.toFixed(2).replace('.', ',')}%` : '—'}</span>
+      <span class="hc-sub">${ok(d) && d.chgText ? d.chgText : ''}</span></div>`;
+  function render() {
+    const html = CARDS.map(c => {
+      const d = c.d();
+      const has = ok(d), up = has && (d.change || 0) >= 0;
+      const sp = (c.spark ? c.spark() : d)?.sparkline;
+      return `<button type="button" class="hc ${has ? (up ? 'is-up' : 'is-dn') : ''}" data-go="market-panel">
+        <span class="hc-txt"><span class="hc-top"><span class="hc-nome">${c.nome}</span><span class="hc-chg">${has ? pct(d.change) : ''}</span></span>
+        <span class="hc-val">${has ? c.fmt(d.value) : '—'}</span></span>${has ? linha(sp, up) : ''}</button>`;
+    }).join('') + `<button type="button" class="hc hc-juros" data-go="market-panel">${juros('SELIC META', tickerLast.selic, 'Meta da Selic ao ano')}<span class="hc-sep"></span>${juros('IPCA 12M', tickerLast.ipca, 'IPCA acumulado em 12 meses')}</button>`;
+    box.innerHTML = html;
+  }
+  box.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) switchTab(b.dataset.go); });
+  const tk = $('#ticker');
+  new MutationObserver(() => { if (!tk.classList.contains('loading')) render(); }).observe(tk, { attributes: true, attributeFilter: ['class'] });
+  render();
+  setTimeout(render, 3000);
+  setInterval(render, 60 * 1000);
+})();
+
 /* ---- Faixa do topo: índices, juros, commodities e moedas (lidos do lote do Yahoo, sem requisição extra) ---- */
 (() => {
   const STRIP = [
