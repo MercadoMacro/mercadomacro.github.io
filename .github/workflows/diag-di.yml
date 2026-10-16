@@ -5,17 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          D=$(TZ=America/Sao_Paulo date +%d/%m/%Y); echo $D
-          for d in $D 15/10/2026 14/10/2026; do
-            curl -s -m 30 -A "Mozilla/5.0" "https://www2.bmf.com.br/pages/portal/bmfbovespa/boletim1/TxRef1.asp?Data=$d&Data1=20061201&slcTaxa=PRE" -o tx.html -w "TxRef $d %{http_code} %{size_download}\n"
-            python3 -c "
-          import re,html;s=open('tx.html',encoding='latin1').read();t=re.sub(r'<[^>]+>',' ',s);t=html.unescape(re.sub(r'\s+',' ',t));i=t.find('Dias');print(t[i:i+700])"
-          done
-          echo ---- ajustes
-          curl -s -m 30 -A "Mozilla/5.0" "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp" -o aj.html -w "%{http_code} %{size_download}\n"
+          echo ---- ajustes redirect
+          curl -s -m 30 -A "Mozilla/5.0" -I "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp" | grep -i "location\|HTTP"
+          curl -s -m 30 -A "Mozilla/5.0" -L "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp" -o aj.html -w "%{http_code} %{size_download} %{url_effective}\n"
           python3 -c "
-          import re,html;s=open('aj.html',encoding='latin1').read();t=html.unescape(re.sub(r'\s+',' ',re.sub(r'<[^>]+>',' ',s)));i=t.find('DI1');print(t[i:i+600])"
-          echo ---- bcb copom
-          for u in "https://www.bcb.gov.br/api/servico/sitebcb/copom/calendarioreunioes" "https://www.bcb.gov.br/api/servico/sitebcb/agendacopom" "https://www.bcb.gov.br/api/servico/sitebcb/copom/reunioes?quantidade=12"; do curl -s -m 20 -A "Mozilla/5.0" "$u" -w "  <- %{http_code} $u\n" | head -c 400; echo; done
-          echo ---- cdi
-          curl -s -m 20 "https://api.bcb.gov.br/dados/serie/bcdata.sgs.4389/dados/ultimos/3?formato=json"; echo
+          import re,html;s=open('aj.html',encoding='latin1').read();t=html.unescape(re.sub(r'\s+',' ',re.sub(r'<[^>]+>',' ',s)));i=t.find('DI1');print(t[i:i+500] if i>=0 else t[:300])"
+          echo ---- bdi app
+          curl -s -m 30 -A "Mozilla/5.0" "https://arquivos.b3.com.br/bdi/" -o bdi.html -w "%{http_code} %{size_download}\n"; head -c 1500 bdi.html; echo
+          for js in $(grep -o 'src="[^"]*\.js"' bdi.html | sed 's/src="//;s/"//'); do
+            u=$js; case $u in http*) ;; /*) u="https://arquivos.b3.com.br$u";; *) u="https://arquivos.b3.com.br/bdi/$u";; esac
+            curl -s -m 30 "$u" -o a.js; echo "== $u $(wc -c < a.js)"; grep -o '"[A-Z][A-Za-z]\{6,40\}"' a.js | sort -u | grep -i "rate\|taxa\|adjust\|ajust\|deriv\|future\|di1\|swap\|interest" | head -40
+          done
+          echo ---- txref novo
+          for u in "https://sistemaswebb3-derivativos.b3.com.br/financialIndicatorsProxy/" "https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/derivativos/ajustes-do-pregao/"; do curl -s -m 20 -A "Mozilla/5.0" -o /dev/null -w "%{http_code} $u\n" "$u"; done
