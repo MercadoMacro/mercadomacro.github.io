@@ -10,6 +10,7 @@ on:
     # Várias passagens curtas: sem dado novo, não grava nada. O agendador do GitHub também atrasa ou pula.
     - cron: '30 8 * * 1-5'    # 05:30 em Brasília
     - cron: '30 10 * * 1-5'   # 07:30
+    - cron: '0 11 * * 1-5'    # 08:00
     - cron: '30 12 * * 1-5'   # 09:30
     - cron: '30 14 * * 1-5'   # 11:30
     - cron: '15 17 * * 1-5'   # 14:15
