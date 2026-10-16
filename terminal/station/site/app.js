@@ -4700,6 +4700,28 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
+   PROBABILIDADES DO COPOM (aba Análises): copom.js só é baixado
+   quando a seção chega perto da tela
+   ========================================================= */
+(() => {
+  const el = document.getElementById('copom-root');
+  if (!el) return;
+  let pedido = false;
+  const carrega = () => {
+    if (window.__copomRender) { window.__copomRender(el); return; }
+    if (pedido) return;
+    pedido = true;
+    const sc = document.createElement('script');
+    sc.src = 'copom.js?v=1';
+    sc.onload = () => window.__copomRender && window.__copomRender(el);
+    sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>copom.js</b>.</div>'; };
+    document.body.appendChild(sc);
+  };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); carrega(); } }, { rootMargin: '600px 0px' }).observe(el);
+  } else carrega();
+})();
+/* =========================================================
    PROBABILIDADES DO FED (aba Análises): fed.js só é baixado
    quando a seção chega perto da tela
    ========================================================= */
