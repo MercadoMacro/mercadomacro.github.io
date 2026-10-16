@@ -160,6 +160,25 @@
   }
   // dias guardados no navegador + histórico do GitHub (o oficial vale quando os dois têm o mesmo dia)
   const allSnaps = () => ({ ...loadSnaps(), ...(histCurva || {}) });
+  // curva DI x pré da B3 (robô curva.yml, terminal/curva/curva.json): último pregão, anterior, 1 semana e 1 mês
+  const DI_URL = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/curva/curva.json';
+  const DI_CMP = [['ontem', 'pregão anterior'], ['semana', '1 semana'], ['mes', '1 mês']];
+  let diCurvas = null, diTentou = 0, diCmp = 'semana';
+  async function loadDI() {
+    if (diCurvas || Date.now() - diTentou < 60000) return;
+    diTentou = Date.now();
+    try { const j = await getJSON(DI_URL); if (j && j.curvas && j.curvas.hoje) diCurvas = j.curvas; } catch (e) { /* fica sem */ }
+    if (diCurvas && root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+  }
+  const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function diPoints(c) {
+    if (!c || !c.v) return [];
+    const d0 = new Date(c.d + 'T12:00:00');
+    return c.v.map(([, dc, taxa]) => {
+      const venc = new Date(d0.getTime() + dc * 86400000), y = dc / 365.25;
+      return { nome: `DI ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y };
+    }).filter((p) => p.y > 0.05 && p.y <= 10.5 && isFinite(p.taxa));
+  }
   async function loadCurve() {
     loadHistCurva();
     try {
@@ -186,6 +205,7 @@
     return null;
   };
   function curveHTML() {
+    if (curveKind === 'di') return curveHTMLdi();
     const snaps = allSnaps();
     const todos = Object.keys(snaps).filter((k) => k !== isoDay()).sort().reverse();
     const days = todos.slice(0, 10);
@@ -210,11 +230,7 @@
     const dSlope = slope != null && c2 != null && c5 != null ? slope - Math.round((c5 - c2) * 100) : null;
     const fmtDay = (k) => (marcos[k] ? `${k.split('-').reverse().join('/').replace(/\/(\d{2})(\d{2})$/, '/$2')} (${marcos[k]})` : k.split('-').reverse().slice(0, 2).join('/'));
     return `
-      <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>
-        <div class="ms-seg" role="group" aria-label="Tipo de curva">
-          <button type="button" data-curve="pre" class="${curveKind === 'pre' ? 'on' : ''}" title="Tesouro Prefixado">Pré</button>
-          <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
-        </div></div>
+      <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>${segHTML()}</div>
       <div class="ms-curve-sub">
         <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde ${fmtDay(curveCmp)}` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
         <span class="sp"></span>
@@ -223,13 +239,39 @@
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${curve ? 'Sem títulos desse tipo no arquivo do Tesouro.' : (curveErr || 'Carregando curva…')}</div>`}</div>
       <div class="ms-foot">${curve ? `Taxas de compra do Tesouro Direto${curve.old ? `, salvas em ${new Date(curve.ts).toLocaleDateString('pt-BR')} (fonte fora do ar agora)` : `, ${new Date(curve.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}.` : ''}${histCurva ? ' Curvas anteriores: Tesouro Transparente.' : days.length ? '' : ' A comparação aparece a partir do segundo dia de uso, com as curvas que o painel guarda.'}</div>`;
   }
+  const segHTML = () => `<div class="ms-seg" role="group" aria-label="Tipo de curva">
+          <button type="button" data-curve="pre" class="${curveKind === 'pre' ? 'on' : ''}" title="Tesouro Prefixado">Pré</button>
+          <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
+          <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
+        </div>`;
+  function curveHTMLdi() {
+    loadDI();
+    const C = diCurvas || {};
+    const pts = diPoints(C.hoje), cmp = diCmp && C[diCmp] ? diPoints(C[diCmp]) : [];
+    const s2 = interp(pts, 2), s5 = interp(pts, 5), c2 = interp(cmp, 2), c5 = interp(cmp, 5);
+    const slope = s2 != null && s5 != null ? Math.round((s5 - s2) * 100) : null;
+    const dSlope = slope != null && c2 != null && c5 != null ? slope - Math.round((c5 - c2) * 100) : null;
+    const dd = (k) => (C[k] ? C[k].d.split('-').reverse().slice(0, 2).join('/') : '');
+    const opts = DI_CMP.filter(([k]) => C[k]);
+    return `
+      <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>${segHTML()}</div>
+      <div class="ms-curve-sub">
+        <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde ${dd(diCmp)}` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
+        <span class="sp"></span>
+        <label>Comparar com <select class="ms-cmp" ${opts.length ? '' : 'disabled'}>${opts.length ? `<option value="">Sem comparação</option>${opts.map(([k, l]) => `<option value="${k}" ${k === diCmp ? 'selected' : ''}>${dd(k)} (${l})</option>`).join('')}` : '<option>—</option>'}</select></label>
+      </div>
+      <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${diTentou && !diCurvas ? 'Curva DI indisponível agora.' : 'Carregando curva…'}</div>`}</div>
+      <div class="ms-foot">${C.hoje ? `Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.` : ''}</div>`;
+  }
   function drawCurve() {
     const box = root.querySelector('.ms-curve');
-    if (!box || !curve) return;
-    const pts = curvePoints(curve.t, curveKind);
+    const di = curveKind === 'di';
+    if (!box || (!di && !curve)) return;
+    const pts = di ? diPoints(diCurvas?.hoje) : curvePoints(curve.t, curveKind);
     if (pts.length < 2) return;
-    const snaps = allSnaps();
-    const cmp = curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : [];
+    const snaps = di ? null : allSnaps();
+    const cmpKey = di ? diCmp : curveCmp;
+    const cmp = di ? (diCmp && diCurvas?.[diCmp] ? diPoints(diCurvas[diCmp]) : []) : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
     const W = Math.max(260, box.clientWidth), H = 220, L = 44, R = 12, T = 12, B = 24;
     const all = [...pts, ...cmp];
     let y0 = Math.min(...all.map((p) => p.taxa)), y1 = Math.max(...all.map((p) => p.taxa));
@@ -245,7 +287,7 @@
       ${years.filter((_, i) => i % step === 0).map((yr) => { const p = pts.find((q) => q.venc.getFullYear() === yr); return `<text x="${PX(p.y).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="ax">${yr}</text>`; }).join('')}
       ${cmp.length >= 2 ? `<path d="${path(cmp)}" class="cmp"/>` : ''}
       <path d="${path(pts)}" class="ln"/>
-      ${pts.map((p, i) => `<circle cx="${PX(p.y).toFixed(1)}" cy="${Y(p.taxa).toFixed(1)}" r="3" class="pt" data-i="${i}"/>`).join('')}
+      ${di ? '' : pts.map((p, i) => `<circle cx="${PX(p.y).toFixed(1)}" cy="${Y(p.taxa).toFixed(1)}" r="3" class="pt" data-i="${i}"/>`).join('')}
       <line class="hv" x1="0" x2="0" y1="${T}" y2="${H - B}" style="display:none"/>
     </svg><div class="ms-tip" hidden></div>`;
     const svg = box.querySelector('svg'), tip = box.querySelector('.ms-tip'), hv = box.querySelector('.hv');
@@ -259,7 +301,8 @@
       const old = cmp.length ? interp(cmp, best.y) : null;
       const bp = old != null ? Math.round((best.taxa - old) * 100) : null;
       tip.hidden = false;
-      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, 2)}% ao ano${curveKind === 'ipca' ? ' + IPCA' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${curveCmp.split('-').reverse().slice(0, Date.now() - Date.parse(curveCmp) > 300 * 86400000 ? 3 : 2).join('/')}</span>` : ''}`;
+      const desde = di ? diCurvas[diCmp].d : cmpKey;
+      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, 2)}% ao ano${curveKind === 'ipca' ? ' + IPCA' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde.split('-').reverse().slice(0, Date.now() - Date.parse(desde) > 300 * 86400000 ? 3 : 2).join('/')}</span>` : ''}`;
       const left = (cx / W) * r.width;
       tip.style.left = `${Math.min(Math.max(left, 70), r.width - 70)}px`;
     };
@@ -388,7 +431,7 @@
   });
   root.addEventListener('change', (e) => {
     if (e.target.classList.contains('ms-cmp')) {
-      curveCmp = e.target.value || '';
+      if (curveKind === 'di') diCmp = e.target.value || ''; else curveCmp = e.target.value || '';
       const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); }
     }
   });
