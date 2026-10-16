@@ -5,11 +5,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          U='https://arquivos.b3.com.br/charts/copom?lang=pt'
-          curl -sSL -A 'Mozilla/5.0' "$U" -o p.html; wc -c p.html; head -c 3000 p.html; echo
-          for s in $(grep -oE '(src|href)="[^"]+\.js[^"]*"' p.html | cut -d'"' -f2); do
-            case "$s" in http*) u=$s;; /*) u="https://arquivos.b3.com.br$s";; *) u="https://arquivos.b3.com.br/charts/$s";; esac
-            echo "== $u"; curl -sSL -A 'Mozilla/5.0' "$u" -o j.js; wc -c j.js
-            grep -oE '"[^"]{0,80}(api|/apinegocios|Copom|copom|json|\.csv)[^"]{0,120}"' j.js | sort -u | head -40
-            grep -oE '`[^`]{0,80}(api|copom)[^`]{0,120}`' j.js | sort -u | head -20
-          done
+          B=https://arquivos.b3.com.br/charts
+          curl -sSL -A 'Mozilla/5.0' $B/config.js | head -c 5300; echo
+          curl -sSL -A 'Mozilla/5.0' $B/static/js/main.c09dd75c.chunk.js -o m.js
+          python3 - <<'P'
+          import re
+          s=open('m.js').read()
+          for k in ['relativeUrl','chart/copom','fetch(']:
+              for m in list(re.finditer(re.escape(k),s))[:8]:
+                  print('##',k, s[max(0,m.start()-300):m.start()+300].replace('\n',' '))
+          P
