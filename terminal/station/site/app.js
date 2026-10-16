@@ -4749,6 +4749,28 @@ function newsReadMins(n) {
   } else abre();
 })();
 /* =========================================================
+   CURVA DE JUROS (aba Análises): curva.js só é baixado
+   quando a seção chega perto da tela
+   ========================================================= */
+(() => {
+  const el = document.getElementById('curva-root');
+  if (!el) return;
+  let pedido = false;
+  const carrega = () => {
+    if (window.__curvaRender) { window.__curvaRender(el); return; }
+    if (pedido) return;
+    pedido = true;
+    const sc = document.createElement('script');
+    sc.src = 'curva.js?v=1';
+    sc.onload = () => window.__curvaRender && window.__curvaRender(el);
+    sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>curva.js</b>.</div>'; };
+    document.body.appendChild(sc);
+  };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); carrega(); } }, { rootMargin: '600px 0px' }).observe(el);
+  } else carrega();
+})();
+/* =========================================================
    POSIÇÕES (CFTC e SEC 13F, aba Análises): posicoes.js só é baixado
    quando uma das duas seções chega perto da tela
    ========================================================= */
