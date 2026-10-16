@@ -1,10 +1,13 @@
-# Probabilidades do Copom: grava terminal/copom/copom.json com a curva DI x pré da B3 (Taxas de Swap),
-# a Selic meta e o CDI do Banco Central, e as chances de cada decisão nos últimos pregões.
+# Probabilidades do Copom: grava terminal/copom/copom.json com os preços das opções de Copom da B3
+# (os mesmos do painel público da B3), dos últimos pregões e os negócios do dia.
 name: Probabilidades do Copom
 
 on:
   schedule:
-    - cron: '30 22 * * 1-5'
+    - cron: '45 13 * * 1-5'
+    - cron: '45 16 * * 1-5'
+    - cron: '45 19 * * 1-5'
+    - cron: '45 22 * * 1-5'
     - cron: '40 1 * * 2-6'
   workflow_dispatch:
 
@@ -21,7 +24,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-      - name: Curva de DI, Selic e CDI
+      - name: Opções de Copom da B3
         run: python3 terminal/copom/gerar_copom.py terminal/copom
       - name: Salvar no repositório
         run: |
