@@ -4712,7 +4712,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'copom.js?v=1';
+    sc.src = 'copom.js?v=2';
     sc.onload = () => window.__copomRender && window.__copomRender(el);
     sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>copom.js</b>.</div>'; };
     document.body.appendChild(sc);

@@ -1,27 +1,25 @@
 /* =========================================================
-   PROBABILIDADES DO COPOM (aba Análises, a mesma ideia do FedWatch para a Selic)
-   Chance de cada decisão do Copom nas próximas reuniões, tirada da curva de juros
-   DI x pré da B3 (arquivo diário de Taxas de Swap, que marca os contratos de DI futuro).
-   Base: copom/copom.json, gravado pelo robô do GitHub (copom.yml) depois do fechamento:
-   a conta já vem feita para cada um dos últimos pregões; aqui só se mostra.
-   Conta: a taxa a termo entre uma reunião e a seguinte é o CDI que o mercado espera
-   depois daquela reunião; a diferença para o período anterior é a mudança esperada,
-   que vira chance entre os dois degraus de 0,25 ponto mais próximos, e as reuniões
-   seguintes se somam numa árvore.
+   PROBABILIDADES DO COPOM (aba Análises)
+   Chance de cada decisão do Copom nas próximas reuniões, pelas opções de Copom da B3
+   (as mesmas do painel público da B3). Cada opção paga se o Copom decidir exatamente
+   aquele cenário, então o preço dela (de 0 a 100) é a chance que o mercado dá a ele.
+   Base: copom/copom.json, gravado pelo robô do GitHub (copom.yml) algumas vezes por dia:
+   preço de referência de cada opção nos últimos pregões e os negócios do dia.
    Regra do painel: nada inventado; o que a fonte não traz aparece como "—".
    ========================================================= */
 (() => {
   if (window.__copomRender) return;
   const URLS = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/copom/copom.json'];
-  const CACHE_KEY = 'copom_cache_v1';
+  const CACHE_KEY = 'copom_cache_v2';
   const PREF_KEY = 'copom_prefs_v1';
-  const TTL = 30 * 60 * 1000;
+  const TTL = 20 * 60 * 1000;
   const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ok = (v) => v != null && isFinite(v);
   const num = (v, d = 2) => (ok(v) ? v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—');
   const pct = (v) => (ok(v) ? `${num(v, 1)}%` : '—');
+  const int = (v) => (ok(v) ? Math.round(v).toLocaleString('pt-BR') : '—');
   const dm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
   const dmy = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
   const curta = (iso) => `${+iso.slice(8, 10)} ${MES[+iso.slice(5, 7) - 1]} ${iso.slice(2, 4)}`;
@@ -46,8 +44,8 @@
     busy = true; erro = ''; draw();
     try {
       let j = null;
-      for (const u of URLS) { try { j = await getJSON(force ? `${u}?t=${Date.now()}` : u); if (j && j.historico) break; } catch (e) { j = null; } }
-      if (j && j.historico) {
+      for (const u of URLS) { try { j = await getJSON(force ? `${u}?t=${Date.now()}` : u); if (j && j.reunioes) break; } catch (e) { j = null; } }
+      if (j && j.reunioes) {
         base = { ...j, ts: Date.now() };
         try { localStorage.setItem(CACHE_KEY, JSON.stringify(base)); } catch (e) { /* cheio */ }
       }
@@ -57,43 +55,24 @@
     } finally { busy = false; draw(); }
   }
 
-  const selicAtual = () => base.selic?.v;
-  const nivel = (s, sb = selicAtual()) => (ok(sb) ? sb + s * 0.25 : null);
-  const nomeMov = (s) => (s === 0 ? 'Manter' : s > 0 ? `Alta de ${s * 25} bp` : `Corte de ${-s * 25} bp`);
-  const tomMov = (s) => (s === 0 ? 'fw-man' : s > 0 ? 'fw-alta' : 'fw-corte');
-  const corDe = (k) => {
-    const s = Math.round((+k - selicAtual()) / 0.25);
-    return { 0: '#60a5fa', 1: '#f87171', 2: '#fb923c', 3: '#facc15', 4: '#e879f9', '-1': '#34d399', '-2': '#2dd4bf', '-3': '#a3e635', '-4': '#22d3ee' }[s] || '#94a3b8';
+  const nomeMov = (m) => (m === 0 ? 'Manter' : m > 0 ? `Alta de ${num(m / 100)}` : `Corte de ${num(-m / 100)}`);
+  const tomMov = (m) => (m === 0 ? 'fw-man' : m > 0 ? 'fw-alta' : 'fw-corte');
+  const corDe = (k) => ({ 0: '#60a5fa', 25: '#f87171', 50: '#fb923c', 75: '#facc15', 100: '#e879f9', '-25': '#34d399', '-50': '#a78bfa', '-75': '#a3e635', '-100': '#22d3ee' }[+k] || '#94a3b8');
+  const faixaAbs = (k) => nomeMov(+k);
+  // pregões de referência de uma reunião: o mais novo, o anterior e o de cerca de 1 semana antes
+  const ultimos = (r) => {
+    const h = r.hist || [], u = h[h.length - 1] || null, o = h[h.length - 2] || null;
+    let s = null;
+    if (u) {
+      const ref = new Date(Date.parse(u.d + 'T12:00:00Z') - 7 * 86400000).toISOString().slice(0, 10);
+      for (const x of h) if (x.d <= ref) s = x;
+    }
+    return { u, o, s };
   };
-  // pregão de referência: o mais novo, o anterior e o de cerca de 1 semana antes
-  const pregao = (k) => base.historico[k] || null;
-  const semanaAtras = () => {
-    const h0 = base.historico[0]?.d;
-    if (!h0) return null;
-    const ref = new Date(Date.parse(h0 + 'T12:00:00Z') - 7 * 86400000).toISOString().slice(0, 10);
-    return base.historico.find((h) => h.d <= ref) || null;
-  };
-  const reuniaoEm = (h, data) => h?.r?.find((x) => x.data === data) || null;
-  // chance de um nível absoluto da Selic (a árvore de cada pregão parte da Selic daquele dia)
-  const chanceAbs = (h, data, k) => {
-    const x = reuniaoEm(h, data);
-    if (!x) return null;
-    let p = 0;
-    for (const [s, v] of Object.entries(x.dist)) if ((h.selic + +s * 0.25).toFixed(2) === (+k).toFixed(2)) p += v;
-    return p;
-  };
-
-  function historico(selData) {
-    const passadas = [...(base.passadas || []), ...(base.reunioes || [])].filter((d) => d < selData);
-    const ultima = passadas.sort().pop() || '';
-    const pts = base.historico.filter((h) => h.d > ultima && reuniaoEm(h, selData)).slice().reverse().map((h) => {
-      const x = reuniaoEm(h, selData), abs = {};
-      for (const [s, p] of Object.entries(x.dist)) abs[(h.selic + +s * 0.25).toFixed(2)] = p;
-      return { d: h.d, abs };
-    });
-    return pts;
+  const hhmm = (t) => (t && t.length >= 16 ? t.slice(11, 16) : '');
+  function historico(r) {
+    return (r.hist || []).map((h) => ({ d: h.d, abs: h.p }));
   }
-  const faixaAbs = (k) => `${num(+k)}%`;
   let hist = null;
   function desenhaHist() {
     const box = root?.querySelector('.fw-hbox');
@@ -136,46 +115,53 @@
       root.innerHTML = `<div class="fw-msg">${busy ? 'Carregando as probabilidades do Copom...' : esc(erro || 'Sem dados.')}</div>`;
       return;
     }
-    const h0 = pregao(0), h1 = pregao(1), hs = semanaAtras();
-    const selic = selicAtual();
-    const agora = (h0?.r || []).filter((x) => x.data >= hojeBR());
-    if (!agora.length || !ok(selic)) {
-      root.innerHTML = '<div class="fw-msg">Sem reuniões ou taxas no arquivo do robô.</div>';
+    const selic = base.selic;
+    const reun = (base.reunioes || []).filter((r) => r.data >= hojeBR() && (r.hist || []).length);
+    if (!reun.length) {
+      root.innerHTML = '<div class="fw-msg">Sem preços das opções de Copom no arquivo do robô.</div>';
       return;
     }
-    const sel = Math.min(Math.max(0, prefs.sel | 0), agora.length - 1);
-    const R = agora[sel];
-    const dist = Object.fromEntries(Object.entries(R.dist).map(([s, p]) => [+s, p]));
-    const estados = Object.keys(dist).map(Number).sort((a, b) => a - b);
-    const maisProv = estados.reduce((m, s) => (dist[s] > (dist[m] ?? -1) ? s : m), estados[0]);
+    const sel = Math.min(Math.max(0, prefs.sel | 0), reun.length - 1);
+    const R = reun[sel];
+    const { u, o, s } = ultimos(R);
+    const P = u.p;
+    const movs = Object.keys(R.cenarios || P).map(Number)
+      .filter((m) => Math.max(P[m] || 0, o?.p?.[m] || 0, s?.p?.[m] || 0, R.vivo?.[m]?.p || 0) >= 1 || (u.oi?.[m] || 0) > 0 && (P[m] || 0) > 0.05)
+      .sort((a, b) => a - b);
+    const soma = Object.values(P).reduce((t, v) => t + v, 0);
+    const maisProv = movs.reduce((m, k) => ((P[k] || 0) > (P[m] ?? -1) ? k : m), movs[0]);
+    const esperado = soma > 0 ? Object.entries(P).reduce((t, [k, v]) => t + (+k) * v, 0) / soma : null;
     const faltam = diasAte(R.data);
-    const esperado = estados.reduce((t, s) => t + s * 0.25 * dist[s] / 100, 0);
+    const vivoHoje = Object.values(R.vivo || {}).some((v) => (v.t || '').slice(0, 10) === hojeBR());
 
-    const chips = agora.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}">${curta(x.data)}</button>`).join('');
+    const chips = reun.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}">${curta(x.data)}</button>`).join('');
 
-    const barras = estados.map((s) => {
-      const k = nivel(s), p = dist[s];
-      const po = h1 ? chanceAbs(h1, R.data, k) : null, ps = hs ? chanceAbs(hs, R.data, k) : null;
-      return `<div class="fw-bar${s === maisProv ? ' top' : ''}">
-        <div class="fw-bl"><b>${num(k)}%</b><span class="${tomMov(s)}">${s === 0 ? 'Manter (Selic atual)' : nomeMov(s)}</span></div>
-        <div class="fw-bt"><i style="width:${Math.max(0.5, p).toFixed(1)}%"></i></div>
+    const barras = movs.map((m) => {
+      const p = P[m], v = R.vivo?.[m];
+      const hoje = vivoHoje && v && (v.t || '').slice(0, 10) === hojeBR() ? ` <span>·</span> hoje ${pct(v.p)} (${hhmm(v.t)})` : '';
+      return `<div class="fw-bar${m === maisProv ? ' top' : ''}">
+        <div class="fw-bl">${sel === 0 ? `<b>${ok(selic) ? `${num(selic + m / 100)}%` : '—'}</b><span class="${tomMov(m)}">${m === 0 ? 'Manter (Selic atual)' : nomeMov(m)}</span>` : `<b class="${tomMov(m)}">${nomeMov(m)}</b><span>${m === 0 ? 'sem mudança nesta reunião' : 'nesta reunião'}</span>`}</div>
+        <div class="fw-bt"><i style="width:${Math.max(0.5, Math.min(100, p || 0)).toFixed(1)}%"></i></div>
         <div class="fw-bv">${pct(p)}</div>
-        <div class="fw-bc">ontem ${pct(po)} <span>·</span> 1 semana ${pct(ps)}</div>
+        <div class="fw-bc">ontem ${pct(o?.p?.[m])} <span>·</span> 1 semana ${pct(s?.p?.[m])}${hoje}</div>
       </div>`;
     }).join('');
 
-    const cols = [...new Set(agora.flatMap((x) => Object.keys(x.dist).filter((k) => x.dist[k] >= 0.5).map(Number)))].sort((a, b) => a - b);
-    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((s) => `<th>${num(nivel(s))}%</th>`).join('')}<th>CDI a termo antes</th><th>depois</th><th>Mudança</th></tr></thead><tbody>${agora.map((x, i) => {
-      const mx = Math.max(...Object.values(x.dist));
-      return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}</td>${cols.map((s) => {
-        const p = x.dist[s];
-        if (!ok(p) || p < 0.05) return '<td class="z">—</td>';
-        return `<td class="${p === mx ? 'mx' : ''}" style="--a:${Math.min(1, p / 100).toFixed(3)}">${num(p, 1)}%</td>`;
-      }).join('')}<td class="fw-ct">${num(x.antes)}%</td><td class="fw-ct">${num(x.depois)}%</td><td class="fw-tx">${x.delta >= 0 ? '+' : '−'}${num(Math.abs(x.delta), 1)} bp</td></tr>`;
+    // tabela: todas as reuniões x cenários (cada reunião sozinha: a decisão daquela reunião)
+    const cols = [...new Set(reun.flatMap((x) => { const p = ultimos(x).u.p; return Object.keys(p).filter((k) => p[k] >= 1).map(Number); }))].sort((a, b) => a - b);
+    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((m) => `<th>${m === 0 ? 'Manter' : `${m > 0 ? '+' : '−'}${num(Math.abs(m) / 100)}`}</th>`).join('')}<th>Contratos em aberto</th><th>Pregão</th></tr></thead><tbody>${reun.map((x, i) => {
+      const ux = ultimos(x).u, p = ux.p;
+      const mx = Math.max(...Object.values(p));
+      const oi = Object.values(ux.oi || {}).reduce((t, v) => t + v, 0);
+      return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}</td>${cols.map((m) => {
+        const v = p[m];
+        if (!ok(v) || v < 0.5) return '<td class="z">—</td>';
+        return `<td class="${v === mx ? 'mx' : ''}" style="--a:${Math.min(1, v / 100).toFixed(3)}">${num(v, 1)}%</td>`;
+      }).join('')}<td class="fw-ct">${int(oi)}</td><td class="fw-ct">${dm(ux.d)}</td></tr>`;
     }).join('')}</tbody></table>`;
 
-    const ro = h1 ? reuniaoEm(h1, R.data) : null, rs = hs ? reuniaoEm(hs, R.data) : null;
     const bp = (v) => (ok(v) ? `${v >= 0 ? '+' : '−'}${num(Math.abs(v), 1)} bp` : '—');
+    const oiTot = Object.values(u.oi || {}).reduce((t, v) => t + v, 0), negTot = Object.values(u.n || {}).reduce((t, v) => t + v, 0);
     root.innerHTML = `<div class="fw-card">
       <div class="fw-top">
         <div class="fw-chips" role="tablist" aria-label="Reuniões do Copom">${chips}</div>
@@ -184,32 +170,31 @@
       </div>
       <div class="fw-kpis">
         <div><span>Reunião</span><b>${dmy(R.data)}</b><small>${faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`}</small></div>
-        <div><span>Selic atual</span><b>${num(selic)}%</b><small>CDI ${num(base.cdi?.v)}%${base.cdi?.data ? ` (${dm(base.cdi.data)})` : ''}</small></div>
-        <div><span>Mais provável</span><b class="${tomMov(maisProv)}">${nomeMov(maisProv)}</b><small>${pct(dist[maisProv])} de chance</small></div>
-        <div><span>Selic esperada depois</span><b>${num(selic + esperado)}%</b><small>média das chances: ${bp(esperado * 100)} sobre a atual</small></div>
+        <div><span>Selic atual</span><b>${ok(selic) ? `${num(selic)}%` : '—'}</b><small>meta do Copom</small></div>
+        <div><span>Mais provável</span><b class="${tomMov(maisProv)}">${nomeMov(maisProv)}</b><small>${pct(P[maisProv])} de chance</small></div>
+        <div><span>Decisão média esperada</span><b>${bp(esperado)}</b><small>${sel === 0 ? `Selic de ${ok(selic) && ok(esperado) ? `${num(selic + esperado / 100)}%` : '—'} depois` : 'nesta reunião'}</small></div>
       </div>
-      <div class="fw-sec">Chance de cada Selic depois da reunião de ${dmy(R.data)}</div>
+      <div class="fw-sec">Chance de cada decisão na reunião de ${dmy(R.data)} ${sel === 0 ? '<small>(e a Selic depois dela)</small>' : '<small>(mudança nesta reunião, além do que for decidido antes)</small>'}</div>
       <div class="fw-ctr">
-        <span class="fw-ctr-t">Curva DI usada</span>
-        <span>CDI a termo antes da reunião</span><b>${num(R.antes)}%</b>
-        <span>depois</span><b>${num(R.depois)}%</b>
-        <span class="fw-ctr-p">${bp(R.delta)}</span>
-        <span>ontem ${bp(ro?.delta)}</span>
-        <span>1 semana ${bp(rs?.delta)}</span>
+        <span class="fw-ctr-t">Opções de Copom</span>
+        <span>pregão</span><b>${dmy(u.d)}</b>
+        <span>contratos em aberto</span><b>${int(oiTot)}</b>
+        <span>negociados no dia</span><b>${int(negTot)}</b>
+        <span>soma das chances</span><b>${pct(soma)}</b>
       </div>
       <div class="fw-bars">${barras}</div>
       <div class="fw-sec fw-sec-b">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small>
         <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}">${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
       ${prefs.graf ? '<div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>' : ''}
-      <div class="fw-sec">Todas as reuniões <small>(chance da Selic depois de cada reunião)</small></div>
+      <div class="fw-sec">Todas as reuniões <small>(chance de cada decisão, reunião por reunião)</small></div>
       <div class="fw-tabw">${tabela}</div>
-      <div class="fw-foot">Curva do fechamento de ${h0 ? dmy(h0.d) : '—'} (a B3 publica depois do pregão; atualiza à noite).
-        Conta feita com a curva DI x pré da B3, a mesma que marca os contratos de DI futuro: a taxa a termo entre uma reunião e a seguinte é o CDI esperado depois da reunião,
-        e a diferença para o período anterior vira chance entre os dois degraus de 0,25 ponto mais próximos. Os vértices da curva caem no começo de cada mês, então é uma aproximação.
-        Fontes: B3 (Taxas de Swap, DI x pré) e Banco Central (Selic meta e CDI).${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
+      <div class="fw-foot">Preço de referência das opções de Copom da B3 no pregão de ${dmy(u.d)}${vivoHoje ? '; "hoje" é o último negócio do dia' : ''}.
+        Cada opção paga se o Copom decidir exatamente aquele cenário, então o preço (de 0 a 100) é a chance que o mercado dá a ele; por isso a soma pode passar ou ficar abaixo de 100%.
+        Cada reunião tem as suas opções: a chance é da decisão daquela reunião. Reuniões sem opções negociadas não aparecem.
+        Fonte: B3, painel público de opções de Copom.${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
     </div>`;
     if (prefs.graf) {
-      hist = historico(R.data);
+      hist = historico(R);
       larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
       desenhaHist();
     }
