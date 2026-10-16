@@ -5,12 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -m 60 "https://arquivos.b3.com.br/bdi/static/js/main.e591a35328ff179145c0.js" -o m.js; wc -c m.js
-          python3 - <<'P'
-          import re
-          s=open('m.js',encoding='utf-8',errors='replace').read()
-          ids=set(re.findall(r'["\'`]([A-Z][A-Za-z0-9]{5,40})["\'`]',s))
-          near=[i for i in ids if re.search(r'Invest|Deriv|Fut|Rate|Tax|Adjust|Ajust|Swap|Interest|DI1|Di1|Settl|Refer|Curve|Curva',i)]
-          print(sorted(near)[:200])
-          i=s.find('SharesInvesVolum'); print(s[i-1500:i+500])
-          P
+          curl -s -m 60 "https://arquivos.b3.com.br/bdi/config.js" | head -c 7000; echo
+          curl -s -m 60 "https://arquivos.b3.com.br/bdi/static/js/main.e591a35328ff179145c0.js" -o m.js
+          grep -o '.\{200\}bdi/table.\{300\}' m.js | head -3
+          grep -o '.\{100\}/table/.\{200\}' m.js | head -5
