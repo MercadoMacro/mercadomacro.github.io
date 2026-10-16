@@ -1,0 +1,7 @@
+name: diag-tes
+on: workflow_dispatch
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s -m 60 -A "Mozilla/5.0" https://mercadomacro.com.br/fechamento-do-mercado | grep -o "Tesouro[^<]\{0,80\}" | head -6
