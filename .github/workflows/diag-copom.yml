@@ -1,0 +1,12 @@
+name: diag copom
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          U='https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/juros/dashboard-publico-opcoes-de-copom/'
+          curl -sSL -A 'Mozilla/5.0' "$U" -o p.html; wc -c p.html
+          grep -oiE '(src|href|data-[a-z-]+)="[^"]+"' p.html | grep -viE '\.(css|png|jpg|svg|woff)' | sort -u | head -80
+          grep -oiE 'https?://[^"'"'"' <>]+' p.html | grep -iE 'api|json|copom|powerbi|tableau|iframe|sistemas|arquivos' | sort -u | head -60
+          grep -oiE '<iframe[^>]+>' p.html | head
