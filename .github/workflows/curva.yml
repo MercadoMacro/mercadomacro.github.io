@@ -1,0 +1,35 @@
+# Curva de juros: grava terminal/curva/curva.json com a curva DI x pré da B3 (Taxas de Swap),
+# que a B3 publica depois do pregão. Guarda hoje, ontem, 1 semana e 1 mês.
+name: Curva de juros
+
+on:
+  schedule:
+    - cron: '30 23 * * 1-5'
+    - cron: '50 1 * * 2-6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: curva
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Curva DI x pré da B3
+        run: python3 terminal/curva/gerar_curva.py terminal/curva
+      - name: Salvar no repositório
+        run: |
+          git config user.name "curva-bot"
+          git config user.email "actions@users.noreply.github.com"
+          p=terminal/curva/curva.json
+          if git cat-file -e HEAD:$p 2>/dev/null && [ "$(git show HEAD:$p | python3 -c 'import json,sys;d=json.load(sys.stdin);d.pop("gerado",None);print(json.dumps(d,sort_keys=True))')" = "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d.pop("gerado",None);print(json.dumps(d,sort_keys=True))' $p)" ]; then git checkout -q -- $p; fi
+          git add $p
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -m "Curva: $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M')"
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1
