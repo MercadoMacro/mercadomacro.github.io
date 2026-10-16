@@ -5,8 +5,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          U='https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/juros/dashboard-publico-opcoes-de-copom/'
-          curl -sSL -A 'Mozilla/5.0' "$U" -o p.html; wc -c p.html
-          grep -oiE '(src|href|data-[a-z-]+)="[^"]+"' p.html | grep -viE '\.(css|png|jpg|svg|woff)' | sort -u | head -80
-          grep -oiE 'https?://[^"'"'"' <>]+' p.html | grep -iE 'api|json|copom|powerbi|tableau|iframe|sistemas|arquivos' | sort -u | head -60
-          grep -oiE '<iframe[^>]+>' p.html | head
+          U='https://arquivos.b3.com.br/charts/copom?lang=pt'
+          curl -sSL -A 'Mozilla/5.0' "$U" -o p.html; wc -c p.html; head -c 3000 p.html; echo
+          for s in $(grep -oE '(src|href)="[^"]+\.js[^"]*"' p.html | cut -d'"' -f2); do
+            case "$s" in http*) u=$s;; /*) u="https://arquivos.b3.com.br$s";; *) u="https://arquivos.b3.com.br/charts/$s";; esac
+            echo "== $u"; curl -sSL -A 'Mozilla/5.0' "$u" -o j.js; wc -c j.js
+            grep -oE '"[^"]{0,80}(api|/apinegocios|Copom|copom|json|\.csv)[^"]{0,120}"' j.js | sort -u | head -40
+            grep -oE '`[^`]{0,80}(api|copom)[^`]{0,120}`' j.js | sort -u | head -20
+          done
