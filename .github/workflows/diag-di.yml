@@ -5,14 +5,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -m 60 "https://arquivos.b3.com.br/bdi/table/all" -o all.json -w "%{http_code} %{size_download}\n"
+          for d in 261015 261014; do
+            curl -s -m 60 -A "Mozilla/5.0" "https://www.b3.com.br/pesquisapregao/download?filelist=TS$d.ex_," -o ts$d.zip -w "TS $d %{http_code} %{size_download} %{content_type}\n"
+          done
           python3 - <<'P'
-          import json,re
-          d=json.load(open('all.json'))
-          items = d if isinstance(d,list) else d.get('value') or d.get('tables') or d
-          print(type(d), (list(d.keys())[:10] if isinstance(d,dict) else len(d)))
-          s=json.dumps(d,ensure_ascii=False)
-          for m in re.finditer(r'\{[^{}]*\}', s):
-              t=m.group(0)
-              if re.search(r'DI1|DI 1|Taxa|Rate|Ajuste|Adjust|Juro|Interest|Futur|Swap|Pré|Pre\b|Referenc',t,re.I): print(t[:300])
+          import zipfile,io
+          for d in ['261015','261014']:
+              try:
+                  z=zipfile.ZipFile('ts%s.zip'%d); print(d, z.namelist())
+                  inner=z.read(z.namelist()[0])
+                  try:
+                      z2=zipfile.ZipFile(io.BytesIO(inner)); print(' inner', z2.namelist())
+                      txt=z2.read(z2.namelist()[0]).decode('latin1')
+                      lines=txt.splitlines(); print(len(lines)); 
+                      pre=[l for l in lines if 'PRE' in l[:40]]
+                      print('\n'.join(lines[:3])); print('\n'.join(pre[:8]))
+                  except Exception as e: print(' inner err',e, inner[:60])
+              except Exception as e: print(d,'err',e)
           P
+          echo ---- ajustes L
+          curl -s -m 30 -A "Mozilla/5.0" -L "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp" -o aj.html -w "%{http_code} %{size_download} %{url_effective}\n"
+          grep -o "DI1.\{0,300\}" aj.html | head -3
