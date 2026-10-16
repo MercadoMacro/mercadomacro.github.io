@@ -154,13 +154,14 @@ def probabilidades(cv, ref, reunioes):
     return out
 
 
-def sgs(serie, n=5):
-    j = json.loads(baixa(f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.{serie}/dados/ultimos/{n}?formato=json'))
+def sgs(serie, dias=10):
+    ini = (dt.date.today() - dt.timedelta(dias)).strftime('%d/%m/%Y')
+    j = json.loads(baixa(f'https://api.bcb.gov.br/dados/serie/bcdata.sgs.{serie}/dados?formato=json&dataInicial={ini}'))
     return [{'data': '%s-%s-%s' % (x['data'][6:], x['data'][3:5], x['data'][:2]), 'v': float(x['valor'])} for x in j]
 
 
 def main(pasta):
-    hoje = (dt.datetime.utcnow() - dt.timedelta(hours=3)).date()
+    hoje = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=3)).date()
     # pregões recentes que têm arquivo da B3 (do mais novo para o mais antigo)
     hist, d, tent = [], hoje, 0
     while len(hist) < DIAS_HIST and tent < DIAS_HIST * 2:
@@ -182,7 +183,7 @@ def main(pasta):
     selic = selic_h[-1]
     mudou = [x['data'] for i, x in enumerate(selic_h) if i and x['v'] != selic_h[i - 1]['v']]
     print('Selic', selic, 'últimas mudanças', mudou[-3:])
-    cdi = sgs(4389, 3)[-1]
+    cdi = sgs(4389, 10)[-1]
     selic_em = lambda dd: next((x['v'] for x in reversed(selic_h) if x['data'] <= dd), selic['v'])
     historico = []
     for d, cv in hist:
@@ -192,7 +193,7 @@ def main(pasta):
     if not historico:
         sys.exit('sem reuniões futuras do Copom no calendário')
     out = {
-        'gerado': dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'gerado': dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         'fonte': 'B3 (curva DI x pré das Taxas de Swap) e Banco Central (Selic meta e CDI)',
         'curva_dia': hist[0][0].isoformat(),
         'selic': selic, 'cdi': cdi,
