@@ -546,9 +546,16 @@ async function apiAdmin(req, env, acao, eu) {
         env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(id),
       ]);
     } else if (novo) {
+      const antes = await env.DB.prepare('SELECT nome, email, status FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
       const q = [env.DB.prepare('UPDATE usuarios SET status = ?, decidido = ? WHERE id = ? AND admin = 0').bind(novo, agora, id)];
       if (novo !== 'ativo') q.push(env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id));
       await env.DB.batch(q);
+      cacheSessao.clear();
+      // ao liberar, avisa a pessoa por e-mail (se o envio estiver ligado em /admin)
+      if (novo === 'ativo' && antes && antes.status !== 'ativo') {
+        const r = await emailLiberado(env, req, antes.nome, antes.email).catch(() => ({ ok: false }));
+        return json({ ok: true, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
+      }
     } else return json({ erro: 'Ação inválida.' }, 400);
     cacheSessao.clear();
     return json({ ok: true });
@@ -591,7 +598,70 @@ async function apiAdmin(req, env, acao, eu) {
     }
     return json({ erro: 'Ação inválida.' }, 400);
   }
+  if (acao === 'email') {
+    const c = await config(env);
+    if (req.method === 'GET') {
+      if (!c.mail_key) return json({ ligado: false });
+      return json({ ligado: true, de: MAIL_DE, dominio: await dominioResend(c.mail_key) });
+    }
+    if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
+    const b = await req.json().catch(() => ({}));
+    if (b.acao === 'chave') {
+      const chave = String(b.chave || '').trim();
+      if (!/^re_[\w-]{10,80}$/.test(chave)) return json({ erro: 'Essa chave não parece do Resend. Ela começa com re_ e tem letras e números.' }, 400);
+      const dom = await dominioResend(chave);
+      if (dom === 'chave_invalida') return json({ erro: 'O Resend não aceitou essa chave. Confira se copiou inteira.' }, 400);
+      await salvarConfig(env, { mail_key: chave });
+      return json({ ok: true, dominio: dom });
+    }
+    if (b.acao === 'desligar') { await salvarConfig(env, { mail_key: null }); return json({ ok: true }); }
+    if (b.acao === 'teste') {
+      if (!c.mail_key) return json({ erro: 'Cole a chave do Resend primeiro.' }, 400);
+      const r = await emailLiberado(env, req, eu.nome, eu.email, true).catch((e) => ({ ok: false, erro: String(e) }));
+      return r.ok ? json({ ok: true, para: eu.email }) : json({ erro: 'O Resend não enviou: ' + (r.erro || 'erro desconhecido') + '.' }, 502);
+    }
+    return json({ erro: 'Ação inválida.' }, 400);
+  }
   return json({ erro: 'Não encontrado.' }, 404);
+}
+
+/* ---------------- e-mail de acesso liberado (Resend) ----------------
+   O administrador cria uma conta no resend.com, verifica o domínio mercadomacro.com.br lá e cola a chave em /admin.
+   A chave fica só no banco D1 (nunca no código público) e não volta para o navegador. */
+const MAIL_DE = 'Mercado Macro <acesso@mercadomacro.com.br>';
+const MAIL_RESPONDER = 'contato@mercadomacro.com.br';
+// situação do domínio no Resend: verified, pending, not_started, failed, ausente, desconhecido (chave só de envio) ou chave_invalida
+async function dominioResend(chave) {
+  const r = await fetch('https://api.resend.com/domains', { headers: { Authorization: 'Bearer ' + chave } }).catch(() => null);
+  if (!r) return 'desconhecido';
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && /restricted/i.test(JSON.stringify(j))) return 'desconhecido';
+  if (r.status === 401 || r.status === 403) return /restricted/i.test(JSON.stringify(j)) ? 'desconhecido' : 'chave_invalida';
+  if (!r.ok) return 'desconhecido';
+  const d = (j.data || []).find((x) => x.name === 'mercadomacro.com.br');
+  return d ? d.status : 'ausente';
+}
+async function emailLiberado(env, req, nome, email, teste = false) {
+  const c = await config(env);
+  if (!c.mail_key) return { ok: false, desligado: true };
+  const site = new URL(req.url).origin.includes('mercadomacro.com.br') ? 'https://mercadomacro.com.br' : new URL(req.url).origin;
+  const primeiro = String(nome || '').trim().split(/\s+/)[0] || 'olá';
+  const h = (x) => String(x).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const assunto = (teste ? '[Teste] ' : '') + 'Seu acesso ao Mercado Macro foi liberado';
+  const texto = `Olá, ${primeiro}.\n\nSeu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou:\n${site}/entrar\n\nSe esquecer a senha, é só responder este e-mail.\n\nMercado Macro`;
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1f2937;max-width:520px">
+<p>Olá, ${h(primeiro)}.</p>
+<p>Seu acesso ao <b>Mercado Macro</b> foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.</p>
+<p style="margin:22px 0"><a href="${site}/entrar" style="background:#f5b83d;color:#111;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:8px;display:inline-block">Entrar no Mercado Macro</a></p>
+<p style="color:#6b7280;font-size:13px">Se esquecer a senha, é só responder este e-mail.</p>
+<p style="color:#6b7280;font-size:13px">Mercado Macro · <a href="${site}" style="color:#6b7280">mercadomacro.com.br</a></p></div>`;
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + c.mail_key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: MAIL_DE, to: [email], reply_to: MAIL_RESPONDER, subject: assunto, text: texto, html }),
+  });
+  const j = await r.json().catch(() => ({}));
+  return r.ok ? { ok: true } : { ok: false, erro: j.message || ('HTTP ' + r.status) };
 }
 
 /* ---------------- avisos pelo Telegram ----------------
@@ -870,6 +940,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 <div id="raiz"><p class="vazio">Carregando…</p></div>
 <h2>Avisos de cadastro novo</h2>
 <div id="avisos"><p class="vazio">Carregando…</p></div>
+<h2>E-mail de acesso liberado</h2>
+<div id="email"><p class="vazio">Carregando…</p></div>
 </main>
 <script>
 (function(){
@@ -907,8 +979,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir de vez o cadastro de ' + b.dataset.n + '? Nome, e-mail e senha são apagados e não dá para desfazer.' : 'Bloquear o acesso de ' + b.dataset.n + '?'))) return;
     b.disabled = true;
     fetch('/api/admin/decidir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.dataset.id, acao: a }) })
-      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
-      .then(function(){ msg.className = 'msg ok'; msg.textContent = { liberar: 'Acesso liberado para ', recusar: 'Cadastro recusado: ', bloquear: 'Acesso bloqueado: ', excluir: 'Cadastro excluído: ' }[a] + b.dataset.n + '.'; carregar(); })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); })
+      .then(function(j){ msg.className = 'msg ok'; msg.textContent = { liberar: 'Acesso liberado para ', recusar: 'Cadastro recusado: ', bloquear: 'Acesso bloqueado: ', excluir: 'Cadastro excluído: ' }[a] + b.dataset.n + '.' + (j && j.email === 'enviado' ? ' A pessoa recebeu um e-mail avisando.' : j && j.email === 'falhou' ? ' O e-mail de aviso não foi enviado; avise a pessoa por outro meio.' : ''); carregar(); })
       .catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
   });
   var prov = document.getElementById('prov');
@@ -968,6 +1040,41 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
   }
+  var em = document.getElementById('email');
+  var ESTADO = { verified: 'verificado', pending: 'aguardando verificação', not_started: 'ainda não verificado', failed: 'falhou a verificação', ausente: 'não adicionado no Resend', desconhecido: 'não consegui consultar (chave só de envio)' };
+  function postEmail(corpo){
+    return fetch('/api/admin/email', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); });
+  }
+  function email(){
+    fetch('/api/admin/email', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var h;
+      if (j.ligado) {
+        var okDom = j.dominio === 'verified' || j.dominio === 'desconhecido';
+        h = '<div class="caixa"><p>Ligado. Quando você toca em Liberar, a pessoa recebe um e-mail de <b>' + esc(j.de) + '</b> avisando que o acesso foi liberado, com o link para entrar.</p>'
+          + '<p>Domínio mercadomacro.com.br no Resend: <b>' + esc(ESTADO[j.dominio] || j.dominio) + '</b>.' + (okDom ? '' : ' Enquanto o domínio não estiver verificado, o Resend não entrega os e-mails. No resend.com, abra Domains, mercadomacro.com.br, e use a configuração automática com a Cloudflare.') + '</p>'
+          + '<div class="linha"><button type="button" id="em-teste" style="' + bt + '">Enviar e-mail de teste para mim</button><button type="button" id="em-off" style="' + bt + '">Desligar</button></div></div>';
+      } else {
+        h = '<div class="caixa"><p>Mande um e-mail automático para a pessoa quando você liberar o acesso. Para ligar:</p><ol>'
+          + '<li>Crie uma conta grátis em <a href="https://resend.com/signup" target="_blank" rel="noopener" style="color:var(--accent-text)">resend.com</a>.</li>'
+          + '<li>Em <b>Domains</b>, adicione <b>mercadomacro.com.br</b> e escolha a configuração automática com a Cloudflare (ela cria os registros de DNS sozinha).</li>'
+          + '<li>Em <b>API Keys</b>, crie uma chave (pode ser só de envio). Ela começa com re_. Copie e cole aqui:</li></ol>'
+          + '<div class="linha"><input id="em-chave" autocomplete="off" spellcheck="false" placeholder="cole a chave re_..." style="flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="em-salvar" style="' + bt + '">Salvar</button></div>'
+          + '<p>A chave fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>';
+      }
+      em.innerHTML = h + '<p class="msg" id="em-msg"></p>';
+      var m = document.getElementById('em-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function acao(corpo, b, depois){ if (b) b.disabled = true; diz(true, 'Aguarde…');
+        postEmail(corpo).then(function(r){ diz(true, ''); depois(r); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ if (b) b.disabled = false; }); }
+      var el;
+      if ((el = document.getElementById('em-salvar'))) el.onclick = function(){ acao({ acao: 'chave', chave: document.getElementById('em-chave').value }, this, email); };
+      if ((el = document.getElementById('em-off'))) el.onclick = function(){ if (confirm('Desligar o e-mail de acesso liberado?')) acao({ acao: 'desligar' }, this, email); };
+      if ((el = document.getElementById('em-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(r){ diz(true, 'E-mail de teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }); };
+    }).catch(function(){ em.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  email();
   avisos();
   carregar();
 })();
