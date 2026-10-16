@@ -51,7 +51,9 @@
     var v = new URLSearchParams(location.search).get('volta') || '/';
     location.replace(/^\/(?!\/)/.test(v) ? v : '/');
   });
-  enviar(fC, 'cadastrar', function () { $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); });
+  enviar(fC, 'cadastrar', function (j) {
+    if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-txt').textContent = j.msg; }
+    $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); });
   $('voltar').onclick = function () { $('pronto').hidden = true; $('forms').hidden = false; aba(false, true); };
 
   /* ---------------- formatação ---------------- */

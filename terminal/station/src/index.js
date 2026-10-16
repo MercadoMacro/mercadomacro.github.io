@@ -52,6 +52,9 @@ export default {
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
+      if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
+      if (p === '/esqueci') return paginaEsqueci();
+      if (p === '/nova-senha') return await paginaNovaSenha(req, env);
       if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
@@ -413,10 +416,31 @@ async function apiAuth(req, env, acao, ctx) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ erro: 'E-mail inválido.' }, 400);
     if (senha.length < 8) return json({ erro: 'A senha precisa ter pelo menos 8 caracteres.' }, 400);
     if (senha.length > 200) return json({ erro: 'Senha longa demais.' }, 400);
-    const existe = await env.DB.prepare('SELECT status FROM usuarios WHERE email = ?').bind(email).first();
+    // cadastros que não confirmaram o e-mail em 7 dias são apagados
+    await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
+    const MSG_CONF = 'Enviamos um link para ' + email + '. Abra o e-mail e confirme para seu pedido seguir para a liberação. Não chegou? Veja o spam.';
+    const existe = await env.DB.prepare('SELECT id, nome, status FROM usuarios WHERE email = ?').bind(email).first();
+    if (existe && existe.status === 'confirmar') {
+      // pediu de novo sem ter confirmado: manda outro link
+      const r = await emailConfirmar(env, req, existe.id, existe.nome, email).catch(() => ({ ok: false }));
+      if (r.ok) return json({ ok: true, confirmar: true, msg: MSG_CONF });
+      await env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ?`).bind(existe.id).run();
+      return json({ ok: true, msg: 'Cadastro enviado. Você poderá entrar assim que o administrador liberar seu acesso.' });
+    }
     if (existe) return json({ erro: existe.status === 'pendente' ? 'Este e-mail já está cadastrado e aguarda liberação.' : 'Este e-mail já está cadastrado. Use Entrar.' }, 409);
-    await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado) VALUES (?, ?, ?, 'pendente', ?)`)
-      .bind(nome, email, await hashSenha(senha), new Date().toISOString()).run();
+    // com o e-mail ligado em /admin, o cadastro só vai para a fila depois que a pessoa confirma o e-mail
+    const comEmail = !!(await config(env)).mail_key;
+    const ins = await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado) VALUES (?, ?, ?, ?, ?)`)
+      .bind(nome, email, await hashSenha(senha), comEmail ? 'confirmar' : 'pendente', new Date().toISOString()).run();
+    if (comEmail) {
+      const r = await emailConfirmar(env, req, ins.meta.last_row_id, nome, email).catch(() => ({ ok: false }));
+      if (r.ok) return json({ ok: true, confirmar: true, msg: MSG_CONF });
+      // se o e-mail falhar, o pedido vai direto para a fila (como antes)
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ?`).bind(ins.meta.last_row_id),
+        env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(ins.meta.last_row_id),
+      ]);
+    }
     ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
     return json({ ok: true, msg: 'Cadastro enviado. Você poderá entrar assim que o administrador liberar seu acesso.' });
   }
@@ -460,6 +484,39 @@ async function apiAuth(req, env, acao, ctx) {
     return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao('', 0) });
   }
 
+  if (acao === 'esqueci') {
+    if (!(await dentroDoLimite(env, 'esq:' + ip, 5, 3600))) return json({ erro: 'Muitos pedidos deste endereço. Tente mais tarde.' }, 429);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ erro: 'Digite seu e-mail.' }, 400);
+    if (!(await config(env)).mail_key) return json({ erro: 'A troca de senha por e-mail ainda não está ligada. Escreva para contato@mercadomacro.com.br.' }, 400);
+    const u = await env.DB.prepare(`SELECT id, nome FROM usuarios WHERE email = ? AND status = 'ativo'`).bind(email).first();
+    // a resposta é a mesma exista ou não a conta, para ninguém descobrir quem tem cadastro
+    if (u && (await dentroDoLimite(env, 'esqu:' + u.id, 3, 3600))) {
+      const tok = await criarLink(env, u.id, 'senha', 1);
+      ctx.waitUntil(enviarEmail(env, req, {
+        para: email, nome: u.nome, assunto: 'Criar senha nova no Mercado Macro',
+        paragrafos: ['Recebemos um pedido para criar uma senha nova na sua conta do Mercado Macro.'],
+        botao: 'Criar senha nova', link: siteDe(req) + '/nova-senha?t=' + tok,
+        nota: 'O link vale por 1 hora e só pode ser usado uma vez. Se não foi você, ignore este e-mail: sua senha continua a mesma.',
+      }).catch(() => {}));
+    }
+    return json({ ok: true, msg: 'Se esse e-mail tiver acesso liberado, enviamos um link para criar uma senha nova. Ele vale por 1 hora. Não chegou? Veja o spam.' });
+  }
+
+  if (acao === 'nova-senha') {
+    if (!(await dentroDoLimite(env, 'nsen:' + ip, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
+    if (senha.length < 8) return json({ erro: 'A senha precisa ter pelo menos 8 caracteres.' }, 400);
+    if (senha.length > 200) return json({ erro: 'Senha longa demais.' }, 400);
+    const l = await lerLink(env, b.t, 'senha');
+    if (!l || l.status !== 'ativo') return json({ erro: 'Este link não vale mais. Peça outro em Esqueci minha senha.' }, 400);
+    await env.DB.batch([
+      env.DB.prepare('UPDATE usuarios SET senha = ? WHERE id = ?').bind(await hashSenha(senha), l.id),
+      env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(l.id),
+      env.DB.prepare(`DELETE FROM links_email WHERE usuario_id = ? AND tipo = 'senha'`).bind(l.id),
+    ]);
+    cacheSessao.clear();
+    return json({ ok: true });
+  }
+
   if (acao === 'entrar') {
     // só senhas erradas contam: 10 erros em 15 minutos bloqueiam este endereço; acertar zera a conta
     const chave = 'ent:' + ip;
@@ -473,6 +530,7 @@ async function apiAuth(req, env, acao, ctx) {
     }
     await env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(chave).run();
     if (u.status === 'pendente') return json({ erro: 'Seu cadastro ainda aguarda liberação do administrador.' }, 403);
+    if (u.status === 'confirmar') return json({ erro: 'Falta confirmar seu e-mail: abra o link que enviamos quando você pediu acesso (veja também o spam). Para receber outro link, peça acesso de novo com o mesmo e-mail.' }, 403);
     if (u.status !== 'ativo') return json({ erro: 'Seu acesso não está liberado.' }, 403);
     const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
     const agora = Date.now();
@@ -545,6 +603,8 @@ async function apiAdmin(req, env, acao, eu) {
         env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(id),
       ]);
+      await garantirLinks(env);
+      await env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(id).run();
     } else if (novo) {
       const antes = await env.DB.prepare('SELECT nome, email, status FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
       const q = [env.DB.prepare('UPDATE usuarios SET status = ?, decidido = ? WHERE id = ? AND admin = 0').bind(novo, agora, id)];
@@ -641,27 +701,141 @@ async function dominioResend(chave) {
   const d = (j.data || []).find((x) => x.name === 'mercadomacro.com.br');
   return d ? d.status : 'ausente';
 }
-async function emailLiberado(env, req, nome, email, teste = false) {
+const siteDe = (req) => (new URL(req.url).origin.includes('mercadomacro.com.br') ? 'https://mercadomacro.com.br' : new URL(req.url).origin);
+const escH = (x) => String(x).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+// monta e manda um e-mail simples: saudação, parágrafos, um botão e uma nota
+async function enviarEmail(env, req, { para, nome, assunto, paragrafos, botao, link, nota }) {
   const c = await config(env);
   if (!c.mail_key) return { ok: false, desligado: true };
-  const site = new URL(req.url).origin.includes('mercadomacro.com.br') ? 'https://mercadomacro.com.br' : new URL(req.url).origin;
+  const site = siteDe(req);
   const primeiro = String(nome || '').trim().split(/\s+/)[0] || 'olá';
-  const h = (x) => String(x).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-  const assunto = (teste ? '[Teste] ' : '') + 'Seu acesso ao Mercado Macro foi liberado';
-  const texto = `Olá, ${primeiro}.\n\nSeu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou:\n${site}/entrar\n\nSe esquecer a senha, é só responder este e-mail.\n\nMercado Macro`;
+  const texto = `Olá, ${primeiro}.\n\n${paragrafos.join('\n\n')}\n\n${botao}: ${link}\n\n${nota ? nota + '\n\n' : ''}Mercado Macro`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1f2937;max-width:520px">
-<p>Olá, ${h(primeiro)}.</p>
-<p>Seu acesso ao <b>Mercado Macro</b> foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.</p>
-<p style="margin:22px 0"><a href="${site}/entrar" style="background:#f5b83d;color:#111;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:8px;display:inline-block">Entrar no Mercado Macro</a></p>
-<p style="color:#6b7280;font-size:13px">Se esquecer a senha, é só responder este e-mail.</p>
+<p>Olá, ${escH(primeiro)}.</p>
+${paragrafos.map((x) => `<p>${escH(x)}</p>`).join('\n')}
+<p style="margin:22px 0"><a href="${escH(link)}" style="background:#f5b83d;color:#111;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:8px;display:inline-block">${escH(botao)}</a></p>
+${nota ? `<p style="color:#6b7280;font-size:13px">${escH(nota)}</p>` : ''}
 <p style="color:#6b7280;font-size:13px">Mercado Macro · <a href="${site}" style="color:#6b7280">mercadomacro.com.br</a></p></div>`;
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + c.mail_key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: MAIL_DE, to: [email], reply_to: MAIL_RESPONDER, subject: assunto, text: texto, html }),
+    body: JSON.stringify({ from: MAIL_DE, to: [para], reply_to: MAIL_RESPONDER, subject: assunto, text: texto, html }),
   });
   const j = await r.json().catch(() => ({}));
   return r.ok ? { ok: true } : { ok: false, erro: j.message || ('HTTP ' + r.status) };
+}
+function emailLiberado(env, req, nome, email, teste = false) {
+  return enviarEmail(env, req, {
+    para: email, nome, assunto: (teste ? '[Teste] ' : '') + 'Seu acesso ao Mercado Macro foi liberado',
+    paragrafos: ['Seu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.'],
+    botao: 'Entrar no Mercado Macro', link: siteDe(req) + '/entrar',
+    nota: 'Se esquecer a senha, use "Esqueci minha senha" na tela de entrar.',
+  });
+}
+
+/* ---------------- links por e-mail (confirmar cadastro e criar senha nova) ----------------
+   O link leva um código aleatório; no banco fica só o hash dele, com o tipo, a pessoa e a validade. Vale uma vez. */
+let tabelaLinks = false;
+async function garantirLinks(env) {
+  if (tabelaLinks) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS links_email (token TEXT PRIMARY KEY, usuario_id INTEGER NOT NULL, tipo TEXT NOT NULL, expira INTEGER NOT NULL)').run();
+  tabelaLinks = true;
+}
+async function criarLink(env, usuarioId, tipo, horas) {
+  await garantirLinks(env);
+  const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM links_email WHERE expira < ? OR (usuario_id = ? AND tipo = ?)').bind(Date.now(), usuarioId, tipo),
+    env.DB.prepare('INSERT INTO links_email (token, usuario_id, tipo, expira) VALUES (?, ?, ?, ?)').bind(await sha256hex(tok), usuarioId, tipo, Date.now() + horas * 3600e3),
+  ]);
+  return tok;
+}
+async function lerLink(env, tok, tipo) {
+  if (!/^[a-f0-9]{64}$/.test(String(tok || ''))) return null;
+  await garantirLinks(env);
+  return env.DB.prepare(`SELECT l.token, u.id, u.nome, u.email, u.status FROM links_email l JOIN usuarios u ON u.id = l.usuario_id
+    WHERE l.token = ? AND l.tipo = ? AND l.expira > ?`).bind(await sha256hex(tok), tipo, Date.now()).first();
+}
+async function emailConfirmar(env, req, id, nome, email) {
+  const tok = await criarLink(env, id, 'confirmar', 72);
+  return enviarEmail(env, req, {
+    para: email, nome, assunto: 'Confirme seu e-mail no Mercado Macro',
+    paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para ele seguir para a liberação, confirme que este e-mail é seu.'],
+    botao: 'Confirmar meu e-mail', link: siteDe(req) + '/confirmar?t=' + tok,
+    nota: 'O link vale por 3 dias. Se você não pediu acesso, ignore este e-mail.',
+  });
+}
+// página simples (mesmo visual de Minha conta) para os links do e-mail
+function paginaLink(titulo, corpo, script = '') {
+  return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escH(titulo)} | Mercado Macro</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${BASE_CSS}
+main{max-width:420px;margin:0 auto;padding:28px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header h1{font-size:19px;margin:0;flex:1}
+a.vol{color:var(--accent-text);font-size:13px}
+.caixa,form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.caixa p{margin:0 0 10px;color:var(--text-2);font-size:14px;line-height:1.5}.caixa p:last-child{margin:0}
+label{display:block;font-size:13px;color:var(--text-2);margin:12px 0 5px}label:first-child{margin-top:0}
+input{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:10px 12px;min-height:42px}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+button,.bt{display:block;text-align:center;text-decoration:none;margin-top:16px;width:100%;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;min-height:44px;font:inherit;font-weight:700}
+button:disabled{opacity:.6;cursor:default}
+.nota{color:var(--text-3);font-size:12.5px;margin:12px 0 0}
+.msg{font-size:13px;margin:12px 0 0;min-height:1.2em}.msg.erro{color:var(--neg)}.msg.ok{color:var(--pos)}
+</style></head><body><main>
+<header><h1>${escH(titulo)}</h1><a class="vol" href="/entrar">Ir para Entrar</a></header>
+${corpo}
+</main>${script ? '<script>' + script + '</script>' : ''}</body></html>`);
+}
+async function paginaConfirmar(req, env, ctx) {
+  const t = new URL(req.url).searchParams.get('t');
+  const l = await lerLink(env, t, 'confirmar');
+  if (!l) return paginaLink('Link vencido', '<div class="caixa"><p>Este link não vale mais. Ele pode ter vencido ou já ter sido usado.</p><p>Se você já confirmou, é só aguardar a liberação. Se não, peça acesso de novo com o mesmo e-mail para receber outro link.</p><a class="bt" href="/entrar#cadastrar">Pedir acesso</a></div>');
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM links_email WHERE token = ?').bind(l.token),
+    env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ? AND status = 'confirmar'`).bind(l.id),
+  ]);
+  if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
+  return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado e seu pedido está na fila de liberação.</p><p>Quando o administrador liberar, você recebe um e-mail avisando e já pode entrar com seu e-mail e senha.</p></div>');
+}
+function paginaEsqueci() {
+  return paginaLink('Esqueci minha senha', `<form id="f" novalidate>
+  <label for="em">Seu e-mail</label><input id="em" type="email" autocomplete="email" required>
+  <button type="submit">Enviar link para criar senha nova</button>
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+</form>`, `(function(){var f=document.getElementById('f'),m=document.getElementById('msg');
+f.addEventListener('submit',function(e){e.preventDefault();var b=f.querySelector('button');b.disabled=true;m.className='msg';m.textContent='';
+fetch('/api/auth/esqueci',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('em').value})})
+.then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j;});})
+.then(function(j){m.className='msg ok';m.textContent=j.msg;})
+.catch(function(j){m.className='msg erro';m.textContent=(j&&j.erro)||'Não foi possível. Tente de novo.';})
+.then(function(){b.disabled=false;});});})();`);
+}
+async function paginaNovaSenha(req, env) {
+  const l = await lerLink(env, new URL(req.url).searchParams.get('t'), 'senha');
+  if (!l) return paginaLink('Link vencido', '<div class="caixa"><p>Este link não vale mais. Ele vence em 1 hora e só pode ser usado uma vez.</p><a class="bt" href="/esqueci">Pedir outro link</a></div>');
+  return paginaLink('Criar senha nova', `<form id="f" novalidate>
+  <p class="nota" style="margin:0 0 4px">Conta: ${escH(l.email)}</p>
+  <label for="nova">Senha nova (mínimo 8 caracteres)</label><input id="nova" type="password" autocomplete="new-password" required minlength="8">
+  <label for="nova2">Repita a senha nova</label><input id="nova2" type="password" autocomplete="new-password" required minlength="8">
+  <button type="submit">Salvar senha nova</button>
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  <p class="nota">Ao salvar, os aparelhos onde você estava conectado saem da conta.</p>
+</form>`, `(function(){var f=document.getElementById('f'),m=document.getElementById('msg'),t=new URLSearchParams(location.search).get('t');
+function diz(ok,x){m.className='msg '+(ok?'ok':'erro');m.textContent=x;}
+f.addEventListener('submit',function(e){e.preventDefault();var n=f.nova.value;
+if(n.length<8)return diz(false,'A senha precisa ter pelo menos 8 caracteres.');
+if(n!==f.nova2.value)return diz(false,'As duas senhas não são iguais.');
+var b=f.querySelector('button');b.disabled=true;diz(true,'');
+fetch('/api/auth/nova-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:t,senha:n})})
+.then(function(r){return r.json().then(function(j){if(!r.ok)throw j;});})
+.then(function(){document.querySelector('main').innerHTML='<header><h1>Senha criada</h1></header><div class="caixa"><p>Sua senha nova está valendo.</p><a class="bt" href="/entrar">Entrar no Mercado Macro</a></div>';})
+.catch(function(j){diz(false,(j&&j.erro)||'Não foi possível. Tente de novo.');b.disabled=false;});});})();`);
 }
 
 /* ---------------- avisos pelo Telegram ----------------
@@ -952,7 +1126,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     pendente: [['liberar','Liberar','lib'],['recusar','Recusar',''],['excluir','Excluir','del']],
     ativo: [['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
     recusado: [['liberar','Liberar','lib'],['excluir','Excluir','del']],
-    bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']]
+    bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']],
+    confirmar: [['liberar','Liberar mesmo assim','lib'],['excluir','Excluir','del']]
   };
   function bloco(titulo, us, vazio){
     return '<h2>' + titulo + '<b>' + us.length + '</b></h2><div class="lista">' + (us.length ? us.map(function(u){
@@ -969,7 +1144,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var f = function(st){ return us.filter(function(u){ return st.indexOf(u.status) >= 0; }); };
       raiz.innerHTML = bloco('Aguardando liberação', f(['pendente']), 'Nenhum pedido novo.')
         + bloco('Liberados', f(['ativo']), 'Ninguém liberado ainda.')
-        + bloco('Recusados e bloqueados', f(['recusado','bloqueado']), 'Nenhum.');
+        + bloco('Recusados e bloqueados', f(['recusado','bloqueado']), 'Nenhum.')
+        + (f(['confirmar']).length ? bloco('E-mail ainda não confirmado', f(['confirmar']), '') + '<p class="d" style="color:var(--text-3);font-size:12px;margin:6px 0 0">Essas pessoas pediram acesso mas ainda não clicaram no link de confirmação. Somem sozinhas depois de 7 dias.</p>' : '');
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   raiz.addEventListener('click', function(ev){
