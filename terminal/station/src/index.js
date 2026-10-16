@@ -1,5 +1,5 @@
 import { noticiasCache, noticiasSoCache } from './noticias.js';
-import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap } from './fechamento-publico.js';
+import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -26,6 +26,7 @@ export default {
   async scheduled(ev, env, ctx) {
     // 18:00 (Brasília) nos dias úteis: dispara o robô do fechamento (resumo.yml) na hora certa, porque o agendador
     // do GitHub às vezes atrasa, e guarda o fechamento do dia para a página pública /fechamento-do-mercado
+    if (ev.cron === '0 23 * * 1-5') { ctx.waitUntil(completarJuros(env, jurosTesouro).catch(() => {})); return; }
     if (ev.cron === '0 21 * * 1-5') {
       ctx.waitUntil(dispararFechamento(env));
       ctx.waitUntil(dadosFechamento(env).then((d) => salvarFechamento(env, d)).catch(() => {}));
@@ -49,7 +50,7 @@ export default {
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
-      if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, () => paginaFixa(req, env, '/vitrine/404', 404));
+      if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
@@ -186,6 +187,22 @@ const FECH_ACOES = ['PETR4', 'PETR3', 'VALE3', 'ITUB4', 'BBDC4', 'BBAS3', 'B3SA3
   'GGBR4', 'BPAC11', 'EQTL3', 'RDOR3', 'RADL3', 'SBSP3', 'VIVT3', 'CMIG4', 'LREN3', 'HAPV3', 'CSAN3', 'UGPA3', 'KLBN11', 'TOTS3', 'ENEV3',
   'BBSE3', 'CSNA3', 'USIM5', 'MGLU3', 'CYRE3', 'ASAI3', 'HYPE3', 'VBBR3', 'BRAP4', 'SANB11', 'TIMS3', 'EGIE3', 'CPFE3', 'GOAU4', 'RAIL3',
   'MULT3', 'CXSE3'];
+// taxa do título prefixado e do IPCA+ mais longos do Tesouro Direto (o que não vier fica de fora)
+async function jurosTesouro(env) {
+  const out = {};
+  try {
+    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev/tesouro', { headers: { Origin: ORIGEM_SITE } });
+    const r = env.API ? await env.API.fetch(req) : await fetch(req);
+    if (!r.ok) return out;
+    const j = await r.json();
+    const ano = (t) => +String(t.vencimento || '').slice(6);
+    const maisLongo = (re) => (j.titulos || []).filter((t) => re.test(t.nome) && ano(t) && typeof t.taxa === 'number').sort((a, b) => ano(b) - ano(a))[0];
+    const pre = maisLongo(/^tesouro prefixado \d{4}$/i), ipca = maisLongo(/^tesouro ipca\+ \d{4}$/i);
+    if (pre) out.pre = { nome: pre.nome, taxa: pre.taxa };
+    if (ipca) out.ipca = { nome: ipca.nome, taxa: ipca.taxa };
+  } catch (e) { /* fica "—" */ }
+  return out;
+}
 async function dadosFechamento(env) {
   const api = async (rota) => {
     const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
@@ -223,14 +240,11 @@ async function dadosFechamento(env) {
       if (isFinite(v)) { out.juros.selic = v; break; }
     } catch (e) { /* tenta a próxima */ }
   }
-  try {
-    const j = await api('/tesouro');
-    const ano = (t) => +String(t.vencimento || '').slice(6);
-    const maisLongo = (re) => (j.titulos || []).filter((t) => re.test(t.nome) && ano(t)).sort((a, b) => ano(b) - ano(a))[0];
-    const pre = maisLongo(/^tesouro prefixado \d{4}$/i), ipca = maisLongo(/^tesouro ipca\+ \d{4}$/i);
-    if (pre) out.juros.pre = { nome: pre.nome, taxa: pre.taxa };
-    if (ipca) out.juros.ipca = { nome: ipca.nome, taxa: ipca.taxa };
-  } catch (e) { /* fica "—" */ }
+  // o arquivo do Tesouro às vezes vem sem taxas bem às 18h; tenta de novo uma vez
+  let tj = await jurosTesouro(env);
+  if (!tj.pre || !tj.ipca) { await new Promise((r) => setTimeout(r, 15000)); const t2 = await jurosTesouro(env); tj = { pre: tj.pre || t2.pre, ipca: tj.ipca || t2.ipca }; }
+  if (tj.pre) out.juros.pre = tj.pre;
+  if (tj.ipca) out.juros.ipca = tj.ipca;
   try {
     const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 120 } })).json();
     const ult = f.dias[f.dias.length - 1], mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);

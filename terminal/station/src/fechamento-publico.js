@@ -31,6 +31,28 @@ export async function salvarFechamento(env, d) {
   return !!r.meta?.changes;
 }
 
+// se o fechamento de hoje foi gravado sem a taxa do Tesouro, completa na mesma noite (as taxas do dia ficam até a manhã seguinte)
+export async function completarJuros(env, jurosTesouro) {
+  const b = agoraBRT(), hoje = b.toISOString().slice(0, 10);
+  if (b.getUTCHours() < 18) return false;
+  await tabela(env);
+  const d = await lerDia(env, hoje);
+  if (!d || (d.juros?.pre && d.juros?.ipca)) return false;
+  const t = await jurosTesouro(env);
+  const juros = { ...(d.juros || {}) };
+  if (!juros.pre && t.pre) juros.pre = t.pre;
+  if (!juros.ipca && t.ipca) juros.ipca = t.ipca;
+  if (juros.pre === d.juros?.pre && juros.ipca === d.juros?.ipca) return false;
+  await env.DB.prepare('UPDATE fechamentos SET dados = ? WHERE dia = ?').bind(JSON.stringify({ ...d, juros }), hoje).run();
+  return true;
+}
+async function completarJurosAs(env, jurosTesouro) {
+  const marca = new Request(SITE + '/__fech-juros');
+  if (await caches.default.match(marca)) return;
+  await caches.default.put(marca, new Response('1', { headers: { 'Cache-Control': 'public, max-age=600' } }));
+  try { await completarJuros(env, jurosTesouro); } catch (e) { /* tenta depois */ }
+}
+
 async function lerDia(env, dia) {
   const r = await env.DB.prepare('SELECT dados FROM fechamentos WHERE dia = ?').bind(dia).first();
   return r ? JSON.parse(r.dados) : null;
@@ -155,7 +177,7 @@ async function completar(env, dadosFechamento) {
   try { await salvarFechamento(env, await dadosFechamento(env)); } catch (e) { /* tenta depois */ }
 }
 
-export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, pagina404) {
+export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, pagina404) {
   await tabela(env);
   const resto = p.slice(BASE.length).replace(/^\/|\/$/g, '');
   if (resto && !/^\d{4}-\d{2}-\d{2}$/.test(resto)) return pagina404();
@@ -164,7 +186,11 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
     // índice: o último fechamento completo + a lista dos anteriores
     const b = agoraBRT(), hoje = b.toISOString().slice(0, 10);
     if (!dias.length || (dias[0] < hoje && b.getUTCHours() >= 18) || dias[0] < new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10)) ctx.waitUntil(completar(env, dadosFechamento));
-    const ult = dias[0] ? await lerDia(env, dias[0]) : null;
+    let ult = dias[0] ? await lerDia(env, dias[0]) : null;
+    if (ult && dias[0] === hoje && !(ult.juros?.pre && ult.juros?.ipca)) {
+      await completarJurosAs(env, jurosTesouro);
+      ult = await lerDia(env, dias[0]);
+    }
     const lista = dias.length ? `<h2>Fechamentos anteriores</h2><ul class="dias">${dias.map((d) => `<li><a href="${BASE}/${d}">${ddmmaaaa(d)}</a></li>`).join('')}</ul>` : '';
     const corpo = ult ? `<h2 style="margin-top:8px">Último fechamento: <a href="${BASE}/${dias[0]}">${ddmmaaaa(dias[0])}</a></h2>${corpoDia(ult)}${lista}`
       : '<p class="lead">O primeiro fechamento aparece aqui depois das 18h do próximo pregão.</p>';
@@ -175,8 +201,12 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
       ld: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Fechamento do mercado', url: SITE + BASE, inLanguage: 'pt-BR' },
     }));
   }
-  const d = await lerDia(env, resto);
+  let d = await lerDia(env, resto);
   if (!d) return pagina404();
+  if (resto === agoraBRT().toISOString().slice(0, 10) && !(d.juros?.pre && d.juros?.ipca)) {
+    await completarJurosAs(env, jurosTesouro);
+    d = await lerDia(env, resto) || d;
+  }
   const i = dias.indexOf(resto);
   const ant = i >= 0 ? dias[i + 1] : null, prox = i > 0 ? dias[i - 1] : null;
   const nav = `<div class="nav"><span>${ant ? `<a href="${BASE}/${ant}">← Fechamento de ${ddmmaaaa(ant)}</a>` : ''}</span><span>${prox ? `<a href="${BASE}/${prox}">Fechamento de ${ddmmaaaa(prox)} →</a>` : ''}</span></div>`;
