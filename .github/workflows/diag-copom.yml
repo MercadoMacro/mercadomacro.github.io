@@ -6,12 +6,12 @@ jobs:
     steps:
       - run: |
           B=https://arquivos.b3.com.br/charts
-          curl -sSL -A 'Mozilla/5.0' $B/config.js | head -c 5300; echo
+          curl -sSL -A 'Mozilla/5.0' $B/config.js | grep -v 'name:' | head -30
           curl -sSL -A 'Mozilla/5.0' $B/static/js/main.c09dd75c.chunk.js -o m.js
           python3 - <<'P'
           import re
           s=open('m.js').read()
-          for k in ['relativeUrl','chart/copom','fetch(']:
-              for m in list(re.finditer(re.escape(k),s))[:8]:
-                  print('##',k, s[max(0,m.start()-300):m.start()+300].replace('\n',' '))
+          for k in ['Object(n.a)(','await d(','await m(','await p(','await h(','d(e)','h(t','h(e','componentDidMount']:
+              for m in list(re.finditer(re.escape(k),s))[:4]:
+                  print('##',k, s[max(0,m.start()-250):m.start()+350].replace('\n',' '))
           P
