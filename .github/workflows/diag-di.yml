@@ -1,0 +1,21 @@
+name: diag-di
+on: workflow_dispatch
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          D=$(TZ=America/Sao_Paulo date +%d/%m/%Y); echo $D
+          for d in $D 15/10/2026 14/10/2026; do
+            curl -s -m 30 -A "Mozilla/5.0" "https://www2.bmf.com.br/pages/portal/bmfbovespa/boletim1/TxRef1.asp?Data=$d&Data1=20061201&slcTaxa=PRE" -o tx.html -w "TxRef $d %{http_code} %{size_download}\n"
+            python3 -c "
+          import re,html;s=open('tx.html',encoding='latin1').read();t=re.sub(r'<[^>]+>',' ',s);t=html.unescape(re.sub(r'\s+',' ',t));i=t.find('Dias');print(t[i:i+700])"
+          done
+          echo ---- ajustes
+          curl -s -m 30 -A "Mozilla/5.0" "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp" -o aj.html -w "%{http_code} %{size_download}\n"
+          python3 -c "
+          import re,html;s=open('aj.html',encoding='latin1').read();t=html.unescape(re.sub(r'\s+',' ',re.sub(r'<[^>]+>',' ',s)));i=t.find('DI1');print(t[i:i+600])"
+          echo ---- bcb copom
+          for u in "https://www.bcb.gov.br/api/servico/sitebcb/copom/calendarioreunioes" "https://www.bcb.gov.br/api/servico/sitebcb/agendacopom" "https://www.bcb.gov.br/api/servico/sitebcb/copom/reunioes?quantidade=12"; do curl -s -m 20 -A "Mozilla/5.0" "$u" -w "  <- %{http_code} $u\n" | head -c 400; echo; done
+          echo ---- cdi
+          curl -s -m 20 "https://api.bcb.gov.br/dados/serie/bcdata.sgs.4389/dados/ultimos/3?formato=json"; echo
