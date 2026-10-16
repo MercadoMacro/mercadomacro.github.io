@@ -5,7 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -m 60 "https://arquivos.b3.com.br/bdi/config.js" | head -c 7000; echo
-          curl -s -m 60 "https://arquivos.b3.com.br/bdi/static/js/main.e591a35328ff179145c0.js" -o m.js
-          grep -o '.\{200\}bdi/table.\{300\}' m.js | head -3
-          grep -o '.\{100\}/table/.\{200\}' m.js | head -5
+          curl -s -m 60 "https://arquivos.b3.com.br/bdi/table/all" -o all.json -w "%{http_code} %{size_download}\n"
+          python3 - <<'P'
+          import json,re
+          d=json.load(open('all.json'))
+          items = d if isinstance(d,list) else d.get('value') or d.get('tables') or d
+          print(type(d), (list(d.keys())[:10] if isinstance(d,dict) else len(d)))
+          s=json.dumps(d,ensure_ascii=False)
+          for m in re.finditer(r'\{[^{}]*\}', s):
+              t=m.group(0)
+              if re.search(r'DI1|DI 1|Taxa|Rate|Ajuste|Adjust|Juro|Interest|Futur|Swap|Pré|Pre\b|Referenc',t,re.I): print(t[:300])
+          P
