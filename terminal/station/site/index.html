@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="estilo.css?v=24">
+<link rel="stylesheet" href="estilo.css?v=25">
 <style id="prefs-css">
   /* =====================================================================
      AJUSTES DO PAINEL (engrenagem): cor de destaque, papel de parede,
@@ -597,13 +597,11 @@
         <div class="market-section-head"><span class="sec-icon"><i class="fas fa-exchange-alt"></i></span><h2>Fluxo na B3</h2><span class="sec-count">por investidor</span></div>
         <div id="fluxo-root"><div class="fx-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">O fluxo de investidores carrega quando você chega aqui.</div></div>
       </div>
-      <div class="market-section" id="ana-sec-copom">
-        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-percent"></i></span><h2>Probabilidades do Copom</h2><span class="sec-count">opções de Copom da B3</span></div>
-        <div id="copom-root"><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Copom carregam quando você chega aqui.</div></div>
-      </div>
       <div class="market-section" id="ana-sec-fed">
-        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-landmark"></i></span><h2>Probabilidades do Fed</h2><span class="sec-count">futuros de Fed Funds</span></div>
+        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-landmark"></i></span><h2 id="pj-tit">Probabilidades do Fed</h2><span class="sec-count" id="pj-fonte">futuros de Fed Funds</span>
+          <button type="button" class="pj-chave" id="pj-chave" role="switch" aria-checked="false" aria-label="Trocar entre Fed (EUA) e Copom (Brasil)"><span class="pj-l">EUA</span><span class="pj-tr"><i></i></span><span class="pj-r">Brasil</span></button></div>
         <div id="fed-root"><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Fed carregam quando você chega aqui.</div></div>
+        <div id="copom-root" hidden><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Copom carregam quando você chega aqui.</div></div>
       </div>
       <div class="market-section" id="ana-sec-cot">
         <div class="market-section-head"><span class="sec-icon"><i class="fas fa-balance-scale"></i></span><h2>Posição dos especuladores</h2><span class="sec-count">CFTC, semanal</span></div>
@@ -743,7 +741,7 @@
 <div id="toast-container"></div>
 
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 <script src="ajustes.js?v=5"></script>
 <script src="extras.js?v=6"></script>
 <script src="cabecalho.js?v=1"></script>

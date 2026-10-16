@@ -2668,3 +2668,14 @@ body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 
   body.nw2 .news-toolbar .nm-toggle { flex:1 0 100%; }
   body.nw2 .news-toolbar .nm-toggle button { flex:1; justify-content:center; }
 }
+
+/* Chave EUA / Brasil das probabilidades de juros (Fed x Copom) */
+.pj-chave { order:4; margin-left:8px; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-3); font:inherit; font-size:12px; font-weight:600; padding:5px 10px; border-radius:99px; cursor:pointer; flex:none; }
+.pj-chave:hover { border-color:var(--line-2); }
+.pj-chave .pj-tr { position:relative; width:34px; height:18px; border-radius:99px; background:var(--accent-soft); border:1px solid var(--accent-line); }
+.pj-chave .pj-tr i { position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:var(--accent); transition:transform .18s ease; }
+.pj-chave.br .pj-tr i { transform:translateX(16px); }
+.pj-chave .pj-l { color:var(--text); }
+.pj-chave.br .pj-l { color:var(--text-3); }
+.pj-chave.br .pj-r { color:var(--text); }
+@media (max-width: 700px) { .pj-chave .pj-l, .pj-chave .pj-r { font-size:11px; } #pj-fonte { display:none; } }

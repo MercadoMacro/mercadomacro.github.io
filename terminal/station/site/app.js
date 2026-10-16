@@ -4700,48 +4700,53 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
-   PROBABILIDADES DO COPOM (aba Análises): copom.js só é baixado
-   quando a seção chega perto da tela
+   PROBABILIDADES DE JUROS (aba Análises): uma seção com a chave EUA / Brasil.
+   EUA = Fed (fed.js), Brasil = Copom (copom.js). Cada arquivo só é baixado
+   quando o seu lado aparece com a seção perto da tela. O lado fica salvo.
    ========================================================= */
 (() => {
-  const el = document.getElementById('copom-root');
-  if (!el) return;
-  let pedido = false;
-  const carrega = () => {
-    if (window.__copomRender) { window.__copomRender(el); return; }
-    if (pedido) return;
-    pedido = true;
+  const sec = document.getElementById('ana-sec-fed');
+  const chave = document.getElementById('pj-chave');
+  if (!sec || !chave) return;
+  const LADOS = {
+    eua: { root: 'fed-root', js: 'fed.js?v=3', fn: '__fedRender', tit: 'Probabilidades do Fed', fonte: 'futuros de Fed Funds', ico: 'fa-landmark' },
+    br: { root: 'copom-root', js: 'copom.js?v=2', fn: '__copomRender', tit: 'Probabilidades do Copom', fonte: 'opções de Copom da B3', ico: 'fa-percent' },
+  };
+  let lado = 'eua', visto = false;
+  try { if (localStorage.getItem('juros_prob_lado') === 'br') lado = 'br'; } catch (e) { /* padrão */ }
+  const pedidos = {};
+  const carrega = (k) => {
+    const L = LADOS[k], el = document.getElementById(L.root);
+    if (window[L.fn]) { window[L.fn](el); return; }
+    if (pedidos[k]) return;
+    pedidos[k] = true;
     const sc = document.createElement('script');
-    sc.src = 'copom.js?v=2';
-    sc.onload = () => window.__copomRender && window.__copomRender(el);
-    sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>copom.js</b>.</div>'; };
+    sc.src = L.js;
+    sc.onload = () => window[L.fn] && window[L.fn](el);
+    sc.onerror = () => { pedidos[k] = false; el.innerHTML = `<div class="ind-boot">Não foi possível carregar o arquivo <b>${L.js.split('?')[0]}</b>.</div>`; };
     document.body.appendChild(sc);
   };
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); carrega(); } }, { rootMargin: '600px 0px' }).observe(el);
-  } else carrega();
-})();
-/* =========================================================
-   PROBABILIDADES DO FED (aba Análises): fed.js só é baixado
-   quando a seção chega perto da tela
-   ========================================================= */
-(() => {
-  const el = document.getElementById('fed-root');
-  if (!el) return;
-  let pedido = false;
-  const carrega = () => {
-    if (window.__fedRender) { window.__fedRender(el); return; }
-    if (pedido) return;
-    pedido = true;
-    const sc = document.createElement('script');
-    sc.src = 'fed.js?v=3';
-    sc.onload = () => window.__fedRender && window.__fedRender(el);
-    sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fed.js</b>.</div>'; };
-    document.body.appendChild(sc);
+  const mostra = () => {
+    for (const [k, L] of Object.entries(LADOS)) document.getElementById(L.root).hidden = k !== lado;
+    const L = LADOS[lado];
+    document.getElementById('pj-tit').textContent = L.tit;
+    document.getElementById('pj-fonte').textContent = L.fonte;
+    const ic = sec.querySelector('.sec-icon i');
+    if (ic) ic.className = `fas ${L.ico}`;
+    chave.setAttribute('aria-checked', lado === 'br' ? 'true' : 'false');
+    chave.classList.toggle('br', lado === 'br');
+    if (visto) carrega(lado);
   };
+  chave.addEventListener('click', () => {
+    lado = lado === 'br' ? 'eua' : 'br';
+    try { localStorage.setItem('juros_prob_lado', lado); } catch (e) { /* cheio */ }
+    mostra();
+  });
+  mostra();
+  const abre = () => { visto = true; carrega(lado); };
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); carrega(); } }, { rootMargin: '600px 0px' }).observe(el);
-  } else carrega();
+    new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); abre(); } }, { rootMargin: '600px 0px' }).observe(sec);
+  } else abre();
 })();
 /* =========================================================
    POSIÇÕES (CFTC e SEC 13F, aba Análises): posicoes.js só é baixado
