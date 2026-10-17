@@ -797,6 +797,35 @@ const rotas = async (request, env, ctx) => {
     // ENDPOINT: /sidra?q=ipca|pib|desemp  (IBGE/SIDRA para a aba Indicadores; só as consultas da lista)
     // =========================================================
     // =========================================================
+    // ENDPOINT: /sse/quotes (Server-Sent Events para cotações em tempo real)
+    // =========================================================
+    if (path === '/sse/quotes') {
+      const stream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+          const initMsg = `data: ${JSON.stringify({ status: 'connected', ts: Date.now() })}\n\n`;
+          controller.enqueue(encoder.encode(initMsg));
+          const interval = setInterval(() => {
+            try {
+              const pingMsg = `data: ${JSON.stringify({ event: 'ping', ts: Date.now() })}\n\n`;
+              controller.enqueue(encoder.encode(pingMsg));
+            } catch (e) {
+              clearInterval(interval);
+            }
+          }, 15000);
+        }
+      });
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          ...cors
+        }
+      });
+    }
+
+    // =========================================================
     // ENDPOINT: /bcb?c=432&q=/ultimos/1  (séries do SGS do Banco Central, com cache)
     // q aceita /ultimos/N e dataInicial/dataFinal (dd/mm/aaaa); o resto é ignorado
     // =========================================================
