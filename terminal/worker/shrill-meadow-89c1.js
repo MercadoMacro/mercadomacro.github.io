@@ -784,7 +784,7 @@ const rotas = async (request, env, ctx) => {
         try {
           const out = await fn(args, key);
           if (out && out.naoAchou) { erros.push(nome + ': não encontrado'); continue; }
-          return json({ ...out, fonte: nome, ts: Date.now() }, 200, cors, { 'Cache-Control': kind === 'search' ? 'public, max-age=3600' : 'public, max-age=300' });
+          return json({ ...out, fonte: nome, ts: Date.now() }, 200, cors, { 'Cache-Control': kind === 'search' ? 'public, max-age=3600, stale-while-revalidate=86400' : 'public, max-age=300, stale-while-revalidate=3600' });
         } catch (err) {
           erros.push(nome + ': ' + String(err.message || err));
         }
@@ -812,7 +812,7 @@ const rotas = async (request, env, ctx) => {
       try {
         const d = await indFetchJSON(u, 25000);
         if (!Array.isArray(d)) return json({ error: 'BCB sem dados' }, 502, cors);
-        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=900' });
+        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=900, stale-while-revalidate=3600' });
       } catch (err) {
         return json({ error: 'BCB falhou: ' + err.message }, 502, cors);
       }
@@ -832,7 +832,7 @@ const rotas = async (request, env, ctx) => {
       const cache = caches.default;
       const ck = new Request('https://td.cache/quote/' + encodeURIComponent(lista));
       const hit = await cache.match(ck);
-      if (hit) return json(await hit.json(), 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      if (hit) return json(await hit.json(), 200, cors, { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' });
       try {
         const r = await fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(lista)}&apikey=${env.TWELVEDATA_API_KEY}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
         const d = await r.json().catch(() => null);
@@ -846,8 +846,8 @@ const rotas = async (request, env, ctx) => {
         }
         if (!Object.keys(out).length) return json({ error: 'Twelve Data sem cotação' }, 502, cors);
         const body = { fonte: 'twelvedata', cotacoes: out };
-        ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120' } })));
-        return json(body, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+        ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120, stale-while-revalidate=600' } })));
+        return json(body, 200, cors, { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' });
       } catch (err) {
         return json({ error: 'Twelve Data falhou: ' + err.message }, 502, cors);
       }
@@ -866,7 +866,7 @@ const rotas = async (request, env, ctx) => {
         const r = await fetch('https://apisidra.ibge.gov.br/values' + SIDRA[q], { cf: { cacheTtl: 21600, cacheEverything: true } });
         const data = await r.json().catch(() => null);
         if (!r.ok || !Array.isArray(data)) return json({ error: 'IBGE HTTP ' + r.status }, 502, cors);
-        return json(data, 200, cors, { 'Cache-Control': 'public, max-age=3600' });
+        return json(data, 200, cors, { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' });
       } catch (err) {
         return json({ error: 'IBGE falhou: ' + err.message }, 502, cors);
       }
@@ -891,7 +891,7 @@ const rotas = async (request, env, ctx) => {
           status: 200,
           headers: {
             'Content-Type': 'application/xml; charset=utf-8',
-            'Cache-Control': 'public, max-age=300',
+            'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
             ...cors
           }
         });
