@@ -784,7 +784,7 @@ const rotas = async (request, env, ctx) => {
         try {
           const out = await fn(args, key);
           if (out && out.naoAchou) { erros.push(nome + ': não encontrado'); continue; }
-          return json({ ...out, fonte: nome, ts: Date.now() }, 200, cors, { 'Cache-Control': kind === 'search' ? 'public, max-age=3600, stale-while-revalidate=86400' : 'public, max-age=300, stale-while-revalidate=3600' });
+          return json({ ...out, fonte: nome, ts: Date.now() }, 200, cors, { 'Cache-Control': kind === 'search' ? 'public, max-age=3600' : 'public, max-age=300' });
         } catch (err) {
           erros.push(nome + ': ' + String(err.message || err));
         }
@@ -796,35 +796,6 @@ const rotas = async (request, env, ctx) => {
     // =========================================================
     // ENDPOINT: /sidra?q=ipca|pib|desemp  (IBGE/SIDRA para a aba Indicadores; só as consultas da lista)
     // =========================================================
-    // =========================================================
-    // ENDPOINT: /sse/quotes (Server-Sent Events para cotações em tempo real)
-    // =========================================================
-    if (path === '/sse/quotes') {
-      const stream = new ReadableStream({
-        start(controller) {
-          const encoder = new TextEncoder();
-          const initMsg = `data: ${JSON.stringify({ status: 'connected', ts: Date.now() })}\n\n`;
-          controller.enqueue(encoder.encode(initMsg));
-          const interval = setInterval(() => {
-            try {
-              const pingMsg = `data: ${JSON.stringify({ event: 'ping', ts: Date.now() })}\n\n`;
-              controller.enqueue(encoder.encode(pingMsg));
-            } catch (e) {
-              clearInterval(interval);
-            }
-          }, 15000);
-        }
-      });
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          ...cors
-        }
-      });
-    }
-
     // =========================================================
     // ENDPOINT: /bcb?c=432&q=/ultimos/1  (séries do SGS do Banco Central, com cache)
     // q aceita /ultimos/N e dataInicial/dataFinal (dd/mm/aaaa); o resto é ignorado
@@ -841,7 +812,7 @@ const rotas = async (request, env, ctx) => {
       try {
         const d = await indFetchJSON(u, 25000);
         if (!Array.isArray(d)) return json({ error: 'BCB sem dados' }, 502, cors);
-        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=900, stale-while-revalidate=3600' });
+        return json(d, 200, cors, { 'Cache-Control': 'public, max-age=900' });
       } catch (err) {
         return json({ error: 'BCB falhou: ' + err.message }, 502, cors);
       }
@@ -861,7 +832,7 @@ const rotas = async (request, env, ctx) => {
       const cache = caches.default;
       const ck = new Request('https://td.cache/quote/' + encodeURIComponent(lista));
       const hit = await cache.match(ck);
-      if (hit) return json(await hit.json(), 200, cors, { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' });
+      if (hit) return json(await hit.json(), 200, cors, { 'Cache-Control': 'public, max-age=60' });
       try {
         const r = await fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(lista)}&apikey=${env.TWELVEDATA_API_KEY}`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
         const d = await r.json().catch(() => null);
@@ -875,8 +846,8 @@ const rotas = async (request, env, ctx) => {
         }
         if (!Object.keys(out).length) return json({ error: 'Twelve Data sem cotação' }, 502, cors);
         const body = { fonte: 'twelvedata', cotacoes: out };
-        ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120, stale-while-revalidate=600' } })));
-        return json(body, 200, cors, { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' });
+        ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120' } })));
+        return json(body, 200, cors, { 'Cache-Control': 'public, max-age=60' });
       } catch (err) {
         return json({ error: 'Twelve Data falhou: ' + err.message }, 502, cors);
       }
@@ -895,7 +866,7 @@ const rotas = async (request, env, ctx) => {
         const r = await fetch('https://apisidra.ibge.gov.br/values' + SIDRA[q], { cf: { cacheTtl: 21600, cacheEverything: true } });
         const data = await r.json().catch(() => null);
         if (!r.ok || !Array.isArray(data)) return json({ error: 'IBGE HTTP ' + r.status }, 502, cors);
-        return json(data, 200, cors, { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' });
+        return json(data, 200, cors, { 'Cache-Control': 'public, max-age=3600' });
       } catch (err) {
         return json({ error: 'IBGE falhou: ' + err.message }, 502, cors);
       }
@@ -920,7 +891,7 @@ const rotas = async (request, env, ctx) => {
           status: 200,
           headers: {
             'Content-Type': 'application/xml; charset=utf-8',
-            'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+            'Cache-Control': 'public, max-age=300',
             ...cors
           }
         });
