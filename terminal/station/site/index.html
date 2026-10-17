@@ -142,6 +142,9 @@
   } catch (e) { /* sem ajustes salvos */ }
 })();
 </script>
+<style id="mm2-styles">
+.mm2-head{display:flex;justify-content:space-between;align-items:center;gap:20px;margin:12px 0 22px}.mm2-head h2{font-size:clamp(23px,3vw,34px);margin:5px 0 8px}.mm2-head p,.mm2-card p,.mm2-note{color:var(--text-secondary,#aab4c6);line-height:1.65}.mm2-eyebrow,.mm2-tag{font-size:11px;letter-spacing:.12em;font-weight:700;color:#5ac8fa}.mm2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 18px}.mm2-card{border:1px solid rgba(140,160,185,.22);background:rgba(12,21,36,.65);border-radius:12px;padding:18px;min-width:0;margin-bottom:16px}.mm2-card h3{margin:0 0 12px;font-size:17px}.mm2-card a{color:#5ac8fa}.mm2-action{border:1px solid rgba(90,200,250,.45);background:rgba(90,200,250,.08);color:inherit;border-radius:8px;padding:10px 14px;cursor:pointer;font:inherit}.mm2-action:hover{background:rgba(90,200,250,.18)}.mm2-note{font-size:12px;margin:10px 0 22px}.mm2-radar .mm2-card{min-height:200px}@media(max-width:760px){.mm2-grid{grid-template-columns:1fr}.mm2-head{align-items:flex-start;flex-direction:column}.mm2-card{padding:14px}}
+</style>
 </head>
 <body>
 
@@ -211,6 +214,9 @@
 </div>
 
 <nav class="tabs" id="tabs" role="tablist" aria-label="Abas de navegação do painel">
+  <button class="tab-btn" id="tab-overview2-panel" data-tab="overview2-panel" role="tab" aria-selected="false" aria-controls="overview2-panel"><i class="fas fa-globe-americas" aria-hidden="true"></i> Overview 2.0</button>
+  <button class="tab-btn" id="tab-radar2-panel" data-tab="radar2-panel" role="tab" aria-selected="false" aria-controls="radar2-panel"><i class="fas fa-bullseye" aria-hidden="true"></i> Radar Macro</button>
+
   <button class="tab-btn active" id="tab-market-panel" data-tab="market-panel" role="tab" aria-selected="true" aria-controls="market-panel">
     <i class="fas fa-chart-bar" aria-hidden="true"></i> Mercado
   </button>
@@ -248,6 +254,27 @@
     <i class="fas fa-bullseye" aria-hidden="true"></i> Opções
   </button>
 </nav>
+
+<div class="tab-panel" id="overview2-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-overview2-panel">
+ <div class="mm2-head"><div><span class="mm2-eyebrow">MERCADO MACRO / TERMINAL</span><h2>Market Overview 2.0</h2><p>Visão rápida dos mercados. As cotações são fornecidas por terceiros e podem ter atraso conforme bolsa, ativo e plano de dados.</p></div><button class="mm2-action" type="button" data-mm2-tab="market-panel">Abrir painel detalhado →</button></div>
+ <div class="mm2-grid">
+ <section class="mm2-card"><h3>Índices e câmbio</h3><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>{"width":"100%","height":340,"symbolsGroups":[{"name":"Índices e câmbio","symbols":[{"name":"BMFBOVESPA:IBOV","displayName":"Ibovespa"},{"name":"FX_IDC:USDBRL","displayName":"USD/BRL"},{"name":"FOREXCOM:SPXUSD","displayName":"S&P 500"},{"name":"NASDAQ:NDX","displayName":"Nasdaq 100"}]}],"showSymbolLogo":true,"isTransparent":true,"colorTheme":"dark","locale":"br"}</script></div></section>
+ <section class="mm2-card"><h3>Commodities e cripto</h3><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>{"width":"100%","height":340,"symbolsGroups":[{"name":"Commodities e cripto","symbols":[{"name":"TVC:GOLD","displayName":"Ouro"},{"name":"TVC:UKOIL","displayName":"Brent"},{"name":"BITSTAMP:BTCUSD","displayName":"Bitcoin"},{"name":"TVC:USOIL","displayName":"WTI"}]}],"showSymbolLogo":true,"isTransparent":true,"colorTheme":"dark","locale":"br"}</script></div></section>
+ </div>
+ <section class="mm2-card"><h3>Agenda e contexto</h3><p>Consulte os eventos econômicos e as divulgações programadas. Horários seguem o fuso indicado pelo provedor.</p><button class="mm2-action" type="button" data-mm2-tab="calendar-panel">Abrir calendário econômico →</button></section>
+ <p class="mm2-note">Fonte das cotações: TradingView e respectivas bolsas/provedores. Verifique a identificação do instrumento e o horário no widget. Curvas de juros DI e Treasury serão incorporadas após validação das fontes e licenças de dados.</p>
+</div>
+<div class="tab-panel" id="radar2-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-radar2-panel">
+ <div class="mm2-head"><div><span class="mm2-eyebrow">ECONOMIA / BRASIL E EXTERIOR</span><h2>Radar Macro</h2><p>O que acompanhar, por que importa e onde aprofundar os dados. As explicações indicam relações econômicas possíveis, não previsões.</p></div><button class="mm2-action" type="button" data-mm2-tab="analysis-panel">Abrir análises →</button></div>
+ <div class="mm2-grid mm2-radar">
+ <article class="mm2-card"><span class="mm2-tag">BRASIL · INFLAÇÃO</span><h3>IPCA e IPCA-15</h3><p>Surpresas de inflação podem alterar expectativas para Selic e juros futuros, com reflexos em câmbio, bolsa e títulos prefixados.</p><a href="/ipca-hoje" target="_blank" rel="noopener">Entender o IPCA ↗</a></article>
+ <article class="mm2-card"><span class="mm2-tag">BRASIL · JUROS</span><h3>Copom, Selic e CDI</h3><p>A comunicação do Copom influencia a trajetória esperada dos juros. Compare expectativas, decisões e taxas efetivamente observadas.</p><a href="/selic-hoje" target="_blank" rel="noopener">Acompanhar Selic ↗</a></article>
+ <article class="mm2-card"><span class="mm2-tag">BRASIL · ATIVIDADE</span><h3>PIB, emprego e fiscal</h3><p>Atividade e contas públicas afetam projeções de crescimento, prêmio de risco e sustentabilidade das expectativas de inflação.</p><button class="mm2-action" type="button" data-mm2-tab="analysis-panel">Ver análises →</button></article>
+ <article class="mm2-card"><span class="mm2-tag">EUA · INFLAÇÃO E FED</span><h3>CPI, PCE, payroll e FOMC</h3><p>Inflação e emprego nos EUA influenciam a expectativa para os Fed Funds, os Treasuries e o apetite global por risco.</p><button class="mm2-action" type="button" data-mm2-tab="calendar-panel">Ver calendário →</button></article>
+ </div>
+ <section class="mm2-card"><h3>Próximas divulgações</h3><p>Consulte o calendário existente do terminal para datas e horários. Os dados macroeconômicos não são necessariamente atualizados em tempo real.</p><button class="mm2-action" type="button" data-mm2-tab="calendar-panel">Calendário econômico →</button></section>
+ <p class="mm2-note">Conteúdo educacional. Fontes recomendadas para conferência: IBGE, Banco Central do Brasil, BEA, BLS e Federal Reserve. Não constitui recomendação de investimento.</p>
+</div>
 
 <div class="tab-panel active" id="market-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-market-panel">
   <div class="market-wrap">
@@ -742,6 +769,7 @@
 
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
 <script src="app.js?v=25"></script>
+<script>document.querySelectorAll('[data-mm2-tab]').forEach(b=>b.addEventListener('click',()=>{const t=document.querySelector('.tab-btn[data-tab="'+b.dataset.mm2Tab+'"]');if(t)t.click();}));</script>
 <script src="ajustes.js?v=5"></script>
 <script src="extras.js?v=6"></script>
 <script src="cabecalho.js?v=1"></script>
