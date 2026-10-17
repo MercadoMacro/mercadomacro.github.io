@@ -4020,7 +4020,7 @@ window.__onTabSwitch = (tabId) => {
    ========================================================= */
 (() => {
   const GROUPS = [
-    ['Visão geral', ['market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
+    ['Visão geral', ['overview2-panel', 'radar2-panel', 'market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
     ['Informação', ['news-panel', 'weekly-panel', 'calendar-panel']],
     ['Análise', ['analysis-panel', 'fund-panel']],
     ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel']]
