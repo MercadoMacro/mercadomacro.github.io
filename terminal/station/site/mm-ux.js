@@ -76,12 +76,7 @@
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         const title = btn.textContent.trim();
         if (title.toLowerCase().includes(q)) {
-          matches.append?.({
-            type: 'Aba',
-            title: `Aba: ${title}`,
-            icon: 'fa-layer-group',
-            action: () => { btn.click(); closeModal(); }
-          }) || matches.push({
+          matches.push({
             type: 'Aba',
             title: `Aba: ${title}`,
             icon: 'fa-layer-group',
