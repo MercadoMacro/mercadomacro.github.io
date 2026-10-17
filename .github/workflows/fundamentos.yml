@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: fundamentos
+  cancel-in-progress: false
+
 jobs:
   gerar:
     runs-on: ubuntu-24.04
