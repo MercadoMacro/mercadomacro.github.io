@@ -2836,3 +2836,78 @@ body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 
   outline: 2px solid var(--accent, #3b82f6);
   transition: outline 0.3s ease;
 }
+
+/* =====================================================================
+   ESTILOS DO MODAL DE GRÁFICOS TRADINGVIEW (LIGHTWEIGHT CHARTS)
+   ===================================================================== */
+.tv-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.tv-modal-backdrop.hidden {
+  display: none;
+  pointer-events: none;
+}
+
+.tv-modal-dialog {
+  background: var(--bg-card, #0f172a);
+  border: 1px solid var(--border, #1e293b);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.tv-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #1e293b);
+}
+
+.tv-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text, #f8fafc);
+}
+
+.tv-modal-title i {
+  color: var(--accent, #3b82f6);
+}
+
+.tv-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim, #94a3b8);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.tv-modal-close:hover {
+  color: var(--text, #f8fafc);
+}
+
+.tv-modal-body {
+  padding: 16px;
+}
+
+.tv-chart-container {
+  width: 100%;
+  height: 400px;
+  position: relative;
+}
