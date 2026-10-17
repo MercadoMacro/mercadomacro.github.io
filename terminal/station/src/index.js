@@ -16,6 +16,9 @@ const PUBLICAS = {
   '/calculadora-juros-compostos': ['/vitrine/juros-compostos', 'juros'],
   '/calculadora-aposentadoria': ['/vitrine/aposentadoria', 'aposentadoria'],
   '/indicadores-hoje': ['/vitrine/indicadores', 'indicadores'],
+  '/ipca-hoje': ['/vitrine/ipca-hoje', 'ipca-hoje'],
+  '/cdi-hoje': ['/vitrine/cdi-hoje', 'cdi-hoje'],
+  '/selic-hoje': ['/vitrine/selic-hoje', 'selic-hoje'],
 };
 // páginas que existem só para quem entrou (não são arquivos)
 const ROTAS_LOGADO = /^\/(admin|conta|fechamento)$/;
@@ -1055,6 +1058,9 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://mercadomacro.com.br/calculadora-juros-compostos</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/calculadora-aposentadoria</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/ipca-hoje</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/cdi-hoje</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/selic-hoje</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mercadomacro.com.br/fechamento-do-mercado</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
 </urlset>
