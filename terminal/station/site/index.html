@@ -111,6 +111,7 @@
   .mm-brand .brand-text .sub { margin-top:6px; }
   .qbanner { border-left-color:#1e90ff !important; }
   @media (max-width: 640px) { .mm-brand .mm-img { height:38px; } }
+.mm2-history-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.mm2-history-controls select{background:#142136;color:#e8edf5;border:1px solid #4a5a70;border-radius:8px;padding:10px;max-width:100%}.mm2-history-canvas{height:310px;position:relative}@media(max-width:760px){.mm2-history-canvas{height:250px}}
 </style>
 <script>
 /* Ajustes salvos: aplicados antes da página aparecer (sem piscar) */
@@ -266,6 +267,7 @@
 </div>
 <div class="tab-panel" id="radar2-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-radar2-panel">
  <div class="mm2-head"><div><span class="mm2-eyebrow">ECONOMIA / BRASIL E EXTERIOR</span><h2>Radar Macro</h2><p>O que acompanhar, por que importa e onde aprofundar os dados. As explicações indicam relações econômicas possíveis, não previsões.</p></div><button class="mm2-action" type="button" data-mm2-tab="analysis-panel">Abrir análises →</button></div>
+<section class="mm2-card"><h3>Histórico dos indicadores brasileiros</h3><p>Compare a evolução de séries oficiais do Banco Central. Selecione o indicador; cada série utiliza sua própria unidade e frequência.</p><div class="mm2-history-controls"><label for="mm2-history-series">Indicador</label><select id="mm2-history-series"><option value="selic">Selic meta (% a.a.)</option><option value="ipca">IPCA mensal (% no mês)</option><option value="ipca12">IPCA acumulado em 12 meses (%)</option><option value="cdi">CDI diário (% a.d.)</option></select><button type="button" id="mm2-history-reload" class="mm2-action">Atualizar</button></div><div class="mm2-history-canvas"><canvas id="mm2-history-chart" role="img" aria-label="Gráfico histórico do indicador selecionado"></canvas></div><p class="mm2-note" id="mm2-history-status" aria-live="polite">Escolha um indicador para consultar a série oficial.</p></section>
  <div class="mm2-grid mm2-radar">
  <article class="mm2-card"><span class="mm2-tag">BRASIL · INFLAÇÃO</span><h3>IPCA e IPCA-15</h3><p>Surpresas de inflação podem alterar expectativas para Selic e juros futuros, com reflexos em câmbio, bolsa e títulos prefixados.</p><a href="/ipca-hoje" target="_blank" rel="noopener">Entender o IPCA ↗</a></article>
  <article class="mm2-card"><span class="mm2-tag">BRASIL · JUROS</span><h3>Copom, Selic e CDI</h3><p>A comunicação do Copom influencia a trajetória esperada dos juros. Compare expectativas, decisões e taxas efetivamente observadas.</p><a href="/selic-hoje" target="_blank" rel="noopener">Acompanhar Selic ↗</a></article>
@@ -769,6 +771,7 @@
 
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
 <script src="app.js?v=25"></script>
+<script src="radar-macro.js?v=1" defer></script>
 <script>document.querySelectorAll('[data-mm2-tab]').forEach(b=>b.addEventListener('click',()=>{const t=document.querySelector('.tab-btn[data-tab="'+b.dataset.mm2Tab+'"]');if(t)t.click();}));</script>
 <script src="ajustes.js?v=5"></script>
 <script src="extras.js?v=6"></script>
