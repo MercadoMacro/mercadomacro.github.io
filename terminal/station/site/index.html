@@ -155,10 +155,10 @@
 
   <div class="topbar-right">
     <span class="tk-updated" id="tk-updated" title="Horário da última atualização das cotações do topo">—</span>
-    <button class="icon-btn" id="summary-btn" title="Resumo de mercado para clientes (Alt+M)"><i class="fas fa-clipboard-list"></i></button>
-    <button class="icon-btn" id="backup-btn" title="Backup de notas e preferências"><i class="fas fa-database"></i></button>
-    <button class="icon-btn" id="theme-toggle" title="Alternar tema (Alt+L)"><i class="fas fa-moon"></i></button>
-    <button class="icon-btn" id="settings-btn" title="Ajustes do painel (Alt+A)" aria-haspopup="dialog"><i class="fas fa-cog"></i></button>
+    <button class="icon-btn" id="summary-btn" title="Resumo de mercado para clientes (Alt+M)" aria-label="Resumo de mercado para clientes (Alt+M)"><i class="fas fa-clipboard-list"></i></button>
+    <button class="icon-btn" id="backup-btn" title="Backup de notas e preferências" aria-label="Backup de notas e preferências"><i class="fas fa-database"></i></button>
+    <button class="icon-btn" id="theme-toggle" title="Alternar tema (Alt+L)" aria-label="Alternar tema claro e escuro (Alt+L)"><i class="fas fa-moon"></i></button>
+    <button class="icon-btn" id="settings-btn" title="Ajustes do painel (Alt+A)" aria-label="Ajustes do painel (Alt+A)" aria-haspopup="dialog"><i class="fas fa-cog"></i></button>
   </div>
 
   <div class="ticker" id="ticker" title="Clique em um indicador para abrir o painel completo">
@@ -206,50 +206,50 @@
       <div class="tk-top"><span class="label">IPCA</span><span class="chg" id="t-ipca-chg"></span></div>
       <span class="val" id="t-ipca">—</span>
     </div>
-    <button class="refresh-btn" id="refresh-ticker" title="Atualizar cotações (Alt+R)">⟳</button>
+    <button class="refresh-btn" id="refresh-ticker" title="Atualizar cotações (Alt+R)" aria-label="Atualizar cotações do topo agora (Alt+R)">⟳</button>
   </div>
 </div>
 
-<nav class="tabs" id="tabs">
-  <button class="tab-btn active" data-tab="market-panel">
-    <i class="fas fa-chart-bar"></i> Mercado
+<nav class="tabs" id="tabs" role="tablist" aria-label="Abas de navegação do painel">
+  <button class="tab-btn active" id="tab-market-panel" data-tab="market-panel" role="tab" aria-selected="true" aria-controls="market-panel">
+    <i class="fas fa-chart-bar" aria-hidden="true"></i> Mercado
   </button>
-  <button class="tab-btn" data-tab="mesa-panel">
-    <i class="fas fa-th-large"></i> Mesa
+  <button class="tab-btn" id="tab-mesa-panel" data-tab="mesa-panel" role="tab" aria-selected="false" aria-controls="mesa-panel">
+    <i class="fas fa-th-large" aria-hidden="true"></i> Mesa
   </button>
-  <button class="tab-btn" data-tab="watch-panel">
-    <i class="fas fa-star"></i> Watchlist
+  <button class="tab-btn" id="tab-watch-panel" data-tab="watch-panel" role="tab" aria-selected="false" aria-controls="watch-panel">
+    <i class="fas fa-star" aria-hidden="true"></i> Watchlist
   </button>
-  <button class="tab-btn" data-tab="heatmap-panel">
-    <i class="fas fa-th"></i> Mapa de Calor
+  <button class="tab-btn" id="tab-heatmap-panel" data-tab="heatmap-panel" role="tab" aria-selected="false" aria-controls="heatmap-panel">
+    <i class="fas fa-th" aria-hidden="true"></i> Mapa de Calor
   </button>
-  <button class="tab-btn" data-tab="news-panel">
-    <i class="fas fa-newspaper"></i> Notícias
+  <button class="tab-btn" id="tab-news-panel" data-tab="news-panel" role="tab" aria-selected="false" aria-controls="news-panel">
+    <i class="fas fa-newspaper" aria-hidden="true"></i> Notícias
   </button>
-  <button class="tab-btn" data-tab="weekly-panel">
-    <i class="fas fa-book-open"></i> Resumo semanal
+  <button class="tab-btn" id="tab-weekly-panel" data-tab="weekly-panel" role="tab" aria-selected="false" aria-controls="weekly-panel">
+    <i class="fas fa-book-open" aria-hidden="true"></i> Resumo semanal
   </button>
-  <button class="tab-btn" data-tab="calendar-panel">
-    <i class="fas fa-calendar-alt"></i> Calendário
+  <button class="tab-btn" id="tab-calendar-panel" data-tab="calendar-panel" role="tab" aria-selected="false" aria-controls="calendar-panel">
+    <i class="fas fa-calendar-alt" aria-hidden="true"></i> Calendário
   </button>
-  <button class="tab-btn" data-tab="analysis-panel">
-    <i class="fas fa-chart-line"></i> Análises
+  <button class="tab-btn" id="tab-analysis-panel" data-tab="analysis-panel" role="tab" aria-selected="false" aria-controls="analysis-panel">
+    <i class="fas fa-chart-line" aria-hidden="true"></i> Análises
   </button>
-  <button class="tab-btn" data-tab="fund-panel">
-    <i class="fas fa-building"></i> Fundamentos
+  <button class="tab-btn" id="tab-fund-panel" data-tab="fund-panel" role="tab" aria-selected="false" aria-controls="fund-panel">
+    <i class="fas fa-building" aria-hidden="true"></i> Fundamentos
   </button>
-  <button class="tab-btn" data-tab="indicators-panel">
-    <i class="fas fa-percentage"></i> Indicadores
+  <button class="tab-btn" id="tab-indicators-panel" data-tab="indicators-panel" role="tab" aria-selected="false" aria-controls="indicators-panel">
+    <i class="fas fa-percentage" aria-hidden="true"></i> Indicadores
   </button>
-  <button class="tab-btn" data-tab="calculator-panel">
-    <i class="fas fa-calculator"></i> Calculadora
+  <button class="tab-btn" id="tab-calculator-panel" data-tab="calculator-panel" role="tab" aria-selected="false" aria-controls="calculator-panel">
+    <i class="fas fa-calculator" aria-hidden="true"></i> Calculadora
   </button>
-  <button class="tab-btn" data-tab="options-panel">
-    <i class="fas fa-bullseye"></i> Opções
+  <button class="tab-btn" id="tab-options-panel" data-tab="options-panel" role="tab" aria-selected="false" aria-controls="options-panel">
+    <i class="fas fa-bullseye" aria-hidden="true"></i> Opções
   </button>
 </nav>
 
-<div class="tab-panel active" id="market-panel">
+<div class="tab-panel active" id="market-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-market-panel">
   <div class="market-wrap">
     <div class="refresh-bar">
       <div class="info" id="market-info"><span class="dot"></span>Última atualização: <span id="market-last-update">—</span></div>
@@ -305,14 +305,14 @@
 <!-- ======================================================
      MESA: tudo numa tela só (conteúdo no mesa.js, baixado só quando a aba é aberta)
      ====================================================== -->
-<div class="tab-panel" id="mesa-panel">
+<div class="tab-panel" id="mesa-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-mesa-panel" aria-hidden="true">
   <div class="generic-wrap" id="mesa-root"><div class="ind-boot">Carregando a mesa…</div></div>
 </div>
 
 <!-- ======================================================
      WATCHLIST (conteúdo e atualização no extras.js)
      ====================================================== -->
-<div class="tab-panel" id="watch-panel">
+<div class="tab-panel" id="watch-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-watch-panel" aria-hidden="true">
   <div class="market-wrap">
     <div class="refresh-bar">
       <div class="info" id="wl-info"><span class="dot"></span>Seus ativos · atualiza ao abrir a aba e a cada 5 min com ela aberta</div>
@@ -330,7 +330,7 @@
 <!-- ======================================================
      MAPA DE CALOR (TRADINGVIEW)
      ====================================================== -->
-<div class="tab-panel" id="heatmap-panel">
+<div class="tab-panel" id="heatmap-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-heatmap-panel" aria-hidden="true">
   <div class="heatmap-wrap">
     <div class="heatmap-header">
       <div class="heatmap-title">
@@ -386,7 +386,7 @@
 <!-- ======================================================
      NOTÍCIAS
      ====================================================== -->
-<div class="tab-panel" id="news-panel">
+<div class="tab-panel" id="news-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-news-panel" aria-hidden="true">
   <div class="news-wrap">
     <div class="refresh-bar">
       <div class="info" id="news-info"><span class="dot"></span>Carregando notícias...</div>
@@ -418,7 +418,7 @@
             </button>
           </div>
           <input type="search" class="news-search" id="news-search" placeholder="Buscar nas notícias...">
-          <button class="btn-sm" id="news-alert-btn"></button>
+          <button class="btn-sm" id="news-alert-btn" aria-label="Ativar ou desativar avisos de notícias"></button>
         </div>
         <div class="ecal-chips news-assets" id="news-assets"></div>
         <div class="news-picks" id="news-picks"></div>
@@ -443,11 +443,11 @@
 <!-- ======================================================
      RESUMO SEMANAL (conteúdo no extras.js, texto em resumo-semanal.txt)
      ====================================================== -->
-<div class="tab-panel" id="weekly-panel">
+<div class="tab-panel" id="weekly-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-weekly-panel" aria-hidden="true">
   <div class="generic-wrap" id="rs-root"><div class="ind-boot">Carregando resumo semanal…</div></div>
 </div>
 
-<div class="tab-panel" id="calendar-panel">
+<div class="tab-panel" id="calendar-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-calendar-panel" aria-hidden="true">
   <div class="generic-wrap">
     <div class="calendar-header">
       <div class="calendar-title">
@@ -478,7 +478,7 @@
           <div class="ecal-actions">
             <button class="btn-sm" id="ecal-week-btn" title="Texto da agenda da semana para WhatsApp"><i class="fab fa-whatsapp"></i> Agenda da semana</button>
             <button class="btn-sm" id="ecal-ics-btn" title="Baixa um arquivo .ics para importar no Google Agenda ou Outlook"><i class="fas fa-file-export"></i> Exportar .ics</button>
-            <button class="btn-sm" id="ecal-alert-btn"></button>
+            <button class="btn-sm" id="ecal-alert-btn" aria-label="Ativar ou desativar avisos do calendário"></button>
           </div>
           <span class="ecal-status" id="ecal-status"></span>
         </div>
@@ -539,7 +539,7 @@
   </div>
 </div>
 
-<div class="tab-panel" id="analysis-panel">
+<div class="tab-panel" id="analysis-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-analysis-panel" aria-hidden="true">
   <div class="generic-wrap ana-wrap">
     <div class="refresh-bar">
       <div class="info" id="ana-info"><span class="dot"></span>Histórico de 1 ano: <span id="ana-hist-status">não carregado</span></div>
@@ -615,22 +615,22 @@
   </div>
 </div>
 
-<div class="tab-panel" id="fund-panel">
+<div class="tab-panel" id="fund-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-fund-panel" aria-hidden="true">
   <!-- conteúdo vem do fundamentos.js (balanços da CVM), baixado só quando a aba é aberta -->
   <div class="generic-wrap" id="fund-root"><div class="ind-boot">Carregando fundamentos…</div></div>
 </div>
 
-<div class="tab-panel" id="indicators-panel">
+<div class="tab-panel" id="indicators-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-indicators-panel" aria-hidden="true">
   <!-- conteúdo vem do indicadores.js, baixado só quando a aba é aberta -->
   <div class="generic-wrap" id="ind-root"><div class="ind-boot">Carregando indicadores…</div></div>
 </div>
 
-<div class="tab-panel" id="calculator-panel">
+<div class="tab-panel" id="calculator-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-calculator-panel" aria-hidden="true">
   <!-- conteúdo vem do calculadoras.js, baixado só quando a aba é aberta -->
   <div class="generic-wrap" id="calc-root"><div class="ind-boot">Carregando calculadoras…</div></div>
 </div>
 
-<div class="tab-panel" id="options-panel">
+<div class="tab-panel" id="options-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-options-panel" aria-hidden="true">
   <div class="generic-wrap" id="opt-root"><div class="ind-boot">Carregando opções…</div></div>
 </div>
 

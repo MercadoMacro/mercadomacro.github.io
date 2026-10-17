@@ -191,14 +191,37 @@ $('#theme-toggle').addEventListener('click', () => {
    TABS
    ========================================================= */
 function switchTab(tabId) {
-  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-  $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+  $$('.tab-btn').forEach(b => {
+    const active = b.dataset.tab === tabId;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  $$('.tab-panel').forEach(p => {
+    const active = p.id === tabId;
+    p.classList.toggle('active', active);
+    p.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
   localStorage.setItem(STORAGE.activeTab, tabId);
   if (tabId === 'calendar-panel') setTimeout(fitCalendarIframe, 100);
   if (tabId === 'heatmap-panel') setTimeout(() => initHeatmapIfNeeded(), 150);
   if (window.__onTabSwitch) window.__onTabSwitch(tabId);
 }
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// Acessibilidade WAI-ARIA: navegação por setas (esquerda/direita) entre as abas
+$('#tabs')?.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const btns = [...$$('#tabs .tab-btn')];
+    const currIdx = btns.findIndex(b => b.classList.contains('active'));
+    if (currIdx === -1) return;
+    const nextIdx = e.key === 'ArrowRight'
+      ? (currIdx + 1) % btns.length
+      : (currIdx - 1 + btns.length) % btns.length;
+    btns[nextIdx].focus();
+    switchTab(btns[nextIdx].dataset.tab);
+  }
+});
 const savedTab = localStorage.getItem(STORAGE.activeTab);
 if (savedTab && $(`#${savedTab}`)) switchTab(savedTab);
 
@@ -4567,6 +4590,31 @@ function newsReadMins(n) {
   window.openNewsReader = (id) => open(id);
   window.closeNewsReader = () => { if (panel.classList.contains('on')) close(); };
 })();
+
+/* =========================================================
+   CARREGADOR DE MÓDULOS / SCRIPTS SOB DEMANDA
+   Deduplica requisições simultâneas, previne injeção dupla e trata erros.
+   ========================================================= */
+const _modulosCarregados = new Map();
+function carregarScriptModulo(src) {
+  if (_modulosCarregados.has(src)) return _modulosCarregados.get(src);
+  const p = new Promise((resolve, reject) => {
+    const exist = document.querySelector(`script[src="${src}"]`);
+    if (exist) { resolve(); return; }
+    const sc = document.createElement('script');
+    sc.src = src;
+    sc.async = true;
+    sc.onload = () => resolve();
+    sc.onerror = (err) => {
+      sc.remove();
+      _modulosCarregados.delete(src);
+      reject(err);
+    };
+    document.body.appendChild(sc);
+  });
+  _modulosCarregados.set(src, p);
+  return p;
+}
 
 /* =========================================================
    INDICADORES: o código fica em indicadores.js (mesma pasta do index.html)

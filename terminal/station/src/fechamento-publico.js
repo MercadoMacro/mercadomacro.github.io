@@ -198,7 +198,28 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
       titulo: 'Fechamento do mercado hoje: Ibovespa, dólar e bolsas | Mercado Macro',
       descricao: 'Como fechou o mercado: Ibovespa, dólar, bolsas de Nova York, petróleo, ouro, bitcoin, maiores altas e baixas, juros e fluxo do estrangeiro. Atualizado todo dia após as 18h.',
       canonico: SITE + BASE, h1: 'Fechamento do mercado', data: 'Atualizado todo dia útil depois das 18h (horário de Brasília)', corpo,
-      ld: { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Fechamento do mercado', url: SITE + BASE, inLanguage: 'pt-BR' },
+      ld: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'CollectionPage',
+            '@id': `${SITE}${BASE}#webpage`,
+            name: 'Fechamento do mercado',
+            url: SITE + BASE,
+            inLanguage: 'pt-BR',
+            description: 'Histórico diário do fechamento do mercado financeiro brasileiro e global.',
+            publisher: { '@type': 'Organization', name: 'Mercado Macro', url: SITE, logo: `${SITE}/icone-512.png` }
+          },
+          {
+            '@type': 'BreadcrumbList',
+            '@id': `${SITE}${BASE}#breadcrumb`,
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Início', item: SITE },
+              { '@type': 'ListItem', position: 2, name: 'Fechamento do mercado', item: SITE + BASE }
+            ]
+          }
+        ]
+      },
     }));
   }
   let d = await lerDia(env, resto);
@@ -216,8 +237,36 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
   return resposta(pagina({
     titulo, descricao: paragrafo(d).slice(0, 300), canonico: `${SITE}${BASE}/${resto}`,
     h1: `Fechamento do mercado em ${ddmmaaaa(resto)}${rt ? `: ${rt}` : ''}`, data: porExtenso(resto), corpo: corpoDia(d) + nav,
-    ld: { '@context': 'https://schema.org', '@type': 'Article', headline: `Fechamento do mercado em ${ddmmaaaa(resto)}`, datePublished: pub, dateModified: pub, inLanguage: 'pt-BR',
-      mainEntityOfPage: `${SITE}${BASE}/${resto}`, image: `${SITE}/previa-link-mercado-macro.png?v=2`,
-      author: { '@type': 'Organization', name: 'Mercado Macro', url: SITE }, publisher: { '@type': 'Organization', name: 'Mercado Macro', logo: { '@type': 'ImageObject', url: `${SITE}/icone-512.png` } } },
+    ld: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': `${SITE}${BASE}/${resto}#article`,
+          headline: `Fechamento do mercado em ${ddmmaaaa(resto)}`,
+          datePublished: pub,
+          dateModified: pub,
+          inLanguage: 'pt-BR',
+          mainEntityOfPage: `${SITE}${BASE}/${resto}`,
+          image: `${SITE}/previa-link-mercado-macro.png?v=2`,
+          author: { '@type': 'Organization', name: 'Mercado Macro', url: SITE },
+          publisher: {
+            '@type': 'Organization',
+            name: 'Mercado Macro',
+            url: SITE,
+            logo: { '@type': 'ImageObject', url: `${SITE}/icone-512.png` }
+          }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${SITE}${BASE}/${resto}#breadcrumb`,
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Início', item: SITE },
+            { '@type': 'ListItem', position: 2, name: 'Fechamento do mercado', item: SITE + BASE },
+            { '@type': 'ListItem', position: 3, name: ddmmaaaa(resto), item: `${SITE}${BASE}/${resto}` }
+          ]
+        }
+      ]
+    },
   }));
 }

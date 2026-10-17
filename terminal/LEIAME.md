@@ -22,3 +22,27 @@ O endereço mercadomacro.github.io agora só manda as pessoas para https://merca
 `resumo/`: robô do resumo do fechamento no Telegram (roda pelo .github/workflows/resumo.yml, dias de pregão às 18h).
 
 `vitrine-worker/`: worker da vitrine na segunda conta da Cloudflare (mercadomacro-vitrine.cota-cotacao10; o autumn-thunder antigo continua lá, sem uso pela vitrine). Publicado à mão no painel da Cloudflare.
+
+---
+
+## Melhorias e Otimizações Aplicadas
+
+1. **Acessibilidade Completa (WAI-ARIA)**:
+   - Abas (`#tabs`) com `role="tablist"` e `aria-label="Abas de navegação do painel"`.
+   - Botões de abas com `role="tab"`, `aria-selected` e `aria-controls`.
+   - Painéis com `role="tabpanel"`, `tabindex="0"`, `aria-labelledby` e sincronização de visibilidade (`aria-hidden`).
+   - Navegação por teclado: suporte nativo a setas (ArrowLeft / ArrowRight) para alternar abas diretamente pelo teclado.
+   - Botões de ícones com `aria-label` descritivos (`#summary-btn`, `#backup-btn`, `#theme-toggle`, `#settings-btn`, `#refresh-ticker`, `#news-alert-btn`, `#ecal-alert-btn`).
+
+2. **Carregador de Módulos Assíncrono (`app.js`)**:
+   - Função centralizada `carregarScriptModulo(src)` que usa Promises para deduplicar requisições concorrentes, evitar injeção duplicada de scripts no DOM e limpar tags com falha de rede.
+
+3. **SEO e Dados Estruturados Enriquecidos (`fechamento-publico.js`)**:
+   - Inclusão de `BreadcrumbList` estruturado em `@graph` para a página de índice e páginas individuais de fechamento diário, facilitando rich snippets com trilha de navegação na busca do Google.
+
+4. **Gestão de Dados e Histórico Git (Monorepo & R2 / KV Ready)**:
+   - Se o volume de JSONs gerados diariamente em `fundamentos/`, `fluxo/` e `historico/` crescer e começar a pesar no Git, os scripts do GitHub Actions podem enviar os arquivos diretamente para um bucket **Cloudflare R2** usando o comando:
+     ```bash
+     npx wrangler r2 object put mercadomacro-dados/fundamentos/24902.json --file=terminal/fundamentos/24902.json
+     ```
+     Ou configurando um binding R2 no Worker para servir os arquivos estáticos diretamente da borda sem depender do repositório Git.
