@@ -1,4 +1,5 @@
 import { noticiasCache, noticiasSoCache } from './noticias.js';
+import { respostaSelic } from './selic-publica.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
@@ -50,6 +51,7 @@ export default {
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
+      if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);

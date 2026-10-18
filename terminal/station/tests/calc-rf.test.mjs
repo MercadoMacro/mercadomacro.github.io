@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 const source = readFileSync(new URL('../site/vitrine/calc-rf.js', import.meta.url), 'utf8');
 const fixture = {4389:10, 432:14, 1178:13, 13522:4.5};
-async function calculator({ rates = fixture, rejectProxy = false } = {}) {
+async function calculator({ rates = fixture, rejectProxy = false, publicQuote = null } = {}) {
   const els = new Map(), calls = [];
   const get = id => {
     if (!els.has(id)) els.set(id, { value:id==='valor'?'10.000':id==='prazo'?'12':'', textContent:'', innerHTML:'', addEventListener() {} });
@@ -15,7 +15,9 @@ async function calculator({ rates = fixture, rejectProxy = false } = {}) {
     document:{getElementById:get,querySelectorAll:()=>[],activeElement:null},
     fetch:async url=>{
       calls.push(url);
-      const u=new URL(url), c=+(u.searchParams.get('c')||u.pathname.match(/sgs\.(\d+)/)?.[1]);
+      const u=new URL(url,'http://localhost:8787');
+      if(u.pathname==='/api/publico/selic') return {ok:!!publicQuote,status:publicQuote?200:503,json:async()=>publicQuote};
+      const c=+(u.searchParams.get('c')||u.pathname.match(/sgs\.(\d+)/)?.[1]);
       const fail=!(c in rates)||(rejectProxy&&!u.hostname.includes('api.bcb.gov.br'));
       return {ok:!fail,status:fail?503:200,json:async()=>[{data:'16/10/2026',valor:String(rates[c])}]};
     }
@@ -92,4 +94,16 @@ test('SGS 1178 remains preferred when the daily reserve is also available',async
 test('invalid annual-series response is replaced by valid daily Selic',async()=>{
   const c=await calculator({rates:{...fixture,1178:'inválido',11:0.05}});
   near(c.result('tselic').bruto,10000*(1.0005**252-1));
+});
+test('same-origin official quote is used even with SGS unavailable',async()=>{
+  const c=await calculator({rates:{4389:10,432:14,13522:4.5},publicQuote:{valor:13.65,data:'16/10/2026',fonte:'Banco Central — Selic apurada',reserva:false}});
+  near(c.result('tselic').bruto,1365);
+  assert.equal(c.els.get('m-selic-data').textContent,'16/10/2026');
+  assert.ok(!c.calls.some(u=>u.includes('c=1178')));
+});
+test('reserve quote has visible date and cache warning',async()=>{
+  const c=await calculator({publicQuote:{valor:13.65,data:'16/10/2026',fonte:'Banco Central — Selic apurada',reserva:true}});
+  near(c.result('tselic').bruto,1365);
+  assert.match(c.els.get('m-selic-data').textContent,/16\/10\/2026.*cache de reserva/);
+  assert.match(c.els.get('m-fonte').textContent,/última consulta válida em cache/);
 });

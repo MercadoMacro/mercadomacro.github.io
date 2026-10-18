@@ -1,6 +1,6 @@
 /* Calculadora pública de renda fixa (página /calculadora-renda-fixa, sem login).
    Comparação simplificada de renda fixa, independente da calculadora do terminal.
-   Dados: CDI (SGS 4389), Selic meta (432), Selic efetiva anualizada (1178,
+   Dados: CDI (SGS 4389), Selic meta (432), Selic efetiva (Selic apurada; SGS 1178,
    com reserva na taxa diária SGS 11, capitalizada em 252 dias úteis)
    e IPCA 12 meses (13522) do Banco Central,
    pelo worker da segunda conta, com o worker principal e o BCB direto como reserva. */
@@ -11,13 +11,14 @@
   var $ = function (id) { return document.getElementById(id); };
   var ok = function (x) { return typeof x === 'number' && isFinite(x); };
   var M = { cdi: NaN, selic: NaN, selicEfetiva: NaN, ipca: NaN };
+  var selicReserva = false;
 
   function okJson(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
   function ultimo(j) { var o = Array.isArray(j) ? j[j.length - 1] : null; var v = o ? parseFloat(o.valor) : NaN; if (!isFinite(v)) throw new Error('sem valor'); return { v: v, d: o.data }; }
   function serie(c) {
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/1?formato=json';
     var fontes = [API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/1'), direto];
-    // A vitrine não libera a série 1178; o worker principal e o BCB já a atendem.
+    // A vitrine não libera a série 1178; o worker principal permite essa consulta.
     if (c !== 1178) fontes.unshift(VT + '/bcb?c=' + c + '&n=1');
     function tentar(i) {
       var ctrl = new AbortController();
@@ -33,15 +34,23 @@
   }
 
   function selicEfetiva() {
-    return serie(1178).then(function (r) {
-      r.fonte = 'SGS 1178';
-      return r;
-    }).catch(function () {
-      // É a própria Selic efetiva diária, não CDI nem meta do Copom.
-      return serie(11).then(function (r) {
-        var anual = (Math.pow(1 + r.v / 100, 252) - 1) * 100;
-        if (!ok(anual)) throw new Error('Selic diária inválida');
-        return { v: anual, d: r.d, fonte: 'SGS 11 anualizada em 252 dias úteis' };
+    var ctrl = new AbortController();
+    var timeout = setTimeout(function () { ctrl.abort(); }, 8000);
+    return fetch('/api/publico/selic', { signal: ctrl.signal }).then(okJson).then(function (j) {
+      if (!ok(j.valor) || j.valor < 0 || !/^\d{2}\/\d{2}\/\d{4}$/.test(j.data || '')) throw new Error('Selic inválida');
+      selicReserva = j.reserva === true;
+      return { v:j.valor, d:j.data, fonte:j.fonte + (selicReserva ? ' (última consulta válida em cache)' : '') };
+    }).finally(function () { clearTimeout(timeout); }).catch(function () {
+      return serie(1178).then(function (r) {
+        r.fonte = 'SGS 1178';
+        return r;
+      }).catch(function () {
+        // É a própria Selic efetiva diária, não CDI nem meta do Copom.
+        return serie(11).then(function (r) {
+          var anual = (Math.pow(1 + r.v / 100, 252) - 1) * 100;
+          if (!ok(anual)) throw new Error('Selic diária inválida');
+          return { v: anual, d: r.d, fonte: 'SGS 11 anualizada em 252 dias úteis' };
+        });
       });
     });
   }
@@ -126,11 +135,12 @@
       M[i[0]] = r.v / 100;
       $(i[2]).textContent = nf(r.v, 2) + i[4];
       $(i[2]).title = 'Referência: ' + r.d + (r.fonte ? ' · ' + r.fonte : '');
+      if (i[0] === 'selicEfetiva') $('m-selic-data').textContent = r.d + (selicReserva ? ' · cache de reserva' : '');
     }).catch(function () {});
   })).then(function () {
     var faltam = indicadores.filter(function (i) { return !ok(M[i[0]]); }).map(function (i) { return i[3]; });
     $('m-fonte').textContent = faltam.length === indicadores.length ? 'Banco Central fora do ar agora. Tente de novo em instantes.'
-      : 'Banco Central · datas de referência nos indicadores' + (faltam.length ? ' · Indisponível: ' + faltam.join(', ') + '.' : '');
+      : 'Banco Central · datas de referência nos indicadores' + (selicReserva ? ' · Selic: última consulta válida em cache' : '') + (faltam.length ? ' · Indisponível: ' + faltam.join(', ') + '.' : '');
     desenha();
   });
 })();

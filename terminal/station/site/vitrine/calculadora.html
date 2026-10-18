@@ -57,7 +57,7 @@
         </div>
       </div>
     </div>
-    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Selic meta <b id="m-selic">—</b></span><span>Selic efetiva <b id="m-selic-efetiva">—</b></span><span>IPCA 12 meses <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
+    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Selic meta <b id="m-selic">—</b></span><span>Selic efetiva <b id="m-selic-efetiva">—</b> <small id="m-selic-data"></small></span><span>IPCA 12 meses <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
   </div>
 
   <h2>Quanto você teria no fim</h2>
@@ -79,13 +79,13 @@
     <h3>Como o Imposto de Renda é cobrado?</h3>
     <p>Sobre o rendimento, e a alíquota cai com o tempo: 22,5% até 6 meses, 20% até 1 ano, 17,5% até 2 anos e 15% acima disso.</p>
     <h3>De onde vêm o CDI, a Selic e o IPCA?</h3>
-    <p>Das séries oficiais do Banco Central: CDI (SGS 4389), meta Selic (432), Selic efetiva anualizada na base de 252 dias úteis (1178) e IPCA em 12 meses (13522), buscadas toda vez que a página abre. Se a série 1178 falhar, usamos a Selic efetiva diária (SGS 11), anualizada por juros compostos em 252 dias úteis.</p>
+    <p>Do Banco Central: CDI (SGS 4389), meta Selic (432) e IPCA em 12 meses (13522). A Selic efetiva vem da publicação oficial Selic apurada, com data de referência visível. Se essa fonte falhar, tentamos a série anualizada SGS 1178 ou a Selic diária SGS 11, capitalizada em 252 dias úteis. Uma consulta válida guardada em cache pode ser usada durante falhas, sempre identificada pela data e pelo aviso de reserva.</p>
   </section>
 </main>
 <footer class="vt-foot">
   <img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="130" height="28" loading="lazy">
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
 </footer>
-<script src="/vitrine/calc-rf.js?v=4"></script>
+<script src="/vitrine/calc-rf.js?v=5"></script>
 </body>
 </html>
