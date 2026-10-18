@@ -3,9 +3,9 @@
    e usa a cópia guardada só quando está sem internet.
    Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
-const CACHE = 'mm-site-v48';
+const CACHE = 'mm-site-v49';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'estilo.css?v=31', 'app.js?v=32', 'ajustes.js?v=8', 'extras.js?v=10', 'cabecalho.js?v=1', 'noticias2.js?v=2', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=1', 'mesa-layout.js?v=1', 'mesa-layout.css?v=1', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=2', 'watchlist-table.css?v=2',
+const BASE = ['./', 'index.html', 'estilo.css?v=31', 'app.js?v=32', 'ajustes.js?v=8', 'extras.js?v=12', 'cabecalho.js?v=1', 'noticias2.js?v=2', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=1', 'watchlists-core.js?v=1', 'watchlists-store.js?v=1', 'watchlists-ui.js?v=1', 'watchlists-ui.css?v=1', 'mesa-layout.js?v=1', 'mesa-layout.css?v=1', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=2', 'watchlist-table.css?v=2',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

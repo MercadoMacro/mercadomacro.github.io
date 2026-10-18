@@ -28,63 +28,23 @@
      1. MINHA WATCHLIST
      ========================================================= */
   const WL3_KEY = 'watch_3m_v1', WL_MAX = 30;
-  let WL_KEY = null, WL_TS_KEY = null, wlUser = null, wlReady = false;
-  let wl = [];
-  // As chaves antigas não têm dono conhecido: não as importar automaticamente para uma conta.
-  // São preservadas no navegador; a lista já sincronizada continua disponível no servidor.
-  // a lista também fica na conta (/api/conta/dados): muda aqui, aparece igual no celular e no computador
-  let wlPushT = null;
-  const wlPush = () => {
-    clearTimeout(wlPushT);
-    wlPushT = setTimeout(() => {
-      if (!wlReady || window.__mmLoggingOut) return;
-      let ts = 0; try { ts = +localStorage.getItem(WL_TS_KEY) || Date.now(); } catch (e) { ts = Date.now(); }
-      fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario: wlUser, k: 'watchlist', v: wl.map((x) => ({ s: x.s, n: x.n || '' })), ts }) })
-        .then((r) => {
-          if (r.status === 401 || r.status === 409) { wlReady = false; wl = []; wlRender(); wlStars(); }
-          if (!r.ok) throw new Error('Falha ao sincronizar');
-        }).catch(() => say('Watchlist não sincronizada. Reabra o painel para tentar novamente.', 'warning'));
-    }, 1200);
-  };
+  let wlUser = null, wlReady = false, wl = [], wlListId = 'main';
+  const listsStore = new window.MMWatchlistsStore({
+    changed: state => {
+      wlUser = state.user; wlReady = state.ready; wl = state.items; wlListId = state.active;
+      wlRender(); wlStars();
+      if (state.quotes && document.getElementById('watch-panel')?.classList.contains('active')) {
+        if (typeof wlLast !== 'undefined') wlLast = 0;
+        wlRefresh();
+      }
+    },
+    notify: message => say(message, 'warning')
+  });
   const wlSave = (sync = true) => {
     if (!wlReady || window.__mmLoggingOut) return;
-    try { localStorage.setItem(WL_KEY, JSON.stringify(wl)); if (sync) localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ }
-    if (sync) wlPush();
+    try { listsStore.saveItems(wl, sync); } catch (e) { say(e.message, 'warning'); }
   };
-  // ao abrir: fica com a versão mais nova entre a do navegador e a da conta
-  async function wlSync() {
-    try {
-      const r = await fetch('/api/conta/dados?k=watchlist', { credentials: 'same-origin', cache: 'no-store' });
-      if (!r.ok) return;
-      const j = await r.json();
-      if (!Number.isSafeInteger(j.usuario) || j.usuario <= 0) return;
-      if (wlUser !== j.usuario) {
-        clearTimeout(wlPushT);
-        wlUser = j.usuario;
-        WL_KEY = 'trader_watchlist_v2:' + wlUser;
-        WL_TS_KEY = 'trader_watchlist_ts_v2:' + wlUser;
-        wl = [];
-        try {
-          const local = JSON.parse(localStorage.getItem(WL_KEY) || '[]');
-          if (Array.isArray(local)) wl = local.filter((x) => x && typeof x.s === 'string').slice(0, WL_MAX);
-        } catch (e) { /* sem dados locais desta conta */ }
-      }
-      wlReady = true;
-      let lts = 0; try { lts = +localStorage.getItem(WL_TS_KEY) || 0; } catch (e) { /* sem acesso */ }
-      if (Array.isArray(j.v) && j.ts > lts) {
-        wl = j.v.filter((x) => x && x.s).slice(0, WL_MAX);
-        try { localStorage.setItem(WL_TS_KEY, String(j.ts)); } catch (e) { /* cheio */ }
-        wlSave(false); wlRender(); wlStars();
-      } else if ((!j.ts || lts > j.ts) && (wl.length || lts)) {
-        if (!lts) { try { localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ } }
-        wlPush();
-      }
-      wlRender(); wlStars();
-      // A lista pode vir do cache da própria conta com o mesmo timestamp do servidor.
-      // Após confirmar a identidade, sempre solicita a cotação da aba já aberta.
-      if (document.getElementById('watch-panel')?.classList.contains('active')) wlRefresh();
-    } catch (e) { /* sem identidade confirmada, não lê nem envia listas locais */ }
-  }
+  const wlSync = () => listsStore.sync();
   const inWl = (s) => wl.some((x) => x.s === s);
   const grid = document.getElementById('grid-watch');
   const ALIAS = {
@@ -142,8 +102,28 @@
   }
   window.addEventListener('mm-watchlist-table-request', wlTablePublish);
 
+  function wlListsPublish() {
+    const ready = listsStore.writable;
+    const add = document.getElementById('wl-add-btn'), input = document.getElementById('wl-input');
+    if (add) add.disabled = !ready;
+    if (input) input.disabled = !ready;
+    window.dispatchEvent(new CustomEvent('mm-watchlists-state', { detail: listsStore.state() }));
+  }
+  window.addEventListener('mm-watchlists-request', wlListsPublish);
+  window.addEventListener('mm-watchlists-action', e => {
+    const a = e.detail || {};
+    try {
+      if (a.type === 'select') listsStore.select(a.id);
+      else if (a.type === 'create') listsStore.create(a.name, a.id);
+      else if (a.type === 'rename') listsStore.rename(a.id, a.name);
+      else if (a.type === 'remove') listsStore.remove(a.id);
+      else if (a.type === 'retry') { if (listsStore.ready) listsStore.push(); else listsStore.sync(); }
+    } catch (error) { say(error.message, 'warning'); }
+  });
+  window.addEventListener('online', () => { if (listsStore.error) { if (listsStore.ready) listsStore.push(); else listsStore.sync(); } });
   function wlRender() {
     wlTablePublish();
+    wlListsPublish();
     if (!grid) return;
     const n = wl.length;
     const cnt = document.getElementById('m-count-watch');
@@ -164,15 +144,15 @@
     wlStars();
   }
   async function wlRefresh() {
-    if (!grid || !wl.length || wlBusy) return;
+    if (!wlReady || window.__mmLoggingOut || !grid || !wl.length || wlBusy) return;
     wlBusy = true;
-    const tableOwner = wlUser;
+    const tableOwner = wlUser, tableList = wlListId;
     wlTableFresh = new Set();
     wlTablePublish();
     document.getElementById('wl-refresh-btn')?.classList.add('busy');
     try {
       const r = await wlFetch(wl.map((x) => x.s));
-      if (tableOwner !== wlUser || !wlReady || window.__mmLoggingOut) return;
+      if (tableOwner !== wlUser || tableList !== wlListId || !wlReady || window.__mmLoggingOut) return;
       wlTableOwner = tableOwner;
       let changed = false;
       wl.forEach((it) => {
@@ -204,12 +184,15 @@
         if (old && old.value !== undefined && typeof markStale === 'function') markStale(card, old.ts);
         else if (!old) applyQuoteToCard(card, null);
       });
-    } finally { wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); wlTablePublish(); }
+    } finally {
+      wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); wlTablePublish();
+      if ((tableOwner !== wlUser || tableList !== wlListId) && wlReady && !window.__mmLoggingOut && document.getElementById('watch-panel')?.classList.contains('active')) setTimeout(wlRefresh, 0);
+    }
     wl3mEnsure().then(wlDecorate);
   }
   async function wlAdd(raw, name, quiet) {
-    if (!wlReady || window.__mmLoggingOut) { say('Aguarde a identificação da conta. Se necessário, reabra o painel.', 'warning'); return; }
-    const s = normSym(raw);
+    if (!listsStore.writable) { say(listsStore.migrating ? 'Preparando suas listas na conta. Aguarde a sincronização.' : 'Aguarde a identificação da conta. Se necessário, reabra o painel.', 'warning'); return; }
+    const s = normSym(raw), targetOwner = wlUser, targetList = wlListId;
     if (!s) return;
     if (inWl(s)) { say(`${nice(s)} já está na watchlist`, 'info'); return; }
     if (wl.length >= WL_MAX) { say(`A watchlist aceita até ${WL_MAX} ativos`, 'warning'); return; }
@@ -218,19 +201,23 @@
       const btn = document.getElementById('wl-add-btn'); btn?.classList.add('busy');
       try {
         const r = await wlFetch([s]);
+        if (targetOwner !== wlUser || targetList !== wlListId || !listsStore.writable) { say('A lista mudou. Adicione o ativo novamente.', 'warning'); return; }
         if (!r[s]) { say(`Não encontrei "${raw}". Use o código do Yahoo (ex.: PETR4, AAPL, BTC, ^BVSP).`, 'warning'); return; }
-        wlMemo[s] = { ...r[s].v, ts: Date.now() };
+        wlMemo[s] = { ...r[s].v, quoteAt: r[s].v.ts, ts: Date.now() };
+        if (wlTableOwner !== wlUser) wlTableFresh = new Set();
+        wlTableOwner = wlUser; wlTableFresh.add(s);
         name = r[s].name;
       } catch (e) { say('Sem conexão com o servidor de cotações agora. Tente de novo.', 'danger'); return; }
       finally { btn?.classList.remove('busy'); }
     }
-    wl.push({ s, n: name || '' });
+    if (targetOwner !== wlUser || targetList !== wlListId || !listsStore.writable || inWl(s) || wl.length >= WL_MAX) return;
+    wl.push({ s, n: (name || '').slice(0,80) });
     wlSave(); wlRender();
     if (!quiet) say(`${name || nice(s)} entrou na watchlist`, 'success');
     if (!wlMemo[s]) wlRefresh(); else wl3mEnsure().then(wlDecorate);
   }
   function wlRemove(s) {
-    if (!wlReady || window.__mmLoggingOut) return;
+    if (!listsStore.writable) return;
     const it = wl.find((x) => x.s === s);
     wl = wl.filter((x) => x.s !== s);
     wlSave(); wlRender();

@@ -378,7 +378,18 @@ function cookieSessao(tok, maxAge) {
 /* ---------------- dados do usuário guardados na conta (hoje só a watchlist) ---------------- */
 // tabela dados_usuario(usuario_id, chave, valor, ts): o site manda a lista ao mudar e busca ao abrir,
 // e fica com a versão mais nova (ts em milissegundos, do navegador que mudou por último)
-const CHAVES_DADOS = { watchlist: (v) => Array.isArray(v) && v.length <= 30 && v.every((x) => x && typeof x.s === 'string' && x.s.length <= 24 && (x.n == null || (typeof x.n === 'string' && x.n.length <= 80))) };
+const CHAVES_DADOS = {
+  watchlist: v => Array.isArray(v) && v.length <= 30 && v.every(x => x && typeof x.s === 'string' && x.s.length <= 24 && (x.n == null || typeof x.n === 'string' && x.n.length <= 80)),
+  watchlists: v => {
+    if (!v || v.version !== 1 || !Array.isArray(v.lists) || !v.lists.length || v.lists.length > 10) return false;
+    const ids = new Set(), names = new Set();
+    return v.lists.every(l => {
+      const name = typeof l?.name === 'string' ? l.name.trim().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : '';
+      if (!l || typeof l.id !== 'string' || !/^[a-zA-Z0-9_-]{1,48}$/.test(l.id) || ids.has(l.id) || !name || l.name.length > 30 || names.has(name) || !CHAVES_DADOS.watchlist(l.items) || l.items.some(x => !x.s.length) || new Set(l.items.map(x => x.s)).size !== l.items.length) return false;
+      ids.add(l.id); names.add(name); return true;
+    });
+  }
+};
 async function apiDados(req, env, u) {
   const url = new URL(req.url);
   if (req.method === 'GET') {
@@ -390,15 +401,30 @@ async function apiDados(req, env, u) {
   if (req.method !== 'PUT') return json({ erro: 'Método não permitido.' }, 405);
   if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
   const txt = await req.text();
-  if (txt.length > 8000) return json({ erro: 'Lista grande demais.' }, 413);
+  if (txt.length > 64000) return json({ erro: 'Lista grande demais.' }, 413);
   let b;
   try { b = JSON.parse(txt); } catch (e) { return json({ erro: 'Dados inválidos.' }, 400); }
   // Uma aba antiga não pode gravar dados depois que outra conta entrou neste navegador.
   if (!b || b.usuario !== u.id) return json({ erro: 'A conta mudou. Reabra o painel antes de salvar.' }, 409);
   const ok = CHAVES_DADOS[b && b.k];
   const ts = Math.floor(Number(b && b.ts));
-  if (!ok || !ok(b.v) || !(ts > 0)) return json({ erro: 'Dados inválidos.' }, 400);
-  const v = b.v.map((x) => (x.n ? { s: x.s, n: x.n } : { s: x.s }));
+  if (!ok || !ok(b.v) || (!Number.isSafeInteger(ts) || ts <= 0)) return json({ erro: 'Dados inválidos.' }, 400);
+  if (b.k === 'watchlist' && txt.length > 8000) return json({ erro: 'Lista grande demais.' }, 413);
+  // Abas anteriores à migração não podem gravar na lista antiga e aparentar salvar.
+  if (b.k === 'watchlist') {
+    const migrated = await env.DB.prepare('SELECT ts FROM dados_usuario WHERE usuario_id = ? AND chave = ?').bind(u.id, 'watchlists').first();
+    if (migrated) return json({ erro: 'Suas listas usam uma versão mais nova. Recarregue o painel.' }, 409);
+  }
+  const cleanItems = items => items.map(x => x.n ? { s: x.s, n: x.n } : { s: x.s });
+  const v = b.k === 'watchlists'
+    ? { version: 1, lists: b.v.lists.map(l => ({ id: l.id, name: l.name.trim().replace(/\s+/g, ' '), items: cleanItems(l.items) })) }
+    : cleanItems(b.v);
+  if (b.k === 'watchlists' && b.migracao === true) {
+    const result = await env.DB.prepare('INSERT OR IGNORE INTO dados_usuario (usuario_id, chave, valor, ts) VALUES (?, ?, ?, ?)')
+      .bind(u.id, b.k, JSON.stringify(v), ts).run();
+    if (result.meta?.changes === 0) return json({ erro: 'As listas já existem. Atualize a versão da conta.', codigo: 'listas-existem' }, 409);
+    return json({ ok: true });
+  }
   // só grava se for mais nova que a guardada (dois aparelhos mudando ao mesmo tempo)
   await env.DB.prepare(`INSERT INTO dados_usuario (usuario_id, chave, valor, ts) VALUES (?, ?, ?, ?)
     ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
