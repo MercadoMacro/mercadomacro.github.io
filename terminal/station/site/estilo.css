@@ -2702,3 +2702,28 @@ html body .topbar.topbar .topbar-right :is(#summary-btn,#backup-btn,#theme-toggl
 @media (pointer:coarse) {
   .topbar-more > summary { min-width:44px; min-height:44px; }
 }
+
+/* Cards de mercado: hierarquia de leitura e procedência sem esconder datas. */
+#market-panel .quote-card { min-width:0; gap:8px; }
+#market-panel .qc-head > div { min-width:0; }
+#market-panel .qc-name { line-height:1.35; overflow-wrap:anywhere; }
+#market-panel .qc-symbol { font-size:10px; letter-spacing:.02em; }
+#market-panel .qc-price { font-size:24px; line-height:1.2; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+#market-panel .qc-footer { flex-wrap:wrap; gap:6px 10px; border-top:1px solid var(--line); }
+#market-panel .qc-change { font-size:14px; font-variant-numeric:tabular-nums; }
+#market-panel .qc-time { display:inline; font:11px/1.4 system-ui; letter-spacing:0; color:var(--text-2); }
+#market-panel .qc-source { font-size:11px; line-height:1.3; color:var(--text-2); }
+#market-panel .qc-source:empty { display:none; }
+#market-panel .qc-note { font-size:11px; color:var(--text-2); }
+#market-panel .qc-badge { font:11px/1.3 system-ui; letter-spacing:0; white-space:normal; text-align:center; }
+#market-panel .quote-card.stale { opacity:1; border-style:dashed; }
+#market-panel .quote-card.stale .qc-badge { color:var(--accent); background:var(--surface-2); }
+@media (max-width:640px) {
+  #market-panel .market-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  #market-panel .quote-card { padding:12px 10px; }
+  #market-panel .qc-head { flex-wrap:wrap; gap:4px; }
+  #market-panel .qc-name { font-size:12px; }
+  #market-panel .qc-price { font-size:20px !important; }
+  #market-panel .qc-change { font-size:13px; }
+}
+@media (max-width:359px) { #market-panel .market-grid { grid-template-columns:minmax(0,1fr); } }

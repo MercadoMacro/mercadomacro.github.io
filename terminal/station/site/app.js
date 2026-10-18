@@ -404,7 +404,7 @@ function parseYahooChart(data) {
     change: prevClose ? ((price - prevClose) / prevClose) * 100 : 0,
     ts: meta.regularMarketTime ? meta.regularMarketTime * 1000 : null,
     date: meta.regularMarketTime
-      ? new Date(meta.regularMarketTime * 1000).toLocaleDateString('pt-BR')
+      ? new Date(meta.regularMarketTime * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
       : '',
     sparkline: cDs,
     volume: vDs
@@ -516,10 +516,12 @@ try {
 function markStale(card, ts) {
   if (ts === null) { card.classList.remove('stale'); card.removeAttribute('title'); return; }
   card.classList.add('stale');
+  const badge = card.querySelector('[data-badge]');
+  if (badge) { badge.textContent = 'Salvo'; badge.className = 'qc-badge na'; }
   const t = ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
   card.title = `Falha ao atualizar. Mostrando o último dado${t ? ' de ' + t : ''}.`;
   const timeEl = card.querySelector('[data-time]');
-  if (timeEl && t) timeEl.textContent = 'dado de ' + t;
+  if (timeEl && t && !timeEl.textContent) timeEl.textContent = 'consulta ' + t;
 }
 let liveMode = localStorage.getItem(STORAGE.liveMode) !== 'false';
 let autoRefreshInterval = null;
@@ -638,15 +640,16 @@ function quoteCardHTML(item) {
           <div class="qc-name">${escapeHTML(item.name)}</div>
           <div class="qc-symbol">${escapeHTML(item.symbol || item.type.toUpperCase())}</div>
         </div>
-        <span class="qc-badge na" data-badge>—</span>
+        <span class="qc-badge na" data-badge>Carregando</span>
       </div>
       <div class="qc-price skeleton" data-price>—</div>
       <div class="qc-spark" data-spark></div>
       <div class="qc-note" data-note></div>
       <div class="qc-footer">
         <span class="qc-change na" data-change>—</span>
-        <span class="qc-time" data-time>—</span>
+        <span class="qc-time" data-time>Consultando…</span>
       </div>
+      <div class="qc-source">${escapeHTML(({yahoo:"Yahoo Finance",selic:"Banco Central",ipca:"Banco Central",fred:"FRED"})[item.type] || "")}</div>
     </div>
   `;
 }
@@ -675,12 +678,12 @@ function applyQuoteToCard(card, data, unit) {
   const timeEl = card.querySelector('[data-time]');
   const sparkEl = card.querySelector('[data-spark]');
 
-  if (!data || data.value === undefined || isNaN(data.value)) {
+  if (!data || data.value == null || !Number.isFinite(data.value)) {
     priceEl.textContent = '—';
     priceEl.classList.remove('skeleton');
     changeEl.textContent = '—';
     changeEl.className = 'qc-change na';
-    badgeEl.textContent = 'N/D';
+    badgeEl.textContent = 'Indisponível';
     badgeEl.className = 'qc-badge na';
     timeEl.textContent = 'sem dados';
     if (sparkEl) sparkEl.innerHTML = '';
@@ -711,7 +714,7 @@ function applyQuoteToCard(card, data, unit) {
   badgeEl.className = `qc-badge ${tone === 'eq' ? 'na' : tone}`;
   const noteEl = card.querySelector('[data-note]');
   if (noteEl) noteEl.textContent = data.note || '';
-  timeEl.textContent = data.date || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  timeEl.textContent = data.date || 'consulta ' + new Date(data.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   // Mini gráfico com volume + pontos de abertura/fechamento
   if (sparkEl) {
