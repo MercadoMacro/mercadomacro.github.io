@@ -75,12 +75,14 @@
         wl = j.v.filter((x) => x && x.s).slice(0, WL_MAX);
         try { localStorage.setItem(WL_TS_KEY, String(j.ts)); } catch (e) { /* cheio */ }
         wlSave(false); wlRender(); wlStars();
-        if (document.getElementById('watch-panel')?.classList.contains('active')) wlRefresh();
       } else if ((!j.ts || lts > j.ts) && (wl.length || lts)) {
         if (!lts) { try { localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ } }
         wlPush();
       }
       wlRender(); wlStars();
+      // A lista pode vir do cache da própria conta com o mesmo timestamp do servidor.
+      // Após confirmar a identidade, sempre solicita a cotação da aba já aberta.
+      if (document.getElementById('watch-panel')?.classList.contains('active')) wlRefresh();
     } catch (e) { /* sem identidade confirmada, não lê nem envia listas locais */ }
   }
   const inWl = (s) => wl.some((x) => x.s === s);
@@ -356,9 +358,8 @@
     };
     setInterval(() => { if (wpOn() && !document.hidden && Date.now() - wlLast >= 5 * 60 * 1000) wlRefresh(); }, 30 * 1000);
     wlRender();
-    if (wpOn()) setTimeout(wlRefresh, 600);
     setTimeout(wlStars, 2500);
-    setTimeout(wlSync, 1500);
+    wlSync();
   }
 
   /* ---- gráfico do ativo (TradingView), aberto ao clicar num card da watchlist ---- */

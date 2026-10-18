@@ -5,14 +5,14 @@ import assert from 'node:assert/strict';
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const extras = read('site/extras.js');
 const watchCode = extras.slice(extras.indexOf('  const WL3_KEY ='), extras.indexOf('  const inWl ='));
-function watch({ user = 2, remote = null, ts = 0, local = [], fail = false } = {}) {
+function watch({ user = 2, remote = null, ts = 0, local = [], fail = false, active = false } = {}) {
   const data = new Map(local), writes = [], timers = new Map();
-  let timer = 0;
+  let timer = 0, refreshes = 0;
   const ctx = vm.createContext({
     localStorage: { getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v) },
-    window: {}, document: { getElementById: () => null },
+    window: {}, document: { getElementById: () => active ? { classList: { contains: () => true } } : null },
     setTimeout: fn => { timers.set(++timer, fn); return timer; }, clearTimeout: id => timers.delete(id),
-    wlRender() {}, wlStars() {}, wlRefresh() {}, say() {},
+    wlRender() {}, wlStars() {}, wlRefresh() { refreshes++; }, say() {},
     fetch: async (url, opts) => {
       if (fail) throw new Error('offline');
       if (opts.method === 'PUT') { writes.push(JSON.parse(opts.body)); return { ok: true }; }
@@ -20,7 +20,7 @@ function watch({ user = 2, remote = null, ts = 0, local = [], fail = false } = {
     }
   });
   vm.runInContext(watchCode, ctx);
-  return { ctx, data, writes, run: code => vm.runInContext(code, ctx), flush: async () => {
+  return { ctx, data, writes, refreshes: () => refreshes, run: code => vm.runInContext(code, ctx), flush: async () => {
     for (const [id, fn] of [...timers]) { timers.delete(id); await fn(); }
     await new Promise(resolve => setImmediate(resolve));
   } };
@@ -95,4 +95,21 @@ for (const [name, fetch] of [
 test('confirmed logout redirects to login',async()=>{
   const l=await logout(async()=>({ok:true,json:async()=>({ok:true})}));
   assert.deepEqual(l.redirects,['/entrar']);assert.equal(l.alerts.length,0);
+});
+
+test('watchlist aberta busca cotação imediatamente após confirmar lista local igual à remota', async () => {
+  const list = JSON.stringify([{s:'PETR4.SA'}]);
+  const w = watch({active:true, remote:[{s:'PETR4.SA'}], ts:2000, local:[['trader_watchlist_v2:2',list],['trader_watchlist_ts_v2:2','2000']]});
+  await w.run('wlSync()');
+  assert.equal(w.refreshes(),1);
+});
+test('lista remota mais nova também dispara apenas uma carga inicial', async () => {
+  const w = watch({active:true,remote:[{s:'AAPL'}],ts:2000});
+  await w.run('wlSync()'); assert.equal(w.refreshes(),1);
+});
+test('aba fechada ou identidade não confirmada não dispara carga inicial', async () => {
+  const hidden = watch({remote:[{s:'AAPL'}],ts:2000});
+  await hidden.run('wlSync()'); assert.equal(hidden.refreshes(),0);
+  const failed = watch({active:true,fail:true});
+  await failed.run('wlSync()'); assert.equal(failed.refreshes(),0);
 });
