@@ -173,7 +173,7 @@ $('#current-date').textContent = new Date().toLocaleDateString('pt-BR', { weekda
 
 function applyTheme(t) {
   document.body.classList.toggle('light', t === 'light');
-  $('#theme-toggle').innerHTML = t === 'light' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  $('#theme-toggle').querySelector('i').className = t === 'light' ? 'fas fa-sun' : 'fas fa-moon';
   localStorage.setItem(STORAGE.theme, t);
   if ($('#heatmap-panel')?.classList.contains('active')) {
     renderHeatmap(heatmapSource);

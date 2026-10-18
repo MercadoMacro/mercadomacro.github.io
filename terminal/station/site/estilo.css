@@ -2679,3 +2679,25 @@ body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 
 .pj-chave.br .pj-l { color:var(--text-3); }
 .pj-chave.br .pj-r { color:var(--text); }
 @media (max-width: 700px) { .pj-chave .pj-l, .pj-chave .pj-r { font-size:11px; } #pj-fonte { display:none; } }
+
+/* Nomes visíveis nas ações do topo, preservando os controles e a barra lateral. */
+html body .topbar.topbar .topbar-right .icon-btn.topbar-action {
+  width:auto; min-width:44px; min-height:44px; height:auto; padding:0 12px;
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+}
+.topbar-action-label { font-size:12px; font-weight:600; line-height:1.2; white-space:nowrap; }
+@media (min-width:901px) {
+  body.has-side .topbar-right #summary-btn,
+  body.has-side .topbar-right #backup-btn,
+  body.has-side .topbar-right #theme-toggle { display:none; }
+}
+@media (max-width:640px) {
+  html body .topbar.topbar {
+    grid-template-areas:"logo logo" "sub sub" "right right" "ticker ticker";
+  }
+  html body .topbar.topbar .topbar-right {
+    width:100%; flex-wrap:wrap; justify-content:flex-start; gap:6px; padding-top:6px;
+  }
+  html body .topbar.topbar .topbar-right .icon-btn.topbar-action { height:44px; padding:0 10px; }
+  html body .topbar.topbar #summary-btn { display:none; }
+}
