@@ -3,9 +3,9 @@
    e usa a cópia guardada só quando está sem internet.
    Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
-const CACHE = 'mm-site-v39';
+const CACHE = 'mm-site-v40';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'estilo.css?v=28', 'app.js?v=28', 'ajustes.js?v=6', 'extras.js?v=7', 'cabecalho.js?v=1', 'noticias2.js?v=2', 'topo-acoes.js?v=1',
+const BASE = ['./', 'index.html', 'estilo.css?v=29', 'app.js?v=29', 'ajustes.js?v=6', 'extras.js?v=7', 'cabecalho.js?v=1', 'noticias2.js?v=2', 'topo-acoes.js?v=1',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

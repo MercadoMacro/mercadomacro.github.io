@@ -2712,8 +2712,6 @@ html body .topbar.topbar .topbar-right :is(#summary-btn,#backup-btn,#theme-toggl
 #market-panel .qc-footer { flex-wrap:wrap; gap:6px 10px; border-top:1px solid var(--line); }
 #market-panel .qc-change { font-size:14px; font-variant-numeric:tabular-nums; }
 #market-panel .qc-time { display:inline; font:11px/1.4 system-ui; letter-spacing:0; color:var(--text-2); }
-#market-panel .qc-source { font-size:11px; line-height:1.3; color:var(--text-2); }
-#market-panel .qc-source:empty { display:none; }
 #market-panel .qc-note { font-size:11px; color:var(--text-2); }
 #market-panel .qc-badge { font:11px/1.3 system-ui; letter-spacing:0; white-space:normal; text-align:center; }
 #market-panel .quote-card.stale { opacity:1; border-style:dashed; }
