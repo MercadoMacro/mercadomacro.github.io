@@ -4310,38 +4310,6 @@ window.__onTabSwitch = (tabId) => {
   }
 
   let items = [], sel = 0;
-  let bionicOn = false;
-  try { bionicOn = localStorage.getItem('mm_bionic_reading') === '1'; } catch (_) {}
-
-  function applyBionic(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(n => {
-      if (!n.nodeValue.trim()) return;
-      if (n.parentElement && n.parentElement.tagName === 'B') return;
-      const frag = document.createDocumentFragment();
-      n.nodeValue.split(/(\s+)/).forEach(w => {
-        if (!w.trim() || w.length <= 1 || /^[\d.,%+-]+$/.test(w)) {
-          frag.appendChild(document.createTextNode(w));
-          return;
-        }
-        const clean = w.replace(/[^\p{L}\p{N}]/gu, '');
-        if (clean.length <= 1) {
-          frag.appendChild(document.createTextNode(w));
-          return;
-        }
-        const cut = Math.max(1, Math.ceil(clean.length * 0.45));
-        const b = document.createElement('b');
-        b.textContent = w.slice(0, cut);
-        frag.append(b, document.createTextNode(w.slice(cut)));
-      });
-      n.parentNode.replaceChild(frag, n);
-    });
-    return div.innerHTML;
-  }
 
   function render() {
     const q = norm($('#cmdk-q').value.trim());
@@ -4442,6 +4410,39 @@ function newsReadMins(n) {
       else { if (inList) { html += '</ul>'; inList = false; } html += `<p>${fmtPara(p)}</p>`; }
     });
     return html + (inList ? '</ul>' : '');
+  }
+
+  let bionicOn = false;
+  try { bionicOn = localStorage.getItem('mm_bionic_reading') === '1'; } catch (_) {}
+
+  function applyBionic(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n => {
+      if (!n.nodeValue.trim()) return;
+      if (n.parentElement && n.parentElement.tagName === 'B') return;
+      const frag = document.createDocumentFragment();
+      n.nodeValue.split(/(\s+)/).forEach(w => {
+        if (!w.trim() || w.length <= 1 || /^[\d.,%+-]+$/.test(w)) {
+          frag.appendChild(document.createTextNode(w));
+          return;
+        }
+        const clean = w.replace(/[^\p{L}\p{N}]/gu, '');
+        if (clean.length <= 1) {
+          frag.appendChild(document.createTextNode(w));
+          return;
+        }
+        const cut = Math.max(1, Math.ceil(clean.length * 0.45));
+        const b = document.createElement('b');
+        b.textContent = w.slice(0, cut);
+        frag.append(b, document.createTextNode(w.slice(cut)));
+      });
+      n.parentNode.replaceChild(frag, n);
+    });
+    return div.innerHTML;
   }
 
   function render() {
