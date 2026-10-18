@@ -1,3 +1,4 @@
+import { limitarConsumo } from './rate-limit.js';
 // cors-proxy-worker.js  (v5: + /ind/bundle, /history)
 // Proxy com endpoint em LOTE (/quotes), cache de borda, endpoints dedicados (FRED, RSS)
 // e TRAVA DE ORIGEM: só o seu painel na Netlify (e localhost, para testes) pode usar.
@@ -21,9 +22,10 @@ function corsFor(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Vary': 'Origin',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': '*',
-    'Access-Control-Max-Age': '86400'
+    'Access-Control-Max-Age': '86400',
+    'Access-Control-Expose-Headers': 'Retry-After, X-Cache, X-Reserva'
   };
 }
 
@@ -551,6 +553,12 @@ const rotas = async (request, env, ctx) => {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });
     }
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return json({ error: 'Método não permitido' }, 405, cors, { Allow: 'GET, HEAD, OPTIONS' });
+    }
+    const limitado = await limitarConsumo(request, env, cors);
+    if (limitado) return limitado;
 
     // =========================================================
     // ENDPOINT: /quotes  (lote, com cache)

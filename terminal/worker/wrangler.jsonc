@@ -6,5 +6,11 @@
   "name": "shrill-meadow-89c1",
   "main": "shrill-meadow-89c1.js",
   "compatibility_date": "2025-06-01",
-  "keep_vars": true
+  "keep_vars": true,
+  // Valores iniciais generosos para redes compartilhadas. Cada contador é por IP/região.
+  "ratelimits": [
+    { "name": "API_RATE_GENERAL", "namespace_id": "2026101801", "simple": { "limit": 600, "period": 60 } },
+    { "name": "API_RATE_HISTORY", "namespace_id": "2026101802", "simple": { "limit": 180, "period": 60 } },
+    { "name": "API_RATE_PREMIUM", "namespace_id": "2026101803", "simple": { "limit": 60, "period": 60 } }
+  ]
 }

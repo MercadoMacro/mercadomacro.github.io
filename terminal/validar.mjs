@@ -78,7 +78,11 @@ try {
     for (const p of [join(worker,'shrill-meadow-89c1.js'),join(worker,'wrangler.jsonc')]) {
       if (!existsSync(p) || !readFileSync(p,'utf8').trim()) throw new Error(`Arquivo obrigatório ausente ou vazio: ${p}`);
     }
-    console.log(`Worker de dados: ${scripts(arquivos(worker),true)} scripts conferidos.`);
+    const lista = arquivos(worker);
+    console.log(`Worker de dados: ${scripts(lista,true)} scripts conferidos.`);
+    const suites = lista.filter(p => /\.test\.mjs$/.test(p));
+    if (!suites.length) throw new Error('Nenhuma suíte de testes do Worker foi encontrada.');
+    executar(['--test', ...suites]);
   }
   console.log('Validação concluída. Nenhum arquivo foi publicado.');
 } catch (e) {
