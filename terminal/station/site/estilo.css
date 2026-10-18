@@ -2725,3 +2725,9 @@ html body .topbar.topbar .topbar-right :is(#summary-btn,#backup-btn,#theme-toggl
   #market-panel .qc-change { font-size:13px; }
 }
 @media (max-width:359px) { #market-panel .market-grid { grid-template-columns:minmax(0,1fr); } }
+
+/* Detalhes opcionais: ocultos até o usuário ativar explicitamente nos Ajustes. */
+#market-panel .qc-source, #market-panel .qc-time { display:none; }
+html[data-card-source="on"] #market-panel .qc-source { display:block; font:11px/1.3 system-ui; color:var(--text-2); }
+html[data-card-source="on"] #market-panel .qc-source:empty { display:none; }
+html[data-card-time="on"] #market-panel .qc-time { display:inline; }

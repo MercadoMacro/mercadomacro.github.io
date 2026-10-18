@@ -649,6 +649,7 @@ function quoteCardHTML(item) {
         <span class="qc-change na" data-change>—</span>
         <span class="qc-time" data-time>Consultando…</span>
       </div>
+      <div class="qc-source">${escapeHTML(({yahoo:"Yahoo Finance",selic:"Banco Central",ipca:"Banco Central",fred:"FRED"})[item.type] || "")}</div>
     </div>
   `;
 }

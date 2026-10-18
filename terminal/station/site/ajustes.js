@@ -13,7 +13,7 @@
   const KEY = 'trader_prefs_v1', IMG_KEY = 'trader_wallpaper_img';
   const DEF = {
     mode: 'manual', dayFrom: 7, dayTo: 19, accent: 'ambar', wp: 'grade', wpOp: 1, wpUrl: '', wpDim: 55, wpBlur: 0,
-    glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frases: 'on', startTab: ''
+    cardSource: false, cardTime: false, glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frases: 'on', startTab: ''
   };
   let P;
   try { P = { ...DEF, ...(JSON.parse(localStorage.getItem(KEY) || '{}') || {}) }; } catch (e) { P = { ...DEF }; }
@@ -53,6 +53,8 @@
     set('updown', P.updown !== 'padrao' ? P.updown : null);
     set('motion', P.motion === 'off' ? 'off' : null);
     set('ticker', P.ticker === 'off' ? 'off' : null);
+    set('cardSource', P.cardSource === true ? 'on' : null);
+    set('cardTime', P.cardTime === true ? 'on' : null);
   }
   // tema: o painel principal guarda escuro/claro; aqui decidimos quando é automático
   const wantTheme = () => (P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -133,6 +135,11 @@
         <div class="aj-row"><span>Alta e baixa</span>${seg('updown', [['padrao', 'Verde e vermelho'], ['cb', 'Azul e laranja'], ['asia', 'Invertido']], P.updown)}</div>
         <div class="aj-updown"><span class="up">+1,25%</span><span class="dn">−0,80%</span><em>${P.updown === 'cb' ? 'Mais fácil de distinguir para quem tem daltonismo.' : P.updown === 'asia' ? 'Padrão da China e do Japão: vermelho sobe, verde cai.' : 'Padrão brasileiro e americano.'}</em></div>
         ${sw('motion', P.motion !== 'off', 'Animações e transições')}
+      </section>
+      <section class="aj-sec">
+        <h3>Exibição dos cards</h3>
+        ${sw('cardSource', P.cardSource === true, 'Mostrar fonte')}
+        ${sw('cardTime', P.cardTime === true, 'Mostrar data e horário')}
       </section>
       <section class="aj-sec">
         <h3>Painel</h3>
@@ -223,6 +230,7 @@
     if (b.dataset.toggle) {
       const k = b.dataset.toggle;
       if (k === 'glass') P.glass = !P.glass;
+      if (k === 'cardSource' || k === 'cardTime') P[k] = P[k] !== true;
       if (k === 'motion') P.motion = P.motion === 'off' ? 'on' : 'off';
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frases') { P.frases = P.frases === 'off' ? 'on' : 'off'; save(); window.__frasesSync?.(); }

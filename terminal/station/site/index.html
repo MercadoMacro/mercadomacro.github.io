@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="estilo.css?v=29">
+<link rel="stylesheet" href="estilo.css?v=30">
 <style id="prefs-css">
   /* =====================================================================
      AJUSTES DO PAINEL (engrenagem): cor de destaque, papel de parede,
@@ -135,6 +135,8 @@
     if (p.updown && p.updown !== 'padrao') d.updown = p.updown;
     if (p.motion === 'off') d.motion = 'off';
     if (p.ticker === 'off') d.ticker = 'off';
+    if (p.cardSource === true) d.cardSource = 'on';
+    if (p.cardTime === true) d.cardTime = 'on';
     // tema automático (sistema) ou por horário: decide antes do script principal ler o tema
     if (p.mode === 'auto') localStorage.setItem('trader_theme', matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     if (p.mode === 'hour') { const hr = new Date().getHours(); localStorage.setItem('trader_theme', hr >= (p.dayFrom ?? 7) && hr < (p.dayTo ?? 19) ? 'light' : 'dark'); }
@@ -749,8 +751,8 @@
 <div id="toast-container"></div>
 
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
-<script src="app.js?v=29"></script>
-<script src="ajustes.js?v=6"></script>
+<script src="app.js?v=30"></script>
+<script src="ajustes.js?v=7"></script>
 <script src="extras.js?v=7"></script>
 <script src="cabecalho.js?v=1"></script>
 <script src="noticias2.js?v=2"></script>
