@@ -46,3 +46,21 @@ O endereço mercadomacro.github.io agora só manda as pessoas para https://merca
      npx wrangler r2 object put mercadomacro-dados/fundamentos/24902.json --file=terminal/fundamentos/24902.json
      ```
      Ou configurando um binding R2 no Worker para servir os arquivos estáticos diretamente da borda sem depender do repositório Git.
+
+## Validação antes de publicar
+
+Na raiz do repositório, com Node.js instalado:
+
+```bash
+node terminal/validar.mjs
+```
+
+Esse comando confere os scripts de todas as subpastas do site, os módulos do servidor, os scripts de teste, os JSONs e manifestos e as referências locais de scripts e estilos no HTML. Depois executa todas as suítes `*.test.mjs` de `station/tests/`. Não exige login na Cloudflare e não publica arquivos.
+
+Para conferir também o servidor de dados:
+
+```bash
+node terminal/validar.mjs todos
+```
+
+Os workflows `publicar-site.yml` e `publicar-worker.yml` validam PRs destinados à `main`. No GitHub Actions, também montam cada Worker com `wrangler deploy --dry-run`, sem publicar. Só depois da validação bem-sucedida, um push ou disparo manual na `main` pode executar a etapa de publicação. Se faltar `CLOUDFLARE_API_TOKEN` ou `CLOUDFLARE_ACCOUNT_ID`, a publicação falha explicitamente, sem registrar sucesso enganoso.

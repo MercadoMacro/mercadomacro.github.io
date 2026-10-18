@@ -1,8 +1,4 @@
-# Publicação automática na Cloudflare: cada mudança em terminal/worker/ enviada ao GitHub vai para o ar.
-# Precisa de dois segredos do repositório (Settings > Secrets and variables > Actions):
-#   CLOUDFLARE_API_TOKEN  token da Cloudflare com o modelo "Edit Cloudflare Workers"
-#   CLOUDFLARE_ACCOUNT_ID ID da conta (aparece na página inicial do painel da Cloudflare)
-# Sem o token, o robô só avisa e não publica nada.
+# Valida PRs e só publica o servidor de dados depois das verificações.
 name: Publicar worker (Cloudflare)
 
 on:
@@ -10,17 +6,26 @@ on:
     branches: [main]
     paths:
       - 'terminal/worker/**'
+      - 'terminal/validar.mjs'
+      - '.github/workflows/publicar-worker.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terminal/worker/**'
+      - 'terminal/validar.mjs'
+      - '.github/workflows/publicar-worker.yml'
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: publicar-worker
+  group: publicar-worker-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publicar:
+  validar:
+    name: Validar worker de dados
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -28,22 +33,33 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - name: Conferir os arquivos (erro de sintaxe não vai para o ar)
+      - name: Conferir todos os scripts do Worker
+        run: node terminal/validar.mjs worker
+      - name: Montar Worker sem publicar
         working-directory: terminal/worker
-        run: cp shrill-meadow-89c1.js "$RUNNER_TEMP/w.mjs" && node --check "$RUNNER_TEMP/w.mjs"
-      - name: Conferir o token
-        id: token
+        run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker-validado"
+
+  publicar:
+    name: Publicar worker de dados
+    needs: validar
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Conferir credenciais de publicação
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::notice::Falta o segredo CLOUDFLARE_API_TOKEN no repositório. Nada foi publicado."
-            echo "ok=0" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=1" >> "$GITHUB_OUTPUT"
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT_ID" ]; then
+            echo "::error::Configure CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID. O Worker não foi publicado."
+            exit 1
           fi
       - name: Publicar na Cloudflare
-        if: steps.token.outputs.ok == '1'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
