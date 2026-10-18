@@ -103,6 +103,7 @@
   const nice = (s) => s.replace(/\.SA$/, '');
 
   let wlMemo = {}, wlBusy = false, wlLast = 0;
+  let wlRadarFresh = new Set(), wlRadarOwner = null;
   // 1 chamada em lote ao worker para todos os ativos da watchlist
   async function wlFetch(syms) {
     const out = {};
@@ -113,6 +114,7 @@
         try {
           const v = parseYahooChart(chart);
           const meta = chart?.chart?.result?.[0]?.meta || {};
+          v.referenceClose = meta.previousClose ?? meta.chartPreviousClose;
           out[sym] = { v, name: meta.shortName || meta.longName || '' };
         } catch (e) { /* sem dados para esse ativo */ }
       });
@@ -125,6 +127,7 @@
       .replace('<span class="qc-badge', `<button type="button" class="wl-x" data-wlrm="${esc(it.s)}" title="Tirar da watchlist" aria-label="Tirar ${esc(nice(it.s))} da watchlist"><i class="fas fa-times"></i></button><span class="qc-badge`);
   }
   function wlRender() {
+    wlRadarPublish();
     if (!grid) return;
     const n = wl.length;
     const cnt = document.getElementById('m-count-watch');
@@ -147,14 +150,20 @@
   async function wlRefresh() {
     if (!grid || !wl.length || wlBusy) return;
     wlBusy = true;
+    const radarOwner = wlUser;
+    wlRadarFresh = new Set();
+    wlRadarPublish();
     document.getElementById('wl-refresh-btn')?.classList.add('busy');
     try {
       const r = await wlFetch(wl.map((x) => x.s));
+      if (radarOwner !== wlUser || !wlReady || window.__mmLoggingOut) return;
+      wlRadarOwner = radarOwner;
       let changed = false;
       wl.forEach((it) => {
         const q = r[it.s];
         if (!q) return;
-        wlMemo[it.s] = { ...q.v, ts: Date.now() };
+        wlMemo[it.s] = { ...q.v, quoteAt: q.v.ts, ts: Date.now() };
+        wlRadarFresh.add(it.s);
         if (typeof yahooMemo !== 'undefined' && !yahooMemo[it.s]) yahooMemo[it.s] = wlMemo[it.s];
         if (q.name && !it.n) { it.n = q.name; changed = true; }
       });
@@ -179,8 +188,8 @@
         if (old && old.value !== undefined && typeof markStale === 'function') markStale(card, old.ts);
         else if (!old) applyQuoteToCard(card, null);
       });
-    } finally { wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); }
-    wl3mEnsure().then(wlDecorate);
+    } finally { wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); wlRadarPublish(); }
+    wl3mEnsure().then(() => { wlDecorate(); wlRadarPublish(); });
   }
   async function wlAdd(raw, name, quiet) {
     if (!wlReady || window.__mmLoggingOut) { say('Aguarde a identificação da conta. Se necessário, reabra o painel.', 'warning'); return; }
@@ -250,6 +259,24 @@
       try { localStorage.setItem(WL3_KEY, JSON.stringify(wl3)); } catch (e) { /* cheio */ }
     } finally { wl3Busy = false; }
   }
+
+  function wlRadarPublish() {
+    const allowed = wlReady && !window.__mmLoggingOut;
+    const rows = allowed ? wl.map(it => {
+      const q = wlMemo[it.s];
+      // Somente séries do cache de histórico, nunca sparklines ou valores interpolados.
+      const history = wl3?.data?.[it.s]
+        || (typeof mkt3m !== 'undefined' && mkt3m?.data?.[it.s])
+        || (typeof anaHist !== 'undefined' && anaHist?.data?.[it.s]) || null;
+      return { symbol: it.s, name: it.n || nice(it.s), history,
+        quote: q ? { value: q.value, quoteAt: q.quoteAt, referenceClose: q.referenceClose, fresh: wlRadarOwner === wlUser && wlRadarFresh.has(it.s) } : null };
+    }) : [];
+    window.dispatchEvent(new CustomEvent('mm-watchlist-radar', {
+      detail: { user: allowed ? wlUser : null, rows, loading: wlBusy || wl3Busy }
+    }));
+  }
+  window.addEventListener('mm-watchlist-radar-request', wlRadarPublish);
+
   function wl3Vals(sym) {
     const h = wl3?.data?.[sym];
     if (!h) return null;
