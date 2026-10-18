@@ -38,6 +38,8 @@ jobs:
       - name: Montar Worker sem publicar
         working-directory: terminal/worker
         run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker-validado"
+      - name: Conferir limitadores no runtime local sem consultar provedores
+        run: node terminal/worker/tests/smoke-runtime.mjs
 
   publicar:
     name: Publicar worker de dados
