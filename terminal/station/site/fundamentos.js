@@ -114,6 +114,36 @@
     return { mcap, aprox };
   }
 
+
+  // Mesmos dados e contas da aba Fundamentos, expostos para a consulta integrada do ativo.
+  const assetJobs = new Map();
+  window.getAssetFundamentals = async symbol => {
+    const ticker = String(symbol || '').toUpperCase().replace(/\.SA$/, '');
+    if (!/^[A-Z]{4}\d{1,2}$/.test(ticker)) return null;
+    if (assetJobs.has(ticker)) return assetJobs.get(ticker);
+    const job = (async () => {
+      if (!idx && !(await loadIndex())) throw new Error('Não foi possível carregar o índice de empresas.');
+      const entry = idx.empresas.find(e => e.tickers.includes(ticker));
+      if (!entry) return null;
+      const d = await loadDoc(entry.cvm);
+      // Uma falha de consulta não pode reaproveitar silenciosamente preços antigos para os múltiplos.
+      d.tickers.forEach(t => quotes.delete(t));
+      await loadQuotes(d.tickers);
+      const { mcap, aprox } = mercado(d), t = d.ttm || {}, b = d.balanco || {};
+      return { name: d.nome, reference: dmy(b.ref || t.ref), approx: !!aprox,
+        metrics: [
+          ['P/L', xx(div(mcap, t.lucro))],
+          ['P/VP', xx(div(mcap, b.pl), 2)],
+          ['ROE', pc(div(t.lucro, b.pl, 100), 1)],
+          ['Dívida líquida / EBITDA', d.financeira ? 'Não se aplica' : xx(div(b.div_liq, t.ebitda), 2)],
+          ['Margem líquida', pc(div(t.lucro, t.receita, 100), 1)],
+          ['Dividend yield (12m)', pc(div(t.proventos, mcap, 100), 1)]
+        ] };
+    })();
+    assetJobs.set(ticker, job);
+    try { return await job; } finally { if (assetJobs.get(ticker) === job) assetJobs.delete(ticker); }
+  };
+
   /* ---------------- desenho ---------------- */
   function shell() {
     root.innerHTML = `

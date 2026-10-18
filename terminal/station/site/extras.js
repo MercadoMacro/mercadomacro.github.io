@@ -416,7 +416,7 @@
       document.addEventListener('keydown', (e) => {
         if (!tvBox || tvBox.hidden) return;
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); wlChartClose(); }
-        else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) {
+        else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') && !document.activeElement?.closest('.asset-tabs')) {
           tvBox.querySelector(`[data-wlc="${e.key === 'ArrowRight' ? 'next' : 'prev'}"]`)?.click();
         }
       }, true);
@@ -444,13 +444,14 @@
       sc.async = true;
       sc.textContent = JSON.stringify({
         autosize: true, symbol: tv, interval: 'D', timezone: 'America/Sao_Paulo', theme: light ? 'light' : 'dark', style: '1', locale: 'br',
-        allow_symbol_change: true, details: true, hotlist: false, calendar: false, withdateranges: true, hide_side_toolbar: false,
+        allow_symbol_change: false, details: true, hotlist: false, calendar: false, withdateranges: true, hide_side_toolbar: false,
         studies: ['STD;SMA'], support_host: 'https://www.tradingview.com'
       });
       sc.onerror = () => { box.innerHTML = `<div class="wlc-load"><div>Não foi possível carregar o gráfico do TradingView agora.<br><a href="https://br.tradingview.com/chart/?symbol=${encodeURIComponent(tv)}" target="_blank" rel="noopener">Abrir no site do TradingView</a></div></div>`; tvLast = null; };
       box.querySelector('.tradingview-widget-container').appendChild(sc);
       tvLast = `${tv}|${light}`;
     }
+    window.enhanceAssetPanel?.(tvBox, sym, list, normSym);
     if (tvBox.hidden) {
       tvBox._focus = document.activeElement;
       tvBox.hidden = false;
