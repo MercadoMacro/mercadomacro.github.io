@@ -22,6 +22,17 @@ const PUBLICAS = {
 const ROTAS_LOGADO = /^\/(admin|conta|fechamento)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 
+// Consolida apenas endereços de páginas; CSS, scripts, imagens e login continuam nas próprias rotas.
+function enderecoPublico(p) {
+  if (['/index.html', '/vitrine', '/vitrine/', '/vitrine/index', '/vitrine/index.html'].includes(p)) return '/';
+  const paginas = { ...PUBLICAS, '/privacidade': ['/vitrine/privacidade'] };
+  for (const [destino, [arquivo]] of Object.entries(paginas)) {
+    if ([arquivo, arquivo + '/', arquivo + '.html', destino + '/', destino + '.html'].includes(p)) return destino;
+  }
+  return null;
+}
+
+
 export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
@@ -38,6 +49,11 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const p = url.pathname;
+    // Os arquivos internos continuam disponíveis ao binding ASSETS, sem expor URLs duplicadas.
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const destino = enderecoPublico(p);
+      if (destino) return Response.redirect('https://mercadomacro.com.br' + destino + url.search, 301);
+    }
     // um endereço só para o Google: www vai para o endereço sem www
     // endereços do site antigo que o Google ainda conhece vão para a página nova equivalente
     // os PDFs de relatórios antigos não existem mais: 410 avisa o Google para tirar da busca
