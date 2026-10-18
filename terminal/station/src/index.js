@@ -367,7 +367,7 @@ async function apiDados(req, env, u) {
     const k = url.searchParams.get('k') || '';
     if (!CHAVES_DADOS[k]) return json({ erro: 'Chave desconhecida.' }, 400);
     const r = await env.DB.prepare('SELECT valor, ts FROM dados_usuario WHERE usuario_id = ? AND chave = ?').bind(u.id, k).first();
-    return json(r ? { k, v: JSON.parse(r.valor), ts: r.ts } : { k, v: null, ts: 0 }, 200, { 'Cache-Control': 'no-store' });
+    return json(r ? { usuario: u.id, k, v: JSON.parse(r.valor), ts: r.ts } : { usuario: u.id, k, v: null, ts: 0 }, 200, { 'Cache-Control': 'no-store' });
   }
   if (req.method !== 'PUT') return json({ erro: 'Método não permitido.' }, 405);
   if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
@@ -375,6 +375,8 @@ async function apiDados(req, env, u) {
   if (txt.length > 8000) return json({ erro: 'Lista grande demais.' }, 413);
   let b;
   try { b = JSON.parse(txt); } catch (e) { return json({ erro: 'Dados inválidos.' }, 400); }
+  // Uma aba antiga não pode gravar dados depois que outra conta entrou neste navegador.
+  if (!b || b.usuario !== u.id) return json({ erro: 'A conta mudou. Reabra o painel antes de salvar.' }, 409);
   const ok = CHAVES_DADOS[b && b.k];
   const ts = Math.floor(Number(b && b.ts));
   if (!ok || !ok(b.v) || !(ts > 0)) return json({ erro: 'Dados inválidos.' }, 400);

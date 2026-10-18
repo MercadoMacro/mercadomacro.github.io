@@ -2,7 +2,7 @@
    EXTRAS DO SITE ANTIGO (Mercado Macro), refeitos para o painel
    1. Minha watchlist (aba própria): seus ativos, com cotação, mini gráfico do dia
       e de 3 meses, igual aos outros cards. Estrela em qualquer card adiciona ou tira.
-      Salva no navegador em "trader_watchlist_v1".
+      Salva no navegador em "trader_watchlist_v2:<usuario>", após confirmar a conta.
    2. Resumo semanal (aba própria): lê o arquivo resumo-semanal.txt (mesma pasta do index.html), com os dias da semana, leitura completa e cópia para WhatsApp.
    3. Frases: uma frase de investidor por vez abaixo das cotações do topo (arquivo frases.json).
       Liga e desliga em Ajustes > Painel.
@@ -27,20 +27,27 @@
   /* =========================================================
      1. MINHA WATCHLIST
      ========================================================= */
-  const WL_KEY = 'trader_watchlist_v1', WL3_KEY = 'watch_3m_v1', WL_MAX = 30;
+  const WL3_KEY = 'watch_3m_v1', WL_MAX = 30;
+  let WL_KEY = null, WL_TS_KEY = null, wlUser = null, wlReady = false;
   let wl = [];
-  try { wl = (JSON.parse(localStorage.getItem(WL_KEY) || '[]') || []).filter((x) => x && x.s); } catch (e) { wl = []; }
+  // As chaves antigas não têm dono conhecido: não as importar automaticamente para uma conta.
+  // São preservadas no navegador; a lista já sincronizada continua disponível no servidor.
   // a lista também fica na conta (/api/conta/dados): muda aqui, aparece igual no celular e no computador
-  const WL_TS_KEY = 'trader_watchlist_ts';
   let wlPushT = null;
   const wlPush = () => {
     clearTimeout(wlPushT);
     wlPushT = setTimeout(() => {
+      if (!wlReady || window.__mmLoggingOut) return;
       let ts = 0; try { ts = +localStorage.getItem(WL_TS_KEY) || Date.now(); } catch (e) { ts = Date.now(); }
-      fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: 'watchlist', v: wl.map((x) => ({ s: x.s, n: x.n || '' })), ts }) }).catch(() => {});
+      fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario: wlUser, k: 'watchlist', v: wl.map((x) => ({ s: x.s, n: x.n || '' })), ts }) })
+        .then((r) => {
+          if (r.status === 401 || r.status === 409) { wlReady = false; wl = []; wlRender(); wlStars(); }
+          if (!r.ok) throw new Error('Falha ao sincronizar');
+        }).catch(() => say('Watchlist não sincronizada. Reabra o painel para tentar novamente.', 'warning'));
     }, 1200);
   };
   const wlSave = (sync = true) => {
+    if (!wlReady || window.__mmLoggingOut) return;
     try { localStorage.setItem(WL_KEY, JSON.stringify(wl)); if (sync) localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ }
     if (sync) wlPush();
   };
@@ -50,6 +57,19 @@
       const r = await fetch('/api/conta/dados?k=watchlist', { credentials: 'same-origin', cache: 'no-store' });
       if (!r.ok) return;
       const j = await r.json();
+      if (!Number.isSafeInteger(j.usuario) || j.usuario <= 0) return;
+      if (wlUser !== j.usuario) {
+        clearTimeout(wlPushT);
+        wlUser = j.usuario;
+        WL_KEY = 'trader_watchlist_v2:' + wlUser;
+        WL_TS_KEY = 'trader_watchlist_ts_v2:' + wlUser;
+        wl = [];
+        try {
+          const local = JSON.parse(localStorage.getItem(WL_KEY) || '[]');
+          if (Array.isArray(local)) wl = local.filter((x) => x && typeof x.s === 'string').slice(0, WL_MAX);
+        } catch (e) { /* sem dados locais desta conta */ }
+      }
+      wlReady = true;
       let lts = 0; try { lts = +localStorage.getItem(WL_TS_KEY) || 0; } catch (e) { /* sem acesso */ }
       if (Array.isArray(j.v) && j.ts > lts) {
         wl = j.v.filter((x) => x && x.s).slice(0, WL_MAX);
@@ -60,7 +80,8 @@
         if (!lts) { try { localStorage.setItem(WL_TS_KEY, String(Date.now())); } catch (e) { /* cheio */ } }
         wlPush();
       }
-    } catch (e) { /* sem conexão: segue com a lista do navegador */ }
+      wlRender(); wlStars();
+    } catch (e) { /* sem identidade confirmada, não lê nem envia listas locais */ }
   }
   const inWl = (s) => wl.some((x) => x.s === s);
   const grid = document.getElementById('grid-watch');
@@ -162,6 +183,7 @@
     wl3mEnsure().then(wlDecorate);
   }
   async function wlAdd(raw, name, quiet) {
+    if (!wlReady || window.__mmLoggingOut) { say('Aguarde a identificação da conta. Se necessário, reabra o painel.', 'warning'); return; }
     const s = normSym(raw);
     if (!s) return;
     if (inWl(s)) { say(`${nice(s)} já está na watchlist`, 'info'); return; }
@@ -183,6 +205,7 @@
     if (!wlMemo[s]) wlRefresh(); else wl3mEnsure().then(wlDecorate);
   }
   function wlRemove(s) {
+    if (!wlReady || window.__mmLoggingOut) return;
     const it = wl.find((x) => x.s === s);
     wl = wl.filter((x) => x.s !== s);
     wlSave(); wlRender();

@@ -243,12 +243,20 @@
     }
     if (act === 'sair') {
       b.disabled = true;
-      fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => null).then(() => {
+      window.__mmLoggingOut = true;
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 10000);
+      fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin', signal: ctrl.signal }).then(async (r) => {
+        if (!r.ok || (await r.json()).ok !== true) throw new Error('Saída não confirmada');
         const limpa = [];
         try { if (window.caches) limpa.push(caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))); } catch (e2) { /* nada */ }
         try { if (navigator.serviceWorker) limpa.push(navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))); } catch (e2) { /* nada */ }
         return Promise.all(limpa).catch(() => null);
-      }).then(() => location.replace('/entrar'));
+      }).then(() => location.replace('/entrar')).catch(() => {
+        window.__mmLoggingOut = false;
+        b.disabled = false;
+        toast('Não foi possível confirmar a saída. Verifique sua conexão e tente novamente.');
+      }).finally(() => clearTimeout(timeout));
       return;
     }
     if (act === 'backup') { close(); setTimeout(() => document.getElementById('backup-btn')?.click(), 230); return; }
