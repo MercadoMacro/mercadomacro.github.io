@@ -4261,7 +4261,7 @@ window.__onTabSwitch = (tabId) => {
   const hint = document.createElement('button');
   hint.className = 'cmdk-hint';
   hint.title = 'Buscar ativo, aba ou ação (Ctrl+K)';
-  hint.innerHTML = `<i class="fas fa-search"></i><span class="tx">Buscar ativo, aba ou ação…</span><span class="kbd">${/Mac/i.test(navigator.platform) ? '⌘' : 'Ctrl'} K</span>`;
+  hint.innerHTML = `<i class="fas fa-search"></i><span class="tx">Buscar</span><span class="kbd">${/Mac/i.test(navigator.platform) ? '⌘' : 'Ctrl'} K</span>`;
   const right = document.querySelector('.topbar-right');
   right?.insertBefore(hint, right.querySelector('#summary-btn'));
   hint.addEventListener('click', () => open());

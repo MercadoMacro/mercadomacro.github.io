@@ -2679,3 +2679,26 @@ body.nw2 .nc-card.nc-lead .nc-img { width:calc(100% + 44px); margin:-20px -22px 
 .pj-chave.br .pj-l { color:var(--text-3); }
 .pj-chave.br .pj-r { color:var(--text); }
 @media (max-width: 700px) { .pj-chave .pj-l, .pj-chave .pj-r { font-size:11px; } #pj-fonte { display:none; } }
+
+/* Ações compactas: os botões originais preservam handlers e atalhos. */
+html body .topbar.topbar .topbar-right :is(#summary-btn,#backup-btn,#theme-toggle) { display:none; }
+.topbar-more { position:relative; flex:none; color:var(--text); }
+.topbar-more > summary { list-style:none; display:flex; align-items:center; justify-content:center;
+  width:42px; height:42px; border:1px solid var(--line); border-radius:11px; background:var(--surface); cursor:pointer; }
+.topbar-more > summary::-webkit-details-marker { display:none; }
+.topbar-more > summary:hover { color:var(--accent); border-color:var(--accent); }
+.topbar-more-list { position:absolute; z-index:1500; right:0; top:calc(100% + 8px);
+  width:min(292px,calc(100vw - 32px)); padding:6px; border:1px solid var(--line-2); border-radius:12px;
+  background:var(--surface); box-shadow:var(--shadow-sm); }
+.topbar-more-list button { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:10px;
+  border:0; border-radius:7px; background:transparent; color:var(--text); font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.topbar-more-list button:hover { background:var(--surface-2); }
+.topbar-more-list button > i { width:18px; text-align:center; color:var(--text-2); }
+.topbar-more-list kbd { margin-left:auto; color:var(--text-3); font:11px system-ui; white-space:nowrap; }
+.topbar-more summary:focus-visible, .topbar-more-list button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (max-width:640px) {
+  .topbar-more > summary { width:38px; height:38px; }
+}
+@media (pointer:coarse) {
+  .topbar-more > summary { min-width:44px; min-height:44px; }
+}
