@@ -1,6 +1,7 @@
 /* Calculadora pública de renda fixa (página /calculadora-renda-fixa, sem login).
    Comparação simplificada de renda fixa, independente da calculadora do terminal.
-   Dados: CDI (SGS 4389), Selic meta (432), Selic efetiva anualizada (1178)
+   Dados: CDI (SGS 4389), Selic meta (432), Selic efetiva anualizada (1178,
+   com reserva na taxa diária SGS 11, capitalizada em 252 dias úteis)
    e IPCA 12 meses (13522) do Banco Central,
    pelo worker da segunda conta, com o worker principal e o BCB direto como reserva. */
 (function () {
@@ -19,12 +20,30 @@
     // A vitrine não libera a série 1178; o worker principal e o BCB já a atendem.
     if (c !== 1178) fontes.unshift(VT + '/bcb?c=' + c + '&n=1');
     function tentar(i) {
-      return fetch(fontes[i]).then(okJson).then(ultimo).catch(function (e) {
+      var ctrl = new AbortController();
+      var timeout = setTimeout(function () { ctrl.abort(); }, 8000);
+      return fetch(fontes[i], { signal: ctrl.signal }).then(okJson).then(ultimo).finally(function () {
+        clearTimeout(timeout);
+      }).catch(function (e) {
         if (i + 1 < fontes.length) return tentar(i + 1);
         throw e;
       });
     }
     return tentar(0);
+  }
+
+  function selicEfetiva() {
+    return serie(1178).then(function (r) {
+      r.fonte = 'SGS 1178';
+      return r;
+    }).catch(function () {
+      // É a própria Selic efetiva diária, não CDI nem meta do Copom.
+      return serie(11).then(function (r) {
+        var anual = (Math.pow(1 + r.v / 100, 252) - 1) * 100;
+        if (!ok(anual)) throw new Error('Selic diária inválida');
+        return { v: anual, d: r.d, fonte: 'SGS 11 anualizada em 252 dias úteis' };
+      });
+    });
   }
 
   // números no formato brasileiro
@@ -103,10 +122,10 @@
     ['ipca', 13522, 'm-ipca', 'IPCA', '%']
   ];
   Promise.all(indicadores.map(function (i) {
-    return serie(i[1]).then(function (r) {
+    return (i[0] === 'selicEfetiva' ? selicEfetiva() : serie(i[1])).then(function (r) {
       M[i[0]] = r.v / 100;
       $(i[2]).textContent = nf(r.v, 2) + i[4];
-      $(i[2]).title = 'Referência: ' + r.d;
+      $(i[2]).title = 'Referência: ' + r.d + (r.fonte ? ' · ' + r.fonte : '');
     }).catch(function () {});
   })).then(function () {
     var faltam = indicadores.filter(function (i) { return !ok(M[i[0]]); }).map(function (i) { return i[3]; });

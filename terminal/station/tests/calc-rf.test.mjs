@@ -11,6 +11,7 @@ async function calculator({ rates = fixture, rejectProxy = false } = {}) {
     return els.get(id);
   };
   const ctx = vm.createContext({
+    AbortController, setTimeout, clearTimeout,
     document:{getElementById:get,querySelectorAll:()=>[],activeElement:null},
     fetch:async url=>{
       calls.push(url);
@@ -31,7 +32,7 @@ test('Tesouro uses effective Selic, with CDI and Selic target deliberately diffe
   near(r.bruto,1300);near(r.imp,227.5);near(r.liq,11072.5);
   assert.notEqual(r.bruto,c.result('cdb').bruto);
   assert.match(c.els.get('linhas').innerHTML,/13,00% a.a. \(Selic efetiva\)/);
-  assert.equal(c.els.get('m-selic-efetiva').title,'Referência: 16/10/2026');
+  assert.equal(c.els.get('m-selic-efetiva').title,'Referência: 16/10/2026 · SGS 1178');
 });
 test('CDB stays linked to CDI and LCI keeps its CDI percentage',async()=>{
   const c=await calculator();near(c.result('cdb').bruto,1000);
@@ -75,4 +76,20 @@ test('IOF applies before IR on a one-day simulation and ends at day 30',async()=
   const c=await calculator();const r=c.result('tselic',1);
   near(r.imp,r.bruto*.96+r.bruto*.04*.225);
   const day30=c.result('tselic',30);near(day30.imp,day30.bruto*.225);
+});
+test('SGS 11 daily Selic is compounded for 252 business days when 1178 fails',async()=>{
+  const c=await calculator({rates:{4389:10,432:14,11:0.05,13522:4.5}});
+  const annual=1.0005**252-1;
+  near(c.result('tselic').bruto,10000*annual);
+  assert.match(c.els.get('m-selic-efetiva').title,/SGS 11 anualizada/);
+  assert.doesNotMatch(c.els.get('m-fonte').textContent,/Indisponível/);
+});
+test('SGS 1178 remains preferred when the daily reserve is also available',async()=>{
+  const c=await calculator({rates:{...fixture,11:0.05}});
+  near(c.result('tselic').bruto,1300);
+  assert.ok(!c.calls.some(u=>/[?&]c=11(?:&|$)/.test(u)));
+});
+test('invalid annual-series response is replaced by valid daily Selic',async()=>{
+  const c=await calculator({rates:{...fixture,1178:'inválido',11:0.05}});
+  near(c.result('tselic').bruto,10000*(1.0005**252-1));
 });
