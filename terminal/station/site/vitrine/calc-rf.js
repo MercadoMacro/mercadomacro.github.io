@@ -1,6 +1,7 @@
 /* Calculadora pública de renda fixa (página /calculadora-renda-fixa, sem login).
-   Mesma conta da aba Calculadora do terminal (calculadoras.js), versão enxuta.
-   Dados: CDI (SGS 4389), Selic (432) e IPCA 12 meses (13522) do Banco Central,
+   Comparação simplificada de renda fixa, independente da calculadora do terminal.
+   Dados: CDI (SGS 4389), Selic meta (432), Selic efetiva anualizada (1178)
+   e IPCA 12 meses (13522) do Banco Central,
    pelo worker da segunda conta, com o worker principal e o BCB direto como reserva. */
 (function () {
   'use strict';
@@ -8,15 +9,22 @@
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   var $ = function (id) { return document.getElementById(id); };
   var ok = function (x) { return typeof x === 'number' && isFinite(x); };
-  var M = { cdi: NaN, selic: NaN, ipca: NaN };
+  var M = { cdi: NaN, selic: NaN, selicEfetiva: NaN, ipca: NaN };
 
   function okJson(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
   function ultimo(j) { var o = Array.isArray(j) ? j[j.length - 1] : null; var v = o ? parseFloat(o.valor) : NaN; if (!isFinite(v)) throw new Error('sem valor'); return { v: v, d: o.data }; }
   function serie(c) {
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/1?formato=json';
-    return fetch(VT + '/bcb?c=' + c + '&n=1').then(okJson).then(ultimo)
-      .catch(function () { return fetch(API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/1')).then(okJson).then(ultimo); })
-      .catch(function () { return fetch(direto).then(okJson).then(ultimo); });
+    var fontes = [API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/1'), direto];
+    // A vitrine não libera a série 1178; o worker principal e o BCB já a atendem.
+    if (c !== 1178) fontes.unshift(VT + '/bcb?c=' + c + '&n=1');
+    function tentar(i) {
+      return fetch(fontes[i]).then(okJson).then(ultimo).catch(function (e) {
+        if (i + 1 < fontes.length) return tentar(i + 1);
+        throw e;
+      });
+    }
+    return tentar(0);
   }
 
   // números no formato brasileiro
@@ -33,7 +41,7 @@
   var LINHAS = [
     ['cdb', 'CDB pós-fixado', '% do CDI', 'pos', '100', false],
     ['lci', 'LCI ou LCA', '% do CDI, isenta de IR', 'pos', '90', true],
-    ['tselic', 'Tesouro Selic', 'Selic, sem custódia', 'tselic', '', false],
+    ['tselic', 'Tesouro Selic (estimativa)', 'Selic efetiva constante; sem custódia e ágio/deságio', 'tselic', '', false],
     ['pre', 'Prefixado (CDB ou Tesouro)', 'digite a taxa ao ano', 'pre', '', false],
     ['ipca', 'IPCA+ (CDB ou Tesouro)', 'digite a taxa acima do IPCA', 'ipca', '', false],
     ['poup', 'Poupança', 'regra atual, isenta', 'poup', '', true]
@@ -46,7 +54,7 @@
     if (l[3] === 'pos' && ok(M.cdi) && ok(t)) f = Math.pow(1 + (Math.pow(1 + M.cdi, 1 / 252) - 1) * t, du);
     else if (l[3] === 'pre' && ok(t)) f = Math.pow(1 + t, du / 252);
     else if (l[3] === 'ipca' && ok(M.ipca) && ok(t)) f = Math.pow((1 + M.ipca) * (1 + t), du / 252);
-    else if (l[3] === 'tselic' && ok(M.cdi)) f = Math.pow(1 + M.cdi, du / 252);
+    else if (l[3] === 'tselic' && ok(M.selicEfetiva)) f = Math.pow(1 + M.selicEfetiva, du / 252);
     else if (l[3] === 'poup' && ok(M.selic)) { var m = M.selic > 0.085 ? 0.005 : Math.pow(1 + M.selic * 0.7, 1 / 12) - 1; f = Math.pow(1 + m, Math.floor(dc / 30.4375 + 0.05)); }
     if (!ok(f)) return null;
     var bruto = P * (f - 1);
@@ -57,7 +65,7 @@
   }
 
   function campoTaxa(l) {
-    if (l[3] === 'tselic') return 'Selic';
+    if (l[3] === 'tselic') return ok(M.selicEfetiva) ? nf(M.selicEfetiva * 100, 2) + '% a.a. (Selic efetiva)' : 'Selic efetiva indisponível';
     if (l[3] === 'poup') return 'regra';
     var suf = l[3] === 'pos' ? '% CDI' : l[3] === 'ipca' ? '% + IPCA' : '% a.a.';
     return '<input data-tx="' + l[0] + '" inputmode="decimal" value="' + taxas[l[0]] + '" aria-label="Taxa de ' + l[1] + '" placeholder="—"> ' + suf;
@@ -88,13 +96,22 @@
   $('linhas').addEventListener('input', function (e) { var id = e.target.dataset.tx; if (!id) return; taxas[id] = e.target.value; desenha(); });
 
   desenha();
-  var datas = [];
-  Promise.all([
-    serie(4389).then(function (r) { M.cdi = r.v / 100; $('m-cdi').textContent = nf(r.v, 2) + '% a.a.'; datas.push(r.d); }).catch(function () {}),
-    serie(432).then(function (r) { M.selic = r.v / 100; $('m-selic').textContent = nf(r.v, 2) + '% a.a.'; datas.push(r.d); }).catch(function () {}),
-    serie(13522).then(function (r) { M.ipca = r.v / 100; $('m-ipca').textContent = nf(r.v, 2) + '%'; }).catch(function () {})
-  ]).then(function () {
-    $('m-fonte').textContent = ok(M.cdi) || ok(M.selic) ? 'Banco Central' + (datas.length ? ', dados de ' + datas[0] : '') : 'Banco Central fora do ar agora. Tente de novo em instantes.';
+  var indicadores = [
+    ['cdi', 4389, 'm-cdi', 'CDI', '% a.a.'],
+    ['selic', 432, 'm-selic', 'Selic meta', '% a.a.'],
+    ['selicEfetiva', 1178, 'm-selic-efetiva', 'Selic efetiva', '% a.a.'],
+    ['ipca', 13522, 'm-ipca', 'IPCA', '%']
+  ];
+  Promise.all(indicadores.map(function (i) {
+    return serie(i[1]).then(function (r) {
+      M[i[0]] = r.v / 100;
+      $(i[2]).textContent = nf(r.v, 2) + i[4];
+      $(i[2]).title = 'Referência: ' + r.d;
+    }).catch(function () {});
+  })).then(function () {
+    var faltam = indicadores.filter(function (i) { return !ok(M[i[0]]); }).map(function (i) { return i[3]; });
+    $('m-fonte').textContent = faltam.length === indicadores.length ? 'Banco Central fora do ar agora. Tente de novo em instantes.'
+      : 'Banco Central · datas de referência nos indicadores' + (faltam.length ? ' · Indisponível: ' + faltam.join(', ') + '.' : '');
     desenha();
   });
 })();

@@ -57,7 +57,7 @@
         </div>
       </div>
     </div>
-    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Selic <b id="m-selic">—</b></span><span>IPCA 12 meses <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
+    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Selic meta <b id="m-selic">—</b></span><span>Selic efetiva <b id="m-selic-efetiva">—</b></span><span>IPCA 12 meses <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
   </div>
 
   <h2>Quanto você teria no fim</h2>
@@ -65,7 +65,7 @@
     <thead><tr><th>Aplicação</th><th>Taxa</th><th>Rendimento bruto</th><th>IR e IOF</th><th>Valor líquido</th><th>Líquido ao ano</th></tr></thead>
     <tbody id="linhas"></tbody>
   </table>
-  <p class="cr-nota">IR pela tabela regressiva (22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois). IOF só nos primeiros 30 dias. LCI, LCA e poupança são isentas para pessoa física. Não inclui taxa de custódia do Tesouro Direto. A poupança usa a regra atual (0,5% ao mês com Selic acima de 8,5%) e ignora a TR. Taxas futuras do CDI e do IPCA são supostas iguais às de hoje. Isto é uma simulação, não uma recomendação.</p>
+  <p class="cr-nota">IR pela tabela regressiva (22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois). IOF só nos primeiros 30 dias. LCI, LCA e poupança são isentas para pessoa física. O Tesouro Selic usa a Selic efetiva anualizada do Banco Central, não o CDI nem a meta Selic; é uma estimativa sem taxa de custódia, taxas da instituição, ágio/deságio e marcação a mercado. A poupança usa a meta Selic para sua regra de remuneração e ignora a TR. Taxas futuras do CDI, da Selic efetiva e do IPCA são supostas iguais às atuais. O prazo em meses é convertido em dias corridos e os dias úteis são aproximados pela proporção 252/365, sem calendário de feriados. Isto é uma simulação, não uma recomendação.</p>
 
   <div class="cr-cta">
     <div><h3>Quer comparar até 8 aplicações com as taxas do Tesouro ao vivo?</h3><p>No terminal do Mercado Macro a calculadora tem gráfico, taxas do Tesouro Direto, custódia, juros compostos, aposentadoria e financiamento, além de cotações e indicadores.</p></div>
@@ -79,13 +79,13 @@
     <h3>Como o Imposto de Renda é cobrado?</h3>
     <p>Sobre o rendimento, e a alíquota cai com o tempo: 22,5% até 6 meses, 20% até 1 ano, 17,5% até 2 anos e 15% acima disso.</p>
     <h3>De onde vêm o CDI, a Selic e o IPCA?</h3>
-    <p>Das séries oficiais do Banco Central (SGS 4389, 432 e 13522), buscadas toda vez que a página abre.</p>
+    <p>Das séries oficiais do Banco Central: CDI (SGS 4389), meta Selic (432), Selic efetiva anualizada na base de 252 dias úteis (1178) e IPCA em 12 meses (13522), buscadas toda vez que a página abre.</p>
   </section>
 </main>
 <footer class="vt-foot">
   <img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="130" height="28" loading="lazy">
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
 </footer>
-<script src="/vitrine/calc-rf.js?v=2"></script>
+<script src="/vitrine/calc-rf.js?v=3"></script>
 </body>
 </html>
