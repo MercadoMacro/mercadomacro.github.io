@@ -12,6 +12,7 @@
   var ok = function (x) { return typeof x === 'number' && isFinite(x); };
   var M = { cdi: NaN, selic: NaN, selicEfetiva: NaN, ipca: NaN };
   var selicReserva = false;
+  var selicData = '';
 
   function okJson(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
   function ultimo(j) { var o = Array.isArray(j) ? j[j.length - 1] : null; var v = o ? parseFloat(o.valor) : NaN; if (!isFinite(v)) throw new Error('sem valor'); return { v: v, d: o.data }; }
@@ -69,7 +70,7 @@
   var LINHAS = [
     ['cdb', 'CDB pós-fixado', '% do CDI', 'pos', '100', false],
     ['lci', 'LCI ou LCA', '% do CDI, isenta de IR', 'pos', '90', true],
-    ['tselic', 'Tesouro Selic (estimativa)', 'Selic efetiva constante; sem custódia e ágio/deságio', 'tselic', '', false],
+    ['tselic', 'Tesouro Selic', 'Estimativa com a taxa atual', 'tselic', '', false],
     ['pre', 'Prefixado (CDB ou Tesouro)', 'digite a taxa ao ano', 'pre', '', false],
     ['ipca', 'IPCA+ (CDB ou Tesouro)', 'digite a taxa acima do IPCA', 'ipca', '', false],
     ['poup', 'Poupança', 'regra atual, isenta', 'poup', '', true]
@@ -93,7 +94,9 @@
   }
 
   function campoTaxa(l) {
-    if (l[3] === 'tselic') return ok(M.selicEfetiva) ? nf(M.selicEfetiva * 100, 2) + '% a.a. (Selic efetiva)' : 'Selic efetiva indisponível';
+    if (l[3] === 'tselic') return ok(M.selicEfetiva)
+      ? nf(M.selicEfetiva * 100, 2) + '% ao ano<small>Taxa usada na simulação' + (selicData ? ' · ' + selicData : '') + (selicReserva ? ' · última consulta disponível' : '') + '</small>'
+      : 'Taxa do Tesouro indisponível';
     if (l[3] === 'poup') return 'regra';
     var suf = l[3] === 'pos' ? '% CDI' : l[3] === 'ipca' ? '% + IPCA' : '% a.a.';
     return '<input data-tx="' + l[0] + '" inputmode="decimal" value="' + taxas[l[0]] + '" aria-label="Taxa de ' + l[1] + '" placeholder="—"> ' + suf;
@@ -126,21 +129,23 @@
   desenha();
   var indicadores = [
     ['cdi', 4389, 'm-cdi', 'CDI', '% a.a.'],
-    ['selic', 432, 'm-selic', 'Selic meta', '% a.a.'],
-    ['selicEfetiva', 1178, 'm-selic-efetiva', 'Selic efetiva', '% a.a.'],
+    ['selic', 432, 'm-selic', 'Selic', '% a.a.'],
+    ['selicEfetiva', 1178, null, 'Taxa do Tesouro', '% a.a.'],
     ['ipca', 13522, 'm-ipca', 'IPCA', '%']
   ];
   Promise.all(indicadores.map(function (i) {
     return (i[0] === 'selicEfetiva' ? selicEfetiva() : serie(i[1])).then(function (r) {
       M[i[0]] = r.v / 100;
-      $(i[2]).textContent = nf(r.v, 2) + i[4];
-      $(i[2]).title = 'Referência: ' + r.d + (r.fonte ? ' · ' + r.fonte : '');
-      if (i[0] === 'selicEfetiva') $('m-selic-data').textContent = r.d + (selicReserva ? ' · cache de reserva' : '');
+      if (i[2]) {
+        $(i[2]).textContent = nf(r.v, 2) + i[4];
+        $(i[2]).title = 'Referência: ' + r.d;
+      }
+      if (i[0] === 'selicEfetiva') selicData = /^\d{2}\/\d{2}\/\d{4}$/.test(r.d || '') ? r.d : '';
     }).catch(function () {});
   })).then(function () {
     var faltam = indicadores.filter(function (i) { return !ok(M[i[0]]); }).map(function (i) { return i[3]; });
     $('m-fonte').textContent = faltam.length === indicadores.length ? 'Banco Central fora do ar agora. Tente de novo em instantes.'
-      : 'Banco Central · datas de referência nos indicadores' + (selicReserva ? ' · Selic: última consulta válida em cache' : '') + (faltam.length ? ' · Indisponível: ' + faltam.join(', ') + '.' : '');
+      : 'Fonte: Banco Central' + (selicReserva ? ' · Taxa do Tesouro: última consulta disponível, com data na tabela' : '') + (faltam.length ? ' · Indisponível: ' + faltam.join(', ') + '.' : '');
     desenha();
   });
 })();

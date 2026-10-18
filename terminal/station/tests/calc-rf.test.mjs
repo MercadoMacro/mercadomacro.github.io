@@ -33,8 +33,8 @@ test('Tesouro uses effective Selic, with CDI and Selic target deliberately diffe
   const c=await calculator(); const r=c.result('tselic');
   near(r.bruto,1300);near(r.imp,227.5);near(r.liq,11072.5);
   assert.notEqual(r.bruto,c.result('cdb').bruto);
-  assert.match(c.els.get('linhas').innerHTML,/13,00% a.a. \(Selic efetiva\)/);
-  assert.equal(c.els.get('m-selic-efetiva').title,'Referência: 16/10/2026 · SGS 1178');
+  assert.match(c.els.get('linhas').innerHTML,/13,00% ao ano/);
+  assert.match(c.els.get('linhas').innerHTML,/Taxa usada na simulação · 16\/10\/2026/);
 });
 test('CDB stays linked to CDI and LCI keeps its CDI percentage',async()=>{
   const c=await calculator();near(c.result('cdb').bruto,1000);
@@ -48,8 +48,8 @@ test('savings uses the Selic target even when effective Selic is below the thres
 test('missing effective Selic does not fall back to CDI or target',async()=>{
   const c=await calculator({rates:{4389:10,432:14,13522:4.5}});
   assert.equal(c.result('tselic'),null);assert.ok(c.result('cdb'));
-  assert.match(c.els.get('m-fonte').textContent,/Indisponível: Selic efetiva/);
-  assert.match(c.els.get('linhas').innerHTML,/Selic efetiva indisponível/);
+  assert.match(c.els.get('m-fonte').textContent,/Indisponível: Taxa do Tesouro/);
+  assert.match(c.els.get('linhas').innerHTML,/Taxa do Tesouro indisponível/);
 });
 test('missing CDI and target do not disable Tesouro when effective Selic is available',async()=>{
   const c=await calculator({rates:{1178:13,13522:4.5}});
@@ -83,7 +83,6 @@ test('SGS 11 daily Selic is compounded for 252 business days when 1178 fails',as
   const c=await calculator({rates:{4389:10,432:14,11:0.05,13522:4.5}});
   const annual=1.0005**252-1;
   near(c.result('tselic').bruto,10000*annual);
-  assert.match(c.els.get('m-selic-efetiva').title,/SGS 11 anualizada/);
   assert.doesNotMatch(c.els.get('m-fonte').textContent,/Indisponível/);
 });
 test('SGS 1178 remains preferred when the daily reserve is also available',async()=>{
@@ -98,12 +97,12 @@ test('invalid annual-series response is replaced by valid daily Selic',async()=>
 test('same-origin official quote is used even with SGS unavailable',async()=>{
   const c=await calculator({rates:{4389:10,432:14,13522:4.5},publicQuote:{valor:13.65,data:'16/10/2026',fonte:'Banco Central — Selic apurada',reserva:false}});
   near(c.result('tselic').bruto,1365);
-  assert.equal(c.els.get('m-selic-data').textContent,'16/10/2026');
+  assert.match(c.els.get('linhas').innerHTML,/16\/10\/2026/);
   assert.ok(!c.calls.some(u=>u.includes('c=1178')));
 });
 test('reserve quote has visible date and cache warning',async()=>{
   const c=await calculator({publicQuote:{valor:13.65,data:'16/10/2026',fonte:'Banco Central — Selic apurada',reserva:true}});
   near(c.result('tselic').bruto,1365);
-  assert.match(c.els.get('m-selic-data').textContent,/16\/10\/2026.*cache de reserva/);
-  assert.match(c.els.get('m-fonte').textContent,/última consulta válida em cache/);
+  assert.match(c.els.get('linhas').innerHTML,/16\/10\/2026.*última consulta disponível/);
+  assert.match(c.els.get('m-fonte').textContent,/última consulta disponível/);
 });

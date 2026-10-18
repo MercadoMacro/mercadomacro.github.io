@@ -57,7 +57,7 @@
         </div>
       </div>
     </div>
-    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Selic meta <b id="m-selic">—</b></span><span>Selic efetiva <b id="m-selic-efetiva">—</b> <small id="m-selic-data"></small></span><span>IPCA 12 meses <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
+    <p class="cr-mk" id="mk"><span>CDI <b id="m-cdi">—</b></span><span>Taxa básica de juros (Selic) <b id="m-selic">—</b></span><span>Inflação em 12 meses (IPCA) <b id="m-ipca">—</b></span><span id="m-fonte">Buscando dados do Banco Central…</span></p>
   </div>
 
   <h2>Quanto você teria no fim</h2>
@@ -65,7 +65,14 @@
     <thead><tr><th>Aplicação</th><th>Taxa</th><th>Rendimento bruto</th><th>IR e IOF</th><th>Valor líquido</th><th>Líquido ao ano</th></tr></thead>
     <tbody id="linhas"></tbody>
   </table>
-  <p class="cr-nota">IR pela tabela regressiva (22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois). IOF só nos primeiros 30 dias. LCI, LCA e poupança são isentas para pessoa física. O Tesouro Selic usa a Selic efetiva anualizada do Banco Central, não o CDI nem a meta Selic; é uma estimativa sem taxa de custódia, taxas da instituição, ágio/deságio e marcação a mercado. A poupança usa a meta Selic para sua regra de remuneração e ignora a TR. Taxas futuras do CDI, da Selic efetiva e do IPCA são supostas iguais às atuais. O prazo em meses é convertido em dias corridos e os dias úteis são aproximados pela proporção 252/365, sem calendário de feriados. Isto é uma simulação, não uma recomendação.</p>
+  <p class="cr-nota">Valores estimados com as taxas atuais mantidas durante todo o prazo. Já descontamos IR e IOF quando aplicáveis. Custos do Tesouro e da instituição não estão incluídos. O rendimento real pode variar.</p>
+  <details class="cr-nota">
+    <summary>Como calculamos</summary>
+    <p><b>Tesouro Selic:</b> usamos a taxa de rendimento diária apurada pelo Banco Central, apresentada ao ano. Ela pode ser um pouco diferente da Selic anunciada pelo Copom. Essa taxa anunciada é a meta Selic; a taxa apurada nas operações é chamada de Selic efetiva. A taxa e sua data de referência aparecem na linha do Tesouro.</p>
+    <p><b>Hipóteses:</b> CDI, Selic e inflação ficam constantes na simulação. O prazo em meses é convertido em dias corridos; os dias úteis são aproximados pela proporção 252/365, sem calendário de feriados. Não incluímos custódia, taxas da instituição, ágio/deságio ou efeitos da venda de títulos antes do vencimento (marcação a mercado). A poupança usa a meta Selic para sua regra de remuneração e não inclui TR.</p>
+    <p><b>Impostos:</b> IR sobre o rendimento: 22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois. IOF somente nos primeiros 30 dias. LCI, LCA e poupança são isentas para pessoa física. Isto é uma simulação, não uma recomendação.</p>
+    <p><b>Dados:</b> Banco Central — CDI (SGS 4389), meta Selic (432) e IPCA em 12 meses (13522). Para o Tesouro, usamos a publicação Selic apurada, com as séries SGS 1178 e SGS 11 como alternativas. Uma consulta válida guardada pode ser usada durante falhas, sempre com data e aviso na tabela.</p>
+  </details>
 
   <div class="cr-cta">
     <div><h3>Quer comparar até 8 aplicações com as taxas do Tesouro ao vivo?</h3><p>No terminal do Mercado Macro a calculadora tem gráfico, taxas do Tesouro Direto, custódia, juros compostos, aposentadoria e financiamento, além de cotações e indicadores.</p></div>
@@ -79,13 +86,13 @@
     <h3>Como o Imposto de Renda é cobrado?</h3>
     <p>Sobre o rendimento, e a alíquota cai com o tempo: 22,5% até 6 meses, 20% até 1 ano, 17,5% até 2 anos e 15% acima disso.</p>
     <h3>De onde vêm o CDI, a Selic e o IPCA?</h3>
-    <p>Do Banco Central: CDI (SGS 4389), meta Selic (432) e IPCA em 12 meses (13522). A Selic efetiva vem da publicação oficial Selic apurada, com data de referência visível. Se essa fonte falhar, tentamos a série anualizada SGS 1178 ou a Selic diária SGS 11, capitalizada em 252 dias úteis. Uma consulta válida guardada em cache pode ser usada durante falhas, sempre identificada pela data e pelo aviso de reserva.</p>
+    <p>Do Banco Central. A taxa usada no Tesouro Selic aparece junto ao resultado, com sua data de referência. Veja as fontes e hipóteses em “Como calculamos”.</p>
   </section>
 </main>
 <footer class="vt-foot">
   <img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="130" height="28" loading="lazy">
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/privacidade">Política de privacidade</a></p>
 </footer>
-<script src="/vitrine/calc-rf.js?v=5"></script>
+<script src="/vitrine/calc-rf.js?v=6"></script>
 </body>
 </html>
