@@ -13,13 +13,14 @@
   const KEY = 'trader_prefs_v1', IMG_KEY = 'trader_wallpaper_img';
   const DEF = {
     mode: 'manual', dayFrom: 7, dayTo: 19, accent: 'ambar', wp: 'grade', wpOp: 1, wpUrl: '', wpDim: 55, wpBlur: 0,
-    cardSource: false, cardTime: false, glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frases: 'on', startTab: ''
+    mesaLayout: null, cardSource: false, cardTime: false, glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frases: 'on', startTab: ''
   };
   let P;
   try { P = { ...DEF, ...(JSON.parse(localStorage.getItem(KEY) || '{}') || {}) }; } catch (e) { P = { ...DEF }; }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) { toast('Sem espaço no navegador para salvar os ajustes.'); } };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const H = document.documentElement;
+  let deskApplied;
   const toast = (m) => { if (typeof window.toast === 'function') window.toast(m); };
 
   const ACCENTS = [
@@ -55,6 +56,8 @@
     set('ticker', P.ticker === 'off' ? 'off' : null);
     set('cardSource', P.cardSource === true ? 'on' : null);
     set('cardTime', P.cardTime === true ? 'on' : null);
+    const deskValue = JSON.stringify(P.mesaLayout || null);
+    if (deskValue !== deskApplied) { deskApplied = deskValue; window.dispatchEvent(new Event('mesa-layout-changed')); }
   }
   // tema: o painel principal guarda escuro/claro; aqui decidimos quando é automático
   const wantTheme = () => (P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -75,7 +78,7 @@
   const curMode = () => (P.mode === 'manual' ? (document.body.classList.contains('light') ? 'light' : 'dark') : P.mode);
 
   /* ---------------- painel ---------------- */
-  let box = null, lastFocus = null;
+  let box = null, lastFocus = null, mesaDragging = null;
   function tabsList() {
     return [...document.querySelectorAll('.tab-btn[data-tab]')].map((b) => [b.dataset.tab, [...b.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim()]);
   }
@@ -150,6 +153,10 @@
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
       <section class="aj-sec">
+        <h3>Minha Mesa</h3>
+        ${window.MMDeskLayout ? window.MMDeskLayout.editor(P.mesaLayout) : '<p class="aj-note">Recarregue a página para personalizar a Mesa.</p>'}
+      </section>
+      <section class="aj-sec">
         <h3>Dados</h3>
         <p class="aj-note">Este navegador guarda ${storageKB()} KB do painel: cotações, histórico, indicadores, notícias, suas notas e estratégias.</p>
         <div class="aj-btns">
@@ -189,6 +196,31 @@
     box.addEventListener('click', onClick);
     box.addEventListener('input', onInput);
     box.addEventListener('change', onChange);
+    box.addEventListener('dragstart', e => {
+      const handle = e.target.closest('.aj-mesa-grip');
+      if (!handle) return;
+      mesaDragging = handle.closest('[data-mesa-block]')?.dataset.mesaBlock;
+      if (mesaDragging && e.dataTransfer) { e.dataTransfer.setData('text/plain', mesaDragging); e.dataTransfer.effectAllowed = 'move'; }
+    });
+    box.addEventListener('dragover', e => {
+      const row = e.target.closest('[data-mesa-block]');
+      if (!mesaDragging || !row) return;
+      e.preventDefault();
+      box.querySelectorAll('.aj-mesa-drop').forEach(n => n.classList.remove('aj-mesa-drop'));
+      row.classList.add('aj-mesa-drop');
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    });
+    box.addEventListener('drop', e => {
+      const row = e.target.closest('[data-mesa-block]');
+      if (!mesaDragging || !row || !window.MMDeskLayout) return;
+      e.preventDefault();
+      P.mesaLayout = window.MMDeskLayout.before(P.mesaLayout, mesaDragging, row.dataset.mesaBlock);
+      mesaDragging = null; save(); applyAll(); render();
+    });
+    box.addEventListener('dragend', () => {
+      mesaDragging = null;
+      box.querySelectorAll('.aj-mesa-drop').forEach(n => n.classList.remove('aj-mesa-drop'));
+    });
   }
   function open() {
     if (!box) build();
@@ -213,6 +245,18 @@
     if (!b) return;
     const act = b.dataset.act;
     if (act === 'close') return close();
+    if (act && act.startsWith('mesa-') && window.MMDeskLayout) {
+      const id = b.dataset.mesaId;
+      if (act === 'mesa-reset') P.mesaLayout = null;
+      else if (act === 'mesa-toggle') P.mesaLayout = window.MMDeskLayout.toggle(P.mesaLayout, id);
+      else if (act === 'mesa-up' || act === 'mesa-down') P.mesaLayout = window.MMDeskLayout.move(P.mesaLayout, id, act === 'mesa-up' ? -1 : 1);
+      else return;
+      save(); applyAll(); render();
+      const candidates = [...box.querySelectorAll('button[data-act]')];
+      const focus = candidates.find(n => n.dataset.act === act && n.dataset.mesaId === id && !n.disabled)
+        || candidates.find(n => n.dataset.act === 'mesa-toggle' && n.dataset.mesaId === id);
+      focus?.focus(); return;
+    }
     if (b.dataset.set) {
       const k = b.dataset.set, raw = b.dataset.v;
       if (k === 'mode') {

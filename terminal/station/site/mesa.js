@@ -397,9 +397,14 @@
       </div>
       <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min), Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
+    let layout = null;
+    try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
+    window.MMDeskLayout?.apply(root, layout);
     const w = root.querySelector('.ms-wrap'); if (w) w.scrollTop = sc;
     requestAnimationFrame(drawCurve);
   }
+
+  window.addEventListener('mesa-layout-changed', render);
 
   /* ---------------- interação ---------------- */
   function openChart(sym, name, list) {
