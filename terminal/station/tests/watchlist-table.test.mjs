@@ -19,10 +19,10 @@ test('nulos e NaN ficam no fim nas duas direções, com empate determinístico',
   }
   assert.deepEqual(symbols(core.sorted([{ symbol: 'B', quote: { value: 1 } }, { symbol: 'A', quote: { value: 1 } }], { sort: 'price', direction: -1 })), ['A', 'B']);
 });
-test('preferências inválidas voltam ao padrão, fonte e horário começam desligados', () => {
+test('preferências inválidas voltam ao padrão e opções removidas são ignoradas', () => {
   const p = core.preferences({ mode: 'radar', sort: 'x', direction: 99, source: 'true', time: 1 });
   assert.equal(p.mode, 'table'); assert.equal(p.sort, 'change'); assert.equal(p.direction, -1);
-  assert.equal(p.source, false); assert.equal(p.time, false);
+  assert.equal('source' in p, false); assert.equal('time' in p, false);
   assert.equal(core.preferences({ mode: 'cards', source: true, time: true }).mode, 'cards');
 });
 test('preserva moeda da fonte e não inventa variação nem horário', () => {

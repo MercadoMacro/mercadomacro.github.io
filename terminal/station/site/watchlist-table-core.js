@@ -3,7 +3,7 @@ globalThis.MMWatchTable = (() => {
   function preferences(value) {
     const p = value && typeof value === 'object' ? value : {};
     return { mode: p.mode === 'cards' ? 'cards' : 'table', sort: ['symbol', 'price', 'change'].includes(p.sort) ? p.sort : 'change',
-      direction: p.direction === 1 ? 1 : -1, source: p.source === true, time: p.time === true };
+      direction: p.direction === 1 ? 1 : -1 };
   }
   function sorted(rows, prefs) {
     return [...rows].sort((a, b) => {
