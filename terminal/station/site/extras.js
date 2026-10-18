@@ -103,6 +103,7 @@
   const nice = (s) => s.replace(/\.SA$/, '');
 
   let wlMemo = {}, wlBusy = false, wlLast = 0;
+  let wlTableOwner = null, wlTableFresh = new Set();
   // 1 chamada em lote ao worker para todos os ativos da watchlist
   async function wlFetch(syms) {
     const out = {};
@@ -113,6 +114,7 @@
         try {
           const v = parseYahooChart(chart);
           const meta = chart?.chart?.result?.[0]?.meta || {};
+          v.currency = meta.currency || '';
           out[sym] = { v, name: meta.shortName || meta.longName || '' };
         } catch (e) { /* sem dados para esse ativo */ }
       });
@@ -124,7 +126,22 @@
       .replace('class="quote-card"', `class="quote-card wl-card" role="button" tabindex="0" title="Abrir o gráfico de ${esc(it.n || nice(it.s))}"`)
       .replace('<span class="qc-badge', `<button type="button" class="wl-x" data-wlrm="${esc(it.s)}" title="Tirar da watchlist" aria-label="Tirar ${esc(nice(it.s))} da watchlist"><i class="fas fa-times"></i></button><span class="qc-badge`);
   }
+
+  function wlTablePublish() {
+    const allowed = wlReady && !window.__mmLoggingOut;
+    const rows = allowed ? wl.map(it => ({
+      symbol: it.s, name: it.n || nice(it.s),
+      quote: wlTableOwner === wlUser ? wlMemo[it.s] || null : null,
+      fresh: wlTableOwner === wlUser && wlTableFresh.has(it.s)
+    })) : [];
+    window.dispatchEvent(new CustomEvent('mm-watchlist-table', {
+      detail: { user: allowed ? wlUser : null, rows, loading: wlBusy }
+    }));
+  }
+  window.addEventListener('mm-watchlist-table-request', wlTablePublish);
+
   function wlRender() {
+    wlTablePublish();
     if (!grid) return;
     const n = wl.length;
     const cnt = document.getElementById('m-count-watch');
@@ -147,14 +164,20 @@
   async function wlRefresh() {
     if (!grid || !wl.length || wlBusy) return;
     wlBusy = true;
+    const tableOwner = wlUser;
+    wlTableFresh = new Set();
+    wlTablePublish();
     document.getElementById('wl-refresh-btn')?.classList.add('busy');
     try {
       const r = await wlFetch(wl.map((x) => x.s));
+      if (tableOwner !== wlUser || !wlReady || window.__mmLoggingOut) return;
+      wlTableOwner = tableOwner;
       let changed = false;
       wl.forEach((it) => {
         const q = r[it.s];
         if (!q) return;
-        wlMemo[it.s] = { ...q.v, ts: Date.now() };
+        wlMemo[it.s] = { ...q.v, quoteAt: q.v.ts, ts: Date.now() };
+        wlTableFresh.add(it.s);
         if (typeof yahooMemo !== 'undefined' && !yahooMemo[it.s]) yahooMemo[it.s] = wlMemo[it.s];
         if (q.name && !it.n) { it.n = q.name; changed = true; }
       });
@@ -179,7 +202,7 @@
         if (old && old.value !== undefined && typeof markStale === 'function') markStale(card, old.ts);
         else if (!old) applyQuoteToCard(card, null);
       });
-    } finally { wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); }
+    } finally { wlBusy = false; document.getElementById('wl-refresh-btn')?.classList.remove('busy'); wlTablePublish(); }
     wl3mEnsure().then(wlDecorate);
   }
   async function wlAdd(raw, name, quiet) {
