@@ -60,10 +60,10 @@ try{
  await network.route('http://127.0.0.1:8787/**',route=>route.fulfill({contentType:'text/html',body:'<html><head></head><body>Verificação da conexão</body></html>'}));
  await network.goto('http://127.0.0.1:8787/');await network.addScriptTag({path:join(site,'crypto-live.js')});
  const result=await network.evaluate(()=>new Promise(resolve=>{
-  let done=false;const ws=new WebSocket('wss://data-stream.binance.vision/ws/btcusdt@ticker');
+  let done=false;const received=new Set(),wanted=Object.values(MMCryptoLive.PAIRS);const ws=new WebSocket('wss://data-stream.binance.vision/stream?streams='+wanted.map(s=>s.toLowerCase()+'@ticker').join('/'));
   const finish=result=>{if(done)return;done=true;clearTimeout(timer);ws.close();resolve(result);};
-  const timer=setTimeout(()=>finish({ok:false,reason:'timeout ou bloqueio regional'}),12000);
-  ws.onmessage=e=>{try{const q=MMCryptoLive.parse(JSON.parse(e.data));if(q)finish({ok:true,pair:q.pair,currency:q.currency});}catch{}};
+  const timer=setTimeout(()=>finish({ok:false,reason:'timeout ou bloqueio regional',received:[...received],missing:wanted.filter(s=>!received.has(s))}),12000);
+  ws.onmessage=e=>{try{const q=MMCryptoLive.parse(JSON.parse(e.data));if(q){received.add(q.pair);if(received.size===wanted.length)finish({ok:true,pairs:[...received],currency:q.currency});}}catch{}};
   ws.onerror=()=>finish({ok:false,reason:'conexão indisponível neste ambiente'});
  }));
  console.log('Sonda externa Binance: '+JSON.stringify(result));
