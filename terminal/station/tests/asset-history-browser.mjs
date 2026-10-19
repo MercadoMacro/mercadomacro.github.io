@@ -29,11 +29,13 @@ try{
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.ok(await page.locator('.wlh-credit a[href="https://www.tradingview.com/"]').isVisible());
  }
+ const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ await settle();
  const initial=await page.evaluate(()=>window.__viewer.chart.timeScale().getVisibleLogicalRange());
- await page.locator('[data-days="31"]').click();
+ await page.locator('[data-days="31"]').click();await settle();
  const month=await page.evaluate(()=>window.__viewer.chart.timeScale().getVisibleLogicalRange());
  assert.ok(month.to-month.from<initial.to-initial.from,'1M precisa reduzir o intervalo');
- await page.locator('[data-days="93"]').click();
+ await page.locator('[data-days="93"]').click();await settle();
  const before=await page.evaluate(()=>window.__viewer.chart.timeScale().getVisibleLogicalRange());
  const bounds=await page.locator('.wlh-canvas').boundingBox();
  await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
@@ -41,7 +43,7 @@ try{
  await page.waitForTimeout(150);
  const zoom=await page.evaluate(()=>window.__viewer.chart.timeScale().getVisibleLogicalRange());
  assert.ok(zoom.to-zoom.from<before.to-before.from,'Zoom com a roda deve aproximar a série');
- await page.locator('[data-reset]').click();
+ await page.locator('[data-reset]').click();await settle();
  const reset=await page.evaluate(()=>window.__viewer.chart.timeScale().getVisibleLogicalRange());
  assert.ok(Math.abs((reset.to-reset.from)-(before.to-before.from))<.01,'Ajustar deve restaurar o intervalo');
  await page.setViewportSize({width:390,height:780});
