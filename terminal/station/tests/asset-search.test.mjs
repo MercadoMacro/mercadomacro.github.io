@@ -1,0 +1,37 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(new URL('../site/'+p,import.meta.url),'utf8');
+const ctx=vm.createContext({});vm.runInContext(read('asset-search-core.js'),ctx);const core=ctx.MMAssetSearch;
+const catalog=core.catalog([{items:[{symbol:'PETR4.SA',name:'Petrobras PN'},{symbol:'PETR3.SA',name:'Petrobras ON'},{symbol:'AAPL',name:'Apple'},{symbol:'GOOG',name:'Alphabet'},{name:'Sem código'}]}]);
+test('Google and Alphabet return both explicitly named classes without automatic choice',()=>{
+ for(const query of ['google','GOOGLE','  Alphabet '])assert.deepEqual(Array.from(core.search(query,catalog),x=>x.symbol),['GOOGL','GOOG']);
+ assert.equal(core.exactCode('google',catalog),undefined);assert.equal(core.exactCode('GOOG',catalog).symbol,'GOOG');
+});
+test('existing panel names and tickers are searchable, with deduplication',()=>{
+ assert.equal(core.search('petrobras',catalog).length,2);assert.equal(core.search('petr4',catalog)[0].symbol,'PETR4.SA');assert.equal(core.exactCode('PETR4',catalog).symbol,'PETR4.SA');assert.equal(catalog.filter(x=>x.symbol==='GOOG').length,1);
+});
+test('normalization accepts accents and extra spaces and unknown queries remain unknown',()=>{
+ assert.equal(core.normalize('  AÇÕES   Brasil '),'acoes brasil');assert.equal(core.search('zzzz',catalog).length,0);assert.equal(core.search('',catalog).length,0);assert.equal(core.search('<script>',catalog).length,0);
+});
+function ui(){
+ const listeners=new Map();
+ class Node{
+  constructor(){this.attrs={};this.children=[];this.hidden=false;this.value='';this.classList={toggle(){}};this.events={};}
+  setAttribute(k,v){this.attrs[k]=v;}removeAttribute(k){delete this.attrs[k];}append(...nodes){this.children.push(...nodes);}replaceChildren(){this.children=[];}addEventListener(k,fn){(this.events[k]??=[]).push(fn);}focus(){}contains(){return true;}
+ }
+ const input=new Node(),form=new Node();let submissions=0;const nodes=[];
+ const c=vm.createContext({MMAssetSearch:core,MARKET_SECTIONS:[],window:{addEventListener(){}},document:{getElementById:id=>id==='wl-input'?input:form,createElement:()=>{const n=new Node();nodes.push(n);return n;},addEventListener:(k,fn)=>listeners.set(k,fn)}});
+ const submit=()=>{const e={prevented:false,preventDefault(){this.prevented=true;},stopImmediatePropagation(){}};for(const fn of form.events.submit||[])fn(e);if(!e.prevented)submissions++;return e;};form.requestSubmit=submit;
+ vm.runInContext(read('asset-search.js'),c);
+ return {input,form,popup:nodes[0],submit,submissions:()=>submissions,event:(key)=>{const e={key,preventDefault(){},stopPropagation(){}};for(const fn of input.events.keydown||[])fn(e);}};
+}
+test('typing a company name then Enter displays choices without submitting a bad ticker',()=>{
+ const u=ui();u.input.value='google';assert.equal(u.submit().prevented,true);assert.equal(u.submissions(),0);assert.equal(u.popup.children.length,2);assert.equal(u.popup.hidden,false);
+ u.event('ArrowDown');u.event('Enter');assert.equal(u.input.value,'GOOG');assert.equal(u.submissions(),1);
+});
+test('direct ticker and bulk additions keep their original submit flow; Escape closes choices',()=>{
+ const u=ui();for(const q of ['GOOGL','PETR4','AAPL, MSFT']){u.input.value=q;assert.equal(u.submit().prevented,false);}assert.equal(u.submissions(),3);
+ u.input.value='google';u.submit();u.event('Escape');assert.equal(u.popup.hidden,true);assert.equal(u.input.attrs['aria-expanded'],'false');
+});
