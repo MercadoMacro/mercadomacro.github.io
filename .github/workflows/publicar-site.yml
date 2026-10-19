@@ -35,6 +35,22 @@ jobs:
           node-version: '22'
       - name: Conferir scripts, recursos e testes
         run: node terminal/validar.mjs site
+      - name: Preparar verificação do gráfico em navegador
+        run: |
+          npm install --prefix "$RUNNER_TEMP/mm-browser" --no-save --package-lock=false playwright@1.56.1 lightweight-charts@5.0.9
+          node "$RUNNER_TEMP/mm-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Conferir Lightweight Charts em Chromium
+        env:
+          MM_BROWSER_MODULES: ${{ runner.temp }}/mm-browser/node_modules
+          MM_BROWSER_OUTPUT: ${{ runner.temp }}/mm-browser-images
+        run: node terminal/station/tests/asset-history-browser.mjs
+      - name: Guardar imagem da verificação
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lightweight-charts-preview
+          path: ${{ runner.temp }}/mm-browser-images
+          if-no-files-found: ignore
       - name: Montar Worker sem publicar
         working-directory: terminal/station
         run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/site-validado"

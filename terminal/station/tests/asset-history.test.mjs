@@ -3,8 +3,19 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const code=readFileSync(new URL('../site/asset-history.js',import.meta.url),'utf8');
-function setup(){const charts=[];const ctx=vm.createContext({Chart:class{constructor(canvas,config){this.config=config;this.destroyed=false;charts.push(this);}destroy(){this.destroyed=true;}}});vm.runInContext(code,ctx);return {core:ctx.MMAssetHistory,charts};}
-function box(){const nodes=new Map();const make=()=>({textContent:'',dataset:{},setAttribute(){},addEventListener(type,fn){this[type]=fn;}});for(const k of ['canvas','.wlh-caption','.wlh-note','button'])nodes.set(k,make());const buttons=[{...make(),dataset:{days:'31'}},{...make(),dataset:{days:'93'}}];return {innerHTML:'',querySelector:k=>nodes.get(k),querySelectorAll:()=>buttons,buttons,nodes};}
+function setup(){
+ const charts=[];
+ const L={AreaSeries:{type:'Area'},CrosshairMode:{Normal:0},createChart(host,config){
+  const chart={config,destroyed:false,series:[],fits:0,
+   remove(){this.destroyed=true;},
+   addSeries(type,options){const s={type,options,data:[],setData(data){this.data=data;}};this.series.push(s);return s;},
+   timeScale(){return {fitContent:()=>{this.fits++;}};},
+   subscribeCrosshairMove(fn){this.crosshair=fn;}
+  };charts.push(chart);return chart;
+ }};
+ const ctx=vm.createContext({LightweightCharts:L});vm.runInContext(code,ctx);return {core:ctx.MMAssetHistory,charts};
+}
+function box(){const nodes=new Map();const make=()=>({textContent:'',dataset:{},setAttribute(){},addEventListener(type,fn){this[type]=fn;}});for(const k of ['.wlh-canvas','.wlh-legend','[data-reset]','.wlh-caption','.wlh-note','button'])nodes.set(k,make());const buttons=[{...make(),dataset:{days:'31'}},{...make(),dataset:{days:'93'}}];return {innerHTML:'',querySelector:k=>nodes.get(k),querySelectorAll:()=>buttons,buttons,nodes};}
 const series={t:[1700000000,1700100000,1700200000],c:[20,21,19],off:0};
 test('VIX, Mexico and other international indices default to own history without symbol substitution',()=>{
  const {core}=setup();for(const [sym,tv]of [['^VIX','TVC:VIX'],['^MXX','BMV:ME'],['^GSPC','SP:SPX'],['^GDAXI','XETR:DAX'],['FTSEMIB.MI','INDEX:FTSEMIB'],['DX-Y.NYB','TVC:DXY']])assert.equal(core.defaultMode(sym,tv),'history');
@@ -19,17 +30,17 @@ test('trading date honors exchange offset instead of the viewer local timezone',
 });
 test('viewer requests exact Yahoo symbol, plots actual closes and caches subsequent opens',async()=>{
  const {core,charts}=setup();let calls=0;const v=new core.Viewer(async symbol=>{calls++;assert.equal(symbol,'^VIX');return {'^VIX':series};});const b=box();await v.show(b,'^VIX','VIX',false);
- assert.equal(charts.length,1);assert.deepEqual(Array.from(charts[0].config.data.datasets[0].data),[20,21,19]);assert.match(b.nodes.get('.wlh-note').textContent,/Até /);assert.match(b.nodes.get('.wlh-caption').textContent,/Yahoo/);
+ assert.equal(charts.length,1);assert.deepEqual(Array.from(charts[0].series[0].data.map(p=>p.value)),[20,21,19]);assert.match(b.nodes.get('.wlh-note').textContent,/Até /);assert.match(b.nodes.get('.wlh-caption').textContent,/Yahoo/);
  await v.show(b,'^VIX','VIX',true);assert.equal(calls,1);assert.equal(charts[0].destroyed,true);
 });
 test('closing or switching assets ignores late history responses',async()=>{
- const {core,charts}=setup();let resolve;const v=new core.Viewer(()=>new Promise(r=>{resolve=r;}));const b=box();const pending=v.show(b,'^MXX','IPC',false);v.destroy();const before=b.innerHTML;resolve({'^MXX':series});await pending;assert.equal(charts.length,0);assert.equal(b.innerHTML,before);
+ const {core,charts}=setup();let resolve;const v=new core.Viewer(()=>new Promise(r=>{resolve=r;}));const b=box();const pending=v.show(b,'^MXX','IPC',false);await Promise.resolve();v.destroy();const before=b.innerHTML;resolve({'^MXX':series});await pending;assert.equal(charts.length,0);assert.equal(b.innerHTML,before);
 });
 test('source failure or missing requested symbol shows a retry rather than another asset',async()=>{
  const {core,charts}=setup();for(const response of [{'^OTHER':series},{'^VIX':{error:'offline'}}]){const b=box();const v=new core.Viewer(async()=>response);await v.show(b,'^VIX','VIX',false);assert.match(b.innerHTML,/Tentar novamente/);assert.equal(charts.length,0);}
 });
-test('range controls filter by observation date and destroy the previous canvas chart',async()=>{
- const {core,charts}=setup();const raw={t:[1700000000,1700000000+50*86400,1700000000+60*86400],c:[1,2,3]};const v=new core.Viewer(async()=>({TEST:raw}));const b=box();await v.show(b,'TEST','Test',false);b.buttons[0].click();assert.equal(charts[0].destroyed,true);assert.deepEqual(Array.from(charts.at(-1).config.data.datasets[0].data),[2,3]);
+test('range controls update Lightweight Charts without creating a second canvas',async()=>{
+ const {core,charts}=setup();const raw={t:[1700000000,1700000000+50*86400,1700000000+60*86400],c:[1,2,3]};const v=new core.Viewer(async()=>({TEST:raw}));const b=box();await v.show(b,'TEST','Test',false);b.buttons[0].click();assert.equal(charts[0].destroyed,false);assert.equal(charts.length,1);assert.deepEqual(Array.from(charts.at(-1).series[0].data.map(p=>p.value)),[2,3]);
 });
 function integration(){
  const extras=readFileSync(new URL('../site/extras.js',import.meta.url),'utf8'),fragment=extras.slice(extras.indexOf('  const TV_MAP ='),extras.indexOf('  css.textContent +=',extras.indexOf('  const TV_MAP =')));
@@ -62,4 +73,19 @@ test('Mesa click handler explicitly identifies its chart context',()=>{
  const calls=[],ctx=vm.createContext({Q:{},window:{openAssetChart:(...args)=>calls.push(args)}});
  const source=mesaSource.slice(mesaSource.indexOf('  function openChart('),mesaSource.indexOf('  const listOf ='));
  vm.runInContext(source+';openChart("ES=F","S&P 500 futuro",[]);',ctx);assert.equal(calls[0][4],'mesa');assert.equal(calls[0][0],'ES=F');
+});
+
+test('Lightweight Charts receives sorted unique exchange calendar days',()=>{
+ const {core}=setup();const values=[{t:Date.parse('2026-10-16T01:00Z')/1000,c:10},{t:Date.parse('2026-10-16T02:00Z')/1000,c:11},{t:Date.parse('2026-10-17T01:00Z')/1000,c:12}];
+ const data=core.seriesData(values,-10800);assert.deepEqual(Array.from(data,p=>[p.time,p.value]),[['2026-10-15',11],['2026-10-16',12]]);
+});
+test('chart enables zoom, pan, attribution and a reset control',async()=>{
+ const {core,charts}=setup();const b=box(),v=new core.Viewer(async()=>({TEST:series}));await v.show(b,'TEST','Test',false);
+ const chart=charts[0];assert.equal(chart.config.autoSize,true);assert.equal(chart.config.layout.attributionLogo,true);assert.equal(chart.config.handleScale.pinch,true);assert.equal(chart.config.handleScroll.pressedMouseMove,true);
+ const fits=chart.fits;b.nodes.get('[data-reset]').click();assert.equal(chart.fits,fits+1);assert.match(b.innerHTML,/Copyright \(с\) 2025 TradingView/);
+});
+test('crosshair exposes actual selected date and value without changing the data',async()=>{
+ const {core,charts}=setup();const b=box(),v=new core.Viewer(async()=>({TEST:series}));await v.show(b,'TEST','Test',false);
+ const chart=charts[0],line=chart.series[0];chart.crosshair({time:'2026-10-16',seriesData:new Map([[line,{value:12.5}]])});
+ assert.match(b.nodes.get('.wlh-legend').textContent,/16\/10\/2026/);assert.match(b.nodes.get('.wlh-legend').textContent,/12,50/);assert.equal(line.data.length,3);
 });

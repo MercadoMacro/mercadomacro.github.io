@@ -10,33 +10,88 @@ globalThis.MMAssetHistory = (() => {
     return [...map].sort((a,b)=>a[0]-b[0]).map(([t,c])=>({t,c}));
   }
   const date=(t,off=0)=>new Date((t+off)*1000).toLocaleDateString('pt-BR',{timeZone:'UTC'});
+  const dayKey=(t,off=0)=>new Date((t+off)*1000).toISOString().slice(0,10);
+  function seriesData(values,off=0) {
+    const days=new Map();
+    for(const p of values) { const key=dayKey(p.t,off); days.set(key,{time:key,value:p.c}); }
+    return [...days.values()].sort((a,b)=>a.time.localeCompare(b.time));
+  }
+  const displayDay=time=>typeof time==='string'?time.split('-').reverse().join('/'):time&&typeof time==='object'?[time.day,time.month,time.year].map((n,i)=>i<2?String(n).padStart(2,'0'):n).join('/'):'';
+  let libraryLoading=null;
+  function loadLibrary() {
+    if(globalThis.LightweightCharts?.createChart)return Promise.resolve(globalThis.LightweightCharts);
+    if(libraryLoading)return libraryLoading;
+    libraryLoading=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js';script.async=true;
+      const fail=()=>{clearTimeout(timer);script.remove();reject(Error('Biblioteca do gráfico indisponível'));};
+      const timer=setTimeout(fail,10000);
+      script.onerror=fail;
+      script.onload=()=>{clearTimeout(timer);if(globalThis.LightweightCharts?.createChart)resolve(globalThis.LightweightCharts);else fail();};
+      document.head.appendChild(script);
+    }).catch(error=>{libraryLoading=null;throw error;});
+    return libraryLoading;
+  }
   class Viewer {
     constructor(fetchHistory){this.fetchHistory=fetchHistory;this.cache=new Map();this.chart=null;this.generation=0;}
-    destroy(){this.generation++;this.chart?.destroy();this.chart=null;}
+    destroy(){this.generation++;this.chart?.remove();this.chart=null;}
     async show(box,symbol,name,light){
       this.destroy();const generation=this.generation;box.innerHTML='<div class="wlc-load" role="status">Carregando histórico do ativo…</div>';
       try{
-        let saved=this.cache.get(symbol);if(!saved||saved.until<Date.now()){const payload=await this.fetchHistory(symbol);const raw=payload?.[symbol];if(points(raw).length<2)throw Error('Histórico indisponível');saved={raw,until:Date.now()+21600000};if(this.cache.size>=80)this.cache.delete(this.cache.keys().next().value);this.cache.set(symbol,saved);}
+        const L=await loadLibrary();
+        if(generation!==this.generation)return;
+        let saved=this.cache.get(symbol);
+        if(!saved||saved.until<Date.now()){
+          const payload=await this.fetchHistory(symbol),raw=payload?.[symbol];
+          if(points(raw).length<2)throw Error('Histórico indisponível');
+          saved={raw,until:Date.now()+21600000};
+          if(this.cache.size>=80)this.cache.delete(this.cache.keys().next().value);
+          this.cache.set(symbol,saved);
+        }
         if(generation!==this.generation)return;
         const all=points(saved.raw),off=Number.isFinite(saved.raw.off)?saved.raw.off:0;
-        box.innerHTML='<div class="wlh"><div class="wlh-tools"><span class="wlh-caption"></span><div role="group" aria-label="Período do histórico"><button type="button" class="wlc-b" data-days="31">1M</button><button type="button" class="wlc-b" data-days="93">3M</button></div></div><div class="wlh-canvas"><canvas role="img"></canvas></div><div class="wlh-note"></div></div>';
-        const canvas=box.querySelector('canvas');canvas.setAttribute('aria-label','Histórico diário de '+name);
+        box.innerHTML='<div class="wlh"><div class="wlh-tools"><span class="wlh-caption"></span><div role="group" aria-label="Período do histórico"><button type="button" class="wlc-b" data-days="31">1M</button><button type="button" class="wlc-b" data-days="93">3M</button><button type="button" class="wlc-b" data-reset title="Restaurar zoom">Ajustar</button></div></div><div class="wlh-legend" role="status" aria-live="off"></div><div class="wlh-canvas" role="group"></div><div class="wlh-note"></div><small class="wlh-credit">TradingView Lightweight Charts™<br>Copyright (с) 2025 TradingView, Inc. <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></small></div>';
+        const host=box.querySelector('.wlh-canvas'),legend=box.querySelector('.wlh-legend');
+        host.setAttribute('aria-label','Histórico diário de '+name);
         box.querySelector('.wlh-caption').textContent='Fechamentos diários · Yahoo Finance';
-        box.querySelector('.wlh-note').textContent='Até '+date(all.at(-1).t,off)+' · O histórico não representa cotações em tempo real.';
+        box.querySelector('.wlh-note').textContent='Até '+date(all.at(-1).t,off)+' · Arraste para navegar; use o zoom para aproximar. Dados diários, sem atualização em tempo real.';
+        const text=light?'#46526a':'#a7b1c3',grid=light?'#e5e7eb':'#1c2740',background=light?'#ffffff':'#0e1524';
+        this.chart=L.createChart(host,{
+          autoSize:true,
+          layout:{background:{type:'solid',color:background},textColor:text,attributionLogo:true},
+          grid:{vertLines:{color:grid},horzLines:{color:grid}},
+          rightPriceScale:{borderColor:grid},timeScale:{borderColor:grid,timeVisible:false},
+          localization:{locale:'pt-BR',dateFormat:'dd/MM/yyyy'},
+          handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+          handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},
+          crosshair:{mode:L.CrosshairMode.Normal}
+        });
+        const precision=all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<1)?6:all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<10)?4:2;
+        const line=this.chart.addSeries(L.AreaSeries,{
+          lineColor:'#4d9eff',topColor:light?'rgba(77,158,255,.18)':'rgba(77,158,255,.25)',bottomColor:'rgba(77,158,255,0)',
+          lineWidth:2,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)}
+        });
+        let shown=[];
+        const describe=p=>{legend.textContent=p?name+' · '+displayDay(p.time)+' · '+p.value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:precision}):name;};
+        this.chart.subscribeCrosshairMove(param=>{
+          const p=param.time&&param.seriesData?.get(line);
+          describe(p&&typeof p.value==='number'?{time:param.time,value:p.value}:shown.at(-1));
+        });
         const render=days=>{
-          this.chart?.destroy();this.chart=null;const subset=all.filter(p=>p.t>=all.at(-1).t-days*86400);if(subset.length<2)throw Error('Sem dados suficientes para este período');
+          const subset=seriesData(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
+          if(subset.length<2)throw Error('Sem dados suficientes para este período');
+          shown=subset;line.setData(subset);this.chart.timeScale().fitContent();describe(shown.at(-1));
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
-          const text=light?'#46526a':'#a7b1c3',grid=light?'#e5e7eb':'#1c2740';
-          this.chart=new Chart(canvas,{type:'line',data:{labels:subset.map(p=>date(p.t,off)),datasets:[{label:name,data:subset.map(p=>p.c),borderColor:'#4d9eff',backgroundColor:light?'#4d9eff15':'#4d9eff20',fill:true,tension:0,pointRadius:0,pointHitRadius:12,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toLocaleString('pt-BR',{maximumFractionDigits:4})}}},scales:{x:{ticks:{color:text,maxTicksLimit:8,maxRotation:0},grid:{display:false}},y:{ticks:{color:text,callback:v=>v.toLocaleString('pt-BR',{maximumFractionDigits:4})},grid:{color:grid}}}}});
         };
         box.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{try{render(+b.dataset.days);}catch{box.querySelector('.wlh-note').textContent='Sem dados suficientes para este período.';}}));
+        box.querySelector('[data-reset]').addEventListener('click',()=>this.chart?.timeScale().fitContent());
         render(93);
       }catch{
         if(generation!==this.generation)return;
-        this.chart?.destroy();this.chart=null;box.innerHTML='<div class="wlh-error" role="status"><b>Não foi possível carregar o histórico agora.</b><span>Tente novamente ou use o link TradingView no topo.</span><button type="button" class="wlc-b">Tentar novamente</button></div>';
+        this.chart?.remove();this.chart=null;
+        box.innerHTML='<div class="wlh-error" role="status"><b>Não foi possível carregar o gráfico agora.</b><span>Tente novamente ou use o link TradingView no topo.</span><button type="button" class="wlc-b">Tentar novamente</button></div>';
         box.querySelector('button').addEventListener('click',()=>this.show(box,symbol,name,light));
       }
     }
   }
-  return {canEmbed,defaultMode,points,date,Viewer};
+  return {canEmbed,defaultMode,points,date,dayKey,seriesData,Viewer};
 })();
