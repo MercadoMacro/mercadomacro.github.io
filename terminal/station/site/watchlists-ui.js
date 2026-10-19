@@ -3,15 +3,19 @@
   if (!grid || document.getElementById('watchlists-controls')) return;
   const root = document.createElement('div'); root.id = 'watchlists-controls'; root.className = 'wls';
   root.innerHTML = `<div class="wls-bar"><label for="wls-select">Lista</label><select id="wls-select" aria-label="Lista de ativos"></select>
-    <button type="button" class="btn-sm" data-wls="new">+ Nova lista</button>
+    
     <button type="button" class="btn-sm" data-wls="menu" aria-label="Gerenciar lista atual" aria-expanded="false" aria-controls="wls-menu">⋯</button></div>
-    <div id="wls-menu" class="wls-menu" hidden><button type="button" class="btn-sm" data-wls="rename">Renomear lista</button><button type="button" class="btn-sm" data-wls="delete">Excluir lista</button></div>
+    <div id="wls-menu" class="wls-menu" hidden><button type="button" class="btn-sm" data-wls="new">Nova lista</button><button type="button" class="btn-sm" data-wls="rename">Renomear lista</button><button type="button" class="btn-sm" data-wls="delete">Excluir lista</button></div>
     <form class="wls-form" hidden><label for="wls-name">Nome da lista</label><input id="wls-name" maxlength="30" required autocomplete="off"><button type="submit" class="btn-sm">Salvar</button><button type="button" class="btn-sm" data-wls="cancel">Cancelar</button></form>
     <div class="wls-confirm" hidden><span></span><button type="button" class="btn-sm" data-wls="confirm-delete">Excluir</button><button type="button" class="btn-sm" data-wls="cancel">Cancelar</button></div>
     <div class="wls-status" role="status"></div><button type="button" class="btn-sm" data-wls="retry" hidden>Tentar novamente</button>`;
   grid.before(root);
-  const picker = root.querySelector('select'), menu = root.querySelector('.wls-menu'), form = root.querySelector('form');
-  const input = root.querySelector('input'), confirm = root.querySelector('.wls-confirm'), status = root.querySelector('.wls-status');
+  const bar = root.querySelector('.wls-bar'), addForm = document.getElementById('wl-form'), refresh = document.getElementById('wl-refresh-btn');
+  if (addForm) { bar.append(addForm); addForm.querySelector('input').placeholder = 'Adicionar ativo…'; const add = addForm.querySelector('button'); add.innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i>'; add.setAttribute('aria-label','Adicionar ativo'); add.title = 'Adicionar ativo'; }
+  if (refresh) { bar.append(refresh); refresh.innerHTML = '<i class="fas fa-sync-alt" aria-hidden="true"></i>'; refresh.setAttribute('aria-label','Atualizar cotações'); }
+
+  const picker = root.querySelector('select'), menu = root.querySelector('.wls-menu'), form = root.querySelector('.wls-form');
+  const input = form.querySelector('input'), confirm = root.querySelector('.wls-confirm'), status = root.querySelector('.wls-status');
   let state = { user:null, active:'main', lists:[], ready:false, writable:false }, editing = null, editId = null;
   const current = () => state.lists.find(l => l.id === state.active);
   function action(value) { window.dispatchEvent(new CustomEvent('mm-watchlists-action', { detail:value })); }
@@ -23,7 +27,7 @@
     picker.replaceChildren();
     for (const list of state.lists) { const o = document.createElement('option'); o.value = list.id; o.textContent = list.name + ' · ' + list.count; picker.append(o); }
     picker.value = state.active; picker.disabled = !state.ready;
-    for (const b of root.querySelectorAll('button')) {
+    for (const b of root.querySelectorAll('button[data-wls], .wls-form button')) {
       b.disabled = !state.writable;
       if (b.dataset.wls === 'cancel') b.disabled = false;
       if (b.dataset.wls === 'retry') { b.disabled = false; b.hidden = !state.error; }
@@ -72,5 +76,6 @@
     state = e.detail; render();
   });
   document.addEventListener('click', e => { if (e.target.closest?.('[data-act="sair"]')) { close(); state = {...state,user:null,lists:[],ready:false,writable:false}; render(); } });
+  document.addEventListener('click', e => { if (!root.contains(e.target)) close(); });
   render(); window.dispatchEvent(new Event('mm-watchlists-request'));
 })();

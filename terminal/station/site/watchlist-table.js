@@ -13,6 +13,9 @@
       <th scope="col"><span class="wt-sr">Ações</span></th>
     </tr></thead><tbody></tbody></table></div><div class="wt-status" role="status"></div>`;
   grid.before(root);
+  const modes = root.querySelector('.wt-modes'), bar = document.querySelector('#watchlists-controls .wls-bar');
+  if (bar) { bar.insertBefore(modes, bar.querySelector('#wl-form')); root.querySelector('.wt-toolbar').remove(); }
+
   const wrap = root.querySelector('.wt-table-wrap'), body = root.querySelector('tbody'), status = root.querySelector('.wt-status');
   let user = null, state = { rows: [], loading: false }, prefs = core.preferences();
   const key = () => 'trader_watch_table_v1:' + user;
@@ -21,7 +24,7 @@
   function original(symbol) { return [...grid.querySelectorAll('.wl-card')].find(c => c.dataset.symbol === symbol); }
   function render() {
     grid.hidden = prefs.mode === 'table'; wrap.hidden = prefs.mode !== 'table';
-    root.querySelectorAll('[data-wt-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wtMode === prefs.mode)));
+    modes.querySelectorAll('[data-wt-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wtMode === prefs.mode)));
     for (const h of root.querySelectorAll('[data-wt-col]')) {
       const active = h.dataset.wtCol === prefs.sort;
       if (active) h.setAttribute('aria-sort', prefs.direction === 1 ? 'ascending' : 'descending'); else h.removeAttribute('aria-sort');
@@ -44,7 +47,7 @@
       remove.addEventListener('click', () => original(r.symbol)?.querySelector('[data-wlrm]')?.click()); actions.append(remove); tr.append(actions); body.append(tr);
     }
   }
-  root.querySelectorAll('[data-wt-mode]').forEach(b => b.addEventListener('click', () => { prefs.mode = b.dataset.wtMode; save(); render(); }));
+  modes.querySelectorAll('[data-wt-mode]').forEach(b => b.addEventListener('click', () => { prefs.mode = b.dataset.wtMode; save(); render(); }));
   root.querySelectorAll('[data-wt-sort]').forEach(b => b.addEventListener('click', () => {
     const sort = b.dataset.wtSort; prefs.direction = prefs.sort === sort ? -prefs.direction : sort === 'symbol' ? 1 : -1;
     prefs.sort = sort; save(); render();
