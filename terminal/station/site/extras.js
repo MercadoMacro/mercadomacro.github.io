@@ -380,7 +380,7 @@
     const list = (ctx && ctx.list) || wl;
     const it = list.find((x) => x.s === sym) || wl.find((x) => x.s === sym) || { s: sym, n: (ctx && ctx.name) || '' };
     const tv = tvSym(sym), light = document.body.classList.contains('light');
-    const canEmbed = window.MMAssetHistory.canEmbed(tv);
+    const canEmbed = ctx?._source !== 'mesa' && window.MMAssetHistory.canEmbed(tv, sym);
     const mode = canEmbed ? ctx?._chartMode || window.MMAssetHistory.defaultMode(sym, tv) : 'history';
     if (!tvBox) {
       tvBox = document.createElement('div');
@@ -422,7 +422,7 @@
       <div class="wlc-id"><b id="wlc-name">${esc(it.n || nice(sym))}</b><span>${esc(nice(sym))} · ${mode === 'history' ? 'Histórico diário' : 'TradingView ' + esc(tv)}</span></div>
       <div class="wlc-q"><b>${price}</b>${chg == null ? '<em class="na">—</em>' : `<em class="${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</em>`}</div>
       <span class="sp"></span>
-      <div class="wlc-modes" role="group" aria-label="Tipo de gráfico"><button type="button" class="wlc-b" data-wlc="history" aria-pressed="${mode === 'history'}">Histórico</button>${canEmbed ? `<button type="button" class="wlc-b" data-wlc="tradingview" aria-pressed="${mode === 'tradingview'}">Avançado</button>` : ''}</div>
+      ${canEmbed ? `<div class="wlc-modes" role="group" aria-label="Tipo de gráfico"><button type="button" class="wlc-b" data-wlc="history" aria-pressed="${mode === 'history'}">Histórico</button><button type="button" class="wlc-b" data-wlc="tradingview" aria-pressed="${mode === 'tradingview'}">Avançado</button></div>` : ''}
       ${list.length > 1 ? `<button type="button" class="wlc-b" data-wlc="prev" title="Ativo anterior (seta esquerda)" aria-label="Ativo anterior"><i class="fas fa-chevron-left"></i></button>
       <button type="button" class="wlc-b" data-wlc="next" title="Próximo ativo (seta direita)" aria-label="Próximo ativo"><i class="fas fa-chevron-right"></i></button>` : ''}
       <a class="wlc-b wlc-ext" href="https://br.tradingview.com/chart/?symbol=${encodeURIComponent(tv)}" target="_blank" rel="noopener" title="Abrir no TradingView"><i class="fas fa-external-link-alt"></i><span>TradingView</span></a>
@@ -454,7 +454,7 @@
     }
     if (mode === 'history') historyView.show(box, sym, it.n || nice(sym), light);
   }
-  window.openAssetChart = (sym, name, list, quote) => wlChart(sym, { name, list: list && list.length ? list : [{ s: sym, n: name }], quote });
+  window.openAssetChart = (sym, name, list, quote, source) => wlChart(sym, { _source: source, name, list: list && list.length ? list : [{ s: sym, n: name }], quote });
   function wlChartClose() {
     if (!tvBox || tvBox.hidden) return;
     historyView.destroy(); tvLast = null;

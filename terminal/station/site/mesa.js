@@ -409,7 +409,7 @@
   /* ---------------- interação ---------------- */
   function openChart(sym, name, list) {
     const quote = (k) => { const q = Q[k]; return q && q.v != null ? { value: q.v, change: q.c } : null; };
-    if (typeof window.openAssetChart === 'function') window.openAssetChart(sym, name, list, quote);
+    if (typeof window.openAssetChart === 'function') window.openAssetChart(sym, name, list, quote, 'mesa');
   }
   const listOf = (tid) => {
     const t = TABLES.find((x) => x.id === tid);

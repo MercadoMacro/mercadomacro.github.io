@@ -1,8 +1,8 @@
 /* Histórico do mesmo código usado nas cotações, independente do widget incorporado. */
 globalThis.MMAssetHistory = (() => {
-  const canEmbed = tv => !['TVC:VIX','BMV:ME'].includes(tv);
+  const canEmbed = (tv,symbol='') => !symbol.endsWith('=F') && !['TVC:VIX','BMV:ME'].includes(tv);
   function defaultMode(symbol,tv) {
-    return symbol.startsWith('^') || /^(TVC|BMV|BME|SIX|INDEX):/.test(tv) || /\.(MI|SS|SZ|L|DE|HK|TO|AX)$/.test(symbol) ? 'history' : 'tradingview';
+    return symbol.endsWith('=F') || symbol.startsWith('^') || /^(TVC|BMV|BME|SIX|INDEX):/.test(tv) || /\.(MI|SS|SZ|L|DE|HK|TO|AX)$/.test(symbol) ? 'history' : 'tradingview';
   }
   function points(raw) {
     if(!Array.isArray(raw?.t)||!Array.isArray(raw?.c)||raw.t.length!==raw.c.length)return [];

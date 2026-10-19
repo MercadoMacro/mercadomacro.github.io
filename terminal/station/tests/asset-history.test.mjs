@@ -46,3 +46,20 @@ test('manual history button and widget script failure keep the original symbol',
 });
 
 test('known restricted symbols cannot reopen the broken embed through navigation context',()=>{const u=integration();vm.runInContext('wlChart("^VIX",{_chartMode:"tradingview"})',u.ctx);assert.equal(u.scripts.length,0);assert.deepEqual(u.calls,['^VIX']);});
+const mesaSource=readFileSync(new URL('../site/mesa.js',import.meta.url),'utf8');
+const catalogCode=mesaSource.slice(mesaSource.indexOf('  const CRYPTO ='),mesaSource.indexOf('  /* ---------------- dados'));
+function mesaSymbols(){const ctx=vm.createContext({});vm.runInContext(catalogCode+';globalThis.symbols=SYMS;',ctx);return Array.from(ctx.symbols);}
+test('all 72 current Mesa symbols route to own history and never create an embed',()=>{
+ const symbols=mesaSymbols(),u=integration();assert.equal(symbols.length,72);
+ for(const sym of symbols)u.ctx.window.openAssetChart(sym,sym,null,null,'mesa');
+ assert.equal(u.scripts.length,0);assert.deepEqual(u.calls,symbols);
+});
+test('all futures including ES, YM, RTY and NQ cannot embed even with an advanced context',()=>{
+ const u=integration();for(const sym of mesaSymbols().filter(s=>s.endsWith('=F')))vm.runInContext('wlChart('+JSON.stringify(sym)+',{_chartMode:"tradingview"})',u.ctx);
+ assert.equal(u.scripts.length,0);for(const sym of ['ES=F','YM=F','NQ=F','RTY=F'])assert.ok(u.calls.includes(sym));
+});
+test('Mesa click handler explicitly identifies its chart context',()=>{
+ const calls=[],ctx=vm.createContext({Q:{},window:{openAssetChart:(...args)=>calls.push(args)}});
+ const source=mesaSource.slice(mesaSource.indexOf('  function openChart('),mesaSource.indexOf('  const listOf ='));
+ vm.runInContext(source+';openChart("ES=F","S&P 500 futuro",[]);',ctx);assert.equal(calls[0][4],'mesa');assert.equal(calls[0][0],'ES=F');
+});
