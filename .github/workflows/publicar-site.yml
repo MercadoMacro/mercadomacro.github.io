@@ -44,6 +44,11 @@ jobs:
           MM_BROWSER_MODULES: ${{ runner.temp }}/mm-browser/node_modules
           MM_BROWSER_OUTPUT: ${{ runner.temp }}/mm-browser-images
         run: node terminal/station/tests/asset-history-browser.mjs
+      - name: Conferir prévia cripto em Chromium
+        env:
+          MM_BROWSER_MODULES: ${{ runner.temp }}/mm-browser/node_modules
+          MM_BROWSER_OUTPUT: ${{ runner.temp }}/mm-browser-images
+        run: node terminal/station/tests/crypto-live-browser.mjs
       - name: Guardar imagem da verificação
         if: always()
         uses: actions/upload-artifact@v4
