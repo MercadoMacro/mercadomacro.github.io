@@ -15,8 +15,8 @@ function env(){
  const start=()=>{client.setActive(true);sockets.at(-1).onopen();};
  return {core,client,sockets,events,clock,timers,tick,message,send,start};
 }
-test('production domains cannot activate the preview and no secret is required',()=>{
- const {core}=env();for(const host of ['mercadomacro.com.br','www.mercadomacro.com.br','localhost.evil'])assert.equal(core.previewAllowed(host),false);for(const host of ['localhost','127.0.0.1','[::1]'])assert.equal(core.previewAllowed(host),true);
+test('official and local domains activate the stream; unknown hosts and disabled clients do not',()=>{
+ const {core}=env();for(const host of ['localhost.evil','mercadomacro.com.br.evil','evilmercadomacro.com.br','example.com',''])assert.equal(core.hostAllowed(host),false);for(const host of ['mercadomacro.com.br','www.mercadomacro.com.br','localhost','127.0.0.1','[::1]','::1'])assert.equal(core.hostAllowed(host),true);
  let count=0;const client=new core.Client({enabled:false,Socket:class{constructor(){count++;}}});client.setActive(true);assert.equal(count,0);
 });
 test('all eight pairs preserve USDT and rolling 24h semantics; Tether/USD is not invented',()=>{

@@ -71,7 +71,7 @@
   /* ---------------- dados ---------------- */
   const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
   let cryptoStream = null;
-  const cryptoPreview = !!window.MMCryptoLive?.previewAllowed(location.hostname);
+  const cryptoEnabled = !!window.MMCryptoLive?.hostAllowed(location.hostname);
   let Q = {}, X = { cds: null, fed: null, selic: null, min: null }, lastTs = 0, busy = false, errMsg = '';
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -368,7 +368,7 @@
   }
   function cryptoPrice(q) { return q&&q.v!=null&&isFinite(q.v)?(q.stream?'USDT ':'US$ ')+nf(q.v,q.v<2?4:2):'—'; }
   function cryptoTitle(s,n,q) {
-    return q?.stream?'Binance · '+s.replace('-USD','/USDT')+' · variação das últimas 24h. Clique para histórico diário em USD (Yahoo Finance).':'Abrir o gráfico de '+n+(cryptoPreview?' · Yahoo Finance · USD · atualização periódica':'');
+    return q?.stream?'Binance · '+s.replace('-USD','/USDT')+' · variação das últimas 24h. Clique para histórico diário em USD (Yahoo Finance).':'Abrir o gráfico de '+n+(cryptoEnabled?' · Yahoo Finance · USD · atualização periódica':'');
   }
   function cryptoHTML() {
     return CRYPTO.map(([s,n])=>{
@@ -377,7 +377,7 @@
     }).join('');
   }
   function paintCrypto(event) {
-    if(!cryptoPreview)return;
+    if(!cryptoEnabled)return;
     for(const [s,n]of CRYPTO){
       if(event?.type==='quote'&&event.symbol!==s)continue;
       const node=[...root.querySelectorAll('.ms-cr')].find(el=>el.dataset.sym===s);if(!node)continue;
@@ -391,7 +391,7 @@
     }
     const status=root.querySelector('.ms-live-status');if(status){
       const state=cryptoStream?.state(),count=state?.count||0;
-      status.textContent=count?'Prévia · Binance · '+count+' pares em USDT · 24h · ao vivo':state?.status==='reconnecting'?'Prévia cripto · reconectando · Yahoo periódico':state?.status==='connecting'||state?.status==='waiting'?'Prévia cripto · conectando à Binance':'Cripto · Yahoo periódico';
+      status.textContent=count?'Binance · '+count+' pares em USDT · 24h · ao vivo':state?.status==='reconnecting'?'Cripto · reconectando · Yahoo periódico':state?.status==='connecting'||state?.status==='waiting'?'Cripto · conectando à Binance':'Cripto · Yahoo periódico';
       status.classList.toggle('on',count>0);
     }
   }
@@ -412,7 +412,7 @@
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
         <div class="ms-info"><span class="dot ${errMsg ? 'bad' : ''}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
-        ${cryptoPreview ? '<span class="ms-live-status" role="status"></span>' : ''}
+        ${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}
         <button type="button" class="btn-sm ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo"><i class="fas fa-sync-alt"></i> Atualizar</button>
       </div>
       <div class="ms-crypto">${cryptoHTML()}</div>
@@ -482,7 +482,7 @@
     const strip=root.querySelector('.ms-crypto');
     cryptoStream.setActive(active()&&!window.__mmLoggingOut&&!!strip&&!strip.hidden&&getComputedStyle(strip).display!=='none');
   }
-  if(cryptoPreview){
+  if(cryptoEnabled){
     cryptoStream=new window.MMCryptoLive.Client({enabled:true,onChange:paintCrypto});
     setInterval(syncCrypto,1000);
     window.addEventListener('pagehide',()=>cryptoStream.setActive(false));

@@ -1,8 +1,7 @@
-/* Prévia técnica de cripto: acesso público de mercado, sem conta, chave ou ordens.
-   A habilitação comercial precisa ser confirmada antes de ativar em produção. */
+/* Cotações cripto por conexão pública de mercado, sem conta, chave ou ordens. */
 globalThis.MMCryptoLive = (() => {
   const PAIRS=Object.freeze({'BTC-USD':'BTCUSDT','ETH-USD':'ETHUSDT','BNB-USD':'BNBUSDT','XRP-USD':'XRPUSDT','SOL-USD':'SOLUSDT','DOGE-USD':'DOGEUSDT','USDC-USD':'USDCUSDT','ADA-USD':'ADAUSDT'});
-  const previewAllowed=host=>['localhost','127.0.0.1','[::1]','::1'].includes(host);
+  const hostAllowed=host=>['mercadomacro.com.br','www.mercadomacro.com.br','localhost','127.0.0.1','[::1]','::1'].includes(host);
   const number=v=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isFinite(Number(v))?Number(v):null;
   function parse(message,now=Date.now()){
     const data=message?.data||message;if(data?.e!=='24hrTicker')return null;
@@ -72,5 +71,5 @@ globalThis.MMCryptoLive = (() => {
     }
     destroy(){this.setActive(false);this.disconnect();this.clock.clearInterval(this.monitor);}
   }
-  return {PAIRS,previewAllowed,parse,Client};
+  return {PAIRS,hostAllowed,parse,Client};
 })();
