@@ -374,11 +374,14 @@
     return s.replace(/^\^/, '').replace(/=F$/, '1!');
   }
   let tvBox = null, tvLast = null;
+  const historyView = new window.MMAssetHistory.Viewer(sym => getJSON(`${PROXY}/history?symbols=${encodeURIComponent(sym)}`, 20000));
   // ctx (opcional): { name, list } para abrir de outras abas (a Mesa usa); sem ctx, navega pela watchlist
   function wlChart(sym, ctx) {
     const list = (ctx && ctx.list) || wl;
     const it = list.find((x) => x.s === sym) || wl.find((x) => x.s === sym) || { s: sym, n: (ctx && ctx.name) || '' };
     const tv = tvSym(sym), light = document.body.classList.contains('light');
+    const canEmbed = window.MMAssetHistory.canEmbed(tv);
+    const mode = canEmbed ? ctx?._chartMode || window.MMAssetHistory.defaultMode(sym, tv) : 'history';
     if (!tvBox) {
       tvBox = document.createElement('div');
       tvBox.className = 'wlc';
@@ -393,6 +396,7 @@
         const b = e.target.closest('[data-wlc]');
         if (!b) return;
         if (b.dataset.wlc === 'close') wlChartClose();
+        else if (b.dataset.wlc === 'history' || b.dataset.wlc === 'tradingview') wlChart(tvBox.dataset.sym, { ...(tvBox._ctx || {}), list: tvBox._list, _chartMode: b.dataset.wlc });
         else if (b.dataset.wlc === 'prev' || b.dataset.wlc === 'next') {
           const L = tvBox._list || wl;
           const i = L.findIndex((x) => x.s === tvBox.dataset.sym);
@@ -415,16 +419,19 @@
     const chg = has && d.change != null && !isNaN(d.change) ? d.change : null;
     const price = has ? (typeof fmtNumber === 'function' ? fmtNumber(d.value, { min: 2, max: d.value < 10 ? 4 : 2 }) : d.value.toFixed(2)) : '—';
     tvBox.querySelector('.wlc-head').innerHTML = `
-      <div class="wlc-id"><b id="wlc-name">${esc(it.n || nice(sym))}</b><span>${esc(nice(sym))} · TradingView ${esc(tv)}</span></div>
+      <div class="wlc-id"><b id="wlc-name">${esc(it.n || nice(sym))}</b><span>${esc(nice(sym))} · ${mode === 'history' ? 'Histórico diário' : 'TradingView ' + esc(tv)}</span></div>
       <div class="wlc-q"><b>${price}</b>${chg == null ? '<em class="na">—</em>' : `<em class="${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</em>`}</div>
       <span class="sp"></span>
+      <div class="wlc-modes" role="group" aria-label="Tipo de gráfico"><button type="button" class="wlc-b" data-wlc="history" aria-pressed="${mode === 'history'}">Histórico</button>${canEmbed ? `<button type="button" class="wlc-b" data-wlc="tradingview" aria-pressed="${mode === 'tradingview'}">Avançado</button>` : ''}</div>
       ${list.length > 1 ? `<button type="button" class="wlc-b" data-wlc="prev" title="Ativo anterior (seta esquerda)" aria-label="Ativo anterior"><i class="fas fa-chevron-left"></i></button>
       <button type="button" class="wlc-b" data-wlc="next" title="Próximo ativo (seta direita)" aria-label="Próximo ativo"><i class="fas fa-chevron-right"></i></button>` : ''}
       <a class="wlc-b wlc-ext" href="https://br.tradingview.com/chart/?symbol=${encodeURIComponent(tv)}" target="_blank" rel="noopener" title="Abrir no TradingView"><i class="fas fa-external-link-alt"></i><span>TradingView</span></a>
       <button type="button" class="wlc-b" data-wlc="close" title="Fechar (Esc)" aria-label="Fechar"><i class="fas fa-times"></i></button>`;
     // gráfico avançado do TradingView (o mesmo do site antigo): diário, média móvel, troca de ativo, detalhes e notícias
     const box = tvBox.querySelector('.wlc-chart');
-    if (tvLast !== `${tv}|${light}`) {
+    historyView.destroy();
+    if (mode === 'history') { tvLast = null; box.replaceChildren(); }
+    else if (tvLast !== `${tv}|${light}`) {
       box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div><div class="wlc-load">Carregando gráfico…</div>';
       const sc = document.createElement('script');
       sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
@@ -434,7 +441,7 @@
         allow_symbol_change: true, details: true, hotlist: false, calendar: false, withdateranges: true, hide_side_toolbar: false,
         studies: ['STD;SMA'], support_host: 'https://www.tradingview.com'
       });
-      sc.onerror = () => { box.innerHTML = `<div class="wlc-load"><div>Não foi possível carregar o gráfico do TradingView agora.<br><a href="https://br.tradingview.com/chart/?symbol=${encodeURIComponent(tv)}" target="_blank" rel="noopener">Abrir no site do TradingView</a></div></div>`; tvLast = null; };
+      sc.onerror = () => { if (tvBox.hidden || tvBox.dataset.sym !== sym || tvBox._ctx?._chartMode === 'history') return; wlChart(sym, { ...(ctx || {}), list, _chartMode: 'history' }); };
       box.querySelector('.tradingview-widget-container').appendChild(sc);
       tvLast = `${tv}|${light}`;
     }
@@ -445,10 +452,13 @@
       requestAnimationFrame(() => tvBox.classList.add('on'));
       setTimeout(() => tvBox.querySelector('[data-wlc="close"].wlc-b')?.focus(), 60);
     }
+    if (mode === 'history') historyView.show(box, sym, it.n || nice(sym), light);
   }
   window.openAssetChart = (sym, name, list, quote) => wlChart(sym, { name, list: list && list.length ? list : [{ s: sym, n: name }], quote });
   function wlChartClose() {
     if (!tvBox || tvBox.hidden) return;
+    historyView.destroy(); tvLast = null;
+    tvBox.querySelector('.wlc-chart').replaceChildren();
     tvBox.classList.remove('on');
     document.body.classList.remove('wlc-open');
     setTimeout(() => { tvBox.hidden = true; }, 180);
