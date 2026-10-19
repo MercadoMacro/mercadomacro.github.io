@@ -327,7 +327,7 @@
     let q = s === '__cds' ? X.cds : Q[s];
     const fq = tid === 'em' ? forexStream?.quote(s) : null;
     if (fq) {
-      q = { ...(q || {}), v: fq.value, ts: fq.ts, live: true, stream: true };
+      q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
     }
     if (s === 'TIO=F' && X.min && (X.min.live || !(q && q.live))) {
       q = X.min;
@@ -422,6 +422,8 @@
       const decimals = dec(fq.value, d);
       if (pxEl) pxEl.textContent = nf(fq.value, decimals);
       if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
+      const chEl = tr.querySelector('.ch');
+      if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
 
       if (event?.type === 'quote' && event.symbol === s && event.quote.direction) {
         tr.classList.remove('ms-tick-up', 'ms-tick-down');
