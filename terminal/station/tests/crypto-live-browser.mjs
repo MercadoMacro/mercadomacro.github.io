@@ -49,12 +49,17 @@ try{
  await prod.route('https://mercadomacro.com.br/**',route=>route.fulfill({contentType:'text/html',body:fixturePage}));
  await prod.routeWebSocket('wss://data-stream.binance.vision/**',()=>productionConnections++);
  await prod.goto('https://mercadomacro.com.br/');await prod.addScriptTag({path:join(site,'crypto-live.js')});
- const allowed=await prod.evaluate(()=>MMCryptoLive.previewAllowed(location.hostname));assert.equal(allowed,false);assert.equal(productionConnections,0);
+ await prod.evaluate(()=>{window.fetchT=async()=>new Response('{}');window.parseYahooChart=x=>x;});
+ await prod.addScriptTag({path:join(site,'mesa.js')});
+ await prod.waitForSelector('.ms-cr');
+ const allowed=await prod.evaluate(()=>MMCryptoLive.previewAllowed(location.hostname));assert.equal(allowed,false);assert.equal(productionConnections,0);assert.equal(await prod.locator('.ms-live-status').count(),0);
  assert.deepEqual(errors,[]);
  console.log('Cripto: 8 pares simulados em Chromium; USD/USDT separados, flash, fallback, pausa, retomada e bloqueio de produção aprovados.');
  // Sonda externa de leitura: indisponibilidade regional não altera o resultado dos testes determinísticos.
- await page.unrouteWebSocket('wss://data-stream.binance.vision/**');
- const result=await page.evaluate(()=>new Promise(resolve=>{
+ const network=await browser.newPage();
+ await network.route('http://127.0.0.1:8787/**',route=>route.fulfill({contentType:'text/html',body:'<html><head></head><body>Verificação da conexão</body></html>'}));
+ await network.goto('http://127.0.0.1:8787/');await network.addScriptTag({path:join(site,'crypto-live.js')});
+ const result=await network.evaluate(()=>new Promise(resolve=>{
   let done=false;const ws=new WebSocket('wss://data-stream.binance.vision/ws/btcusdt@ticker');
   const finish=result=>{if(done)return;done=true;clearTimeout(timer);ws.close();resolve(result);};
   const timer=setTimeout(()=>finish({ok:false,reason:'timeout ou bloqueio regional'}),12000);
