@@ -72,6 +72,8 @@
   const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
   let cryptoStream = null;
   const cryptoEnabled = !!window.MMCryptoLive?.hostAllowed(location.hostname);
+  let forexStream = null;
+  const forexEnabled = typeof window.MMForexLive !== 'undefined';
   let Q = {}, X = { cds: null, fed: null, selic: null, min: null }, lastTs = 0, busy = false, errMsg = '';
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -323,6 +325,10 @@
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : Q[s];
+    const fq = tid === 'em' ? forexStream?.quote(s) : null;
+    if (fq) {
+      q = { ...(q || {}), v: fq.value, ts: fq.ts, live: true, stream: true };
+    }
     if (s === 'TIO=F' && X.min && (X.min.live || !(q && q.live))) {
       q = X.min;
       n = X.min.mercado === 'DCE' ? 'Minério de ferro (Dalian, ¥/t)' : 'Minério de ferro (US$/t)';
@@ -396,6 +402,35 @@
     }
   }
 
+  function paintForex(event) {
+    if (!root || !forexEnabled) return;
+    const table = root.querySelector('.ms-tb[data-tb="em"]');
+    if (!table) return;
+    const emTableDef = TABLES.find((t) => t.id === 'em');
+    if (!emTableDef) return;
+
+    for (const [s, n, cc, d] of emTableDef.rows) {
+      if (event?.type === 'quote' && event.symbol !== s) continue;
+      const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`);
+      if (!tr) continue;
+      const fq = forexStream?.quote(s);
+      if (!fq) continue;
+
+      const pxEl = tr.querySelector('.px');
+      const tmEl = tr.querySelector('.tm');
+
+      const decimals = dec(fq.value, d);
+      if (pxEl) pxEl.textContent = nf(fq.value, decimals);
+      if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
+
+      if (event?.type === 'quote' && event.symbol === s && event.quote.direction) {
+        tr.classList.remove('ms-tick-up', 'ms-tick-down');
+        void tr.offsetWidth;
+        tr.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down');
+      }
+    }
+  }
+
   function newsHTML() {
     const list = (typeof newsAll !== 'undefined' && Array.isArray(newsAll) ? newsAll : []).filter((n) => n && n.titulo && n.data).slice().sort((a, b) => b.data - a.data).slice(0, 14);
     if (!list.length) return '<div class="ms-empty">Carregando notícias…</div>';
@@ -432,6 +467,7 @@
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
     window.MMDeskLayout?.apply(root, layout);
     paintCrypto();
+    paintForex();
     const w = root.querySelector('.ms-wrap'); if (w) w.scrollTop = sc;
     requestAnimationFrame(drawCurve);
   }
@@ -489,11 +525,24 @@
     window.addEventListener('pageshow',syncCrypto);
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-act="sair"]'))cryptoStream.setActive(false);},true);
   }
-  new MutationObserver(() => { syncCrypto(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
+
+  function syncForex() {
+    if (!forexStream) return;
+    const emTable = root?.querySelector('.ms-tb[data-tb="em"]');
+    forexStream.setActive(active() && !window.__mmLoggingOut && !!emTable && !emTable.hidden && getComputedStyle(emTable).display !== 'none');
+  }
+  if (forexEnabled) {
+    forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex });
+    setInterval(syncForex, 1000);
+    window.addEventListener('pagehide', () => forexStream.setActive(false));
+    window.addEventListener('pageshow', syncForex);
+    document.addEventListener('click', (e) => { if (e.target.closest?.('[data-act="sair"]')) forexStream.setActive(false); }, true);
+  }
+  new MutationObserver(() => { syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
   setInterval(() => { if (active()) { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); } }, 60 * 1000);
-  document.addEventListener('visibilitychange', () => { syncCrypto(); if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); });
+  document.addEventListener('visibilitychange', () => { syncCrypto(); syncForex(); if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); });
 
   /* ---------------- estilos ---------------- */
   const css = document.createElement('style');
