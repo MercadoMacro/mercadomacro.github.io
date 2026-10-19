@@ -7,7 +7,7 @@ globalThis.MMAssetSearch = (() => {
     {symbol:'GOOG',name:'Alphabet (Google) · Classe C',aliases:['google','alphabet'],market:'Nasdaq · USD'}
   ];
   function catalog(sections = []) {
-    const map = new Map(seed.map(x => [x.symbol,{...x}]));
+    const map = new Map([...seed,...(globalThis.MMAssetCatalog || [])].map(x => [x.symbol,{...x,market:x.market || [x.exchange,x.type,x.currency].filter(Boolean).join(' · ')}]));
     for (const section of sections) for (const item of section.items || []) {
       if (typeof item.symbol !== 'string' || !item.symbol || typeof item.name !== 'string') continue;
       if (!map.has(item.symbol)) map.set(item.symbol,{symbol:item.symbol,name:item.name,aliases:[],market:item.symbol.endsWith('.SA')?'B3':''});
@@ -26,5 +26,14 @@ globalThis.MMAssetSearch = (() => {
     }).filter(x=>x.match).sort((a,b)=>a.rank-b.rank||a.index-b.index).slice(0,8).map(x=>x.item);
   }
   const exactCode=(query,entries)=>entries.find(x=>code(x.symbol)===code(query));
-  return {normalize,catalog,search,exactCode};
+  function remoteQuery(query,entries) {
+    const q=normalize(query), match=entries.find(x=>(x.aliases||[]).some(a=>normalize(a)===q));
+    return match ? match.name.split(' · ')[0].replace(/\(Google\)/g,'').trim() : query.trim();
+  }
+  function combine(local,remote) {
+    const map=new Map(local.map(x=>[x.symbol,x]));
+    for(const x of remote || [])if(x && typeof x.symbol==='string' && /^[A-Z0-9][A-Z0-9.^=_-]{0,23}$/.test(x.symbol) && typeof x.name==='string' && !map.has(x.symbol))map.set(x.symbol,x);
+    return [...map.values()].slice(0,8);
+  }
+  return {normalize,catalog,search,exactCode,remoteQuery,combine};
 })();

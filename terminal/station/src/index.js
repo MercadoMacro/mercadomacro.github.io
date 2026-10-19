@@ -1,3 +1,4 @@
+import { buscarAtivos } from './busca-ativos.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
@@ -92,6 +93,7 @@ export default {
       if (p === '/admin') return u.admin ? html(PAGINA_ADMIN) : redirect('/');
       if (p === '/fechamento' || p.startsWith('/fechamento/')) { if (!u.admin) return redirect('/'); }
       if (p === '/conta') return html(PAGINA_CONTA);
+      if (p === '/api/ativos/buscar') return await buscarAtivos(req);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);
