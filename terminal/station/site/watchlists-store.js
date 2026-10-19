@@ -47,6 +47,14 @@ globalThis.MMWatchlistsStore = class {
           await this.sync(true); return;
         }
       }
+      if (r.status === 409 && !migrating) {
+        const body = await r.clone().json().catch(() => ({}));
+        if (body.codigo === 'versao-mais-nova') {
+          // Outro aparelho gravou uma versão mais nova: a conta vale, esta alteração não foi salva.
+          this.notify('Suas listas mudaram em outro aparelho. Carregando a versão da conta; refaça a última alteração se ela não aparecer.');
+          await this.sync(true); return;
+        }
+      }
       if (r.status === 401 || r.status === 409) { this.ready = false; this.doc = null; this.emit(); throw new Error('A conta mudou. Reabra o painel.'); }
       if (!r.ok) throw new Error('Listas não sincronizadas. Use Tentar novamente.');
       this.migrating = false; this.error = ''; this.emit();

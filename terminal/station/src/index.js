@@ -93,7 +93,11 @@ export default {
       if (p === '/admin') return u.admin ? html(PAGINA_ADMIN) : redirect('/');
       if (p === '/fechamento' || p.startsWith('/fechamento/')) { if (!u.admin) return redirect('/'); }
       if (p === '/conta') return html(PAGINA_CONTA);
-      if (p === '/api/ativos/buscar') return await buscarAtivos(req);
+      if (p === '/api/ativos/buscar') {
+        // cada busca nova consulta o Yahoo: limite por conta
+        if (!(await dentroDoLimite(env, 'busca:' + u.id, 120, 600))) return json({ erro: 'Muitas buscas seguidas. Espere alguns minutos.' }, 429);
+        return await buscarAtivos(req);
+      }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);
@@ -369,7 +373,7 @@ async function usuarioDaSessao(req, env) {
      WHERE s.token = ? AND s.expira > ? AND u.status = 'ativo'`).bind(h, agora).first();
   if (u) {
     if (cacheSessao.size > 500) cacheSessao.clear();
-    cacheSessao.set(tok, { u, ate: agora + 60000 });
+    cacheSessao.set(tok, { u, ate: agora + 10000 }); // curto: bloqueio, saída e troca de senha valem em até 10 s em todas as instâncias
   }
   return u || null;
 }
@@ -428,9 +432,11 @@ async function apiDados(req, env, u) {
     return json({ ok: true });
   }
   // só grava se for mais nova que a guardada (dois aparelhos mudando ao mesmo tempo)
-  await env.DB.prepare(`INSERT INTO dados_usuario (usuario_id, chave, valor, ts) VALUES (?, ?, ?, ?)
+  const res = await env.DB.prepare(`INSERT INTO dados_usuario (usuario_id, chave, valor, ts) VALUES (?, ?, ?, ?)
     ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
     .bind(u.id, b.k, JSON.stringify(v), ts).run();
+  // nada gravado: a conta já tem uma versão mais nova (de outro aparelho); o site deve recarregar a da conta
+  if (res.meta?.changes === 0) return json({ erro: 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
   return json({ ok: true });
 }
 
