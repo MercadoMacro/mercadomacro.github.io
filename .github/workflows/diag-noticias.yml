@@ -1,5 +1,7 @@
 name: diag-noticias
 on: workflow_dispatch
+permissions:
+  contents: write
 jobs:
   d:
     runs-on: ubuntu-24.04
@@ -8,5 +10,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: node .github/coleta-tmp.mjs "$PWD/terminal/station/src/noticias.js" noticias.json
-      - uses: actions/upload-artifact@v4
-        with: { name: noticias, path: noticias.json }
+      - run: |
+          git config user.name diag; git config user.email actions@users.noreply.github.com
+          git checkout -q --orphan diag-noticias && git rm -rq --cached . && git add noticias.json && git commit -qm diag && git push -qf origin diag-noticias
