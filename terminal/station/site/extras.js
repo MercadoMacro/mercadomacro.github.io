@@ -499,7 +499,7 @@
     }
     const ref = t.ref || b.ref || '';
     const tri = ref ? (+ref.slice(5, 7) === 12 ? `ano de ${ref.slice(0, 4)}` : `${Math.ceil(+ref.slice(5, 7) / 3)}º tri/${ref.slice(0, 4)}`) : '';
-    const doc = b.doc && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(b.doc) ? `<a class="wlc-fdoc" href="${esc(b.doc)}" target="_blank" rel="noopener" title="Documento original entregue à CVM">documento na CVM</a>` : '';
+    const doc = b.doc && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(b.doc) ? `<a class="wlc-fdoc" href="${esc(/NumeroSequencialDocumento=(\d+)/.test(b.doc) ? 'https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento=' + RegExp.$1 + '&CodigoTipoInstituicao=2' : b.doc)}" target="_blank" rel="noopener" title="Documento original entregue à CVM">documento na CVM</a>` : '';
     el.innerHTML = `<span class="wlc-ft">Fundamentos <small>${esc(tri)}</small></span>
       ${itens.map(([k, v]) => `<span class="wlc-fi"><small>${esc(k)}</small><b>${esc(v)}</b></span>`).join('')}
       <span class="sp"></span>${doc}

@@ -198,11 +198,8 @@ ESTOQUE = ('ativo', 'pl', 'caixa', 'divida', 'div_liq')                         
 # ---------------------------------------------------------------- cadastro (FCA)
 def links_doc(zbytes, prefixo):
     """{(cnpj, dt_refer): link do documento na CVM (versão mais nova)}, do arquivo-índice do zip (coluna LINK_DOC)."""
-    out, ver, amostra = {}, {}, None
+    out, ver = {}, {}
     for r in ler_csv(zbytes, rf'(^|/){prefixo}_cia_aberta_\d{{4}}\.csv$'):
-        if amostra is None:
-            amostra = r
-            print(f'  índice {prefixo}: colunas {list(r)}; LINK_DOC = {r.get("LINK_DOC")!r}')
         cnpj, dt, link = digitos(r.get('CNPJ_CIA')), r.get('DT_REFER', ''), (r.get('LINK_DOC') or '').strip()
         link = re.sub(r'^http://', 'https://', link, flags=re.I)
         if not cnpj or not dt or not re.match(r'^https://[\w.-]*cvm\.gov\.br/', link, re.I):

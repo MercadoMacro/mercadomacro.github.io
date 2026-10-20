@@ -239,7 +239,9 @@
     const cols = [...anos.map((a) => ({ k: String(a.ano), r: a, sub: a.ref && a.ref.slice(5) !== '12-31' ? dmy(a.ref) : '' }))];
     if (d.ttm && (!anos.length || d.ttm.ref > anos[anos.length - 1].ref)) cols.push({ k: '12 meses', r: { ...d.ttm, ...d.balanco }, sub: `até ${dmy(d.ttm.ref)}`, ttm: true });
     // link para o documento entregue à CVM (DFP no ano, ITR no último trimestre): só endereços da própria CVM
-    const docLink = (u, txt = 'CVM') => (u && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(u) ? `<a class="fd-doc" href="${esc(u)}" target="_blank" rel="noopener" title="Abrir o documento original entregue à CVM">${txt} <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>` : '');
+    // o link do arquivo da CVM baixa o pacote; o mesmo número abre o documento para leitura no RAD
+    const cvmVer = (u) => { const n = /NumeroSequencialDocumento=(\d+)/.exec(u); return n ? `https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento=${n[1]}&CodigoTipoInstituicao=2` : u; };
+    const docLink = (u, txt = 'CVM') => (u && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(u) ? `<a class="fd-doc" href="${esc(cvmVer(u))}" target="_blank" rel="noopener" title="Abrir o documento original entregue à CVM">${txt} <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>` : '');
     const linhas = [
       ['Receita', (r) => brl(r.receita)],
       ...(d.financeira ? [] : [['EBITDA', (r) => brl(r.ebitda)]]),
