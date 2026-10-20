@@ -1,6 +1,4 @@
 # GitHub Pages (mercadomacro.github.io): só manda quem chega aqui para https://mercadomacro.com.br/.
-# site-antigo/ guarda o site antigo como era; terminal/ é o site novo, servido pela Cloudflare.
-# As duas pastas ficam fora do GitHub Pages.
+# terminal/ é o site novo, servido pela Cloudflare, e fica fora do GitHub Pages.
 exclude:
   - terminal
-  - site-antigo
