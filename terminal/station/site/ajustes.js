@@ -99,10 +99,11 @@
     box.querySelector('.aj-body').innerHTML = `
       ${C && C.logado ? `<section class="aj-sec">
         <h3>Conta</h3>
-        <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span></p>
+        <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</p>
         <div class="aj-btns">
           ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
           <a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a>
+          ${C.admin ? '' : `<a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a>`}
           <button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>
         </div>
       </section>` : ''}
@@ -373,6 +374,13 @@
     if (!c || !c.logado) return;
     window.__conta = c;
     if (box && !box.hidden) render();
+    // acesso perto de terminar: lembra uma vez por dia
+    const falta = c.expira ? (Date.parse(c.expira) - Date.now()) / 864e5 : Infinity;
+    if (falta <= 3) {
+      let hoje = false; const k = 'mm_venc_avisado', d = new Date().toDateString();
+      try { hoje = localStorage.getItem(k) === d; localStorage.setItem(k, d); } catch (e) { /* nada */ }
+      if (!hoje) setTimeout(() => toast(`Seu acesso vai até ${new Date(c.expira).toLocaleDateString('pt-BR')}. Para renovar, abra Ajustes > Conta > Assinatura.`), 3000);
+    }
     if (c.admin && c.pendentes) {
       let avisado = false;
       try { avisado = sessionStorage.getItem('mm_pend_avisado') === String(c.pendentes); sessionStorage.setItem('mm_pend_avisado', String(c.pendentes)); } catch (e) { /* nada */ }

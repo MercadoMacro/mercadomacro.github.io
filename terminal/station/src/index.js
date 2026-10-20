@@ -2,6 +2,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
+import { ligarAssinatura, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
@@ -21,8 +22,9 @@ const PUBLICAS = {
   '/indicadores-hoje': ['/vitrine/indicadores', 'indicadores'],
 };
 // páginas que existem só para quem entrou (não são arquivos)
-const ROTAS_LOGADO = /^\/(admin|conta|fechamento)$/;
+const ROTAS_LOGADO = /^\/(admin|conta|fechamento|assinar)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
+const limparCacheSessao = () => cacheSessao.clear();
 
 // Consolida apenas endereços de páginas; CSS, scripts, imagens e login continuam nas próprias rotas.
 function enderecoPublico(p) {
@@ -38,6 +40,8 @@ function enderecoPublico(p) {
 export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
+    // todo dia às 9h (Brasília): avisa por e-mail quem vence em 3 dias e desativa quem venceu (src/assinatura.js)
+    if (ev.cron === '0 12 * * *') { ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message))); return; }
     // 18:00 (Brasília) nos dias úteis: dispara o robô do fechamento (resumo.yml) na hora certa, porque o agendador
     // do GitHub às vezes atrasa, e guarda o fechamento do dia para a página pública /fechamento-do-mercado
     if (ev.cron === '0 23 * * 1-5') { ctx.waitUntil(completarJuros(env, jurosTesouro).catch(() => {})); return; }
@@ -80,6 +84,13 @@ export default {
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
+      // conta que entrou mas não tem acesso (aguardando liberação ou validade vencida): só a página de assinatura
+      const conta = u ? { ...u, status: 'ativo' } : await contaDaSessao(req, env);
+      if (conta) {
+        if (p === '/assinar') return paginaAssinar();
+        if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
+      }
+      if (!u && conta) return navegacao(req) ? redirect('/assinar') : json({ erro: 'Seu acesso não está ativo.', assinar: true }, 403);
       if (!u) {
         // a página inicial mostra a vitrine para quem não entrou (e para o Google), sem redirecionar
         if ((p === '/' || p === '/index.html') && navegacao(req)) { contar(env, ctx, req, 'vitrine'); return paginaEntrar(req, env, true); }
@@ -382,9 +393,11 @@ async function usuarioDaSessao(req, env) {
   const c = cacheSessao.get(tok);
   if (c && c.ate > agora) return c.u;
   const h = await sha256hex(tok);
+  await garantirAssinatura(env);
+  // validade vencida corta o acesso na hora, mesmo antes do robô diário marcar a conta como expirada
   const u = await env.DB.prepare(
-    `SELECT u.id, u.nome, u.email, u.admin FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
-     WHERE s.token = ? AND s.expira > ? AND u.status = 'ativo'`).bind(h, agora).first();
+    `SELECT u.id, u.nome, u.email, u.admin, u.expira FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
+     WHERE s.token = ? AND s.expira > ? AND u.status = 'ativo' AND (u.admin = 1 OR u.expira IS NULL OR u.expira > ?)`).bind(h, agora, new Date(agora).toISOString()).first();
   if (u) {
     if (cacheSessao.size > 500) cacheSessao.clear();
     cacheSessao.set(tok, { u, ate: agora + 10000 }); // curto: bloqueio, saída e troca de senha valem em até 10 s em todas as instâncias
@@ -459,7 +472,7 @@ async function apiAuth(req, env, acao, ctx) {
   if (acao === 'eu' && req.method === 'GET') {
     const u = await usuarioDaSessao(req, env);
     if (!u) return json({ logado: false }, 401);
-    const out = { logado: true, nome: u.nome, email: u.email, admin: !!u.admin };
+    const out = { logado: true, nome: u.nome, email: u.email, admin: !!u.admin, expira: u.admin ? null : u.expira || null };
     if (u.admin) out.pendentes = (await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`).first()).n;
     return json(out);
   }
@@ -486,6 +499,7 @@ async function apiAuth(req, env, acao, ctx) {
     if (senha.length > 200) return json({ erro: 'Senha longa demais.' }, 400);
     // cadastros que não confirmaram o e-mail em 7 dias são apagados
     await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
+    const MSG_FILA = 'Cadastro enviado. Você já pode entrar com seu e-mail e senha e escolher um plano, ou aguardar a liberação do administrador.';
     const MSG_CONF = 'Enviamos um link para ' + email + '. Abra o e-mail e confirme para seu pedido seguir para a liberação. Não chegou? Veja o spam.';
     const existe = await env.DB.prepare('SELECT id, nome, status FROM usuarios WHERE email = ?').bind(email).first();
     if (existe && existe.status === 'confirmar') {
@@ -493,7 +507,7 @@ async function apiAuth(req, env, acao, ctx) {
       const r = await emailConfirmar(env, req, existe.id, existe.nome, email).catch(() => ({ ok: false }));
       if (r.ok) return json({ ok: true, confirmar: true, msg: MSG_CONF });
       await env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ?`).bind(existe.id).run();
-      return json({ ok: true, msg: 'Cadastro enviado. Você poderá entrar assim que o administrador liberar seu acesso.' });
+      return json({ ok: true, msg: MSG_FILA });
     }
     if (existe) return json({ erro: existe.status === 'pendente' ? 'Este e-mail já está cadastrado e aguarda liberação.' : 'Este e-mail já está cadastrado. Use Entrar.' }, 409);
     // com o e-mail ligado em /admin, o cadastro só vai para a fila depois que a pessoa confirma o e-mail
@@ -510,7 +524,7 @@ async function apiAuth(req, env, acao, ctx) {
       ]);
     }
     ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
-    return json({ ok: true, msg: 'Cadastro enviado. Você poderá entrar assim que o administrador liberar seu acesso.' });
+    return json({ ok: true, msg: MSG_FILA });
   }
 
   if (acao === 'senha') {
@@ -545,6 +559,7 @@ async function apiAuth(req, env, acao, ctx) {
       env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind('sen:' + eu.id),
       env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = ?').bind(eu.id),
+      env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(eu.id),
     ]);
     cacheSessao.clear();
@@ -597,9 +612,9 @@ async function apiAuth(req, env, acao, ctx) {
       return json({ erro: 'E-mail ou senha incorretos.' }, 401);
     }
     await env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(chave).run();
-    if (u.status === 'pendente') return json({ erro: 'Seu cadastro ainda aguarda liberação do administrador.' }, 403);
     if (u.status === 'confirmar') return json({ erro: 'Falta confirmar seu e-mail: abra o link que enviamos quando você pediu acesso (veja também o spam). Para receber outro link, peça acesso de novo com o mesmo e-mail.' }, 403);
-    if (u.status !== 'ativo') return json({ erro: 'Seu acesso não está liberado.' }, 403);
+    // aguardando liberação ou com a validade vencida também entra, mas só vê a página de assinatura
+    if (!['ativo', 'pendente', 'expirado'].includes(u.status)) return json({ erro: 'Seu acesso não está liberado.' }, 403);
     const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
     const agora = Date.now();
     await env.DB.batch([
@@ -644,9 +659,12 @@ async function apiAdmin(req, env, acao, eu) {
     const r = await telegramFoto(env, await foto.arrayBuffer(), fd.get('legenda'));
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
+  const ass = await apiAdminAssinatura(req, env, acao);
+  if (ass) return ass;
   if (acao === 'usuarios' && req.method === 'GET') {
+    await garantirAssinatura(env);
     const r = await env.DB.prepare(
-      'SELECT id, nome, email, status, admin, criado, decidido, ultimo_acesso FROM usuarios ORDER BY criado DESC').all();
+      'SELECT id, nome, email, status, admin, criado, decidido, ultimo_acesso, expira FROM usuarios ORDER BY criado DESC').all();
     return json({ eu: eu.id, usuarios: r.results });
   }
   if (acao === 'decidir' && req.method === 'POST') {
@@ -663,26 +681,48 @@ async function apiAdmin(req, env, acao, eu) {
       cacheSessao.clear();
       return json({ ok: true, senha });
     }
+    if (b.acao === 'validade') {
+      // validade da conta: +3 dias, +1 mês ou sem validade (a partir de hoje ou do fim da validade atual)
+      await garantirAssinatura(env);
+      const v = await env.DB.prepare(`SELECT status, expira FROM usuarios WHERE id = ? AND admin = 0`).bind(id).first();
+      if (!v || !['ativo', 'expirado'].includes(v.status)) return json({ erro: 'Usuário inválido.' }, 400);
+      const base = new Date(v.expira && v.expira > new Date().toISOString() ? v.expira : Date.now());
+      if (b.mais === 'dias3') base.setTime(base.getTime() + 3 * 864e5);
+      else if (b.mais === 'mes1') base.setUTCMonth(base.getUTCMonth() + 1);
+      else if (b.mais !== 'sem') return json({ erro: 'Ação inválida.' }, 400);
+      const expira = b.mais === 'sem' ? null : base.toISOString();
+      await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ? WHERE id = ? AND admin = 0`).bind(expira, id).run();
+      cacheSessao.clear();
+      return json({ ok: true, expira });
+    }
     const novo = { liberar: 'ativo', recusar: 'recusado', bloquear: 'bloqueado' }[b.acao];
     const agora = new Date().toISOString();
     if (b.acao === 'excluir') {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id),
         env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
+        env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(id),
       ]);
       await garantirLinks(env);
       await env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(id).run();
     } else if (novo) {
-      const antes = await env.DB.prepare('SELECT nome, email, status FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
+      await garantirAssinatura(env);
+      const antes = await env.DB.prepare('SELECT nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
       const q = [env.DB.prepare('UPDATE usuarios SET status = ?, decidido = ? WHERE id = ? AND admin = 0').bind(novo, agora, id)];
+      // liberação grátis vale 3 dias (se a conta não tiver uma validade ainda valendo)
+      let validade = antes && antes.expira > agora ? antes.expira : null;
+      if (novo === 'ativo' && antes && antes.status !== 'ativo' && !validade) {
+        validade = new Date(Date.now() + GRATIS_DIAS * 864e5).toISOString();
+        q.push(env.DB.prepare('UPDATE usuarios SET expira = ? WHERE id = ? AND admin = 0').bind(validade, id));
+      }
       if (novo !== 'ativo') q.push(env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id));
       await env.DB.batch(q);
       cacheSessao.clear();
       // ao liberar, avisa a pessoa por e-mail (se o envio estiver ligado em /admin)
       if (novo === 'ativo' && antes && antes.status !== 'ativo') {
-        const r = await emailLiberado(env, req, antes.nome, antes.email).catch(() => ({ ok: false }));
-        return json({ ok: true, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
+        const r = await emailLiberado(env, req, antes.nome, antes.email, false, validade).catch(() => ({ ok: false }));
+        return json({ ok: true, validade, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
       }
     } else return json({ erro: 'Ação inválida.' }, 400);
     cacheSessao.clear();
@@ -841,10 +881,11 @@ ${nota ? `<p style="color:#6b7280;font-size:13px">${escH(nota)}</p>` : ''}
   const j = await r.json().catch(() => ({}));
   return r.ok ? { ok: true } : { ok: false, erro: j.message || ('HTTP ' + r.status) };
 }
-function emailLiberado(env, req, nome, email, teste = false) {
+function emailLiberado(env, req, nome, email, teste = false, validade = null) {
+  const ate = validade ? ' Ele vale até ' + new Date(validade).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '; depois, é só escolher um plano em ' + siteDe(req) + '/assinar para continuar.' : '';
   return enviarEmail(env, req, {
     para: email, nome, assunto: (teste ? '[Teste] ' : '') + 'Seu acesso ao Mercado Macro foi liberado',
-    paragrafos: ['Seu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.'],
+    paragrafos: ['Seu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.' + ate],
     botao: 'Entrar no Mercado Macro', link: siteDe(req) + '/entrar',
     nota: 'Se esquecer a senha, use "Esqueci minha senha" na tela de entrar.',
   });
@@ -1228,7 +1269,10 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 <header><h1>Cadastros do Mercado Macro</h1><a class="vol" href="/">Voltar ao site</a></header>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
 <div id="prov"></div>
+<div id="pags"></div>
 <div id="raiz"><p class="vazio">Carregando…</p></div>
+<h2>Pix para assinaturas</h2>
+<div id="pix"><p class="vazio">Carregando…</p></div>
 <h2>Avisos de cadastro novo</h2>
 <div id="avisos"><p class="vazio">Carregando…</p></div>
 <h2>E-mail de acesso liberado</h2>
@@ -1241,9 +1285,14 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   var raiz = document.getElementById('raiz'), msg = document.getElementById('msg'), eu = 0;
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function data(s){ if (!s) return '—'; var d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  function dia(s){ return s ? new Date(s).toLocaleDateString('pt-BR') : '—'; }
+  function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
+  function post(u, corpo){ return fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
+  var EMAIL = { enviado: ' A pessoa recebeu um e-mail avisando.', falhou: ' O e-mail de aviso não foi enviado; avise a pessoa por outro meio.', desligado: ' (E-mail desligado: avise a pessoa por outro meio.)' };
   var BT = {
     pendente: [['liberar','Liberar','lib'],['recusar','Recusar',''],['excluir','Excluir','del']],
-    ativo: [['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
+    ativo: [['v:dias3','+3 dias',''],['v:mes1','+1 mês',''],['v:sem','Sem validade',''],['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
+    expirado: [['v:dias3','Liberar 3 dias','lib'],['v:mes1','Liberar 1 mês',''],['excluir','Excluir','del']],
     recusado: [['liberar','Liberar','lib'],['excluir','Excluir','del']],
     bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['excluir','Excluir','del']]
@@ -1252,7 +1301,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     return '<h2>' + titulo + '<b>' + us.length + '</b></h2><div class="lista">' + (us.length ? us.map(function(u){
       return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + (u.admin ? ' <span class="tag">administrador</span>' : '') + (u.status === 'bloqueado' ? ' <span class="tag">bloqueado</span>' : u.status === 'recusado' ? ' <span class="tag">recusado</span>' : '') + '</div>'
         + '<div class="e">' + esc(u.email) + '</div>'
-        + '<div class="d">Cadastro ' + data(u.criado) + (u.status === 'ativo' ? ' · Último acesso ' + data(u.ultimo_acesso) : '') + '</div></div>'
+        + '<div class="d">Cadastro ' + data(u.criado) + (u.status === 'ativo' ? ' · Último acesso ' + data(u.ultimo_acesso) : '') + (u.admin ? '' : u.status === 'ativo' ? ' · ' + (u.expira ? 'Vale até <b>' + dia(u.expira) + '</b>' : 'Sem validade') : u.status === 'expirado' ? ' · Venceu em ' + dia(u.expira) : '') + '</div></div>'
         + (u.id === eu || u.admin ? '' : '<div class="bts">' + (BT[u.status] || []).map(function(b){ return '<button type="button" class="' + b[2] + '" data-id="' + u.id + '" data-a="' + b[0] + '" data-n="' + esc(u.nome) + '">' + b[1] + '</button>'; }).join('') + '</div>')
         + '</div>';
     }).join('') : '<p class="vazio">' + vazio + '</p>') + '</div>';
@@ -1263,6 +1312,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var f = function(st){ return us.filter(function(u){ return st.indexOf(u.status) >= 0; }); };
       raiz.innerHTML = bloco('Aguardando liberação', f(['pendente']), 'Nenhum pedido novo.')
         + bloco('Liberados', f(['ativo']), 'Ninguém liberado ainda.')
+        + (f(['expirado']).length ? bloco('Acesso vencido', f(['expirado']), '') : '')
         + bloco('Recusados e bloqueados', f(['recusado','bloqueado']), 'Nenhum.')
         + (f(['confirmar']).length ? bloco('E-mail ainda não confirmado', f(['confirmar']), '') + '<p class="d" style="color:var(--text-3);font-size:12px;margin:6px 0 0">Essas pessoas pediram acesso mas ainda não clicaram no link de confirmação. Somem sozinhas depois de 7 dias.</p>' : '');
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
@@ -1271,11 +1321,18 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     var b = ev.target.closest('button[data-a]'); if (!b) return;
     var a = b.dataset.a;
     if (a === 'senha') return novaSenha(b);
+    if (a.indexOf('v:') === 0) {
+      if (a === 'v:sem' && !confirm('Deixar o acesso de ' + b.dataset.n + ' sem data para terminar?')) return;
+      b.disabled = true;
+      return post('/api/admin/decidir', { id: +b.dataset.id, acao: 'validade', mais: a.slice(2) })
+        .then(function(j){ msg.className = 'msg ok'; msg.textContent = b.dataset.n + ': ' + (j.expira ? 'acesso vale até ' + dia(j.expira) + '.' : 'acesso sem validade.'); carregar(); })
+        .catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
+    }
     if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir de vez o cadastro de ' + b.dataset.n + '? Nome, e-mail e senha são apagados e não dá para desfazer.' : 'Bloquear o acesso de ' + b.dataset.n + '?'))) return;
     b.disabled = true;
     fetch('/api/admin/decidir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.dataset.id, acao: a }) })
       .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); })
-      .then(function(j){ msg.className = 'msg ok'; msg.textContent = { liberar: 'Acesso liberado para ', recusar: 'Cadastro recusado: ', bloquear: 'Acesso bloqueado: ', excluir: 'Cadastro excluído: ' }[a] + b.dataset.n + '.' + (j && j.email === 'enviado' ? ' A pessoa recebeu um e-mail avisando.' : j && j.email === 'falhou' ? ' O e-mail de aviso não foi enviado; avise a pessoa por outro meio.' : ''); carregar(); })
+      .then(function(j){ msg.className = 'msg ok'; msg.textContent = { liberar: 'Acesso liberado para ', recusar: 'Cadastro recusado: ', bloquear: 'Acesso bloqueado: ', excluir: 'Cadastro excluído: ' }[a] + b.dataset.n + (j && j.validade ? ' até ' + dia(j.validade) : '') + '.' + (j && j.email === 'enviado' ? EMAIL.enviado : j && j.email === 'falhou' ? EMAIL.falhou : ''); carregar(); })
       .catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
   });
   var prov = document.getElementById('prov');
@@ -1411,6 +1468,52 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       }); };
     }).catch(function(){ cp.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  var pg = document.getElementById('pags');
+  function pagamentos(){
+    fetch('/api/admin/pagamentos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
+      var linha = function(p){
+        return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
+          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + ' · comprovante enviado ' + data(p.enviado) + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
+          + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
+          + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
+      };
+      pg.innerHTML = '<h2>Pagamentos para conferir<b>' + abertos.length + '</b></h2><div class="lista">' + (abertos.length ? abertos.map(linha).join('') : '<p class="vazio">Nenhum comprovante novo. Confira no extrato do banco antes de aprovar.</p>') + '</div>'
+        + (feitos.length ? '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--text-3);font-size:12.5px">Decididos nos últimos 60 dias (' + feitos.length + ')</summary><div class="lista" style="margin-top:8px">' + feitos.map(linha).join('') + '</div></details>' : '');
+    }).catch(function(){ pg.innerHTML = '<p class="vazio">Não foi possível carregar os pagamentos.</p>'; });
+  }
+  pg.addEventListener('click', function(ev){
+    var b = ev.target.closest('button[data-pg]'); if (!b) return;
+    var a = b.dataset.pg;
+    if (!confirm((a === 'aprovar' ? 'Aprovar o pagamento de ' : 'Recusar o pagamento de ') + b.dataset.n + '?' + (a === 'aprovar' ? ' Confira antes se o valor entrou na sua conta.' : ''))) return;
+    b.disabled = true;
+    post('/api/admin/pagamentos', { id: +b.dataset.id, acao: a }).then(function(j){
+      msg.className = 'msg ok'; msg.textContent = (a === 'aprovar' ? 'Pagamento aprovado: ' + b.dataset.n + ' tem acesso até ' + dia(j.validade) + '.' : 'Pagamento recusado.') + (EMAIL[j.email] || '');
+      pagamentos(); carregar();
+    }).catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
+  });
+  var px = document.getElementById('pix');
+  function pix(){
+    fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p><p>Para trocar, preencha de novo:</p>'
+          : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
+        + '<div class="linha"><input id="px-chave" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
+        + '<div class="linha"><input id="px-nome" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
+        + '<div class="linha"><button type="button" id="px-salvar" style="' + bt + '">Salvar</button>' + (j.chave ? '<button type="button" id="px-off" style="' + bt + '">Desligar o Pix</button>' : '') + '</div></div>';
+      px.innerHTML = h + '<p class="msg" id="px-msg"></p>';
+      var m = document.getElementById('px-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      document.getElementById('px-salvar').onclick = function(){ var b = this; b.disabled = true;
+        post('/api/admin/pix', { chave: document.getElementById('px-chave').value, nome: document.getElementById('px-nome').value, cidade: document.getElementById('px-cidade').value })
+          .then(function(){ pix(); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); b.disabled = false; }); };
+      var off = document.getElementById('px-off');
+      if (off) off.onclick = function(){ if (confirm('Desligar o pagamento por Pix? A página de assinatura deixa de mostrar o QR Code.')) post('/api/admin/pix', { acao: 'desligar' }).then(pix); };
+    }).catch(function(){ px.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  pix();
+  pagamentos();
   capital();
   email();
   avisos();
@@ -1489,3 +1592,6 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
   });
 })();
 </script></body></html>`;
+
+// o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
+ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao });

@@ -79,7 +79,8 @@ export class CapitalRelay {
     for (let i = 0; i < hashes.length; i += 50) {
       const lote = hashes.slice(i, i + 50);
       const r = await this.env.DB.prepare(`SELECT s.token FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
-        WHERE s.token IN (${lote.map(() => '?').join(',')}) AND s.expira > ? AND u.status = 'ativo'`).bind(...lote, Date.now()).all();
+        WHERE s.token IN (${lote.map(() => '?').join(',')}) AND s.expira > ? AND u.status = 'ativo'
+        AND (u.admin = 1 OR u.expira IS NULL OR u.expira > ?)`).bind(...lote, Date.now(), new Date().toISOString()).all();
       for (const x of r.results) ok.add(x.token);
     }
     for (const [ws, h] of this.sessaoDe) {
