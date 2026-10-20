@@ -389,6 +389,7 @@
       tvBox.innerHTML = `<div class="wlc-scrim" data-wlc="close"></div>
         <div class="wlc-box" role="dialog" aria-modal="true" aria-labelledby="wlc-name">
           <header class="wlc-head"></header>
+          <div class="wlc-fund" hidden></div>
           <div class="wlc-chart"></div>
         </div>`;
       document.body.appendChild(tvBox);
@@ -396,6 +397,7 @@
         const b = e.target.closest('[data-wlc]');
         if (!b) return;
         if (b.dataset.wlc === 'close') wlChartClose();
+        else if (b.dataset.wlc === 'fund') abrirFundamentos(b.dataset.cvm);
         else if (b.dataset.wlc === 'history' || b.dataset.wlc === 'tradingview') wlChart(tvBox.dataset.sym, { ...(tvBox._ctx || {}), list: tvBox._list, _chartMode: b.dataset.wlc });
         else if (b.dataset.wlc === 'prev' || b.dataset.wlc === 'next') {
           const L = tvBox._list || wl;
@@ -453,6 +455,62 @@
       setTimeout(() => tvBox.querySelector('[data-wlc="close"].wlc-b')?.focus(), 60);
     }
     if (mode === 'history') historyView.show(box, sym, it.n || nice(sym), light);
+    faixaFundamentos(sym, has ? d.value : null);
+  }
+
+  /* Ação da B3 na janela do gráfico: resumo dos fundamentos (dados da CVM, mesmos da aba Fundamentos) e atalho para a aba.
+     Indicadores de preço (P/L, dividend yield) só quando a empresa tem uma classe de ação, para não misturar ON e PN. */
+  const FUND_RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fundamentos/';
+  let fundIdx = null; const fundDocs = new Map();
+  const jsonOuNada = (u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  async function fundamentosDe(tk) {
+    const idx = await (fundIdx ||= jsonOuNada(FUND_RAW + 'index.json'));
+    if (!idx || !Array.isArray(idx.empresas)) { fundIdx = null; return null; }
+    const e = idx.empresas.find((x) => (x.tickers || []).includes(tk));
+    if (!e) return null;
+    if (!fundDocs.has(e.cvm)) fundDocs.set(e.cvm, jsonOuNada(FUND_RAW + encodeURIComponent(e.cvm) + '.json'));
+    const doc = await fundDocs.get(e.cvm);
+    if (!doc) fundDocs.delete(e.cvm);
+    return doc;
+  }
+  async function faixaFundamentos(sym, preco) {
+    const el = tvBox.querySelector('.wlc-fund');
+    const m = /^([A-Z]{4}\d{1,2})\.SA$/.exec(sym || '');
+    el.hidden = true; el.replaceChildren();
+    if (!m) return;
+    const f = await fundamentosDe(m[1]);
+    if (!f || tvBox.hidden || tvBox.dataset.sym !== sym) return;
+    const ok = (v) => v != null && isFinite(v);
+    const n = (v, dd = 1) => v.toLocaleString('pt-BR', { minimumFractionDigits: dd, maximumFractionDigits: dd });
+    const brl = (v) => { const a = Math.abs(v), sg = v < 0 ? '−' : ''; return a >= 1e9 ? `${sg}R$ ${n(a / 1e9, 1)} bi` : `${sg}R$ ${n(a / 1e6, 0)} mi`; };
+    const t = f.ttm || {}, b = f.balanco || {};
+    const q = f.acoes, umaClasse = q && (q.on > 0) !== (q.pn > 0);
+    const mcap = umaClasse && ok(preco) ? preco * (q.on + q.pn) : null;
+    const itens = [
+      ['Lucro 12 meses', ok(t.lucro) ? brl(t.lucro) : '—'],
+      ['ROE', ok(t.lucro) && b.pl > 0 ? n(t.lucro / b.pl * 100) + '%' : '—'],
+      ['Margem líquida', ok(t.lucro) && t.receita > 0 ? n(t.lucro / t.receita * 100) + '%' : '—'],
+    ];
+    if (!f.financeira) itens.push(['Dív. líq./EBITDA', ok(b.div_liq) && t.ebitda > 0 ? n(b.div_liq / t.ebitda, 2) + 'x' : '—']);
+    if (mcap) {
+      itens.unshift(['P/L', t.lucro > 0 ? n(mcap / t.lucro) + 'x' : '—']);
+      itens.push(['Dividend yield', ok(t.proventos) ? n(t.proventos / mcap * 100) + '%' : '—']);
+    }
+    const ref = t.ref || b.ref || '';
+    const tri = ref ? (+ref.slice(5, 7) === 12 ? `ano de ${ref.slice(0, 4)}` : `${Math.ceil(+ref.slice(5, 7) / 3)}º tri/${ref.slice(0, 4)}`) : '';
+    const doc = b.doc && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(b.doc) ? `<a class="wlc-fdoc" href="${esc(b.doc)}" target="_blank" rel="noopener" title="Documento original entregue à CVM">documento na CVM</a>` : '';
+    el.innerHTML = `<span class="wlc-ft">Fundamentos <small>${esc(tri)}</small></span>
+      ${itens.map(([k, v]) => `<span class="wlc-fi"><small>${esc(k)}</small><b>${esc(v)}</b></span>`).join('')}
+      <span class="sp"></span>${doc}
+      <button type="button" class="wlc-b" data-wlc="fund" data-cvm="${esc(f.cvm)}">Ver tudo em Fundamentos</button>`;
+    el.hidden = false;
+  }
+  function abrirFundamentos(cvm) {
+    if (!cvm) return;
+    try { const k = 'fund_prefs_v1', p = JSON.parse(localStorage.getItem(k) || '{}') || {}; localStorage.setItem(k, JSON.stringify({ ...p, cvm, view: 'empresa' })); } catch (e) { /* padrão */ }
+    wlChartClose();
+    if (typeof window.__fundAbrir === 'function') window.__fundAbrir(cvm);
+    if (typeof switchTab === 'function') switchTab('fund-panel');
   }
   window.openAssetChart = (sym, name, list, quote, source) => wlChart(sym, { _source: source, name, list: list && list.length ? list : [{ s: sym, n: name }], quote });
   function wlChartClose() {
@@ -493,6 +551,16 @@
   .wlc-b { display:inline-flex; align-items:center; gap:7px; height:34px; min-width:34px; justify-content:center; padding:0 10px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12.5px; cursor:pointer; text-decoration:none; }
   .wlc-b:hover { color:var(--text); border-color:var(--line-2); }
   .wlc-chart { position:relative; flex:1; min-height:0; }
+  .wlc-fund { display:flex; align-items:center; flex-wrap:wrap; gap:6px 18px; padding:8px 14px 8px 18px; border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--surface-2) 60%, transparent); }
+  .wlc-fund[hidden] { display:none; }
+  .wlc-ft { font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2); }
+  .wlc-ft small { font-weight:500; letter-spacing:0; text-transform:none; color:var(--text-3); margin-left:4px; }
+  .wlc-fi { display:flex; flex-direction:column; line-height:1.2; }
+  .wlc-fi small { font-size:10.5px; color:var(--text-3); }
+  .wlc-fi b { font:600 13px 'JetBrains Mono', monospace; color:var(--text); }
+  .wlc-fund .sp { flex:1; }
+  .wlc-fdoc { font-size:11.5px; color:var(--accent); }
+  @media (max-width: 640px) { .wlc-fund { gap:6px 12px; padding:8px 10px 8px 14px; } .wlc-fund .sp { display:none; } }
   .wlc-load { position:absolute; inset:0; display:grid; place-items:center; color:var(--text-3); font-size:13px; pointer-events:none; z-index:0; text-align:center; padding:20px; }
   .wlc-chart .tradingview-widget-container { position:relative; z-index:1; }
   .wlc-load a { pointer-events:auto; color:var(--accent); }

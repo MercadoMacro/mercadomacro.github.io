@@ -238,6 +238,8 @@
     const anos = d.anos || [];
     const cols = [...anos.map((a) => ({ k: String(a.ano), r: a, sub: a.ref && a.ref.slice(5) !== '12-31' ? dmy(a.ref) : '' }))];
     if (d.ttm && (!anos.length || d.ttm.ref > anos[anos.length - 1].ref)) cols.push({ k: '12 meses', r: { ...d.ttm, ...d.balanco }, sub: `até ${dmy(d.ttm.ref)}`, ttm: true });
+    // link para o documento entregue à CVM (DFP no ano, ITR no último trimestre): só endereços da própria CVM
+    const docLink = (u, txt = 'CVM') => (u && /^https:\/\/[\w.-]*cvm\.gov\.br\//.test(u) ? `<a class="fd-doc" href="${esc(u)}" target="_blank" rel="noopener" title="Abrir o documento original entregue à CVM">${txt} <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>` : '');
     const linhas = [
       ['Receita', (r) => brl(r.receita)],
       ...(d.financeira ? [] : [['EBITDA', (r) => brl(r.ebitda)]]),
@@ -259,7 +261,7 @@
           return `<button class="fd-tk" data-sym="${esc(k)}" title="Ver gráfico de ${esc(k)}"><b>${esc(k)}</b><span>${q ? 'R$ ' + nf(q.value, 2) : '—'}</span>${q ? `<em class="${q.change > 0 ? 'up' : q.change < 0 ? 'dn' : 'eq'}">${q.change > 0 ? '+' : q.change < 0 ? '−' : ''}${nf(Math.abs(q.change), 2)}%</em>` : ''}</button>`;
         }).join('')}</div>
       </section>
-      <div class="fd-ref">Últimos números: <b>${esc(triLabel(t.ref || b.ref))}</b> (balanço de ${dmy(b.ref || t.ref)})${d.financeira ? ' · empresa financeira: EBITDA e dívida não se aplicam' : ''}${!tkq.length ? ' · sem cotação agora: indicadores de preço ficam em branco' : ''}</div>
+      <div class="fd-ref">Últimos números: <b>${esc(triLabel(t.ref || b.ref))}</b> (balanço de ${dmy(b.ref || t.ref)})${b.doc ? ' · ' + docLink(b.doc, 'documento na CVM') : ''}${d.financeira ? ' · empresa financeira: EBITDA e dívida não se aplicam' : ''}${!tkq.length ? ' · sem cotação agora: indicadores de preço ficam em branco' : ''}</div>
       <div class="fd-kpis">${kp.map(([n, v, s]) => `<div class="fd-kpi"><span>${esc(n)}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join('')}</div>
       <div class="fd-grid">
         <section class="fd-box">
@@ -269,14 +271,14 @@
         <section class="fd-box">
           <div class="fd-bh"><h3>Resultados por ano</h3></div>
           <div class="fd-tbl"><table>
-            <thead><tr><th></th>${cols.map((c) => `<th class="${c.ttm ? 'ttm' : ''}">${esc(c.k)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</th>`).join('')}</tr></thead>
+            <thead><tr><th></th>${cols.map((c) => `<th class="${c.ttm ? 'ttm' : ''}">${esc(c.k)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}${docLink(c.r.doc)}</th>`).join('')}</tr></thead>
             <tbody>${linhas.map(([n, f, cl]) => `<tr><th>${esc(n)}</th>${cols.map((c) => `<td class="${c.ttm ? 'ttm ' : ''}${cl ? cl(c.r) : ''}">${esc(f(c.r))}</td>`).join('')}</tr>`).join('')}</tbody>
           </table></div>
         </section>
       </div>`;
     body.querySelectorAll('.fd-tk').forEach((btn) => btn.addEventListener('click', () => {
       const k = btn.dataset.sym;
-      if (typeof window.openAssetChart === 'function') window.openAssetChart(`${k}.SA`, `${d.nome} (${k})`, d.tickers.map((x) => [`${x}.SA`, x]), (s) => quotes.get(s.replace(/\.SA$/, '')));
+      if (typeof window.openAssetChart === 'function') window.openAssetChart(`${k}.SA`, `${d.nome} (${k})`, d.tickers.map((x) => ({ s: `${x}.SA`, n: `${d.nome} (${x})` })), (s) => quotes.get(s.replace(/\.SA$/, '')));
     }));
   }
 
@@ -404,6 +406,10 @@
   .fd-wrap .up { color:var(--pos); } .fd-wrap .dn { color:var(--neg); } .fd-wrap .eq { color:var(--text-3); }
   .fd-ref { font-size:12px; color:var(--text-3); }
   .fd-ref b { color:var(--text-2); }
+  .fd-doc { color:var(--accent); text-decoration:none; font-size:11px; font-weight:600; white-space:nowrap; }
+  .fd-doc:hover { text-decoration:underline; }
+  .fd-doc i { font-size:9px; }
+  th .fd-doc { display:block; margin-top:2px; font-size:10px; }
   .fd-kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(165px, 1fr)); gap:10px; }
   .fd-kpi { display:flex; flex-direction:column; gap:3px; padding:11px 13px; border:1px solid var(--line); border-radius:12px; background:var(--surface); min-width:0; }
   .fd-kpi span { font-size:11.5px; color:var(--text-3); }
@@ -474,6 +480,8 @@
     if (!booting) booting = loadIndex().then((okIdx) => { idxFalhou = !okIdx; });
     return booting;
   }
+  // a janela de gráfico (extras.js) abre aqui a empresa de uma ação
+  window.__fundAbrir = (cvm) => { prefs.view = 'empresa'; savePrefs(); boot().then(() => open(cvm)); };
   shell();
   if (prefs.view === 'ranking') {
     // o ranking precisa de uma empresa aberta para o botão Empresa voltar a ela
