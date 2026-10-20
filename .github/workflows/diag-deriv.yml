@@ -11,7 +11,7 @@ jobs:
         with: { node-version: '22' }
       - run: |
           cat > d.mjs <<'JS'
-          const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+          const ws = new WebSocket(process.env.URL);
           const send = (o) => ws.send(JSON.stringify(o));
           const ticks = {}; let fx = [];
           ws.onopen = () => send({ active_symbols: 'brief', product_type: 'basic' });
@@ -29,6 +29,7 @@ jobs:
             }
             if (m.msg_type === 'tick') { const t = m.tick; const o = ticks[t.symbol] ||= { n: 0 }; o.n++; o.q = t.quote; o.t = t.epoch; }
           };
-          ws.onerror = (e) => console.log('ws erro', e.message);
+          ws.onerror = (e) => { console.log('ws erro', e.message); process.exit(0); };
           JS
-          node d.mjs
+          for u in 'wss://ws.derivws.com/websockets/v3?app_id=1089' 'wss://ws.binaryws.com/websockets/v3?app_id=1089' 'wss://ws.binaryws.com/websockets/v3' 'wss://green.derivws.com/websockets/v3?app_id=1089'; do echo "== $u"; curl -s -o /dev/null -w 'http %{http_code}\n' -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -m 8 "https${u#wss}" || true; done
+          for u in 'wss://ws.binaryws.com/websockets/v3?app_id=1089' 'wss://ws.derivws.com/websockets/v3?app_id=1089&l=EN'; do echo "== node $u"; URL="$u" node d.mjs || true; done
