@@ -1651,11 +1651,21 @@ function newsMistura(list) {
   }
   return out;
 }
+// busca: procura em todas as notícias carregadas (não só nas que estão na tela), sem diferenciar acento
+const newsSemAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function newsTermo() { return newsSemAcento(document.getElementById('news-search')?.value).trim(); }
+function newsBusca(list) {
+  const q = newsTermo();
+  if (!q) return list;
+  return list.filter(n => newsSemAcento([n.titulo, n.tituloOriginal, n.trecho, n.trechoPt, n.resumo, n.fonte, n.veiculo].join(' ')).includes(q));
+}
+
 function renderNewsView() {
   const view = document.getElementById('news-view');
   if (!view) return;
 
-  const filtrado = filterNewsByAsset(filterNewsBySources(newsAll));
+  const busca = newsTermo();
+  const filtrado = newsBusca(filterNewsByAsset(filterNewsBySources(newsAll)));
   const leads = clusterNews(filtrado);
 
   let destaques = leads.filter(n => n.impactScore >= 4);
@@ -1663,10 +1673,10 @@ function renderNewsView() {
     const outras = leads.filter(n => n.impactScore < 4);
     destaques = [...destaques, ...outras];
   }
-  destaques = newsMistura(destaques).slice(0, 40);
+  destaques = newsMistura(destaques).slice(0, busca ? 120 : 40);
 
   if (!destaques.length) {
-    view.innerHTML = `<div class="nl-empty">${newsAsset === 'movers' ? 'Nenhuma notícia sobre as maiores altas e baixas de hoje.' : 'Nenhuma notícia para esta seleção.'}</div>`;
+    view.innerHTML = `<div class="nl-empty">${busca ? `Nenhuma notícia com "${escapeHTML(document.getElementById('news-search').value.trim())}" nesta seleção.` : newsAsset === 'movers' ? 'Nenhuma notícia sobre as maiores altas e baixas de hoje.' : 'Nenhuma notícia para esta seleção.'}</div>`;
     return;
   }
 
@@ -1715,7 +1725,6 @@ function renderNewsView() {
       </a>`;
   }).join('') + '</div>';
 
-  applyNewsSearch();
 }
 
 document.getElementById('news-view')?.addEventListener('click', (e) => {
@@ -1738,11 +1747,11 @@ function renderLiveView() {
   const counter = document.getElementById('live-count');
   if (!container) return;
 
-  const filtrado = filterNewsBySources(newsAll);
+  const filtrado = newsBusca(filterNewsBySources(newsAll));
   const live = [...filtrado].sort((a, b) => b.data - a.data).slice(0, 100);
 
   if (!live.length) {
-    container.innerHTML = '<div class="nl-empty">Nenhuma notícia no momento.</div>';
+    container.innerHTML = `<div class="nl-empty">${newsTermo() ? 'Nenhuma notícia com esse termo.' : 'Nenhuma notícia no momento.'}</div>`;
     if (counter) counter.textContent = '';
     return;
   }
@@ -1765,22 +1774,6 @@ function renderLiveView() {
     </div>`).join('');
 
   live.forEach(n => newsLastSeenIds.add(n.id));
-  applyNewsSearch();
-}
-
-function applyNewsSearch() {
-  const q = (document.getElementById('news-search')?.value || '').toLowerCase().trim();
-  if (!q) return;
-
-  document.querySelectorAll('.nc-card').forEach(card => {
-    const txt = card.textContent.toLowerCase();
-    card.style.display = txt.includes(q) ? '' : 'none';
-  });
-
-  document.querySelectorAll('.lc-item').forEach(item => {
-    const txt = item.textContent.toLowerCase();
-    item.style.display = txt.includes(q) ? '' : 'none';
-  });
 }
 
 document.getElementById('news-search')?.addEventListener('input', () => {
@@ -2231,7 +2224,6 @@ function renderMarketStatus() {
 /* =========================================================
    RESUMO DE MERCADO (texto para WhatsApp / clientes)
    ========================================================= */
-const BR_NEWS_SOURCES = ['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News'];
 
 function sumNum(v, min, max) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: min, maximumFractionDigits: max });
@@ -2249,7 +2241,7 @@ function pickSummaryNews(max = 3) {
   const picks = getNewsPicks();
   if (picks.length) return picks.slice(0, max);
   const now = Date.now();
-  const pool = (Array.isArray(newsAll) ? newsAll : []).filter(n => BR_NEWS_SOURCES.includes(n.fonte) || n.traduzido);
+  const pool = (Array.isArray(newsAll) ? newsAll : []).filter(n => NEWS_BR.has(n.fonte) || n.traduzido);
   const recent = pool.filter(n => now - n.data < 24 * 3600 * 1000);
   return clusterNews(recent.length ? recent : pool).slice(0, max);
 }

@@ -27,7 +27,7 @@ const FEEDS = [
   { name: 'Bloomberg Línea', url: 'https://www.bloomberglinea.com.br/arc/outboundfeeds/rss.xml', source: 'Bloomberg Línea', weight: 7 },
   { name: 'Suno', url: 'https://www.suno.com.br/noticias/feed/', source: 'Suno', weight: 6 },
   // ============ POLÍTICA (o site só mostra se a pessoa ligar "Política" nas Notícias) ============
-  { name: 'O Antagonista', url: 'https://oantagonista.com.br/feed/', source: 'O Antagonista', weight: 4 },
+  { name: 'O Antagonista', url: 'https://oantagonista.com.br/feed/', source: 'O Antagonista', weight: 4, so: /oantagonista\.com\.br\/(brasil|politica)\// }, // o feed traz muita variedade (ladooa, curiosidades em economia)
   { name: 'Poder360', url: 'https://www.poder360.com.br/feed/', source: 'Poder360', weight: 4 },
   { name: 'G1 Política', url: 'https://g1.globo.com/rss/g1/politica/', source: 'G1 Política', weight: 4 },
   { name: 'Agência Brasil', url: 'https://agenciabrasil.ebc.com.br/rss/politica/feed.xml', source: 'Agência Brasil', weight: 4 },
@@ -181,6 +181,8 @@ async function fetchOneFeed(feed) {
 
       // sem data confiável, a notícia velha apareceria como "agora": descarta
       if (!titulo || !link || !pubDate || pubDate > Date.now() + 10 * 60 * 1000) continue;
+      // feeds que misturam variedades: só ficam as seções que interessam (feed.so)
+      if (feed.so && !feed.so.test(link)) continue;
 
       // Google News: "Manchete - Veículo" -> separa o veículo
       let veiculo = '';
