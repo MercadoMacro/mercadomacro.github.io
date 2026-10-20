@@ -36,12 +36,27 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
+      # o dado do dia já foi gravado por uma passagem anterior: as outras passagens agendadas do dia param aqui
+      # (rodar à mão continua sempre buscando)
+      - name: Já tem o dado de hoje?
+        id: hoje
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          desde=$(TZ=America/Sao_Paulo date +%Y-%m-%dT00:00:00-03:00)
+          n=$(gh api "repos/${{ github.repository }}/commits?path=terminal/fluxo/fluxo.json&since=$desde&per_page=5" --jq '[.[] | select(.commit.message | startswith("Fluxo B3:"))] | length' || echo 0)
+          if [ "${n:-0}" -gt 0 ]; then echo "Dado de hoje já gravado; nada a fazer até amanhã."; echo "pular=1" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v5
+        if: steps.hoje.outputs.pular != '1'
       - name: Instalar o leitor de PDF
+        if: steps.hoje.outputs.pular != '1'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null
       - name: Ler os boletins da B3
+        if: steps.hoje.outputs.pular != '1'
         run: python3 terminal/fluxo/gerar_fluxo.py terminal/fluxo "${{ github.event.inputs.dias || '12' }}"
       - name: Salvar no repositório
+        if: steps.hoje.outputs.pular != '1'
         run: |
           git config user.name "fluxo-bot"
           git config user.email "actions@users.noreply.github.com"
