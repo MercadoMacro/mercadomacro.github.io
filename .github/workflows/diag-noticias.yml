@@ -1,0 +1,12 @@
+name: diag-noticias
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node .github/coleta-tmp.mjs "$PWD/terminal/station/src/noticias.js" noticias.json
+      - uses: actions/upload-artifact@v4
+        with: { name: noticias, path: noticias.json }
