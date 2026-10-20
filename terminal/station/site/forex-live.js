@@ -11,7 +11,12 @@ globalThis.MMForexLive = (() => {
     'CAD=X': { s: 'frxUSDCAD' },
     'CHF=X': { s: 'frxUSDCHF' },
     'MXN=X': { s: 'frxUSDMXN' },
-    'AUD=X': { s: 'frxAUDUSD', inv: true }
+    'AUD=X': { s: 'frxAUDUSD', inv: true },
+    // metais à vista: não têm par no Yahoo; a variação é contra o fechamento diário da própria Deriv (00h GMT)
+    '__xau': { s: 'frxXAUUSD', spot: true },
+    '__xag': { s: 'frxXAGUSD', spot: true },
+    '__xpt': { s: 'frxXPTUSD', spot: true },
+    '__xpd': { s: 'frxXPDUSD', spot: true }
   });
   const YAHOO = Object.freeze(['BRL=X', 'MXN=X', 'CLP=X', 'COP=X', 'ARS=X', 'CNY=X', 'INR=X', 'ZAR=X', 'TRY=X', 'AUD=X', 'EURBRL=X',
     'EUR=X', 'JPY=X', 'GBP=X', 'CAD=X', 'SEK=X', 'CHF=X']);
@@ -27,6 +32,7 @@ globalThis.MMForexLive = (() => {
       this.socket = null;
       this.live = new Map();   // Deriv: símbolo Yahoo -> { value, ts, received }
       this.polled = new Map(); // Yahoo: símbolo -> { value, change, base, ts }
+      this.spotBase = new Map(); // metais: símbolo -> fechamento do dia anterior na Deriv
       this.status = 'paused';
       this.pollTimer = null;
       this.pingTimer = null;
@@ -47,7 +53,8 @@ globalThis.MMForexLive = (() => {
     quote(symbol) {
       const l = this.liveQuote(symbol), p = this.polled.get(symbol);
       if (l) {
-        const change = p && p.base ? (l.value / p.base - 1) * 100 : null;
+        const base = DERIV[symbol]?.spot ? this.spotBase.get(symbol) : p && p.base;
+        const change = base ? (l.value / base - 1) * 100 : null;
         return { symbol, value: l.value, change, ts: l.ts, source: 'Deriv', direction: l.direction || 0 };
       }
       return p ? { symbol, value: p.value, change: p.change, ts: p.ts, source: 'Yahoo', direction: p.direction || 0 } : null;
@@ -88,13 +95,22 @@ globalThis.MMForexLive = (() => {
       this.emit({ type: 'state' });
       ws.onopen = () => {
         if (this.socket !== ws) return;
-        for (const { s } of Object.values(DERIV)) ws.send(JSON.stringify({ ticks: s, subscribe: 1 }));
+        for (const { s, spot } of Object.values(DERIV)) {
+          ws.send(JSON.stringify({ ticks: s, subscribe: 1 }));
+          // velas diárias: a penúltima fecha o dia anterior
+          if (spot) ws.send(JSON.stringify({ ticks_history: s, style: 'candles', granularity: 86400, count: 2, end: 'latest' }));
+        }
         // a Deriv fecha conexões paradas: um ping a cada 30 s mantém aberta
         this.pingTimer = setInterval(() => { try { ws.send('{"ping":1}'); } catch (_) {} }, 30000);
       };
       ws.onmessage = (ev) => {
         if (this.socket !== ws || typeof ev.data !== 'string' || ev.data.length > 8000) return;
         let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+        if (m.msg_type === 'candles' && Array.isArray(m.candles) && m.candles.length >= 2) {
+          const sym = DE_DERIV[m.echo_req?.ticks_history], close = Number(m.candles[m.candles.length - 2].close);
+          if (sym && isFinite(close) && close > 0) { this.spotBase.set(sym, close); if (this.liveQuote(sym)) this.emit({ type: 'quote', symbol: sym, quote: this.quote(sym) }); }
+          return;
+        }
         if (m.msg_type !== 'tick' || !m.tick) return; // erros (mercado fechado etc.) só deixam o Yahoo valendo
         const sym = DE_DERIV[m.tick.symbol], cfg = DERIV[sym];
         const raw = Number(m.tick.quote);

@@ -22,7 +22,8 @@
     return r.json();
   };
   const nf = (v, d = 2) => (v == null || !isFinite(v) ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }));
-  const pct = (v, d = 2) => (v == null || !isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d).replace('.', ',')}%`);
+  // arredonda antes do sinal: -0,001% vira 0,00%, não −0,00%
+  const pct = (v, d = 2) => { if (v == null || !isFinite(v)) return '—'; const r = +v.toFixed(d); return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r).toFixed(d).replace('.', ',')}%`; };
   const cls = (v) => (v == null || !isFinite(v) ? 'na' : v > 0 ? 'up' : v < 0 ? 'dn' : 'eq');
   const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const hhmm = (ts) => {
@@ -56,7 +57,8 @@
     { id: 'em', col: 2, t: 'Moedas emergentes', rows: [['BRL=X', 'USD/BRL', 'BR', 4], ['MXN=X', 'USD/MXN', 'MX', 4], ['CLP=X', 'USD/CLP', 'CL'], ['COP=X', 'USD/COP', 'CO'],
       ['ARS=X', 'USD/ARS', 'AR'], ['CNY=X', 'USD/CNY', 'CN', 4], ['INR=X', 'USD/INR', 'IN'], ['ZAR=X', 'USD/ZAR', 'ZA', 4], ['TRY=X', 'USD/TRY', 'TR', 4],
       ['AUD=X', 'USD/AUD', 'AU', 4], ['EURBRL=X', 'EUR/BRL', 'BR', 4]] },
-    { id: 'co', col: 3, t: 'Commodities', rows: [['TIO=F', 'Minério de ferro', 'SG'], ['GC=F', 'Ouro', 'US'], ['SI=F', 'Prata', 'US'], ['HG=F', 'Cobre', 'US', 3],
+    { id: 'co', col: 3, t: 'Commodities', rows: [['TIO=F', 'Minério de ferro', 'SG'], ['GC=F', 'Ouro (futuro)', 'US'], ['SI=F', 'Prata (futuro)', 'US'],
+      ['__xau', 'Ouro à vista', 'XAU', 2], ['__xag', 'Prata à vista', 'XAG', 3], ['__xpt', 'Platina à vista', 'XPT', 2], ['__xpd', 'Paládio à vista', 'XPD', 2], ['HG=F', 'Cobre', 'US', 3],
       ['BZ=F', 'Petróleo Brent', 'UK'], ['CL=F', 'Petróleo WTI', 'US'], ['NG=F', 'Gás natural', 'US', 3], ['ZS=F', 'Soja', 'US'], ['ZC=F', 'Milho', 'US'],
       ['KC=F', 'Café', 'US'], ['SB=F', 'Açúcar', 'US']] },
     { id: 'ou', col: 3, t: 'Futuros, juros e risco', rows: [['ES=F', 'S&P 500 futuro', 'US'], ['NQ=F', 'Nasdaq futuro', 'US'], ['YM=F', 'Dow Jones futuro', 'US', 0],
@@ -325,7 +327,7 @@
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : Q[s];
-    const fq = tid === 'em' || tid === 'dx' ? forexStream?.quote(s) : null;
+    const fq = tid === 'em' || tid === 'dx' || s.startsWith('__x') ? forexStream?.quote(s) : null;
     if (fq) {
       q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
     }
@@ -337,8 +339,8 @@
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
     const fonte = fq ? ` · ${fq.source === 'Deriv' ? 'ao vivo pela Deriv' : 'Yahoo Finance'}` : '';
-    const tag = s === '__cds' ? '' : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
-    return `<tr class="${stale ? 'old' : ''}"${tag}>
+    const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo pela Deriv · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
+    return `<tr class="${stale ? 'old' : ''}${fq?.source === 'Deriv' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
@@ -405,13 +407,14 @@
 
   function paintForex(event) {
     if (!root || !forexEnabled) return;
-    for (const tid of ['dx', 'em']) {
+    for (const tid of ['dx', 'em', 'co']) {
       const table = root.querySelector(`.ms-tb[data-tb="${tid}"]`);
       const def = TABLES.find((t) => t.id === tid);
       if (!table || !def) continue;
       for (const [s, n, cc, d] of def.rows) {
         if (event?.type === 'quote' && event.symbol !== s) continue;
-        const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`);
+        if (tid === 'co' && !s.startsWith('__x')) continue;
+        const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`) || table.querySelector(`tr[data-x="${s}"]`);
         const fq = tr && forexStream?.quote(s);
         if (!fq) continue;
         const pxEl = tr.querySelector('.px'), tmEl = tr.querySelector('.tm'), chEl = tr.querySelector('.ch');
@@ -419,7 +422,7 @@
         if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
         if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
         tr.classList.remove('old');
-        tr.title = 'Abrir o gráfico de ' + n + (fq.source === 'Deriv' ? ' · ao vivo pela Deriv' : ' · Yahoo Finance');
+        tr.title = s.startsWith('__x') ? n + ' · ao vivo pela Deriv · variação desde 00h GMT' : 'Abrir o gráfico de ' + n + (fq.source === 'Deriv' ? ' · ao vivo pela Deriv' : ' · Yahoo Finance');
         tr.classList.toggle('ms-fx-live', fq.source === 'Deriv');
         if (event?.type === 'quote' && event.quote?.direction) {
           tr.classList.remove('ms-tick-up', 'ms-tick-down');
@@ -460,7 +463,7 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); câmbio marcado com ponto verde ao vivo pela Deriv; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
+      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); câmbio e metais à vista marcados com ponto verde ao vivo pela Deriv; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
@@ -528,7 +531,7 @@
   function syncForex() {
     if (!forexStream) return;
     const vis = (el) => !!el && !el.hidden && getComputedStyle(el).display !== 'none';
-    forexStream.setActive(active() && !window.__mmLoggingOut && (vis(root?.querySelector('.ms-tb[data-tb="em"]')) || vis(root?.querySelector('.ms-tb[data-tb="dx"]'))));
+    forexStream.setActive(active() && !window.__mmLoggingOut && (vis(root?.querySelector('.ms-tb[data-tb="em"]')) || vis(root?.querySelector('.ms-tb[data-tb="dx"]')) || vis(root?.querySelector('.ms-tb[data-tb="co"]'))));
   }
   if (forexEnabled) {
     forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex });
