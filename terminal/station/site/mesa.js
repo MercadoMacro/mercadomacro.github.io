@@ -325,7 +325,7 @@
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : Q[s];
-    const fq = tid === 'em' ? forexStream?.quote(s) : null;
+    const fq = tid === 'em' || tid === 'dx' ? forexStream?.quote(s) : null;
     if (fq) {
       q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
     }
@@ -336,7 +336,8 @@
     }
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
-    const tag = s === '__cds' ? '' : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}"`;
+    const fonte = fq ? ` · ${fq.source === 'Deriv' ? 'ao vivo pela Deriv' : 'Yahoo Finance'}` : '';
+    const tag = s === '__cds' ? '' : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
     return `<tr class="${stale ? 'old' : ''}"${tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
@@ -404,31 +405,27 @@
 
   function paintForex(event) {
     if (!root || !forexEnabled) return;
-    const table = root.querySelector('.ms-tb[data-tb="em"]');
-    if (!table) return;
-    const emTableDef = TABLES.find((t) => t.id === 'em');
-    if (!emTableDef) return;
-
-    for (const [s, n, cc, d] of emTableDef.rows) {
-      if (event?.type === 'quote' && event.symbol !== s) continue;
-      const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`);
-      if (!tr) continue;
-      const fq = forexStream?.quote(s);
-      if (!fq) continue;
-
-      const pxEl = tr.querySelector('.px');
-      const tmEl = tr.querySelector('.tm');
-
-      const decimals = dec(fq.value, d);
-      if (pxEl) pxEl.textContent = nf(fq.value, decimals);
-      if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
-      const chEl = tr.querySelector('.ch');
-      if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
-
-      if (event?.type === 'quote' && event.symbol === s && event.quote.direction) {
-        tr.classList.remove('ms-tick-up', 'ms-tick-down');
-        void tr.offsetWidth;
-        tr.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down');
+    for (const tid of ['dx', 'em']) {
+      const table = root.querySelector(`.ms-tb[data-tb="${tid}"]`);
+      const def = TABLES.find((t) => t.id === tid);
+      if (!table || !def) continue;
+      for (const [s, n, cc, d] of def.rows) {
+        if (event?.type === 'quote' && event.symbol !== s) continue;
+        const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`);
+        const fq = tr && forexStream?.quote(s);
+        if (!fq) continue;
+        const pxEl = tr.querySelector('.px'), tmEl = tr.querySelector('.tm'), chEl = tr.querySelector('.ch');
+        if (pxEl) pxEl.textContent = nf(fq.value, dec(fq.value, d));
+        if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
+        if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
+        tr.classList.remove('old');
+        tr.title = 'Abrir o gráfico de ' + n + (fq.source === 'Deriv' ? ' · ao vivo pela Deriv' : ' · Yahoo Finance');
+        tr.classList.toggle('ms-fx-live', fq.source === 'Deriv');
+        if (event?.type === 'quote' && event.quote?.direction) {
+          tr.classList.remove('ms-tick-up', 'ms-tick-down');
+          void tr.offsetWidth;
+          tr.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down');
+        }
       }
     }
   }
@@ -463,7 +460,7 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min), Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
+      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); câmbio marcado com ponto verde ao vivo pela Deriv; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
@@ -530,8 +527,8 @@
 
   function syncForex() {
     if (!forexStream) return;
-    const emTable = root?.querySelector('.ms-tb[data-tb="em"]');
-    forexStream.setActive(active() && !window.__mmLoggingOut && !!emTable && !emTable.hidden && getComputedStyle(emTable).display !== 'none');
+    const vis = (el) => !!el && !el.hidden && getComputedStyle(el).display !== 'none';
+    forexStream.setActive(active() && !window.__mmLoggingOut && (vis(root?.querySelector('.ms-tb[data-tb="em"]')) || vis(root?.querySelector('.ms-tb[data-tb="dx"]'))));
   }
   if (forexEnabled) {
     forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex });
@@ -639,6 +636,7 @@
   .ms-news .hr.new { background:var(--neg); color:#fff; }
   .ms-link { border:0; background:none; color:var(--accent); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
   .ms-note { margin:14px 2px 0; font-size:11px; color:var(--text-3); }
+  .ms-tb tr.ms-fx-live td.tm::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--pos); margin-right:5px; vertical-align:1px; }
 
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
