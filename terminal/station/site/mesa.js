@@ -550,7 +550,7 @@
     forexStream.setActive(active() && !window.__mmLoggingOut);
   }
   if (forexEnabled) {
-    forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex, ref: (s) => (Q[s] && Q[s].live ? { v: Q[s].v, c: Q[s].c } : null) });
+    forexStream = window.MMForexLive.entrar('mesa', { onChange: paintForex, ref: (s) => (Q[s] && Q[s].live ? { v: Q[s].v, c: Q[s].c } : null) });
     setInterval(syncForex, 1000);
     window.addEventListener('pagehide', () => forexStream.setActive(false));
     window.addEventListener('pageshow', syncForex);

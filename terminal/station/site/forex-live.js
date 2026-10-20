@@ -12,6 +12,9 @@ globalThis.MMForexLive = (() => {
     'CHF=X': { s: 'frxUSDCHF' },
     'MXN=X': { s: 'frxUSDMXN' },
     'AUD=X': { s: 'frxAUDUSD', inv: true },
+    // aba Mercado
+    'EURUSD=X': { s: 'frxEURUSD' },
+    'GBPUSD=X': { s: 'frxGBPUSD' },
     // metais à vista: não têm par no Yahoo; a variação é contra o fechamento diário da própria Deriv (00h GMT)
     '__xau': { s: 'frxXAUUSD', spot: true },
     '__xag': { s: 'frxXAGUSD', spot: true },
@@ -20,7 +23,9 @@ globalThis.MMForexLive = (() => {
   });
   const YAHOO = Object.freeze(['BRL=X', 'MXN=X', 'CLP=X', 'COP=X', 'ARS=X', 'CNY=X', 'INR=X', 'ZAR=X', 'TRY=X', 'AUD=X', 'EURBRL=X',
     'EUR=X', 'JPY=X', 'GBP=X', 'CAD=X', 'SEK=X', 'CHF=X']);
-  const DE_DERIV = Object.freeze(Object.fromEntries(Object.entries(DERIV).map(([k, v]) => [v.s, k])));
+  // par da Deriv -> símbolos da Mesa/Mercado que usam esse par (EUR/USD vale para EUR=X invertido e EURUSD=X direto)
+  const DE_DERIV = {};
+  for (const [k, v] of Object.entries(DERIV)) (DE_DERIV[v.s] ||= []).push(k);
   const WS_URL = 'wss://api.derivws.com/trading/v1/options/ws/public';
   const VELHO = 20000; // preço da Deriv sem atualizar há 20 s deixa de valer (mercado fechado ou conexão parada)
 
@@ -88,7 +93,7 @@ globalThis.MMForexLive = (() => {
         return { symbol, value: c.mid, change: b ? (c.mid / b - 1) * 100 : null, ts: c.t, source: 'Capital.com', epic: c.e, direction: c.dir };
       }
       if (l) {
-        const base = DERIV[symbol]?.spot ? this.spotBase.get(symbol) : p && p.base;
+        const base = DERIV[symbol]?.spot ? this.spotBase.get(symbol) : this.base(symbol);
         const change = base ? (l.value / base - 1) * 100 : null;
         return { symbol, value: l.value, change, ts: l.ts, source: 'Deriv', direction: l.direction || 0 };
       }
@@ -163,7 +168,8 @@ globalThis.MMForexLive = (() => {
       this.emit({ type: 'state' });
       ws.onopen = () => {
         if (this.socket !== ws) return;
-        for (const { s, spot } of Object.values(DERIV)) {
+        for (const [s, syms] of Object.entries(DE_DERIV)) {
+          const spot = DERIV[syms[0]].spot;
           ws.send(JSON.stringify({ ticks: s, subscribe: 1 }));
           // velas diárias: a penúltima fecha o dia anterior
           if (spot) ws.send(JSON.stringify({ ticks_history: s, style: 'candles', granularity: 86400, count: 2, end: 'latest' }));
@@ -175,21 +181,23 @@ globalThis.MMForexLive = (() => {
         if (this.socket !== ws || typeof ev.data !== 'string' || ev.data.length > 8000) return;
         let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
         if (m.msg_type === 'candles' && Array.isArray(m.candles) && m.candles.length >= 2) {
-          const sym = DE_DERIV[m.echo_req?.ticks_history], close = Number(m.candles[m.candles.length - 2].close);
+          const sym = DE_DERIV[m.echo_req?.ticks_history]?.[0], close = Number(m.candles[m.candles.length - 2].close);
           if (sym && isFinite(close) && close > 0) { this.spotBase.set(sym, close); if (this.liveQuote(sym)) this.emit({ type: 'quote', symbol: sym, quote: this.quote(sym) }); }
           return;
         }
         if (m.msg_type !== 'tick' || !m.tick) return; // erros (mercado fechado etc.) só deixam o Yahoo valendo
-        const sym = DE_DERIV[m.tick.symbol], cfg = DERIV[sym];
+        const syms = DE_DERIV[m.tick.symbol];
         const raw = Number(m.tick.quote);
-        if (!sym || !isFinite(raw) || raw <= 0) return;
-        const value = cfg.inv ? 1 / raw : raw;
-        const prev = this.liveQuote(sym);
-        const direction = prev && prev.value !== value ? Math.sign(value - prev.value) : 0;
-        this.live.set(sym, { value, ts: (Number(m.tick.epoch) || Date.now() / 1000) * 1000, received: Date.now(), direction });
+        if (!syms || !isFinite(raw) || raw <= 0) return;
         this.attempt = 0;
         if (this.status !== 'live') { this.status = 'live'; this.emit({ type: 'state' }); }
-        this.emit({ type: 'quote', symbol: sym, quote: this.quote(sym) });
+        for (const sym of syms) {
+          const value = DERIV[sym].inv ? 1 / raw : raw;
+          const prev = this.liveQuote(sym);
+          const direction = prev && prev.value !== value ? Math.sign(value - prev.value) : 0;
+          this.live.set(sym, { value, ts: (Number(m.tick.epoch) || Date.now() / 1000) * 1000, received: Date.now(), direction });
+          this.emit({ type: 'quote', symbol: sym, quote: this.quote(sym) });
+        }
       };
       ws.onerror = ws.onclose = () => { if (this.socket === ws) this.reconnect(); };
     }
@@ -232,5 +240,21 @@ globalThis.MMForexLive = (() => {
     }
   }
 
-  return { DERIV, YAHOO, CAPITAL, Client };
+    // um cliente só para a Mesa e a aba Mercado: uma conexão com a Deriv e uma com o servidor, não duas de cada
+  const usuarios = new Map();
+  let comum = null;
+  function entrar(nome, { onChange = () => {}, ref = () => null } = {}) {
+    if (!comum) comum = new Client({
+      onChange: (e) => { for (const u of usuarios.values()) { try { u.onChange(e); } catch (_) {} } },
+      ref: (s) => { for (const u of usuarios.values()) { const r = u.ref(s); if (r) return r; } return null; },
+    });
+    usuarios.set(nome, { onChange, ref, ativo: false });
+    const c = comum;
+    return {
+      covers: (s) => c.covers(s), quote: (s) => c.quote(s), state: () => c.state(),
+      setActive(v) { usuarios.get(nome).ativo = !!v; c.setActive([...usuarios.values()].some((u) => u.ativo)); },
+    };
+  }
+
+  return { DERIV, YAHOO, CAPITAL, Client, entrar };
 })();

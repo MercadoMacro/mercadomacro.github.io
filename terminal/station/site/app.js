@@ -4686,7 +4686,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=14';
+    sc.src = 'mesa.js?v=15';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -4919,6 +4919,67 @@ function newsReadMins(n) {
 /* =========================================================
    APLICATIVO (PWA): permite instalar o site na tela inicial e abrir sem internet
    ========================================================= */
+/* =========================================================
+   ABA MERCADO AO VIVO
+   Os cards que têm fonte ao vivo trocam o preço sem esperar a próxima consulta ao Yahoo:
+   câmbio (Deriv), USD/BRL, VIX e futuros (Capital.com, pelo servidor do site) e cripto (Binance).
+   A variação do dia usa o fechamento anterior do Yahoo que o card já tem; o mini gráfico continua o do Yahoo.
+   ========================================================= */
+(function mercadoAoVivo() {
+  const panel = document.getElementById('market-panel');
+  if (!panel) return;
+  const fx = window.MMForexLive?.entrar ? window.MMForexLive.entrar('mercado', {
+    onChange: (e) => { if (e.type === 'quote') pinta(e.symbol, e.quote?.direction); },
+    ref: (s) => { const d = marketDataCache[s]; return d && Number.isFinite(d.value) ? { v: d.value, c: d.change } : null; },
+  }) : null;
+  const cr = window.MMCryptoLive?.hostAllowed(location.hostname)
+    ? new window.MMCryptoLive.Client({ enabled: true, onChange: (e) => { if (e?.type === 'quote') pinta(e.symbol, e.quote?.direction); } })
+    : null;
+  const cards = (s) => [...document.querySelectorAll('#market-panel .quote-card[data-symbol]')].filter((c) => c.dataset.symbol === s);
+  function vivo(s) {
+    const q = fx?.covers(s) ? fx.quote(s) : null;
+    if (q && q.source !== 'Yahoo') return { v: q.value, src: q.source === 'Deriv' ? 'Deriv' : 'Capital.com', ts: q.ts };
+    const c = cr?.quote(s);
+    if (c && Number.isFinite(c.value)) return { v: c.value, src: 'Binance (USDT)', ts: c.ts };
+    return null;
+  }
+  function pinta(s, dir) {
+    if (!liveMode || !panel.classList.contains('active')) return;
+    const l = vivo(s), d = marketDataCache[s];
+    if (!l) return;
+    for (const card of cards(s)) {
+      const unit = d?.unit || '';
+      const priceEl = card.querySelector('[data-price]'), changeEl = card.querySelector('[data-change]'), badgeEl = card.querySelector('[data-badge]'), timeEl = card.querySelector('[data-time]');
+      if (!priceEl) continue;
+      const v = l.v;
+      priceEl.textContent = unit === 'R$' ? `R$ ${fmtNumber(v, { min: 4, max: 4 })}` : v >= 10000 ? fmtNumber(v, { min: 0, max: 2 }) : v >= 100 ? fmtNumber(v, { min: 2, max: 2 }) : fmtNumber(v, { min: 2, max: 4 });
+      priceEl.classList.remove('skeleton');
+      // fechamento anterior do Yahoo: preço / (1 + variação)
+      const base = d && Number.isFinite(d.value) && Number.isFinite(d.change) ? d.value / (1 + d.change / 100) : null;
+      if (base) {
+        const chg = (v / base - 1) * 100, tone = chg >= 0 ? 'up' : 'dn';
+        if (changeEl) { changeEl.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`; changeEl.className = `qc-change ${tone}`; }
+        if (badgeEl) { badgeEl.textContent = chg > 0 ? '▲' : chg < 0 ? '▼' : '▲'; badgeEl.className = `qc-badge ${tone}`; }
+        card.classList.remove('up', 'dn'); card.classList.add(tone);
+      }
+      if (timeEl) timeEl.textContent = 'ao vivo · ' + l.src + ' ' + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      card.title = 'Preço ao vivo pela ' + l.src + (l.src === 'Capital.com' ? ' (CFD)' : '') + '; o gráfico e o fechamento anterior vêm do Yahoo.';
+      if (dir) flashCard(card, dir > 0 ? 'up' : 'dn');
+    }
+  }
+  const todos = () => MARKET_SECTIONS.flatMap((sec) => sec.items.map((it) => it.symbol)).filter(Boolean);
+  function sync() {
+    const on = liveMode && panel.classList.contains('active') && !document.hidden && !window.__mmLoggingOut;
+    fx?.setActive(on); cr?.setActive(on);
+  }
+  setInterval(sync, 1000);
+  document.addEventListener('visibilitychange', sync);
+  window.addEventListener('pagehide', () => { fx?.setActive(false); cr?.setActive(false); });
+  // depois de cada consulta ao Yahoo, o card volta a mostrar o preço ao vivo
+  const orig = updateMarketPanel;
+  updateMarketPanel = async function (...a) { const r = await orig.apply(this, a); todos().forEach((s) => pinta(s)); return r; };
+})();
+
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }, { once: true });
 }
