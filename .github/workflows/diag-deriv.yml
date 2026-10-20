@@ -1,0 +1,30 @@
+# Diagnóstico temporário: lista índices, commodities e cripto da Deriv e confere preços ao vivo. Apagar depois.
+name: Diag Deriv
+on: { workflow_dispatch: {} }
+permissions: { contents: read }
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/setup-node@v5
+        with: { node-version: '22' }
+      - run: |
+          cat > d.mjs <<'JS'
+          const ws = new WebSocket('wss://api.derivws.com/trading/v1/options/ws/public');
+          const send = (o) => ws.send(JSON.stringify(o));
+          const ticks = {};
+          ws.onopen = () => send({ active_symbols: 'brief' });
+          ws.onmessage = (e) => {
+            const m = JSON.parse(e.data);
+            if (m.msg_type === 'active_symbols') {
+              const l = m.active_symbols.filter(s => ['indices','commodities','cryptocurrency'].includes(s.market));
+              for (const s of l) console.log(s.market, '|', s.underlying_symbol, '|', s.underlying_symbol_name, '|', s.submarket, '| aberto', s.exchange_is_open);
+              for (const s of l) send({ ticks: s.underlying_symbol, subscribe: 1 });
+              setTimeout(() => { console.log('TICKS em 20 s:'); for (const s of l) { const v = ticks[s.underlying_symbol]; console.log(s.underlying_symbol, v ? v.n + ' ultimo ' + v.q : 'nenhum'); } process.exit(0); }, 20000);
+            }
+            if (m.msg_type === 'tick') { const o = ticks[m.tick.symbol] ||= { n: 0 }; o.n++; o.q = m.tick.quote; }
+            if (m.error && m.msg_type !== 'tick') console.log('ERRO', m.echo_req?.ticks, m.error.message);
+          };
+          JS
+          node d.mjs
