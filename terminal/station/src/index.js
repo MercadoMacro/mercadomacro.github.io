@@ -2,7 +2,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
-import { ligarAssinatura, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS } from './assinatura.js';
+import { ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
@@ -783,6 +783,11 @@ async function apiAdmin(req, env, acao, eu) {
       return json({ ok: true, dominio: dom });
     }
     if (b.acao === 'desligar') { await salvarConfig(env, { mail_key: null }); return json({ ok: true }); }
+    if (b.acao === 'teste-assinatura') {
+      if (!c.mail_key) return json({ erro: 'Cole a chave do Resend primeiro.' }, 400);
+      const r = await emailsDeTeste(env, req, eu);
+      return r.enviados === 3 ? json({ ok: true, para: eu.email }) : json({ erro: 'Foram enviados ' + r.enviados + ' de 3. O Resend respondeu: ' + (r.erro || 'erro desconhecido') + '.' }, 502);
+    }
     if (b.acao === 'teste') {
       if (!c.mail_key) return json({ erro: 'Cole a chave do Resend primeiro.' }, 400);
       const r = await emailLiberado(env, req, eu.nome, eu.email, true).catch((e) => ({ ok: false, erro: String(e) }));
@@ -1406,7 +1411,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
         var okDom = j.dominio === 'verified' || j.dominio === 'desconhecido';
         h = '<div class="caixa"><p>Ligado. Quando você toca em Liberar, a pessoa recebe um e-mail de <b>' + esc(j.de) + '</b> avisando que o acesso foi liberado, com o link para entrar.</p>'
           + '<p>Domínio mercadomacro.com.br no Resend: <b>' + esc(ESTADO[j.dominio] || j.dominio) + '</b>.' + (okDom ? '' : ' Enquanto o domínio não estiver verificado, o Resend não entrega os e-mails. No resend.com, abra Domains, mercadomacro.com.br, e use a configuração automática com a Cloudflare.') + '</p>'
-          + '<div class="linha"><button type="button" id="em-teste" style="' + bt + '">Enviar e-mail de teste para mim</button><button type="button" id="em-off" style="' + bt + '">Desligar</button></div></div>';
+          + '<div class="linha"><button type="button" id="em-teste" style="' + bt + '">Enviar e-mail de teste para mim</button><button type="button" id="em-ass" style="' + bt + '">Testar e-mails da assinatura</button><button type="button" id="em-off" style="' + bt + '">Desligar</button></div></div>';
       } else {
         h = '<div class="caixa"><p>Mande um e-mail automático para a pessoa quando você liberar o acesso. Para ligar:</p><ol>'
           + '<li>Crie uma conta grátis em <a href="https://resend.com/signup" target="_blank" rel="noopener" style="color:var(--accent-text)">resend.com</a>.</li>'
@@ -1423,6 +1428,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var el;
       if ((el = document.getElementById('em-salvar'))) el.onclick = function(){ acao({ acao: 'chave', chave: document.getElementById('em-chave').value }, this, email); };
       if ((el = document.getElementById('em-off'))) el.onclick = function(){ if (confirm('Desligar o e-mail de acesso liberado?')) acao({ acao: 'desligar' }, this, email); };
+      if ((el = document.getElementById('em-ass'))) el.onclick = function(){ acao({ acao: 'teste-assinatura' }, this, function(r){ diz(true, 'Enviados 3 e-mails para ' + r.para + ': vence em 3 dias, acesso terminou e pagamento confirmado. Confira a caixa de entrada (e o spam).'); }); };
       if ((el = document.getElementById('em-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(r){ diz(true, 'E-mail de teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }); };
     }).catch(function(){ em.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }

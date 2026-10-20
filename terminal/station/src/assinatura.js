@@ -129,6 +129,17 @@ function emailRecusado(env, req, u, plano) {
   });
 }
 
+// /admin: manda para o administrador os e-mails que o assinante recebe (vence em 3 dias, venceu e pagamento confirmado)
+export async function emailsDeTeste(env, req, eu) {
+  const agora = new Date().toISOString();
+  const r = [
+    await emailVencendo(env, { ...eu, expira: new Date(Date.now() + 3 * 864e5).toISOString() }, 3).catch((e) => ({ ok: false, erro: String(e) })),
+    await emailVenceu(env, { ...eu, expira: agora }).catch((e) => ({ ok: false, erro: String(e) })),
+    await emailAprovado(env, req, eu, PLANOS.mensal, somarPeriodo(agora, PLANOS.mensal)).catch((e) => ({ ok: false, erro: String(e) })),
+  ];
+  return { enviados: r.filter((x) => x.ok).length, erro: (r.find((x) => !x.ok) || {}).erro };
+}
+
 /* ---------------- robô diário: avisa quem vai vencer e desativa quem venceu ---------------- */
 export async function rotinaAssinaturas(env) {
   await garantirAssinatura(env);
