@@ -77,8 +77,10 @@
     busy = true; erro = ''; draw();
     try {
       let j;
-      try { j = await getJSON(`${PROXY}/focus?full=1`); if (!Array.isArray(j.anuais) || !j.anuais.length) throw new Error('vazio'); }
-      catch (e) { j = await direto(); }
+      // atualizar à mão vai direto ao Banco Central (o servidor guarda o Focus por 30 min); se falhar, usa o servidor
+      const servidor = async () => { const x = await getJSON(`${PROXY}/focus?full=1`); if (!Array.isArray(x.anuais) || !x.anuais.length) throw new Error('vazio'); return x; };
+      const bcb = async () => { const x = await direto(); if (!x.anuais.length) throw new Error('vazio'); return x; };
+      j = force ? await bcb().catch(servidor) : await servidor().catch(bcb);
       if (!j.anuais.length) throw new Error('sem dados');
       cache = { ts: Date.now(), anuais: j.anuais, copom: j.copom || [] };
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* cheio */ }
@@ -87,6 +89,8 @@
     } finally { busy = false; draw(); }
   }
 
+  // o relatório sai na segunda seguinte à última data da pesquisa (a de sexta)
+  const relatorio = (d) => { let r = addDays(d, 1); while (new Date(r + 'T12:00:00').getDay() !== 1) r = addDays(r, 1); return r; };
   // valor da série na data mais recente <= alvo
   const ate = (pts, alvo) => { for (const p of pts) if (p[0] <= alvo) return p; return null; };
   // linhas que fecham um grupo no relatório do BCB (separador mais forte depois delas)
@@ -149,7 +153,7 @@
       }
       corpo = `
         <section class="fo-box">
-          <div class="fo-bh"><h3>Mediana das expectativas</h3><span>dados até ${dm(d0)} · clique numa linha para ver o gráfico</span></div>
+          <div class="fo-bh"><h3>Mediana das expectativas</h3><span>relatório de ${dm(relatorio(d0))} (dados até ${dm(d0)}) · clique numa linha para ver o gráfico</span></div>
           <div class="fo-tbl"><table class="fo-main">
             <thead><tr><th rowspan="2" class="corner"></th>${anos.map((y) => `<th colspan="${porAno}" class="yr ${cor(y)}">${y}</th>`).join('')}</tr><tr>${head2}</tr></thead>
             <tbody>${linhas}</tbody>
@@ -165,9 +169,11 @@
         <span class="fo-leg"><span class="fo-c up">▲ Aumento</span><span class="fo-c dn">▼ Diminuição</span><span class="fo-c eq">= Estabilidade</span></span>
         <span class="fo-next">Próximo relatório: segunda, ${prox.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, 8h25</span>
         <span class="er-st">${busy ? 'Atualizando…' : erro ? (cache ? esc(erro) + ' Mostrando o último dado salvo.' : '') : cache ? `Atualizado às ${new Date(cache.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+        <button type="button" class="btn-sm fo-atu" ${busy ? 'disabled' : ''} title="Buscar o Focus de novo no Banco Central"><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}" aria-hidden="true"></i> Atualizar</button>
       </div>
       <div class="fo-body">${corpo || `<div class="er-msg">${busy ? 'Carregando o Focus…' : esc(erro || '—')}</div>`}</div>
       <div class="calendar-footer"><span>Fonte: </span><a href="https://www.bcb.gov.br/publicacoes/focus" target="_blank" rel="noopener">Banco Central do Brasil, Relatório Focus</a><span> (sistema Expectativas de Mercado). "Semana" compara com a semana anterior; o número entre parênteses é há quantas semanas seguidas o movimento se repete. "Resp." (ao ver dois anos) é o número de instituições que responderam.</span></div>`;
+    root.querySelector('.fo-atu')?.addEventListener('click', () => load(true));
     root.querySelectorAll('.ecal-chip[data-par]').forEach((b) => b.addEventListener('click', () => { prefs.par = b.dataset.par === 'todos' ? 'todos' : +b.dataset.par; savePrefs(); draw(); }));
     root.querySelectorAll('.fo-row').forEach((tr) => {
       const go = () => { aberto = aberto === tr.dataset.ind ? null : tr.dataset.ind; draw(); root.querySelector(`.fo-row[data-ind="${CSS.escape(tr.dataset.ind)}"]`)?.focus({ preventScroll: true }); };

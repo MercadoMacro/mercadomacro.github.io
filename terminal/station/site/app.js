@@ -2766,7 +2766,7 @@ function ecalSetView(view) {
     setTimeout(fitCalendarIframe, 50);
   }
   if (view === 'earn') ecalEarn();
-  if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=3', '__focusRender', 'o Boletim Focus');
+  if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=4', '__focusRender', 'o Boletim Focus');
   if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=2', '__bbrRender', 'a agenda de balanços do Brasil');
   if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=1', '__provRender', 'a agenda de proventos');
 }
