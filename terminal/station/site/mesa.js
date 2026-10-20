@@ -462,14 +462,14 @@
 
   function render() {
     const col = (n) => TABLES.filter((t) => t.col === n).map(tableHTML).join('');
-    const sc = root.querySelector('.ms-wrap')?.scrollTop || 0;
+    const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
         <div class="ms-info"><span class="dot ${errMsg ? 'bad' : ''}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
         ${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}
         <button type="button" class="btn-sm ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo"><i class="fas fa-sync-alt"></i> Atualizar</button>
       </div>
-      <div class="ms-crypto">${cryptoHTML()}</div>
+      <div class="ms-crypto"><button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
@@ -488,10 +488,41 @@
     paintCrypto();
     paintForex();
     const w = root.querySelector('.ms-wrap'); if (w) w.scrollTop = sc;
+    const car = root.querySelector('.ms-car'); if (car) { car.scrollLeft = cx; carSetas(); }
     requestAnimationFrame(drawCurve);
   }
 
   window.addEventListener('mesa-layout-changed', render);
+
+  /* ---------------- faixa de cripto: carrossel (arrastar com o mouse, roda do mouse ou setas) ---------------- */
+  function carSetas() {
+    const car = root.querySelector('.ms-car'); if (!car) return;
+    const max = car.scrollWidth - car.clientWidth;
+    root.querySelectorAll('.ms-car-btn').forEach((b) => { b.disabled = b.dataset.car < 0 ? car.scrollLeft <= 2 : car.scrollLeft >= max - 2; b.hidden = max <= 2; });
+  }
+  let arr = null, arrastou = false;
+  root.addEventListener('pointerdown', (e) => {
+    const car = e.target.closest('.ms-car');
+    if (!car || e.pointerType !== 'mouse' || e.button !== 0) return;
+    arr = { car, x: e.clientX, sl: car.scrollLeft }; arrastou = false;
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!arr) return;
+    const dx = e.clientX - arr.x;
+    if (!arrastou && Math.abs(dx) > 5) { arrastou = true; arr.car.classList.add('drag'); }
+    if (arrastou) arr.car.scrollLeft = arr.sl - dx;
+  });
+  window.addEventListener('pointerup', () => { if (arr) arr.car.classList.remove('drag'); arr = null; });
+  // depois de arrastar, soltar o mouse em cima de uma moeda não abre o gráfico
+  root.addEventListener('click', (e) => { if (arrastou && e.target.closest('.ms-car')) { e.stopPropagation(); e.preventDefault(); arrastou = false; } }, true);
+  root.addEventListener('wheel', (e) => {
+    const car = e.target.closest('.ms-car'); if (!car || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const max = car.scrollWidth - car.clientWidth;
+    if ((e.deltaY < 0 && car.scrollLeft <= 0) || (e.deltaY > 0 && car.scrollLeft >= max)) return; // na ponta, a página rola
+    e.preventDefault(); car.scrollLeft += e.deltaY;
+  }, { passive: false });
+  root.addEventListener('scroll', (e) => { if (e.target.classList?.contains('ms-car')) carSetas(); }, true);
+  window.addEventListener('resize', carSetas);
 
   /* ---------------- interação ---------------- */
   function openChart(sym, name, list) {
@@ -504,6 +535,8 @@
   };
   root.addEventListener('click', (e) => {
     if (e.target.closest('.ms-refresh')) { refresh(true); return; }
+    const cb = e.target.closest('.ms-car-btn');
+    if (cb) { const car = root.querySelector('.ms-car'); car?.scrollBy({ left: Math.sign(+cb.dataset.car) * car.clientWidth * 0.8, behavior: 'smooth' }); return; }
     const cv = e.target.closest('[data-curve]');
     if (cv) { curveKind = cv.dataset.curve; const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } return; }
     const go = e.target.closest('[data-go]');
@@ -535,6 +568,7 @@
   function syncCrypto() {
     if(!cryptoStream)return;
     const strip=root.querySelector('.ms-crypto');
+    if(active())carSetas();
     cryptoStream.setActive(active()&&!window.__mmLoggingOut&&!!strip&&!strip.hidden&&getComputedStyle(strip).display!=='none');
   }
   if(cryptoEnabled){
@@ -576,11 +610,19 @@
   .ms-refresh.busy i { animation:spin .8s linear infinite; }
   .ms-wrap .up { color:var(--pos); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
 
-  /* as 8 cripto sempre à vista: quebram linha em vez de sumir para a direita; no celular a faixa rola */
-  .ms-crypto { display:flex; flex-wrap:wrap; gap:6px; padding-bottom:2px; margin-bottom:10px; }
-  .ms-crypto::-webkit-scrollbar { display:none; }
-  @media (max-width:700px) { .ms-crypto { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; } .ms-crypto .ms-cr { flex:0 0 auto; } }
-  .ms-cr { flex:1 1 auto; justify-content:center; display:inline-flex; align-items:baseline; gap:7px; padding:6px 11px; border:1px solid var(--line); border-radius:99px; background:var(--surface); color:var(--text-3); font:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; }
+  /* faixa de cripto em carrossel: arrasta com o mouse, rola com a roda ou pelas setas; no celular, com o dedo */
+  .ms-crypto { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+  .ms-car { flex:1; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:1px 0 2px; cursor:grab;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); mask-image:linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+  .ms-car::-webkit-scrollbar { display:none; }
+  .ms-car.drag { cursor:grabbing; user-select:none; }
+  .ms-car.drag .ms-cr { pointer-events:none; }
+  .ms-car-btn { flex:none; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:50%; background:var(--surface); color:var(--text-2); font-size:11px; cursor:pointer; }
+  .ms-car-btn:hover:not(:disabled) { border-color:var(--line-2); color:var(--text); }
+  .ms-car-btn:disabled { opacity:.3; cursor:default; }
+  .ms-car-btn[hidden] { display:none; }
+  @media (pointer:coarse) { .ms-car-btn { display:none; } }
+  .ms-cr { flex:0 0 auto; display:inline-flex; align-items:baseline; gap:7px; padding:6px 11px; border:1px solid var(--line); border-radius:99px; background:var(--surface); color:var(--text-3); font:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; }
   .ms-cr b { font:600 12px 'JetBrains Mono', monospace; color:var(--text); }
   .ms-cr em { font:normal 11px 'JetBrains Mono', monospace; }
   .ms-cr:hover { border-color:var(--line-2); }
