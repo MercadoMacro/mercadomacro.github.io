@@ -636,7 +636,8 @@
   .ms-news .hr.new { background:var(--neg); color:#fff; }
   .ms-link { border:0; background:none; color:var(--accent); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
   .ms-note { margin:14px 2px 0; font-size:11px; color:var(--text-3); }
-  .ms-tb tr.ms-fx-live td.tm::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--pos); margin-right:5px; vertical-align:1px; }
+  .ms-tb tr.ms-fx-live td.tm { position:relative; }
+  .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
 
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
