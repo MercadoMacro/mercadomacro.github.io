@@ -736,7 +736,55 @@ async function apiAdmin(req, env, acao, eu) {
     }
     return json({ erro: 'Ação inválida.' }, 400);
   }
+  if (acao === 'capital') {
+    const c = await config(env);
+    if (req.method === 'GET') return json(c.cap_key ? { ligado: true, login: mascarar(c.cap_id), ambiente: c.cap_amb || 'demo' } : { ligado: false });
+    if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
+    const b = await req.json().catch(() => ({}));
+    if (b.acao === 'chave') {
+      const cfg = { cap_key: String(b.chave || '').trim(), cap_id: String(b.login || '').trim(), cap_pw: String(b.senha || ''), cap_amb: b.ambiente === 'real' ? 'real' : 'demo' };
+      if (!/^[\w-]{8,100}$/.test(cfg.cap_key)) return json({ erro: 'Cole a chave da API como aparece na Capital.com.' }, 400);
+      if (!cfg.cap_id || cfg.cap_id.length > 120 || !cfg.cap_pw || cfg.cap_pw.length > 200) return json({ erro: 'Preencha o login e a senha da API.' }, 400);
+      const ses = await sessaoCapital(cfg);
+      if (!ses.ok) return json({ erro: 'A Capital.com não aceitou: ' + ses.erro }, 400);
+      await salvarConfig(env, cfg);
+      return json({ ok: true });
+    }
+    if (b.acao === 'desligar') { await salvarConfig(env, { cap_key: null, cap_id: null, cap_pw: null, cap_amb: null }); return json({ ok: true }); }
+    if (b.acao === 'testar') {
+      if (!c.cap_key) return json({ erro: 'Salve a chave primeiro.' }, 400);
+      const ses = await sessaoCapital(c);
+      if (!ses.ok) return json({ erro: 'A Capital.com não aceitou: ' + ses.erro }, 502);
+      const achados = [];
+      for (const termo of BUSCA_CAPITAL) {
+        const r = await fetch(ses.base + '/api/v1/markets?searchTerm=' + encodeURIComponent(termo), { headers: ses.h }).catch(() => null);
+        const j = r && r.ok ? await r.json().catch(() => ({})) : {};
+        achados.push({ termo, itens: (j.markets || []).slice(0, 4).map((m) => ({ epic: m.epic, nome: m.instrumentName, tipo: m.instrumentType, situacao: m.marketStatus, compra: m.bid, venda: m.offer })) });
+        await new Promise((ok) => setTimeout(ok, 150)); // limite da Capital: 10 pedidos por segundo
+      }
+      return json({ ok: true, ambiente: c.cap_amb || 'demo', achados });
+    }
+    return json({ erro: 'Ação inválida.' }, 400);
+  }
   return json({ erro: 'Não encontrado.' }, 404);
+}
+
+/* ---------------- Capital.com (teste de cotações) ----------------
+   Chave, login e senha da API ficam só no banco D1, colados em /admin, e nunca vão para o navegador:
+   com eles dá para operar a conta. Por isso o recomendado é usar a conta demo. */
+const BUSCA_CAPITAL = ['USD/BRL', 'EUR/BRL', 'Brazil', 'US500', 'US Tech 100', 'Germany 40', 'Brent', 'Crude', 'Natural Gas', 'Gold', 'Silver', 'Copper', 'Iron', 'Soybean', 'Coffee', 'VIX'];
+const mascarar = (x) => { const t = String(x || ''); const [a, d] = t.split('@'); return d ? a.slice(0, 2) + '***@' + d : t.slice(0, 2) + '***'; };
+async function sessaoCapital(c) {
+  const base = c.cap_amb === 'real' ? 'https://api-capital.backend-capital.com' : 'https://demo-api-capital.backend-capital.com';
+  const r = await fetch(base + '/api/v1/session', {
+    method: 'POST', headers: { 'X-CAP-API-KEY': c.cap_key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: c.cap_id, password: c.cap_pw, encryptedPassword: false }),
+  }).catch(() => null);
+  if (!r) return { ok: false, erro: 'sem resposta do servidor deles.' };
+  if (!r.ok) { const j = await r.json().catch(() => ({})); return { ok: false, erro: (j.errorCode || 'HTTP ' + r.status) + '.' }; }
+  const cst = r.headers.get('CST'), sec = r.headers.get('X-SECURITY-TOKEN');
+  if (!cst || !sec) return { ok: false, erro: 'sessão sem os códigos de acesso.' };
+  return { ok: true, base, h: { CST: cst, 'X-SECURITY-TOKEN': sec } };
 }
 
 /* ---------------- e-mail de acesso liberado (Resend) ----------------
@@ -1170,6 +1218,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 <div id="avisos"><p class="vazio">Carregando…</p></div>
 <h2>E-mail de acesso liberado</h2>
 <div id="email"><p class="vazio">Carregando…</p></div>
+<h2>Capital.com (teste de cotações)</h2>
+<div id="capital"><p class="vazio">Carregando…</p></div>
 </main>
 <script>
 (function(){
@@ -1304,6 +1354,49 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if ((el = document.getElementById('em-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(r){ diz(true, 'E-mail de teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }); };
     }).catch(function(){ em.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  var cp = document.getElementById('capital');
+  function postCap(corpo){
+    return fetch('/api/admin/capital', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); });
+  }
+  function capital(){
+    fetch('/api/admin/capital', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
+      var h;
+      if (j.ligado) {
+        h = '<div class="caixa"><p>Chave salva (login ' + esc(j.login) + ', conta ' + (j.ambiente === 'real' ? '<b>real</b>' : 'demo') + '). O botão abaixo mostra quais ativos a Capital.com tem e o preço agora. Nada aparece no site ainda.</p>'
+          + '<div class="linha"><button type="button" id="cp-testar" style="' + bt + '">Testar</button><button type="button" id="cp-off" style="' + bt + '">Apagar chave</button></div><div id="cp-res"></div></div>';
+      } else {
+        h = '<div class="caixa"><p>Para testar as cotações da Capital.com. Na Capital.com, em Configurações, API, gere uma chave com uma <b>senha personalizada</b> (diferente da senha da conta). Use de preferência a <b>conta demo</b>: com esses dados dá para operar a conta.</p>'
+          + '<div class="linha"><input id="cp-chave" autocomplete="off" spellcheck="false" placeholder="chave da API" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="cp-login" autocomplete="off" spellcheck="false" placeholder="e-mail de login da Capital.com" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="cp-senha" type="password" autocomplete="new-password" placeholder="senha personalizada da API" style="' + inp + '"></div>'
+          + '<div class="linha"><select id="cp-amb" style="' + inp + ';flex:0 0 auto"><option value="demo">Conta demo (recomendado)</option><option value="real">Conta real</option></select><button type="button" id="cp-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<p>Fica guardado só no servidor do site e não aparece de novo nesta página.</p></div>';
+      }
+      cp.innerHTML = h + '<p class="msg" id="cp-msg"></p>';
+      var m = document.getElementById('cp-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function acao(corpo, b, depois){ if (b) b.disabled = true; diz(true, 'Aguarde…');
+        postCap(corpo).then(function(r){ diz(true, ''); depois(r); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ if (b) b.disabled = false; }); }
+      var el;
+      if ((el = document.getElementById('cp-salvar'))) el.onclick = function(){
+        var amb = document.getElementById('cp-amb').value;
+        if (amb === 'real' && !confirm('Usar a conta REAL? Com esses dados dá para operar a conta. A conta demo é mais segura para isso.')) return;
+        acao({ acao: 'chave', chave: document.getElementById('cp-chave').value, login: document.getElementById('cp-login').value, senha: document.getElementById('cp-senha').value, ambiente: amb }, this, capital); };
+      if ((el = document.getElementById('cp-off'))) el.onclick = function(){ if (confirm('Apagar a chave da Capital.com do servidor?')) acao({ acao: 'desligar' }, this, capital); };
+      if ((el = document.getElementById('cp-testar'))) el.onclick = function(){ acao({ acao: 'testar' }, this, function(r){
+        var t = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px"><tr style="color:var(--text-3);text-align:left"><th>Busca</th><th>Ativo (código)</th><th>Situação</th><th style="text-align:right">Compra / venda</th></tr>';
+        r.achados.forEach(function(a){
+          if (!a.itens.length) t += '<tr><td>' + esc(a.termo) + '</td><td colspan="3" style="color:var(--text-3)">não encontrado</td></tr>';
+          a.itens.forEach(function(x, i){ t += '<tr style="border-top:1px solid var(--line)"><td>' + (i ? '' : esc(a.termo)) + '</td><td>' + esc(x.nome) + ' <span style="color:var(--text-3)">(' + esc(x.epic) + ')</span></td><td>' + esc(x.situacao || '—') + '</td><td style="text-align:right">' + (x.compra == null ? '—' : esc(x.compra) + ' / ' + esc(x.venda)) + '</td></tr>'; });
+        });
+        document.getElementById('cp-res').innerHTML = t + '</table>';
+      }); };
+    }).catch(function(){ cp.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  capital();
   email();
   avisos();
   carregar();
