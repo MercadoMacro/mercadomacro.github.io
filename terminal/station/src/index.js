@@ -103,7 +103,10 @@ export default {
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
         if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
-        return env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch(req);
+        // a conexão leva a sessão do site (hash) para o relay poder fechá-la se a pessoa sair ou for bloqueada
+        const h = new Headers(req.headers);
+        h.set('X-MM-Sessao', await sha256hex(lerCookie(req)));
+        return env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch(new Request(req, { headers: h }));
       }
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);
@@ -360,6 +363,11 @@ async function telegramFoto(env, png, legenda) {
   const r = await fetch(`https://api.telegram.org/bot${c.tg_token}/sendPhoto`, { method: 'POST', body: fd });
   const j = await r.json().catch(() => ({ ok: false }));
   return j.ok ? { ok: true } : { ok: false, erro: 'O Telegram recusou a imagem.' };
+}
+
+// avisa o relay da Capital que a chave mudou ou foi apagada: ele descarta a sessão antiga na hora
+async function reiniciarCapital(env) {
+  try { await env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch('https://capital/reiniciar', { method: 'POST' }); } catch (_) { /* o relay também confere a chave ao reabrir */ }
 }
 
 /* ---------------- sessões ---------------- */
@@ -754,9 +762,10 @@ async function apiAdmin(req, env, acao, eu) {
       const ses = await sessaoCapital(cfg);
       if (!ses.ok) return json({ erro: 'A Capital.com não aceitou: ' + ses.erro }, 400);
       await salvarConfig(env, cfg);
+      await reiniciarCapital(env);
       return json({ ok: true });
     }
-    if (b.acao === 'desligar') { await salvarConfig(env, { cap_key: null, cap_id: null, cap_pw: null, cap_amb: null }); return json({ ok: true }); }
+    if (b.acao === 'desligar') { await salvarConfig(env, { cap_key: null, cap_id: null, cap_pw: null, cap_amb: null }); await reiniciarCapital(env); return json({ ok: true }); }
     if (b.acao === 'testar') {
       if (!c.cap_key) return json({ erro: 'Salve a chave primeiro.' }, 400);
       const ses = await sessaoCapital(c);

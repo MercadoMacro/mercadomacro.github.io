@@ -2,7 +2,10 @@
    Um único Durable Object ("main") abre UMA conexão com a Capital usando a chave, o login e a senha da API
    guardados em /admin (tabela config do D1) e repassa os preços para quem está com a Mesa aberta.
    A chave e a sessão nunca vão para o navegador: com elas dá para operar a conta.
-   Sem ninguém conectado por 1 minuto, a conexão com a Capital fecha. */
+   Sem ninguém conectado por 1 minuto, a conexão com a Capital fecha.
+   Cada navegador conectado fica ligado à sua sessão do site: a cada 5 min a sessão é conferida no D1 e,
+   se saiu, expirou ou a conta foi bloqueada, a conexão é fechada. Falha ao abrir a Capital tenta de novo com espera crescente.
+   /admin chama POST /reiniciar ao trocar ou apagar a chave: a sessão com a Capital é descartada na hora. */
 
 const STREAM = 'wss://api-streaming-capital.backend-capital.com/connect';
 // símbolo do Yahoo na Mesa -> como achar na Capital.
@@ -40,21 +43,72 @@ export class CapitalRelay {
     this.timers = [];
     this.fechar = null;
     this.erro = '';
+    this.sessaoDe = new Map(); // socket do navegador -> hash da sessão do site
+    this.vigia = null;         // conferência periódica das sessões
+    this.tentativa = 0; this.novaTentativa = null;
+    this.geracao = 0;          // muda a cada desligar: uma abertura antiga em andamento desiste
   }
 
   async fetch(req) {
+    // só o worker do site chega aqui (o Durable Object não tem endereço público)
+    if (new URL(req.url).pathname === '/reiniciar' && req.method === 'POST') { await this.reiniciar(); return new Response(null, { status: 204 }); }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Use WebSocket.', { status: 426 });
+    const sessao = req.headers.get('X-MM-Sessao') || '';
+    if (!/^[a-f0-9]{64}$/.test(sessao)) return new Response('Sem sessão.', { status: 401 });
     const [cli, srv] = Object.values(new WebSocketPair());
     srv.accept();
     this.clientes.add(srv);
+    this.sessaoDe.set(srv, sessao);
     clearTimeout(this.fechar); this.fechar = null;
-    const sai = () => { this.clientes.delete(srv); if (!this.clientes.size) this.agendarFechar(); };
+    const sai = () => { this.clientes.delete(srv); this.sessaoDe.delete(srv); if (!this.clientes.size) this.agendarFechar(); };
     srv.addEventListener('close', sai);
     srv.addEventListener('error', sai);
+    if (!this.vigia) this.vigia = setInterval(() => this.conferirSessoes().catch(() => {}), 5 * 60000);
     // quem chega recebe o mapa e os últimos preços na hora
     if (this.mapa) this.manda(srv, { tipo: 'mapa', mapa: this.mapa, precos: this.ultimo });
-    if (!this.up) this.ligar().catch((e) => { this.erro = String(e.message || e); this.avisa({ tipo: 'erro', erro: this.erro }); });
+    else if (this.erro) this.manda(srv, { tipo: 'erro', erro: this.erro });
+    if (!this.up && !this.novaTentativa) this.tentarLigar();
     return new Response(null, { status: 101, webSocket: cli });
+  }
+
+  // fecha quem saiu do site, teve a sessão expirada ou a conta bloqueada
+  async conferirSessoes() {
+    if (!this.clientes.size) { clearInterval(this.vigia); this.vigia = null; return; }
+    const hashes = [...new Set(this.sessaoDe.values())];
+    const ok = new Set();
+    for (let i = 0; i < hashes.length; i += 50) {
+      const lote = hashes.slice(i, i + 50);
+      const r = await this.env.DB.prepare(`SELECT s.token FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
+        WHERE s.token IN (${lote.map(() => '?').join(',')}) AND s.expira > ? AND u.status = 'ativo'`).bind(...lote, Date.now()).all();
+      for (const x of r.results) ok.add(x.token);
+    }
+    for (const [ws, h] of this.sessaoDe) {
+      if (ok.has(h)) continue;
+      this.clientes.delete(ws); this.sessaoDe.delete(ws);
+      try { ws.close(4001, 'Sessão encerrada'); } catch (_) {}
+    }
+    if (!this.clientes.size) this.agendarFechar();
+  }
+
+  // abre a Capital; se falhar, tenta de novo (10 s, 20 s, 40 s... até 5 min) enquanto houver alguém olhando
+  tentarLigar() {
+    clearTimeout(this.novaTentativa); this.novaTentativa = null;
+    this.ligar().then(() => { this.erro = ''; }).catch((e) => {
+      this.erro = String(e.message || e);
+      this.avisa({ tipo: 'erro', erro: this.erro });
+      if (/desligada/.test(this.erro) || !this.clientes.size) return; // sem chave salva não adianta insistir
+      const espera = Math.min(5 * 60000, 10000 * 2 ** Math.min(this.tentativa++, 5));
+      this.novaTentativa = setTimeout(() => { this.novaTentativa = null; if (this.clientes.size && !this.up) this.tentarLigar(); }, espera);
+    });
+  }
+
+  // chave trocada ou apagada em /admin: descarta a sessão com a Capital e os preços, e abre de novo se ainda tiver chave
+  async reiniciar() {
+    clearTimeout(this.novaTentativa); this.novaTentativa = null;
+    this.desligar();
+    this.mapa = null; this.ultimo = {}; this.erro = ''; this.tentativa = 0;
+    this.avisa({ tipo: 'mapa', mapa: {}, precos: {} });
+    if (this.clientes.size) this.tentarLigar();
   }
 
   manda(ws, o) { try { ws.send(JSON.stringify(o)); } catch (_) { this.clientes.delete(ws); } }
@@ -62,9 +116,12 @@ export class CapitalRelay {
 
   agendarFechar() {
     clearTimeout(this.fechar);
-    this.fechar = setTimeout(() => { if (!this.clientes.size) this.desligar(); }, 60000);
+    this.fechar = setTimeout(() => {
+      if (!this.clientes.size) { this.desligar(); clearTimeout(this.novaTentativa); this.novaTentativa = null; clearInterval(this.vigia); this.vigia = null; }
+    }, 60000);
   }
   desligar() {
+    this.geracao++;
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
     if (this.up) { try { this.up.close(); } catch (_) {} }
@@ -125,14 +182,19 @@ export class CapitalRelay {
   async ligar() {
     if (this.up) return;
     this.up = 'abrindo';
+    const g = this.geracao;
     try {
       await this.sessao();
-      this.mapa = await this.montarMapa();
+      const mapa = await this.montarMapa();
+      if (g !== this.geracao) return; // desligaram no meio do caminho
+      this.mapa = mapa;
       await this.foto().catch(() => {});
+      if (g !== this.geracao) return;
       this.avisa({ tipo: 'mapa', mapa: this.mapa, precos: this.ultimo });
       const ws = new WebSocket(STREAM);
       this.up = ws;
       ws.addEventListener('open', () => {
+        this.tentativa = 0;
         const eps = [...new Set(Object.values(this.mapa).flat())].slice(0, 40);
         ws.send(JSON.stringify({ destination: 'marketData.subscribe', correlationId: '1', cst: this.ses.cst, securityToken: this.ses.sec, payload: { epics: eps } }));
       });
@@ -144,14 +206,18 @@ export class CapitalRelay {
         this.ultimo[p.epic] = q;
         this.avisa({ tipo: 'q', e: p.epic, ...q });
       });
-      const caiu = () => { if (this.up !== ws) return; this.desligar(); if (this.clientes.size) setTimeout(() => this.ligar().catch(() => {}), 10000); };
+      const caiu = () => {
+        if (this.up !== ws) return;
+        this.desligar();
+        if (this.clientes.size && !this.novaTentativa) this.novaTentativa = setTimeout(() => { this.novaTentativa = null; if (this.clientes.size && !this.up) this.tentarLigar(); }, 10000);
+      };
       ws.addEventListener('close', caiu);
       ws.addEventListener('error', caiu);
       // a Capital pede um ping a cada menos de 10 min
       this.timers.push(setInterval(() => { try { ws.send(JSON.stringify({ destination: 'ping', correlationId: '2', cst: this.ses.cst, securityToken: this.ses.sec })); } catch (_) {} }, 5 * 60000));
       this.timers.push(setInterval(() => this.foto().catch(() => {}), 5 * 60000));
     } catch (e) {
-      this.up = null;
+      if (g === this.geracao) this.up = null;
       throw e;
     }
   }

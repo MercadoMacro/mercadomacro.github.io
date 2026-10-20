@@ -32,6 +32,7 @@ globalThis.MMForexLive = (() => {
   // Capital.com (repasse do servidor do site em /api/capital/ws): USD/BRL, VIX e futuros
   const CAPITAL = Object.freeze(['BRL=X', '^VIX', 'GC=F', 'SI=F', 'HG=F', 'BZ=F', 'CL=F', 'NG=F', 'KC=F', 'ES=F', 'NQ=F', 'YM=F', 'RTY=F']);
   const CAP_VELHO = 10 * 60000; // preço da Capital parado há 10 min deixa de valer
+  const POLL_VELHO = 3 * 60000; // lote do Yahoo não renovado há 3 min (aba parada): a Mesa volta aos dados dela
 
   class Client {
     // ref(símbolo) -> { v, c } do Yahoo que a Mesa já tem: escolhe o contrato certo e dá o fechamento anterior
@@ -39,7 +40,7 @@ globalThis.MMForexLive = (() => {
       this.enabled = enabled;
       this.onChange = onChange;
       this.ref = ref;
-      this.cap = null; this.capMapa = {}; this.capPreco = {}; this.capRetry = null; this.capTent = 0; this.capErro = '';
+      this.cap = null; this.capMapa = {}; this.capPreco = {}; this.capFixo = {}; this.capRetry = null; this.capTent = 0; this.capErro = '';
       this.active = false;
       this.socket = null;
       this.live = new Map();   // Deriv: símbolo Yahoo -> { value, ts, received }
@@ -63,22 +64,34 @@ globalThis.MMForexLive = (() => {
 
     covers(symbol) { return symbol in DERIV || YAHOO.includes(symbol) || CAPITAL.includes(symbol); }
 
-    // contrato da Capital para o símbolo: aberto, recente e com preço até 3% do Yahoo (o mesmo contrato que o Yahoo mostra)
+    // contrato da Capital para o símbolo: aberto, recente e com preço até 3% do Yahoo (o mesmo contrato que o Yahoo mostra).
+    // A escolha fica fixa enquanto o contrato continuar valendo; numa escolha nova, o vencimento mais próximo ganha
+    // de um posterior que esteja só um pouco mais perto do Yahoo (o Yahoo pode estar atrasado alguns minutos).
     capQuote(symbol) {
       const eps = this.capMapa[symbol];
       if (!eps) return null;
-      const r = this.polled.get(symbol)?.value ?? this.ref(symbol)?.v;
-      let melhor = null, dist = Infinity;
-      for (const e of eps) {
+      const r = this.pollFresco(symbol)?.value ?? this.ref(symbol)?.v;
+      const ok = [];
+      for (const e of eps) { // eps vem do servidor em ordem de vencimento
         const q = this.capPreco[e];
         if (!q || q.st !== 'TRADEABLE' || !(q.b > 0) || !(q.o > 0) || Date.now() - q.t > CAP_VELHO) continue;
         const mid = (q.b + q.o) / 2, d = r ? Math.abs(mid / r - 1) : (eps.length === 1 ? 0 : Infinity);
-        if (d < dist) { dist = d; melhor = { e, mid, t: q.t, dir: q.dir || 0 }; }
+        if (d <= 0.03) ok.push({ e, mid, t: q.t, dir: q.dir || 0, d });
       }
-      return melhor && dist <= 0.03 ? melhor : null;
+      if (!ok.length) { delete this.capFixo[symbol]; return null; }
+      const fixo = ok.find((x) => x.e === this.capFixo[symbol]);
+      if (fixo) return fixo;
+      const menor = Math.min(...ok.map((x) => x.d));
+      const escolha = ok.find((x) => x.d <= menor + 0.005);
+      this.capFixo[symbol] = escolha.e;
+      return escolha;
+    }
+    pollFresco(symbol) {
+      const p = this.polled.get(symbol);
+      return p && Date.now() - p.recv <= POLL_VELHO ? p : null;
     }
     base(symbol) {
-      const p = this.polled.get(symbol);
+      const p = this.pollFresco(symbol);
       if (p && p.base) return p.base;
       const r = this.ref(symbol);
       return r && r.v > 0 && r.c != null && isFinite(r.c) ? r.v / (1 + r.c / 100) : null;
@@ -86,7 +99,7 @@ globalThis.MMForexLive = (() => {
 
     // o que a Mesa mostra: Deriv ao vivo, senão Capital ao vivo, senão o Yahoo
     quote(symbol) {
-      const l = this.liveQuote(symbol), p = this.polled.get(symbol);
+      const l = this.liveQuote(symbol), p = this.pollFresco(symbol);
       const c = !l && this.capQuote(symbol);
       if (c) {
         const b = this.base(symbol);
@@ -121,7 +134,7 @@ globalThis.MMForexLive = (() => {
         if (this.cap !== ws) return;
         let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
         if (m.tipo === 'mapa' || m.tipo === 'precos') {
-          if (m.mapa) this.capMapa = m.mapa;
+          if (m.mapa) { this.capMapa = m.mapa; this.capFixo = {}; if (!Object.keys(m.mapa).length) this.capPreco = {}; }
           for (const [e, q] of Object.entries(m.precos || {})) this.capPreco[e] = { ...q, dir: 0 };
           this.capTent = 0; this.capErro = '';
           for (const s of Object.keys(this.capMapa)) this.emit({ type: 'quote', symbol: s, quote: this.quote(s) });
@@ -174,8 +187,19 @@ globalThis.MMForexLive = (() => {
           // velas diárias: a penúltima fecha o dia anterior
           if (spot) ws.send(JSON.stringify({ ticks_history: s, style: 'candles', granularity: 86400, count: 2, end: 'latest' }));
         }
-        // a Deriv fecha conexões paradas: um ping a cada 30 s mantém aberta
-        this.pingTimer = setInterval(() => { try { ws.send('{"ping":1}'); } catch (_) {} }, 30000);
+        // a Deriv fecha conexões paradas: um ping a cada 30 s mantém aberta.
+        // Na virada do dia em UTC (00h GMT, quando a vela diária fecha) pede de novo o fechamento dos metais.
+        let dia = new Date().toISOString().slice(0, 10);
+        this.pingTimer = setInterval(() => {
+          try {
+            ws.send('{"ping":1}');
+            const hoje = new Date().toISOString().slice(0, 10);
+            if (hoje !== dia) {
+              dia = hoje;
+              for (const [s, syms] of Object.entries(DE_DERIV)) if (DERIV[syms[0]].spot) { this.spotBase.delete(syms[0]); ws.send(JSON.stringify({ ticks_history: s, style: 'candles', granularity: 86400, count: 2, end: 'latest' })); }
+            }
+          } catch (_) {}
+        }, 30000);
       };
       ws.onmessage = (ev) => {
         if (this.socket !== ws || typeof ev.data !== 'string' || ev.data.length > 8000) return;
@@ -229,7 +253,7 @@ globalThis.MMForexLive = (() => {
             const change = base ? (value / base - 1) * 100 : null;
             const prev = this.polled.get(s);
             const direction = prev && prev.value !== value ? Math.sign(value - prev.value) : 0;
-            this.polled.set(s, { value, change, base, ts: meta.regularMarketTime ? meta.regularMarketTime * 1000 : Date.now(), direction });
+            this.polled.set(s, { value, change, base, ts: meta.regularMarketTime ? meta.regularMarketTime * 1000 : Date.now(), recv: Date.now(), direction });
             // par ao vivo: quem pisca é a Deriv; aqui só avisa os pares do Yahoo que mudaram
             if (direction !== 0 && !this.liveQuote(s)) this.emit({ type: 'quote', symbol: s, quote: this.quote(s) });
           }
