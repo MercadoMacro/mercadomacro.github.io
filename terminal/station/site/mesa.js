@@ -576,9 +576,11 @@
   .ms-refresh.busy i { animation:spin .8s linear infinite; }
   .ms-wrap .up { color:var(--pos); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
 
-  .ms-crypto { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; margin-bottom:10px; }
+  /* as 8 cripto sempre à vista: quebram linha em vez de sumir para a direita; no celular a faixa rola */
+  .ms-crypto { display:flex; flex-wrap:wrap; gap:6px; padding-bottom:2px; margin-bottom:10px; }
   .ms-crypto::-webkit-scrollbar { display:none; }
-  .ms-cr { flex:0 0 auto; display:inline-flex; align-items:baseline; gap:7px; padding:6px 11px; border:1px solid var(--line); border-radius:99px; background:var(--surface); color:var(--text-3); font:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; }
+  @media (max-width:700px) { .ms-crypto { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; } .ms-crypto .ms-cr { flex:0 0 auto; } }
+  .ms-cr { flex:1 1 auto; justify-content:center; display:inline-flex; align-items:baseline; gap:7px; padding:6px 11px; border:1px solid var(--line); border-radius:99px; background:var(--surface); color:var(--text-3); font:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; }
   .ms-cr b { font:600 12px 'JetBrains Mono', monospace; color:var(--text); }
   .ms-cr em { font:normal 11px 'JetBrains Mono', monospace; }
   .ms-cr:hover { border-color:var(--line-2); }
