@@ -2743,3 +2743,6 @@ html[data-card-time="on"] #market-panel .qc-time { display:inline; }
   .mn-current { padding:6px 12px 10px; font-size:12px; color:var(--text-2); border-top:1px solid var(--line); }
   #mobile-navigation [hidden] { display:none !important; }
 }
+
+/* a aba inteira recebe foco para as setas rolarem a página; não precisa da moldura de foco em volta de tudo */
+.tab-panel:focus, .tab-panel:focus-visible { outline: none; }
