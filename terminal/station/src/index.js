@@ -1,4 +1,5 @@
 import { buscarAtivos } from './busca-ativos.js';
+export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
@@ -99,6 +100,11 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
+      if (p === '/api/capital/ws') {
+        if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
+        return env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch(req);
+      }
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);
         if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo

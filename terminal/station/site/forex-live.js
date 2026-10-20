@@ -24,10 +24,17 @@ globalThis.MMForexLive = (() => {
   const WS_URL = 'wss://api.derivws.com/trading/v1/options/ws/public';
   const VELHO = 20000; // preço da Deriv sem atualizar há 20 s deixa de valer (mercado fechado ou conexão parada)
 
+  // Capital.com (repasse do servidor do site em /api/capital/ws): USD/BRL, VIX e futuros
+  const CAPITAL = Object.freeze(['BRL=X', '^VIX', 'GC=F', 'SI=F', 'HG=F', 'BZ=F', 'CL=F', 'NG=F', 'KC=F', 'ES=F', 'NQ=F', 'YM=F', 'RTY=F']);
+  const CAP_VELHO = 10 * 60000; // preço da Capital parado há 10 min deixa de valer
+
   class Client {
-    constructor({ enabled = true, onChange = () => {} } = {}) {
+    // ref(símbolo) -> { v, c } do Yahoo que a Mesa já tem: escolhe o contrato certo e dá o fechamento anterior
+    constructor({ enabled = true, onChange = () => {}, ref = () => null } = {}) {
       this.enabled = enabled;
       this.onChange = onChange;
+      this.ref = ref;
+      this.cap = null; this.capMapa = {}; this.capPreco = {}; this.capRetry = null; this.capTent = 0; this.capErro = '';
       this.active = false;
       this.socket = null;
       this.live = new Map();   // Deriv: símbolo Yahoo -> { value, ts, received }
@@ -49,9 +56,37 @@ globalThis.MMForexLive = (() => {
       return q && Date.now() - q.received <= VELHO ? q : null;
     }
 
-    // o que a Mesa mostra: o preço da Deriv quando está chegando, senão o do Yahoo
+    covers(symbol) { return symbol in DERIV || YAHOO.includes(symbol) || CAPITAL.includes(symbol); }
+
+    // contrato da Capital para o símbolo: aberto, recente e com preço até 3% do Yahoo (o mesmo contrato que o Yahoo mostra)
+    capQuote(symbol) {
+      const eps = this.capMapa[symbol];
+      if (!eps) return null;
+      const r = this.polled.get(symbol)?.value ?? this.ref(symbol)?.v;
+      let melhor = null, dist = Infinity;
+      for (const e of eps) {
+        const q = this.capPreco[e];
+        if (!q || q.st !== 'TRADEABLE' || !(q.b > 0) || !(q.o > 0) || Date.now() - q.t > CAP_VELHO) continue;
+        const mid = (q.b + q.o) / 2, d = r ? Math.abs(mid / r - 1) : (eps.length === 1 ? 0 : Infinity);
+        if (d < dist) { dist = d; melhor = { e, mid, t: q.t, dir: q.dir || 0 }; }
+      }
+      return melhor && dist <= 0.03 ? melhor : null;
+    }
+    base(symbol) {
+      const p = this.polled.get(symbol);
+      if (p && p.base) return p.base;
+      const r = this.ref(symbol);
+      return r && r.v > 0 && r.c != null && isFinite(r.c) ? r.v / (1 + r.c / 100) : null;
+    }
+
+    // o que a Mesa mostra: Deriv ao vivo, senão Capital ao vivo, senão o Yahoo
     quote(symbol) {
       const l = this.liveQuote(symbol), p = this.polled.get(symbol);
+      const c = !l && this.capQuote(symbol);
+      if (c) {
+        const b = this.base(symbol);
+        return { symbol, value: c.mid, change: b ? (c.mid / b - 1) * 100 : null, ts: c.t, source: 'Capital.com', epic: c.e, direction: c.dir };
+      }
       if (l) {
         const base = DERIV[symbol]?.spot ? this.spotBase.get(symbol) : p && p.base;
         const change = base ? (l.value / base - 1) * 100 : null;
@@ -69,10 +104,43 @@ globalThis.MMForexLive = (() => {
       if (!value) { this.stop(); return; }
       this.startPoll();
       this.connect();
+      this.capLigar();
+    }
+
+    capLigar() {
+      if (!this.active || this.cap || typeof WebSocket === 'undefined' || !/^https?:$/.test(location.protocol)) return;
+      let ws;
+      try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/capital/ws'); } catch (_) { return; }
+      this.cap = ws;
+      ws.onmessage = (ev) => {
+        if (this.cap !== ws) return;
+        let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+        if (m.tipo === 'mapa' || m.tipo === 'precos') {
+          if (m.mapa) this.capMapa = m.mapa;
+          for (const [e, q] of Object.entries(m.precos || {})) this.capPreco[e] = { ...q, dir: 0 };
+          this.capTent = 0; this.capErro = '';
+          for (const s of Object.keys(this.capMapa)) this.emit({ type: 'quote', symbol: s, quote: this.quote(s) });
+        } else if (m.tipo === 'q' && m.e) {
+          const v = this.capPreco[m.e] || {};
+          const mid = (m.b + m.o) / 2, old = v.b > 0 ? (v.b + v.o) / 2 : null;
+          this.capPreco[m.e] = { b: m.b, o: m.o, t: m.t || Date.now(), st: m.st ?? v.st, dir: old && old !== mid ? Math.sign(mid - old) : 0 };
+          for (const [s, eps] of Object.entries(this.capMapa)) if (eps.includes(m.e) && this.capQuote(s)?.e === m.e) this.emit({ type: 'quote', symbol: s, quote: this.quote(s) });
+        } else if (m.tipo === 'erro') this.capErro = m.erro;
+      };
+      ws.onclose = ws.onerror = () => {
+        if (this.cap !== ws) return;
+        this.cap = null;
+        if (!this.active) return;
+        clearTimeout(this.capRetry);
+        this.capRetry = setTimeout(() => { this.capRetry = null; this.capLigar(); }, Math.min(120000, 5000 * 2 ** Math.min(this.capTent++, 5)));
+      };
     }
 
     stop() {
       this.closeSocket();
+      clearTimeout(this.capRetry); this.capRetry = null;
+      const c = this.cap; this.cap = null;
+      if (c) { c.onmessage = c.onclose = c.onerror = null; try { c.close(); } catch (_) {} }
       clearTimeout(this.retry); this.retry = null;
       clearInterval(this.pollTimer); this.pollTimer = null;
       this.live.clear();
@@ -164,5 +232,5 @@ globalThis.MMForexLive = (() => {
     }
   }
 
-  return { DERIV, YAHOO, Client };
+  return { DERIV, YAHOO, CAPITAL, Client };
 })();

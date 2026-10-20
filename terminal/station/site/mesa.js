@@ -327,7 +327,7 @@
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : Q[s];
-    const fq = tid === 'em' || tid === 'dx' || s.startsWith('__x') ? forexStream?.quote(s) : null;
+    const fq = forexStream?.covers(s) ? forexStream.quote(s) : null;
     if (fq) {
       q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
     }
@@ -338,9 +338,9 @@
     }
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
-    const fonte = fq ? ` · ${fq.source === 'Deriv' ? 'ao vivo pela Deriv' : 'Yahoo Finance'}` : '';
+    const fonte = fq ? ` · ${fonteFx(fq)}` : '';
     const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo pela Deriv · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
-    return `<tr class="${stale ? 'old' : ''}${fq?.source === 'Deriv' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
+    return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
@@ -364,7 +364,10 @@
         <div class="ms-jn" title="Próximas decisões de juros: Fed (FOMC) e Copom">FOMC ${dm(nextF)} · Copom ${dm(nextC)}</div>
       </div>`;
     }
-    const q = Q[c.s], has = q && q.v != null && isFinite(q.v);
+    let q = Q[c.s];
+    const fq = forexStream?.covers(c.s) ? forexStream.quote(c.s) : null;
+    if (fq && fq.source !== 'Yahoo') q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), live: true };
+    const has = q && q.v != null && isFinite(q.v);
     return `<div class="ms-card ${has ? cls(q.c) : ''} ${has && !q.live ? 'old' : ''}" data-sym="${esc(c.s)}" data-name="${esc(c.n)}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(c.n)}">
       <div class="ms-ct"><span>${esc(c.n)}</span><em class="${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</em></div>
       <div class="ms-cv">${has ? esc(c.pre) + nf(q.v, c.d) : '—'}</div>
@@ -407,13 +410,13 @@
 
   function paintForex(event) {
     if (!root || !forexEnabled) return;
-    for (const tid of ['dx', 'em', 'co']) {
+    for (const tid of TABLES.map((t) => t.id)) {
       const table = root.querySelector(`.ms-tb[data-tb="${tid}"]`);
       const def = TABLES.find((t) => t.id === tid);
       if (!table || !def) continue;
       for (const [s, n, cc, d] of def.rows) {
         if (event?.type === 'quote' && event.symbol !== s) continue;
-        if (tid === 'co' && !s.startsWith('__x')) continue;
+        if (!forexStream?.covers(s)) continue;
         const tr = table.querySelector(`tr[data-sym="${CSS.escape(s)}"]`) || table.querySelector(`tr[data-x="${s}"]`);
         const fq = tr && forexStream?.quote(s);
         if (!fq) continue;
@@ -422,8 +425,8 @@
         if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
         if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
         tr.classList.remove('old');
-        tr.title = s.startsWith('__x') ? n + ' · ao vivo pela Deriv · variação desde 00h GMT' : 'Abrir o gráfico de ' + n + (fq.source === 'Deriv' ? ' · ao vivo pela Deriv' : ' · Yahoo Finance');
-        tr.classList.toggle('ms-fx-live', fq.source === 'Deriv');
+        tr.title = s.startsWith('__x') ? n + ' · ao vivo pela Deriv · variação desde 00h GMT' : 'Abrir o gráfico de ' + n + ' · ' + fonteFx(fq);
+        tr.classList.toggle('ms-fx-live', fq.source !== 'Yahoo');
         if (event?.type === 'quote' && event.quote?.direction) {
           tr.classList.remove('ms-tick-up', 'ms-tick-down');
           void tr.offsetWidth;
@@ -431,6 +434,20 @@
         }
       }
     }
+    // cards de destaque (dólar, S&P futuro, Brent): mesmo preço da tabela
+    for (const c of CARDS) {
+      if (event?.type === 'quote' && event.symbol !== c.s) continue;
+      const fq = forexStream?.covers(c.s) ? forexStream.quote(c.s) : null;
+      const el = fq && fq.source !== 'Yahoo' && root.querySelector(`.ms-card[data-sym="${CSS.escape(c.s)}"]`);
+      if (!el) continue;
+      const v = el.querySelector('.ms-cv'), ch = el.querySelector('.ms-ct em');
+      if (v) v.textContent = c.pre + nf(fq.value, c.d);
+      if (ch && fq.change != null && isFinite(fq.change)) { ch.textContent = pct(fq.change); ch.className = cls(fq.change); }
+      el.title = 'Abrir o gráfico de ' + c.n + ' · ' + fonteFx(fq);
+    }
+  }
+  function fonteFx(fq) {
+    return fq.source === 'Deriv' ? 'ao vivo pela Deriv' : fq.source === 'Capital.com' ? 'ao vivo pela Capital.com (CFD ' + fq.epic + ')' : 'Yahoo Finance';
   }
 
   function newsHTML() {
@@ -463,7 +480,7 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); câmbio e metais à vista marcados com ponto verde ao vivo pela Deriv; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
+      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo (câmbio e metais à vista pela Deriv; dólar, VIX e futuros pela Capital.com, preço de CFD); Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
@@ -530,11 +547,10 @@
 
   function syncForex() {
     if (!forexStream) return;
-    const vis = (el) => !!el && !el.hidden && getComputedStyle(el).display !== 'none';
-    forexStream.setActive(active() && !window.__mmLoggingOut && (vis(root?.querySelector('.ms-tb[data-tb="em"]')) || vis(root?.querySelector('.ms-tb[data-tb="dx"]')) || vis(root?.querySelector('.ms-tb[data-tb="co"]'))));
+    forexStream.setActive(active() && !window.__mmLoggingOut);
   }
   if (forexEnabled) {
-    forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex });
+    forexStream = new window.MMForexLive.Client({ enabled: true, onChange: paintForex, ref: (s) => (Q[s] && Q[s].live ? { v: Q[s].v, c: Q[s].c } : null) });
     setInterval(syncForex, 1000);
     window.addEventListener('pagehide', () => forexStream.setActive(false));
     window.addEventListener('pageshow', syncForex);
