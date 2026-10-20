@@ -191,8 +191,11 @@ $('#theme-toggle').addEventListener('click', () => {
    TABS
    ========================================================= */
 function switchTab(tabId) {
-  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-  $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+  // se o foco estava dentro da aba que vai sumir, ele passa para o botão da aba nova (aba escondida com foco gera aviso no navegador)
+  const ativa = document.activeElement?.closest?.('.tab-panel');
+  if (ativa && ativa.id !== tabId) document.getElementById('tab-' + tabId)?.focus({ preventScroll: true });
+  $$('.tab-btn').forEach(b => { const on = b.dataset.tab === tabId; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  $$('.tab-panel').forEach(p => { const on = p.id === tabId; p.classList.toggle('active', on); if (on) p.removeAttribute('aria-hidden'); else p.setAttribute('aria-hidden', 'true'); });
   localStorage.setItem(STORAGE.activeTab, tabId);
   if (tabId === 'calendar-panel') setTimeout(fitCalendarIframe, 100);
   if (tabId === 'heatmap-panel') setTimeout(() => initHeatmapIfNeeded(), 150);
