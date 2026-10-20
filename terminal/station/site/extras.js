@@ -475,11 +475,12 @@
   }
   async function faixaFundamentos(sym, preco) {
     const el = tvBox.querySelector('.wlc-fund');
+    if (!el) return;
     const m = /^([A-Z]{4}\d{1,2})\.SA$/.exec(sym || '');
     el.hidden = true; el.replaceChildren();
     if (!m) return;
     const f = await fundamentosDe(m[1]);
-    if (!f || tvBox.hidden || tvBox.dataset.sym !== sym) return;
+    if (!f || !el.isConnected || tvBox.hidden || tvBox.dataset.sym !== sym) return;
     const ok = (v) => v != null && isFinite(v);
     const n = (v, dd = 1) => v.toLocaleString('pt-BR', { minimumFractionDigits: dd, maximumFractionDigits: dd });
     const brl = (v) => { const a = Math.abs(v), sg = v < 0 ? '−' : ''; return a >= 1e9 ? `${sg}R$ ${n(a / 1e9, 1)} bi` : `${sg}R$ ${n(a / 1e6, 0)} mi`; };
