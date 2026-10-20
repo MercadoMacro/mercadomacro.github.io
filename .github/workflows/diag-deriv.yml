@@ -14,12 +14,12 @@ jobs:
           const ws = new WebSocket(process.env.URL);
           const send = (o) => ws.send(JSON.stringify(o));
           const ticks = {}; let fx = [];
-          ws.onopen = () => send({ active_symbols: 'brief', product_type: 'basic' });
+          ws.onopen = () => send({ active_symbols: 'brief' });
           ws.onmessage = (e) => {
-            const m = JSON.parse(e.data);
+            const m = JSON.parse(e.data); if (m.msg_type !== 'tick') console.log('RESP', String(e.data).slice(0, 700));
             if (m.error) { console.log('ERRO', m.msg_type, m.error.message); return; }
             if (m.msg_type === 'active_symbols') {
-              fx = m.active_symbols.filter(s => s.market === 'forex');
+              const lst = m.active_symbols || []; console.log('MERCADOS', [...new Set(lst.map(s => s.market))].join(',')); fx = lst.filter(s => s.market === 'forex').map(s => ({ ...s, symbol: s.symbol || s.underlying_symbol, display_name: s.display_name || s.underlying_symbol_name }));
               console.log('FOREX', fx.length);
               for (const s of fx) console.log(s.symbol, '|', s.display_name, '|', s.submarket, '| aberto', s.exchange_is_open);
               const want = fx.map(s => s.symbol).filter(s => /USD(BRL|MXN|ZAR|TRY|CNH|CNY|INR|CLP|COP|ARS)|BRL|MXN|ZAR/.test(s) || ['frxEURUSD','frxUSDJPY','frxAUDUSD'].includes(s));
@@ -31,5 +31,4 @@ jobs:
           };
           ws.onerror = (e) => { console.log('ws erro', e.message); process.exit(0); };
           JS
-          for u in 'wss://ws.derivws.com/websockets/v3?app_id=1089' 'wss://ws.binaryws.com/websockets/v3?app_id=1089' 'wss://ws.binaryws.com/websockets/v3' 'wss://green.derivws.com/websockets/v3?app_id=1089'; do echo "== $u"; curl -s -o /dev/null -w 'http %{http_code}\n' -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -m 8 "https${u#wss}" || true; done
-          for u in 'wss://ws.binaryws.com/websockets/v3?app_id=1089' 'wss://ws.derivws.com/websockets/v3?app_id=1089&l=EN'; do echo "== node $u"; URL="$u" node d.mjs || true; done
+          URL='wss://api.derivws.com/trading/v1/options/ws/public' node d.mjs || true
