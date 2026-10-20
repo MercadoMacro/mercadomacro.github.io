@@ -196,6 +196,19 @@ ESTOQUE = ('ativo', 'pl', 'caixa', 'divida', 'div_liq')                         
 
 
 # ---------------------------------------------------------------- cadastro (FCA)
+def links_doc(zbytes, prefixo):
+    """{(cnpj, dt_refer): link do documento na CVM (versão mais nova)}, do arquivo-índice do zip (coluna LINK_DOC)."""
+    out, ver = {}, {}
+    for r in ler_csv(zbytes, rf'(^|/){prefixo}_cia_aberta_\d{{4}}\.csv$'):
+        cnpj, dt, link = digitos(r.get('CNPJ_CIA')), r.get('DT_REFER', ''), (r.get('LINK_DOC') or '').strip()
+        if not cnpj or not dt or not re.match(r'^https://[\w.-]*cvm\.gov\.br/', link):
+            continue
+        v = int(num(r.get('VERSAO')) or 0)
+        if v >= ver.get((cnpj, dt), -1):
+            ver[(cnpj, dt)] = v; out[(cnpj, dt)] = link
+    return out
+
+
 def cadastro(zfca):
     emp, tick = {}, {}
     for r in ler_csv(zfca, r'fca_cia_aberta_geral_\d{4}\.csv$'):
@@ -246,6 +259,7 @@ def main():
     emp, tick = cadastro(zfca)
     print(f'  {len(emp)} empresas, {len(tick)} com ação na bolsa')
 
+    docs_cvm = {}    # (cnpj, dt_refer) -> link do DFP/ITR na CVM
     anual = {}       # cnpj -> {ano: {'dt', 'm'}}
     nomes = {}
     qtd = {}
@@ -254,6 +268,7 @@ def main():
         z = baixar(f'{BASE}/DFP/DADOS/dfp_cia_aberta_{ano}.zip', local)
         if not z:
             continue
+        docs_cvm.update(links_doc(z, 'dfp'))
         for cnpj, docs in carregar_demos(z, 'dfp').items():
             if cnpj not in tick:
                 continue
@@ -274,6 +289,7 @@ def main():
         z = baixar(f'{BASE}/ITR/DADOS/itr_cia_aberta_{ano}.zip', local)
         if not z:
             continue
+        docs_cvm.update(links_doc(z, 'itr'))
         for cnpj, docs in carregar_demos(z, 'itr').items():
             if cnpj not in tick:
                 continue
@@ -334,9 +350,9 @@ def main():
             'segmento': next((v['segmento'] for v in tks.values() if v.get('segmento')), ''),
             'tickers': lista_t, 'financeira': fin,
             'acoes': {'ref': q[0], 'on': q[1], 'pn': q[2]} if q else None,
-            'anos': [{'ano': y, 'ref': a[y]['dt'], **{k: a[y]['m'].get(k) for k in FLUXO + ESTOQUE}} for y in sorted(a)[-ANOS_DFP:]],
+            'anos': [{'ano': y, 'ref': a[y]['dt'], 'doc': docs_cvm.get((cnpj, a[y]['dt'])), **{k: a[y]['m'].get(k) for k in FLUXO + ESTOQUE}} for y in sorted(a)[-ANOS_DFP:]],
             'ttm': {'ref': ref, **(ttm or {})} if ttm else None,
-            'balanco': {'ref': ref, **balanco} if balanco else None,
+            'balanco': {'ref': ref, 'doc': docs_cvm.get((cnpj, ref)), **balanco} if balanco else None,
             'gerado': gerado,
             'fonte': 'CVM Dados Abertos (DFP, ITR e FCA), licença ODbL. Valores em R$.'
         }
