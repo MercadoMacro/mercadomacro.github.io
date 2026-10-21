@@ -1364,6 +1364,8 @@ dialog#dlg-hist::backdrop{background:rgba(3,6,12,.6)}
 .linha-t li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2)}
 .linha-t li.pg::before{border-color:var(--pos)}.linha-t li.adm::before{border-color:var(--accent)}
 .linha-t time{display:block;color:var(--text-3);font-size:11.5px}
+#hs .menu{left:0;right:auto}
+#hs .menu button[data-a=hist]{display:none}
 .fun{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .fun div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .fun small{display:block;color:var(--text-3);font-size:12px}.fun strong{font-size:22px}.fun em{display:block;font-style:normal;color:var(--text-3);font-size:12px}
