@@ -3,7 +3,7 @@ export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
-import { ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS } from './assinatura.js';
+import { ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
@@ -500,6 +500,9 @@ async function apiAuth(req, env, acao, ctx) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ erro: 'E-mail inválido.' }, 400);
     if (senha.length < 8) return json({ erro: 'A senha precisa ter pelo menos 8 caracteres.' }, 400);
     if (senha.length > 200) return json({ erro: 'Senha longa demais.' }, 400);
+    const celular = normalizarCelular(b.celular);
+    if (celular === null) return json({ erro: 'Celular inválido. Digite com DDD, por exemplo (11) 91234-5678, ou deixe em branco.' }, 400);
+    await garantirAssinatura(env);
     // cadastros que não confirmaram o e-mail em 7 dias são apagados
     await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
     const MSG_FILA = 'Cadastro enviado. Você já pode entrar com seu e-mail e senha e escolher um plano, ou aguardar a liberação do administrador.';
@@ -515,8 +518,8 @@ async function apiAuth(req, env, acao, ctx) {
     if (existe) return json({ erro: existe.status === 'pendente' ? 'Este e-mail já está cadastrado e aguarda liberação.' : 'Este e-mail já está cadastrado. Use Entrar.' }, 409);
     // com o e-mail ligado em /admin, o cadastro só vai para a fila depois que a pessoa confirma o e-mail
     const comEmail = !!(await config(env)).mail_key;
-    const ins = await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado) VALUES (?, ?, ?, ?, ?)`)
-      .bind(nome, email, await hashSenha(senha), comEmail ? 'confirmar' : 'pendente', new Date().toISOString()).run();
+    const ins = await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado, celular) VALUES (?, ?, ?, ?, ?, ?)`)
+      .bind(nome, email, await hashSenha(senha), comEmail ? 'confirmar' : 'pendente', new Date().toISOString(), celular || null).run();
     if (comEmail) {
       const r = await emailConfirmar(env, req, ins.meta.last_row_id, nome, email).catch(() => ({ ok: false }));
       if (r.ok) return json({ ok: true, confirmar: true, msg: MSG_CONF });
@@ -528,6 +531,18 @@ async function apiAuth(req, env, acao, ctx) {
     }
     ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
     return json({ ok: true, msg: MSG_FILA });
+  }
+
+  if (acao === 'celular') {
+    // a própria pessoa informa ou apaga o celular (opcional)
+    const eu = (await usuarioDaSessao(req, env)) || (await contaDaSessao(req, env));
+    if (!eu) return json({ erro: 'Faça login para continuar.' }, 401);
+    await garantirAssinatura(env);
+    if (b.ler) return json({ celular: (await env.DB.prepare('SELECT celular FROM usuarios WHERE id = ?').bind(eu.id).first()).celular || '' });
+    const celular = normalizarCelular(b.celular);
+    if (celular === null) return json({ erro: 'Celular inválido. Digite com DDD, por exemplo (11) 91234-5678.' }, 400);
+    await env.DB.prepare('UPDATE usuarios SET celular = ? WHERE id = ?').bind(celular || null, eu.id).run();
+    return json({ ok: true, celular });
   }
 
   if (acao === 'senha') {
@@ -563,6 +578,7 @@ async function apiAuth(req, env, acao, ctx) {
       env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind('sen:' + eu.id),
       env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = ?').bind(eu.id),
+      env.DB.prepare('DELETE FROM historico WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(eu.id),
     ]);
     cacheSessao.clear();
@@ -673,7 +689,7 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
     const r = await env.DB.prepare(
-      `SELECT u.id, u.nome, u.email, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.expira,
+      `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.expira,
         COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano
         FROM usuarios u ORDER BY u.criado DESC`).all();
     return json({ eu: eu.id, usuarios: r.results });
@@ -690,6 +706,8 @@ async function apiAdmin(req, env, acao, eu) {
       if (!r.meta.changes) return json({ erro: 'Usuário inválido.' }, 400);
       await env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id).run();
       cacheSessao.clear();
+      await garantirAssinatura(env);
+      await registrar(env, id, 'Senha provisória criada pelo administrador');
       return json({ ok: true, senha });
     }
     if (b.acao === 'validade') {
@@ -713,6 +731,7 @@ async function apiAdmin(req, env, acao, eu) {
         env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id),
         env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
+        env.DB.prepare('DELETE FROM historico WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(id),
       ]);
       await garantirLinks(env);
@@ -730,6 +749,7 @@ async function apiAdmin(req, env, acao, eu) {
       if (novo !== 'ativo') q.push(env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id));
       await env.DB.batch(q);
       cacheSessao.clear();
+      await registrar(env, id, { ativo: 'Acesso liberado' + (validade ? ' até ' + new Date(validade).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : ''), recusado: 'Cadastro recusado', bloqueado: 'Acesso bloqueado' }[novo]);
       // ao liberar, avisa a pessoa por e-mail (se o envio estiver ligado em /admin)
       if (novo === 'ativo' && antes && antes.status !== 'ativo') {
         const r = await emailLiberado(env, req, antes.nome, antes.email, false, validade).catch(() => ({ ok: false }));
@@ -1330,6 +1350,20 @@ details.mais[open] .menu{display:flex}
 .cfg>div>h2:first-child{margin-top:4px}
 ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 [data-p][hidden]{display:none}
+button.nm{background:none;border:0;padding:0;color:var(--text);font:inherit;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:block}
+button.nm:hover{color:var(--accent-text);text-decoration:underline}
+.t td.p .cel{display:block;color:var(--text-3);font-size:12px}
+dialog#dlg-hist{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog#dlg-hist::backdrop{background:rgba(3,6,12,.6)}
+.hs-dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.hs-dados div{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.hs-dados small{display:block;color:var(--text-3);font-size:11.5px}.hs-dados b{font-size:13px}
+.hs-bts{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.linha-t{list-style:none;margin:0;padding:0;border-left:2px solid var(--line-2)}
+.linha-t li{position:relative;padding:0 0 12px 16px;font-size:13px}
+.linha-t li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2)}
+.linha-t li.pg::before{border-color:var(--pos)}.linha-t li.adm::before{border-color:var(--accent)}
+.linha-t time{display:block;color:var(--text-3);font-size:11.5px}
 .fun{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .fun div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .fun small{display:block;color:var(--text-3);font-size:12px}.fun strong{font-size:22px}.fun em{display:block;font-style:normal;color:var(--text-3);font-size:12px}
@@ -1394,11 +1428,11 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <h2>Mês a mês</h2><div id="funil"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
-  <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div></div>
+  <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
   <div id="raiz"><p class="vazio">Carregando…</p></div>
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
-<section data-p="pagamentos" hidden><div id="pags"><p class="vazio">Carregando…</p></div></section>
+<section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
 <section data-p="comunicado" hidden><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
 <section data-p="ajustes" hidden>
   <div class="cfg">
@@ -1408,6 +1442,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div></div>
   </div>
 </section>
+<dialog id="dlg-hist" aria-labelledby="hs-t"><div class="dl" id="hs"></div></dialog>
 <dialog id="dlg-acesso" aria-labelledby="ac-t">
   <div class="dl">
     <div class="dl-top"><div><h3 id="ac-t"></h3><p id="ac-e" class="e"></p></div><button type="button" class="x" data-fechar aria-label="Fechar">&times;</button></div>
@@ -1457,9 +1492,12 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   ];
   // botão principal de cada situação; o resto fica no menu (...)
   var PRINCIPAL = { pendente: ['liberar', 'recusar'], ativo: ['acesso'], expirado: ['acesso'], confirmar: ['liberar'], recusado: ['liberar'], bloqueado: ['liberar'] };
-  function botoes(u){
+  function botoes(u, zapPrincipal){
     if (u.id === eu || u.admin) return '<span class="pill admin">administrador</span>';
-    var todos = BT[u.status] || [], pri = PRINCIPAL[u.status] || [];
+    var todos = (BT[u.status] || []).slice(), pri = (PRINCIPAL[u.status] || []).slice();
+    // WhatsApp entra antes de Excluir; nas listas de "precisa de você" e "vencem" fica à vista
+    if (u.celular) { todos.splice(todos.length - 1, 0, ['zap', 'WhatsApp', '']); if (zapPrincipal) pri.push('zap'); }
+    todos.splice(todos.length - 1, 0, ['hist', 'Histórico', '']);
     var at = function(b, menu){ return '<button type="button" class="' + (menu ? (b[2] === 'del' ? 'del' : '') : 'b ' + b[2]) + '" data-id="' + u.id + '" data-a="' + b[0] + '" data-n="' + esc(u.nome) + '">' + b[1] + '</button>'; };
     var resto = todos.filter(function(b){ return pri.indexOf(b[0]) < 0; });
     return '<span class="bx">' + todos.filter(function(b){ return pri.indexOf(b[0]) >= 0; }).map(function(b){ return at(b); }).join('')
@@ -1487,7 +1525,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
     raiz.innerHTML = lista.length ? '<table class="t"><thead><tr><th>Pessoa</th><th>Situação</th><th>Plano</th><th>Validade</th><th>Último acesso</th><th>Cadastro</th><th></th></tr></thead><tbody>'
       + lista.map(function(u){
-        return '<tr><td class="p"><b>' + esc(u.nome) + '</b><span>' + esc(u.email) + '</span></td>'
+        return '<tr><td class="p"><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
           + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
           + '<td class="ac">' + botoes(u) + '</td></tr>';
@@ -1508,9 +1546,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       + k('pessoas:todos', 'Cadastros na semana', novos, US.length + ' no total');
     document.getElementById('acao').innerHTML = (pend.length || env.length) ? '<div class="lista">'
       + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
-      + pend.map(function(u){ return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + '</div><div class="e">' + esc(u.email) + '</div><div class="d">Pediu acesso ' + data(u.criado) + '</div></div><div class="bts">' + botoes(u) + '</div></div>'; }).join('') + '</div>'
+      + pend.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="e">' + esc(u.email) + '</div><div class="d">Pediu acesso ' + data(u.criado) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>'
       : '<p class="vazio">Nada pendente. Tudo em dia.</p>';
-    document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + '</div><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
+    document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
     document.getElementById('cnt-pessoas').textContent = pend.length || '';
     document.getElementById('cnt-pag').textContent = env.length || '';
   }
@@ -1566,6 +1604,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     var a = b.dataset.a;
     if (a === 'senha') return novaSenha(b);
     if (a === 'acesso') return abrirAcesso(+b.dataset.id);
+    if (a === 'zap') return zap(+b.dataset.id);
+    if (a === 'hist') return abrirHistorico(+b.dataset.id);
     if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir de vez o cadastro de ' + b.dataset.n + '? Nome, e-mail e senha são apagados e não dá para desfazer.' : 'Bloquear o acesso de ' + b.dataset.n + '?'))) return;
     b.disabled = true;
     fetch('/api/admin/decidir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.dataset.id, acao: a }) })
@@ -1630,6 +1670,68 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       msg.textContent = AU.nome + ': ' + (NOMEP[AT] || AT) + ', ' + (j.expira ? 'acesso até ' + dia(j.expira) : 'acesso sem validade') + '.' + (corpo.pago ? ' Pagamento registrado em Recebido no mês.' : '') + (EMAIL[j.email] || '');
       carregar(); if (corpo.pago) pagamentos();
     }).catch(function(j){ m.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
+  });
+  // celular 5511912345678 -> (11) 91234-5678
+  function celFmt(c){ var d = String(c || '').slice(2); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : c; }
+  // WhatsApp com a mensagem pronta conforme a situação da pessoa
+  function zap(id){
+    var u = US.filter(function(x){ return x.id === id; })[0]; if (!u || !u.celular) return;
+    var n = String(u.nome).split(' ')[0], site = 'https://mercadomacro.com.br/assinar', t;
+    if (u.status === 'expirado') t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Seu acesso terminou' + (u.expira ? ' em ' + dia(u.expira) : '') + '. Seus dados e listas continuam guardados. Para voltar, é só escolher um plano em ' + site;
+    else if (u.status === 'ativo' && u.expira) t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Seu acesso vai até ' + dia(u.expira) + '. Para continuar sem interrupção, é só escolher um plano em ' + site + ' (se renovar antes, o novo período começa depois dessa data).';
+    else if (u.status === 'pendente' || u.status === 'confirmar') t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Recebemos seu pedido de acesso. Para entrar agora, é só escolher um plano em ' + site;
+    else t = 'Oi, ' + n + '! Aqui é do Mercado Macro.';
+    window.open('https://wa.me/' + u.celular + '?text=' + encodeURIComponent(t), '_blank', 'noopener');
+  }
+  // histórico da pessoa
+  var dh = document.getElementById('dlg-hist');
+  var STP = { aguardando: 'aguardando comprovante', enviado: 'comprovante para conferir', aprovado: 'aprovado', recusado: 'recusado', vencido: 'pedido vencido' };
+  function abrirHistorico(id){
+    var hs = document.getElementById('hs');
+    hs.innerHTML = '<p class="vazio">Carregando…</p>'; dh.showModal();
+    fetch('/api/admin/historico?id=' + id, { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var u = j.usuario, ev = [];
+      ev.push({ q: u.criado, t: 'Pediu acesso (cadastro)' });
+      if (u.ultimo_acesso) ev.push({ q: u.ultimo_acesso, t: 'Último acesso ao site' });
+      j.pagamentos.forEach(function(p){
+        ev.push({ q: p.criado, t: 'Gerou o Pix do plano ' + esc(p.nome_plano) + ' (' + reais(p.valor) + ')' + (p.enviado ? '' : ' · ' + (STP[p.status] || p.status)), c: 'pg' });
+      });
+      j.historico.forEach(function(h){ ev.push({ q: h.quando, t: esc(h.texto), c: /^Pagamento|comprovante/.test(h.texto) ? 'pg' : 'adm' }); });
+      ev.sort(function(a, b){ return a.q < b.q ? 1 : -1; });
+      var vis = US.filter(function(x){ return x.id === id; })[0] || u;
+      hs.innerHTML = '<div class="dl-top"><div><h3 id="hs-t">' + esc(u.nome) + '</h3><p class="e">' + esc(u.email) + (u.celular ? ' · ' + celFmt(u.celular) : '') + '</p></div><button type="button" class="x" data-fechar aria-label="Fechar">&times;</button></div>'
+        + '<div class="hs-dados"><div><small>Situação</small><b>' + (u.admin ? 'Administrador' : SIT[vis.status] || vis.status) + '</b></div><div><small>Plano</small><b>' + plano(vis) + '</b></div><div><small>Validade</small><b>' + validade(vis) + '</b></div><div><small>Pagou no total</small><b>' + reais(j.pagamentos.filter(function(p){ return p.status === 'aprovado'; }).reduce(function(a, p){ return a + p.valor; }, 0)) + '</b></div></div>'
+        + '<div class="hs-bts">' + botoes(vis, true) + '</div>'
+        + '<h2>Linha do tempo</h2><ul class="linha-t">' + ev.map(function(e){ return '<li class="' + (e.c || '') + '"><time>' + data(e.q) + '</time>' + e.t + '</li>'; }).join('') + '</ul>'
+        + '<p class="vazio" style="margin-top:6px;font-size:12px">O que o administrador fez aparece a partir de 21/10/2026.</p>';
+    }).catch(function(){ hs.innerHTML = '<p class="vazio">Não foi possível carregar o histórico.</p><div class="dl-ac"><button type="button" class="b" data-fechar>Fechar</button></div>'; });
+  }
+  dh.addEventListener('click', function(e){
+    if (e.target === dh || e.target.closest('[data-fechar]')) return dh.close();
+    var b = e.target.closest('button[data-a]');
+    if (b && b.dataset.a !== 'zap' && b.dataset.a !== 'hist') dh.close();
+  });
+  document.querySelector('main').addEventListener('click', function(e){ var b = e.target.closest('button[data-h]'); if (b) abrirHistorico(+b.dataset.h); });
+  // planilhas (CSV com ; e vírgula decimal, abre direto no Excel em português)
+  function baixarCsv(nome, cab, linhas){
+    var q = function(v){ v = v === null || v === undefined ? '' : String(v); return /[;"\\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var txt = '\ufeff' + [cab].concat(linhas).map(function(l){ return l.map(q).join(';'); }).join('\\r\\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }));
+    a.download = nome + '-' + agora().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  var num = function(c){ return (c / 100).toFixed(2).replace('.', ','); };
+  document.getElementById('csv-pessoas').addEventListener('click', function(){
+    baixarCsv('pessoas', ['Nome', 'E-mail', 'Celular', 'Situação', 'Plano', 'Válido até', 'Cadastro', 'Último acesso'], US.filter(function(u){ return !u.admin; }).map(function(u){
+      return [u.nome, u.email, u.celular ? celFmt(u.celular) : '', SIT[u.status] || u.status, plano(u), u.expira ? dia(u.expira) : (u.status === 'ativo' ? 'sem validade' : ''), dia(u.criado), u.ultimo_acesso ? data(u.ultimo_acesso) : ''];
+    }));
+  });
+  document.getElementById('csv-pags').addEventListener('click', function(){
+    var b = this; b.disabled = true;
+    fetch('/api/admin/pagamentos?todos=1', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      baixarCsv('pagamentos', ['Pedido', 'Nome', 'E-mail', 'Plano', 'Valor (R$)', 'Situação', 'Criado', 'Comprovante enviado', 'Decidido', 'Válido até'], j.pagamentos.map(function(p){
+        return ['MM' + String(p.id).padStart(6, '0'), p.nome, p.email, p.nome_plano, num(p.valor), STP[p.status] || p.status, data(p.criado), p.enviado ? data(p.enviado) : '', p.decidido ? data(p.decidido) : '', p.validade ? dia(p.validade) : ''];
+      }));
+    }).catch(function(){ msg.className = 'msg erro'; msg.textContent = 'Não foi possível baixar a planilha.'; }).then(function(){ b.disabled = false; });
   });
   var prov = document.getElementById('prov');
   function novaSenha(b){
@@ -1868,6 +1970,13 @@ h2{font-size:15px;margin:22px 0 10px}
 button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 </style></head><body><main>
 <header><h1>Minha conta</h1><a class="vol" href="/">Voltar ao site</a></header>
+<h2>Celular (opcional)</h2>
+<form id="fc" novalidate>
+  <label for="cel">Celular com DDD, para avisos sobre seu acesso pelo WhatsApp</label><input id="cel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="20">
+  <button type="submit">Salvar celular</button>
+  <p class="msg" id="msgc" role="status" aria-live="polite"></p>
+  <p class="nota">Usado só para avisar sobre o vencimento e a renovação do acesso. Deixe em branco e salve para apagar.</p>
+</form>
 <h2>Trocar senha</h2>
 <form id="f" novalidate>
   <label for="atual">Senha atual</label><input id="atual" type="password" autocomplete="current-password" required>
@@ -1901,6 +2010,16 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
       .then(function(){ f.reset(); diz(true, 'Senha trocada. Use a nova senha da próxima vez que entrar.'); })
       .catch(function(j){ diz(false, (j && j.erro) || 'Não foi possível. Tente de novo.'); })
       .then(function(){ b.disabled = false; });
+  });
+  var fc = document.getElementById('fc'), mc = document.getElementById('msgc');
+  function cel(c){ var d = String(c || '').slice(2); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : ''; }
+  function pc(corpo){ return fetch('/api/auth/celular', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
+  pc({ ler: 1 }).then(function(j){ fc.cel.value = cel(j.celular); }).catch(function(){});
+  fc.addEventListener('submit', function(e){
+    e.preventDefault();
+    var b = fc.querySelector('button'); b.disabled = true; mc.textContent = '';
+    pc({ celular: fc.cel.value }).then(function(j){ fc.cel.value = cel(j.celular); mc.className = 'msg ok'; mc.textContent = j.celular ? 'Celular salvo.' : 'Celular apagado.'; })
+      .catch(function(j){ mc.className = 'msg erro'; mc.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
   });
   var fx = document.getElementById('fx'), mx = document.getElementById('msgx');
   fx.addEventListener('submit', function(e){

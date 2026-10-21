@@ -51,6 +51,10 @@ export async function garantirAssinatura(env) {
   if (!cols.includes('aviso_venc')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN aviso_venc TEXT'));
   // plano do acesso atual: cortesia, degustacao, mensal, trimestral, semestral, sem (sem validade) ou data (data escolhida)
   if (!cols.includes('plano')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN plano TEXT'));
+  // celular opcional (só números, com 55 e DDD), para o administrador avisar pelo WhatsApp
+  if (!cols.includes('celular')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN celular TEXT'));
+  // histórico do que o administrador fez em cada conta
+  q.push(env.DB.prepare('CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, quando TEXT NOT NULL, texto TEXT NOT NULL)'));
   q.push(env.DB.prepare(`CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL,
     plano TEXT NOT NULL, valor INTEGER NOT NULL, status TEXT NOT NULL, criado TEXT NOT NULL, enviado TEXT, decidido TEXT,
     validade TEXT, arquivo BLOB, tipo_arq TEXT)`));
@@ -65,6 +69,20 @@ export async function contaDaSessao(req, env) {
   await garantirAssinatura(env);
   return env.DB.prepare(`SELECT u.id, u.nome, u.email, u.admin, u.status, u.expira FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
     WHERE s.token = ? AND s.expira > ? AND u.status IN ('ativo', 'pendente', 'expirado')`).bind(await sha256hex(tok), Date.now()).first();
+}
+
+// guarda uma linha no histórico da pessoa (falhar aqui nunca impede a ação)
+export function registrar(env, uid, texto) {
+  return env.DB.prepare('INSERT INTO historico (usuario_id, quando, texto) VALUES (?, ?, ?)').bind(uid, new Date().toISOString(), String(texto).slice(0, 300)).run().catch(() => null);
+}
+// celular do Brasil: aceita com ou sem 55, com DDD; devolve 55DDDNÚMERO, '' (vazio) ou null (inválido)
+export function normalizarCelular(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length >= 12 && d.startsWith('55')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  if (!(d.length === 10 || d.length === 11) || Number(d.slice(0, 2)) < 11) return null;
+  return '55' + d;
 }
 
 /* ---------------- Pix (BR Code do Banco Central, QR estático com valor) ---------------- */
@@ -245,6 +263,7 @@ export async function apiAssinatura(req, env, conta, acao) {
     const dados = new Uint8Array(await arq.arrayBuffer());
     await env.DB.prepare(`UPDATE pagamentos SET status = 'enviado', enviado = ?, arquivo = ?, tipo_arq = ? WHERE id = ?`).bind(new Date().toISOString(), dados, tipo, id).run();
     const plano = PLANOS[p.plano];
+    await registrar(env, conta.id, `Enviou comprovante do plano ${plano.nome} (${reais(p.valor)}, pedido MM${String(p.id).padStart(6, '0')})`);
     await telegramArquivo(env, dados, tipo, `Pagamento para conferir\n${conta.nome} (${conta.email})\nPlano ${plano.nome}: ${reais(p.valor)} (pedido MM${String(p.id).padStart(6, '0')})\nAprovar em ${SITE}/admin`).catch(() => {});
     return json({ ok: true });
   }
@@ -303,10 +322,22 @@ export async function apiAdminAssinatura(req, env, acao) {
       .bind(u.id, b.tipo, PLANOS[b.tipo].valor, agora, agora, validade));
     await env.DB.batch(q);
     limparCacheSessao();
+    const nomeTipo = b.tipo === 'cortesia' ? `Cortesia de ${GRATIS_DIAS} dias` : PLANOS[b.tipo] ? PLANOS[b.tipo].nome : b.tipo === 'sem' ? 'Sem validade' : 'Até uma data';
+    await registrar(env, u.id, `Acesso definido: ${nomeTipo}${validade ? ', até ' + dataBR(validade) : ''}${b.inicio === 'somar' ? ' (somado ao que tinha)' : ''}${pago ? `. Pagamento por fora registrado: ${reais(PLANOS[b.tipo].valor)}` : ''}`);
     let r = null;
     if (pago) r = await emailAprovado(env, req, u, PLANOS[b.tipo], validade).catch(() => ({ ok: false }));
     else if (u.status !== 'ativo') r = await emailLiberado(env, req, u.nome, u.email, false, validade).catch(() => ({ ok: false }));
     return json({ ok: true, expira: validade, email: !r ? null : r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
+  }
+  if (acao === 'historico' && req.method === 'GET') {
+    const id = Number(new URL(req.url).searchParams.get('id'));
+    const u = await env.DB.prepare('SELECT id, nome, email, celular, status, admin, criado, decidido, ultimo_acesso, expira, plano FROM usuarios WHERE id = ?').bind(id).first();
+    if (!u) return json({ erro: 'Usuário não encontrado.' }, 404);
+    const [pags, hist] = await env.DB.batch([
+      env.DB.prepare('SELECT id, plano, valor, status, criado, enviado, decidido, validade FROM pagamentos WHERE usuario_id = ? ORDER BY id DESC').bind(id),
+      env.DB.prepare('SELECT quando, texto FROM historico WHERE usuario_id = ? ORDER BY id DESC LIMIT 100').bind(id),
+    ]);
+    return json({ usuario: u, pagamentos: pags.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })), historico: hist.results });
   }
   if (acao === 'numeros' && req.method === 'GET') {
     // funil mês a mês (horário de Brasília): cadastros, quem pagou pela primeira vez, pagamentos e receita
@@ -328,6 +359,12 @@ export async function apiAdminAssinatura(req, env, acao) {
     const por = (r, k) => Object.fromEntries(r.results.map((x) => [x.m, x[k]]));
     const c = por(cad, 'n'), pn = por(pag, 'n'), pt = por(pag, 'total'), pr = por(pri, 'n');
     return json({ meses: meses.map((m) => ({ mes: m, cadastros: c[m] || 0, novos_pagantes: pr[m] || 0, pagamentos: pn[m] || 0, receita: pt[m] || 0 })), ...tot.results[0] });
+  }
+  if (acao === 'pagamentos' && req.method === 'GET' && new URL(req.url).searchParams.get('todos') === '1') {
+    // planilha: todos os pagamentos (sem o arquivo do comprovante)
+    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, u.nome, u.email
+      FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id ORDER BY p.id DESC`).all();
+    return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'pagamentos' && req.method === 'GET') {
     const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq,
@@ -359,6 +396,7 @@ export async function apiAdminAssinatura(req, env, acao) {
       const r1 = await env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, validade, p.id).run();
       if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
       await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ?`).bind(validade, agora, p.plano, p.uid).run();
+      await registrar(env, p.uid, `Pagamento aprovado: ${plano.nome} (${reais(plano.valor)}), acesso até ${dataBR(validade)}`);
       limparCacheSessao();
       const r = await emailAprovado(env, req, p, plano, validade).catch(() => ({ ok: false }));
       return json({ ok: true, validade, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
@@ -366,6 +404,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     if (b.acao === 'recusar') {
       const r1 = await env.DB.prepare(`UPDATE pagamentos SET status = 'recusado', decidido = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, p.id).run();
       if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
+      await registrar(env, p.uid, `Pagamento recusado: ${plano.nome} (${reais(plano.valor)})`);
       const r = await emailRecusado(env, req, p, plano).catch(() => ({ ok: false }));
       return json({ ok: true, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
     }

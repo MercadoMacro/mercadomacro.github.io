@@ -37,7 +37,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/vitrine/vitrine.css?v=8">
+<link rel="stylesheet" href="/vitrine/vitrine.css?v=9">
 </head>
 <body>
 <div class="vt-bg" aria-hidden="true"><div class="vt-grid"></div><div class="vt-glow g1"></div><div class="vt-glow g2"></div></div>
@@ -95,6 +95,7 @@
           <div id="p-cad" role="tabpanel" aria-labelledby="t-cad" hidden><form id="f-cad">
             <label for="c-nome">Nome</label><input id="c-nome" name="nome" autocomplete="name" required maxlength="80">
             <label for="c-email">E-mail</label><input id="c-email" name="email" type="email" autocomplete="email" required>
+            <label for="c-cel">Celular com DDD <span class="vt-opc">(opcional, para avisos do seu acesso)</span></label><input id="c-cel" name="celular" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="20">
             <label for="c-senha">Senha (mínimo 8 caracteres)</label><input id="c-senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
             <button class="vt-enviar" type="submit">Pedir meu acesso <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
             <p class="vt-msg" role="status" aria-live="polite"></p>

@@ -275,3 +275,4 @@ main { width: 100%; }
 .vt-top-bts a.vt-bt { text-decoration: none; }
 .vt-cad-priv { font-size: 12px; color: var(--text-3); margin: 10px 0 0; }
 .vt-cad-priv a, .vt-foot a { color: var(--text-2); }
+.vt-opc{font-weight:400;color:var(--vt-t3,#8591a8);font-size:.92em}
