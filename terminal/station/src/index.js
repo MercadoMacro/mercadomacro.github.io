@@ -1244,25 +1244,72 @@ button,input{font:inherit}
 
 const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cadastros | Mercado Macro</title>
+<title>Administração | Mercado Macro</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${BASE_CSS}
-main{max-width:860px;margin:0 auto;padding:20px 16px 48px}
-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-header h1{font-size:19px;margin:0;flex:1}
-a.vol{color:var(--accent-text);font-size:13px}
-h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:26px 0 10px;font-weight:700}
+main{max-width:1180px;margin:0 auto;padding:0 20px 56px}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 12px}
+.marca{flex:1;display:flex;align-items:baseline;gap:10px;min-width:0}
+.marca b{white-space:nowrap;font-size:13px;letter-spacing:.22em;font-weight:700;color:var(--text)}
+.marca span{font-size:13px;color:var(--text-3)}
+a.vol{color:var(--accent-text);font-size:13px;white-space:nowrap}
+.abas{position:sticky;top:0;z-index:5;display:flex;gap:2px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 18px;padding:0 20px;scrollbar-width:none}
+.abas::-webkit-scrollbar{display:none}
+.abas button{background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:12px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.abas button[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent)}
+.abas button:hover{color:var(--text)}
+.cnt{background:var(--accent);color:var(--on-accent);border-radius:10px;font-size:11px;font-weight:700;padding:1px 7px;line-height:1.5}
+.cnt:empty{display:none}
+#msg{position:sticky;top:48px;z-index:4;margin:0 0 10px}
+#msg:empty{display:none}
+#msg.ok,#msg.erro{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
 h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-left:6px;letter-spacing:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit}
+.kpi:hover{border-color:var(--line-2)}
+.kpi.alerta{border-color:var(--accent)}
+.kpi small{display:block;color:var(--text-3);font-size:12px;margin-bottom:6px}
+.kpi strong{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.kpi em{display:block;font-style:normal;color:var(--text-3);font-size:12px;margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
 .lista{display:grid;gap:8px}
 .u{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-.u .q{flex:1;min-width:200px}
+.u .q{flex:1;min-width:180px}
 .u .n{font-weight:600}.u .e{color:var(--text-2);font-size:13px;word-break:break-all}.u .d{color:var(--text-3);font-size:12px}
 .u .bts{display:flex;gap:6px;flex-wrap:wrap}
-.u button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
-.u button.lib{background:var(--accent);color:var(--on-accent);border-color:transparent}
-.u button.del{color:var(--neg)}
+button.b{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:6px 11px;cursor:pointer;font-weight:600;font-size:13px;min-height:34px;white-space:nowrap}
+.u button,.caixa button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
+button.lib,.u button.lib{background:var(--accent);color:var(--on-accent);border-color:transparent}
+button.del,.u button.del{color:var(--neg)}
+.ferr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.ferr input{flex:1;min-width:220px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 12px;min-height:40px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{white-space:nowrap;flex:none;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--surface-2);color:var(--text);border-color:var(--accent)}
+.chips i{font-style:normal;color:var(--text-3);margin-left:5px;font-weight:500}
+table.t{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.t th:first-child{border-top-left-radius:11px}.t th:last-child{border-top-right-radius:11px}
+.t th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.t td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t td.p b{display:block;font-size:14px}.t td.p span{color:var(--text-2);word-break:break-all}
+.t td.c{color:var(--text-2);white-space:nowrap}
+.t td.ac{text-align:right;white-space:nowrap}
+.t td.ac .bx{display:inline-flex;gap:6px;align-items:center}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid currentColor;white-space:nowrap}
+.pill.pendente{color:var(--accent-text)}.pill.ativo{color:var(--pos)}.pill.expirado,.pill.bloqueado,.pill.recusado{color:var(--neg)}.pill.confirmar,.pill.admin{color:var(--text-3)}
+.venc{color:var(--accent-text);font-weight:600}
+details.mais{position:relative;display:inline-block}
+details.mais summary{list-style:none;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);border-radius:7px;padding:6px 10px;font-weight:700;min-height:34px;display:flex;align-items:center}
+details.mais summary::-webkit-details-marker{display:none}
+details.mais[open] .menu{display:flex}
+.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:6;flex-direction:column;min-width:170px;background:var(--surface);border:1px solid var(--line-2);border-radius:9px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.menu button{background:none;border:0;color:var(--text);text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px}
+.menu button:hover{background:var(--surface-2)}
+.menu button.del{color:var(--neg)}
 .tag{font-size:11px;border:1px solid var(--line-2);border-radius:10px;padding:1px 8px;color:var(--text-2)}
 .vazio{color:var(--text-3);font-size:13px;margin:0}
 .caixa{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 8px}
@@ -1271,24 +1318,57 @@ h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);
 .prov{border-color:var(--accent)}
 .cod{font:600 18px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:6px 10px;display:inline-block;word-break:break-all;user-select:all}
 .linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-.caixa button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
+.cfg{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;align-items:start}
+.cfg>div>h2:first-child{margin-top:4px}
 ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
+[data-p][hidden]{display:none}
+@media (max-width:820px){
+  .grid2,.cfg{grid-template-columns:1fr}
+  table.t,.t tbody,.t tr,.t td{display:block;width:100%}
+  .t thead{display:none}
+  table.t{background:none;border:0;border-radius:0}
+  .t tr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .t td{border:0;padding:3px 0}
+  .t td.ac{text-align:left;padding-top:8px}
+  .t td.c[data-r]::before{content:attr(data-r) ": ";color:var(--text-3)}
+  .menu{left:0;right:auto}
+  .marca span{display:none}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
+  .ferr input{min-width:0;width:100%}
+}
 </style></head><body><main>
-<header><h1>Cadastros do Mercado Macro</h1><a class="vol" href="/">Voltar ao site</a></header>
+<header class="top"><div class="marca"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/">Voltar ao site</a></header>
+<nav class="abas" role="tablist" aria-label="Seções">
+  <button type="button" role="tab" data-aba="geral" aria-selected="true">Visão geral</button>
+  <button type="button" role="tab" data-aba="pessoas" aria-selected="false">Pessoas <span class="cnt" id="cnt-pessoas"></span></button>
+  <button type="button" role="tab" data-aba="pagamentos" aria-selected="false">Pagamentos <span class="cnt" id="cnt-pag"></span></button>
+  <button type="button" role="tab" data-aba="comunicado" aria-selected="false">Comunicado</button>
+  <button type="button" role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
+</nav>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
 <div id="prov"></div>
-<div id="pags"></div>
-<div id="raiz"><p class="vazio">Carregando…</p></div>
-<h2>Comunicado de novidades</h2>
-<div id="com"><p class="vazio">Carregando…</p></div>
-<h2>Pix para assinaturas</h2>
-<div id="pix"><p class="vazio">Carregando…</p></div>
-<h2>Avisos de cadastro novo</h2>
-<div id="avisos"><p class="vazio">Carregando…</p></div>
-<h2>E-mail de acesso liberado</h2>
-<div id="email"><p class="vazio">Carregando…</p></div>
-<h2>Capital.com (teste de cotações)</h2>
-<div id="capital"><p class="vazio">Carregando…</p></div>
+<section data-p="geral">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2">
+    <div><h2>Precisa de você</h2><div id="acao"><p class="vazio">Carregando…</p></div></div>
+    <div><h2>Vencem nos próximos 7 dias</h2><div id="venc"><p class="vazio">Carregando…</p></div></div>
+  </div>
+</section>
+<section data-p="pessoas" hidden>
+  <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div></div>
+  <div id="raiz"><p class="vazio">Carregando…</p></div>
+  <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
+</section>
+<section data-p="pagamentos" hidden><div id="pags"><p class="vazio">Carregando…</p></div></section>
+<section data-p="comunicado" hidden><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="ajustes" hidden>
+  <div class="cfg">
+    <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
+      <h2>E-mail (Resend)</h2><div id="email"><p class="vazio">Carregando…</p></div></div>
+    <div><h2>Avisos no Telegram</h2><div id="avisos"><p class="vazio">Carregando…</p></div>
+      <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div></div>
+  </div>
+</section>
 </main>
 <script>
 (function(){
@@ -1307,28 +1387,99 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['excluir','Excluir','del']]
   };
-  function bloco(titulo, us, vazio){
-    return '<h2>' + titulo + '<b>' + us.length + '</b></h2><div class="lista">' + (us.length ? us.map(function(u){
-      return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + (u.admin ? ' <span class="tag">administrador</span>' : '') + (u.status === 'bloqueado' ? ' <span class="tag">bloqueado</span>' : u.status === 'recusado' ? ' <span class="tag">recusado</span>' : '') + '</div>'
-        + '<div class="e">' + esc(u.email) + '</div>'
-        + '<div class="d">Cadastro ' + data(u.criado) + (u.status === 'ativo' ? ' · Último acesso ' + data(u.ultimo_acesso) : '') + (u.admin ? '' : u.status === 'ativo' ? ' · ' + (u.expira ? 'Vale até <b>' + dia(u.expira) + '</b>' : 'Sem validade') : u.status === 'expirado' ? ' · Venceu em ' + dia(u.expira) : '') + '</div></div>'
-        + (u.id === eu || u.admin ? '' : '<div class="bts">' + (BT[u.status] || []).map(function(b){ return '<button type="button" class="' + b[2] + '" data-id="' + u.id + '" data-a="' + b[0] + '" data-n="' + esc(u.nome) + '">' + b[1] + '</button>'; }).join('') + '</div>')
-        + '</div>';
-    }).join('') : '<p class="vazio">' + vazio + '</p>') + '</div>';
+  var US = [], PG = [], filtro = 'todos';
+  var SIT = { pendente: 'Aguardando', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
+  var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  var agora = function(){ return new Date().toISOString(); };
+  var em7 = function(u){ return u.status === 'ativo' && !u.admin && u.expira && u.expira > agora() && u.expira <= new Date(Date.now() + 7 * 864e5).toISOString(); };
+  var FILTROS = [
+    ['todos', 'Todos', function(){ return true; }],
+    ['pendente', 'Aguardando', function(u){ return u.status === 'pendente'; }],
+    ['ativo', 'Liberados', function(u){ return u.status === 'ativo' && !u.admin; }],
+    ['vence', 'Vencem em 7 dias', em7],
+    ['expirado', 'Vencidos', function(u){ return u.status === 'expirado'; }],
+    ['confirmar', 'Sem confirmar', function(u){ return u.status === 'confirmar'; }],
+    ['fora', 'Recusados e bloqueados', function(u){ return u.status === 'recusado' || u.status === 'bloqueado'; }]
+  ];
+  // botão principal de cada situação; o resto fica no menu (...)
+  var PRINCIPAL = { pendente: ['liberar', 'recusar'], ativo: ['v:mes1'], expirado: ['v:dias3'], confirmar: ['liberar'], recusado: ['liberar'], bloqueado: ['liberar'] };
+  function botoes(u){
+    if (u.id === eu || u.admin) return '<span class="pill admin">administrador</span>';
+    var todos = BT[u.status] || [], pri = PRINCIPAL[u.status] || [];
+    var at = function(b, menu){ return '<button type="button" class="' + (menu ? (b[2] === 'del' ? 'del' : '') : 'b ' + b[2]) + '" data-id="' + u.id + '" data-a="' + b[0] + '" data-n="' + esc(u.nome) + '">' + b[1] + '</button>'; };
+    var resto = todos.filter(function(b){ return pri.indexOf(b[0]) < 0; });
+    return '<span class="bx">' + todos.filter(function(b){ return pri.indexOf(b[0]) >= 0; }).map(function(b){ return at(b); }).join('')
+      + (resto.length ? '<details class="mais"><summary aria-label="Mais ações">&middot;&middot;&middot;</summary><div class="menu">' + resto.map(function(b){ return at(b, true); }).join('') + '</div></details>' : '') + '</span>';
+  }
+  function validade(u){
+    if (u.admin) return '—';
+    if (u.status === 'expirado') return 'venceu ' + dia(u.expira);
+    if (u.status !== 'ativo') return '—';
+    if (!u.expira) return 'sem validade';
+    return '<span class="' + (em7(u) ? 'venc' : '') + '">até ' + dia(u.expira) + '</span>';
+  }
+  function pessoas(){
+    var q = semAc(document.getElementById('busca').value.trim());
+    var f = (FILTROS.filter(function(x){ return x[0] === filtro; })[0] || FILTROS[0])[2];
+    var ordem = { pendente: 0, confirmar: 1, expirado: 2, ativo: 3, recusado: 4, bloqueado: 5 };
+    var lista = US.filter(f).filter(function(u){ return !q || semAc(u.nome + ' ' + u.email).indexOf(q) >= 0; })
+      .sort(function(a, b){ return (ordem[a.status] - ordem[b.status]) || (a.criado < b.criado ? 1 : -1); });
+    document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
+    raiz.innerHTML = lista.length ? '<table class="t"><thead><tr><th>Pessoa</th><th>Situação</th><th>Validade</th><th>Último acesso</th><th>Cadastro</th><th></th></tr></thead><tbody>'
+      + lista.map(function(u){
+        return '<tr><td class="p"><b>' + esc(u.nome) + '</b><span>' + esc(u.email) + '</span></td>'
+          + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
+          + '<td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
+          + '<td class="ac">' + botoes(u) + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<p class="vazio">Ninguém ' + (q ? 'com essa busca' : 'nesta lista') + '.</p>';
+    document.getElementById('nota-pessoas').textContent = US.some(function(u){ return u.status === 'confirmar'; }) ? 'Quem está "Sem confirmar e-mail" pediu acesso mas não clicou no link de confirmação; some sozinho depois de 7 dias.' : '';
+  }
+  function geral(){
+    var pend = US.filter(function(u){ return u.status === 'pendente'; }), env = PG.filter(function(p){ return p.status === 'enviado'; });
+    var lib = US.filter(function(u){ return u.status === 'ativo' && !u.admin; }), venc = US.filter(em7).sort(function(a, b){ return a.expira < b.expira ? -1 : 1; });
+    var mes = agora().slice(0, 7), rec = PG.filter(function(p){ return p.status === 'aprovado' && String(p.decidido).slice(0, 7) === mes; }).reduce(function(a, p){ return a + p.valor; }, 0);
+    var novos = US.filter(function(u){ return u.criado > new Date(Date.now() - 7 * 864e5).toISOString(); }).length;
+    var k = function(ir, rot, val, nota, alerta){ return '<button type="button" class="kpi' + (alerta ? ' alerta' : '') + '" data-ir="' + ir + '"><small>' + rot + '</small><strong>' + val + '</strong><em>' + nota + '</em></button>'; };
+    document.getElementById('kpis').innerHTML = k('pessoas:pendente', 'Aguardando liberação', pend.length, pend.length ? 'toque para ver' : 'nenhum pedido', pend.length)
+      + k('pagamentos', 'Pagamentos para conferir', env.length, env.length ? 'comprovantes novos' : 'tudo conferido', env.length)
+      + k('pessoas:ativo', 'Com acesso liberado', lib.length, lib.filter(function(u){ return !u.expira; }).length + ' sem validade')
+      + k('pessoas:vence', 'Vencem em 7 dias', venc.length, venc.length ? 'toque para ver' : 'nenhum')
+      + k('pagamentos', 'Recebido no mês', reais(rec), PG.filter(function(p){ return p.status === 'aprovado' && String(p.decidido).slice(0, 7) === mes; }).length + ' aprovado(s)')
+      + k('pessoas:todos', 'Cadastros na semana', novos, US.length + ' no total');
+    document.getElementById('acao').innerHTML = (pend.length || env.length) ? '<div class="lista">'
+      + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
+      + pend.map(function(u){ return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + '</div><div class="e">' + esc(u.email) + '</div><div class="d">Pediu acesso ' + data(u.criado) + '</div></div><div class="bts">' + botoes(u) + '</div></div>'; }).join('') + '</div>'
+      : '<p class="vazio">Nada pendente. Tudo em dia.</p>';
+    document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><div class="n">' + esc(u.nome) + '</div><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
+    document.getElementById('cnt-pessoas').textContent = pend.length || '';
+    document.getElementById('cnt-pag').textContent = env.length || '';
   }
   function carregar(){
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      eu = j.eu; var us = j.usuarios;
-      var f = function(st){ return us.filter(function(u){ return st.indexOf(u.status) >= 0; }); };
-      raiz.innerHTML = bloco('Aguardando liberação', f(['pendente']), 'Nenhum pedido novo.')
-        + bloco('Liberados', f(['ativo']), 'Ninguém liberado ainda.')
-        + (f(['expirado']).length ? bloco('Acesso vencido', f(['expirado']), '') : '')
-        + bloco('Recusados e bloqueados', f(['recusado','bloqueado']), 'Nenhum.')
-        + (f(['confirmar']).length ? bloco('E-mail ainda não confirmado', f(['confirmar']), '') + '<p class="d" style="color:var(--text-3);font-size:12px;margin:6px 0 0">Essas pessoas pediram acesso mas ainda não clicaram no link de confirmação. Somem sozinhas depois de 7 dias.</p>' : '');
+      eu = j.eu; US = j.usuarios; pessoas(); geral();
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
-  raiz.addEventListener('click', function(ev){
+  // abas (lembradas no endereço: /admin#pessoas)
+  function aba(n, f){
+    if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
+    document.querySelectorAll('[data-p]').forEach(function(x){ x.hidden = x.dataset.p !== n; });
+    document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); });
+    if (f) { filtro = f; pessoas(); }
+    if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
+  }
+  document.querySelector('.abas').addEventListener('click', function(e){ var b = e.target.closest('button[data-aba]'); if (b) aba(b.dataset.aba); });
+  document.getElementById('chips').addEventListener('click', function(e){ var b = e.target.closest('button[data-f]'); if (b) { filtro = b.dataset.f; pessoas(); } });
+  document.getElementById('busca').addEventListener('input', pessoas);
+  document.querySelector('main').addEventListener('click', function(e){
+    var b = e.target.closest('[data-ir]'); if (!b) return;
+    var x = b.dataset.ir.split(':'); aba(x[0], x[1]); window.scrollTo(0, 0);
+  });
+  // fecha o menu (...) ao clicar fora
+  document.addEventListener('click', function(e){ document.querySelectorAll('details.mais[open]').forEach(function(d){ if (!d.contains(e.target)) d.open = false; }); });
+  aba(location.hash.slice(1) || 'geral');
+  document.querySelector('main').addEventListener('click', function(ev){
     var b = ev.target.closest('button[data-a]'); if (!b) return;
+    var dm = b.closest('details'); if (dm) dm.open = false;
     var a = b.dataset.a;
     if (a === 'senha') return novaSenha(b);
     if (a.indexOf('v:') === 0) {
@@ -1482,6 +1633,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   var pg = document.getElementById('pags');
   function pagamentos(){
     fetch('/api/admin/pagamentos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      PG = j.pagamentos; geral();
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
