@@ -32,38 +32,53 @@
       return `<div class="cd ${semVar ? '' : tom(x.ch)}"><span>${esc(NOME[k] || x.nome || k)}</span><div><b>${ok(x.v) ? FMT[k](x.v) : '—'}</b>${semVar ? '' : `<i>${pct(x.ch)}</i>`}</div>${nota ? `<em>${esc(nota)}</em>` : ''}</div>`;
     };
     const ib = c.ibov || {};
-    const ag = d.agenda || [];
-    $('card').innerHTML = `
-      <div class="cab manha">
-        <svg class="sol" viewBox="0 0 200 110" aria-hidden="true">
+    // na imagem cabem até 6 itens da agenda; com agenda cheia, 3 notícias (o texto leva tudo)
+    const ag = (d.agenda || []).slice(0, 6);
+    const nots = (d.noticias || []).slice(0, ag.length > 3 ? 3 : 4);
+    const sol = `<svg class="sol" viewBox="0 0 200 110" aria-hidden="true">
           <defs><radialGradient id="sg" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="#ffd76a"/><stop offset=".55" stop-color="#ffb627"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
           <radialGradient id="hg" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient></defs>
           <circle cx="100" cy="110" r="100" fill="url(#hg)"/>
           <g stroke="#f5a524" stroke-width="5" stroke-linecap="round" opacity=".85">${[-80, -60, -40, -20, 0, 20, 40, 60, 80].map((a) => { const r = (a - 90) * Math.PI / 180; return `<line x1="${(100 + Math.cos(r) * 58).toFixed(1)}" y1="${(110 + Math.sin(r) * 58).toFixed(1)}" x2="${(100 + Math.cos(r) * 80).toFixed(1)}" y2="${(110 + Math.sin(r) * 80).toFixed(1)}"/>`; }).join('')}</g>
           <circle cx="100" cy="110" r="46" fill="url(#sg)"/>
-        </svg>
+        </svg>`;
+    // cabeçalho das duas páginas; n = número da página (1 de 2, 2 de 2)
+    const cab = (n) => `
+      <div class="cab manha">${sol}
         <div class="cab-l"><img src="/logo-mercado-macro-claro.png" alt="Mercado Macro" crossorigin="anonymous">
           <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
         <h1>Abertura <em>do mercado</em></h1>
-        <small>O que mexe com a bolsa hoje · ${dt.getUTCFullYear()}</small>
+        <small>${n === 1 ? 'O que mexe com a bolsa hoje' : 'Agenda e notícias do dia'} · ${n} de 2</small>
+      </div>`;
+    const rod = (txt) => `<div class="rod"><b>mercadomacro.com.br</b><span>${txt}</span></div>`;
+    // as duas páginas têm o formato do status do WhatsApp (9:16): 540 x 960, viram 1080 x 1920 na imagem
+    $('card').innerHTML = `
+      <div class="card claro pg" id="pg1">${cab(1)}
+        <div class="corpo">
+          <section><div class="sub">Brasil</div>
+          <div class="grade">${cd('ibov', ib.dia ? 'Fechamento de ' + ddmm(ib.dia) : '')}${cd('dolar', 'Agora')}${cd('ewz', 'Último fechamento em NY')}${cd('dxy', 'Dólar contra moedas fortes')}</div></section>
+          <section><div class="sub">Futuros em Nova York <small>agora</small></div>
+          <div class="grade g3">${cd('spf')}${cd('nqf')}${cd('dowf')}</div></section>
+          <section><div class="sub">Europa <small>agora</small></div>
+          <div class="grade g3">${cd('stoxx')}${cd('dax')}${cd('ftse')}</div></section>
+          <section><div class="sub">Ásia <small>fechamento</small></div>
+          <div class="grade g3">${cd('nikkei')}${cd('hsi')}${cd('xangai')}</div></section>
+        </div>
+        ${rod('Futuros e Europa no momento da imagem;<br>Ásia e Ibovespa no último fechamento. Fonte: Yahoo Finance.')}
       </div>
-      <div class="sub">Brasil</div>
-      <div class="grade">${cd('ibov', ib.dia ? 'Fechamento de ' + ddmm(ib.dia) : '')}${cd('dolar', 'Agora')}${cd('ewz', 'Último fechamento em NY')}${cd('dxy', 'Dólar contra moedas fortes')}</div>
-      <div class="sub">Futuros em Nova York <small>agora</small></div>
-      <div class="grade g3">${cd('spf')}${cd('nqf')}${cd('dowf')}</div>
-      <div class="sub">Europa <small>agora</small></div>
-      <div class="grade g3">${cd('stoxx')}${cd('dax')}${cd('ftse')}</div>
-      <div class="sub">Ásia <small>fechamento</small></div>
-      <div class="grade g3">${cd('nikkei')}${cd('hsi')}${cd('xangai')}</div>
-      <div class="sub">Commodities, cripto e juros</div>
-      <div class="grade">${cd('brent')}${cd('ouro')}${cd('btc')}${cd('tnx')}</div>
-      <div class="bloco"><h2>Agenda de hoje (horário de Brasília)</h2>${ag.length
-        ? `<table class="agenda">${ag.map((a) => `<tr><td class="h">${esc(a.hora)}</td><td class="p"><b class="${a.pais === 'EUA' ? 'eua' : ''}">${esc(a.pais)}</b></td><td class="t">${esc(a.titulo)}${a.proj || a.ant ? `<span>${a.proj ? 'Projeção ' + esc(a.proj) : ''}${a.proj && a.ant ? ' · ' : ''}${a.ant ? 'Anterior ' + esc(a.ant) : ''}</span>` : ''}</td></tr>`).join('')}</table>`
-        : `<p class="vazio">${d.agendaOk ? 'Sem indicadores importantes do Brasil ou dos EUA hoje.' : '—'}</p>`}</div>
-      <div class="bloco dest"><h2>Principais notícias</h2>${d.noticias && d.noticias.length
-        ? `<ul class="nots">${d.noticias.map((n) => `<li><p>${esc(n.t)}</p>${n.f ? `<span>${esc(n.f)}</span>` : ''}</li>`).join('')}</ul>`
-        : '<p class="vazio">Sem notícias disponíveis agora.</p>'}</div>
-      <div class="rod"><b>mercadomacro.com.br</b><span>Futuros e Europa no momento da imagem; Ásia e Ibovespa no último fechamento.<br>Fontes: Yahoo Finance, Investing/TradingView (agenda) e os veículos citados.</span></div>`;
+      <div class="card claro pg${ag.length > 4 ? ' cheio' : ''}" id="pg2">${cab(2)}
+        <div class="corpo">
+          <section><div class="sub">Commodities, cripto e juros</div>
+          <div class="grade">${cd('brent')}${cd('ouro')}${cd('btc')}${cd('tnx')}</div></section>
+          <div class="bloco"><h2>Agenda de hoje (horário de Brasília)</h2>${ag.length
+            ? `<table class="agenda">${ag.map((a) => `<tr><td class="h">${esc(a.hora)}</td><td class="p"><b class="${a.pais === 'EUA' ? 'eua' : ''}">${esc(a.pais)}</b></td><td class="t">${esc(a.titulo)}${a.proj || a.ant ? `<span>${a.proj ? 'Projeção ' + esc(a.proj) : ''}${a.proj && a.ant ? ' · ' : ''}${a.ant ? 'Anterior ' + esc(a.ant) : ''}</span>` : ''}</td></tr>`).join('')}</table>`
+            : `<p class="vazio">${d.agendaOk ? 'Sem indicadores importantes do Brasil ou dos EUA hoje.' : '—'}</p>`}</div>
+          <div class="bloco dest"><h2>Principais notícias</h2>${nots.length
+            ? `<ul class="nots">${nots.map((n) => `<li><p>${esc(n.t)}</p>${n.f ? `<span>${esc(n.f)}</span>` : ''}</li>`).join('')}</ul>`
+            : '<p class="vazio">Sem notícias disponíveis agora.</p>'}</div>
+        </div>
+        ${rod('Fontes: Yahoo Finance, Investing/TradingView (agenda)<br>e os veículos citados.')}
+      </div>`;
   }
 
   function msg(t, erro) { const m = $('f-msg'); m.textContent = t || ''; m.className = erro ? 'erro' : ''; }
@@ -78,12 +93,13 @@
     } catch (e) { msg(e.message, true); }
     finally { $('f-atualizar').disabled = false; }
   }
-  async function imagem() {
+  async function imagem(id) {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const cv = await window.html2canvas($('card'), { scale: 2, backgroundColor: '#fffaf2', useCORS: true, logging: false });
+    const cv = await window.html2canvas($(id), { scale: 2, backgroundColor: '#fffaf2', useCORS: true, logging: false });
     return new Promise((res) => cv.toBlob(res, 'image/png'));
   }
-  const nome = () => 'abertura-' + (dados ? dados.data : 'mercado') + '.png';
+  const imagens = async () => [await imagem('pg1'), await imagem('pg2')];
+  const nome = (n) => 'abertura-' + (dados ? dados.data : 'mercado') + '-' + n + '.png';
   function ver(qual) {
     document.querySelectorAll('.abas button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ver === qual)));
     $('texto').hidden = qual !== 'texto';
@@ -109,16 +125,19 @@
     };
     $('f-baixar').onclick = async function () {
       if (!dados) return;
-      this.disabled = true; msg('Gerando a imagem…');
-      try { const b = await imagem(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nome(); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); msg('Imagem baixada.'); }
-      catch (e) { msg('Não foi possível gerar a imagem.', true); } finally { this.disabled = false; }
+      this.disabled = true; msg('Gerando as duas imagens…');
+      try {
+        const bs = await imagens();
+        bs.forEach((b, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nome(i + 1); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, i * 600));
+        msg('Duas imagens baixadas (página 1 e página 2).');
+      } catch (e) { msg('Não foi possível gerar as imagens.', true); } finally { this.disabled = false; }
     };
     if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] })) {
       $('f-compartilhar').hidden = false;
       $('f-compartilhar').onclick = async function () {
         if (!dados) return;
         this.disabled = true;
-        try { const b = await imagem(); await navigator.share({ files: [new File([b], nome(), { type: 'image/png' })], text: 'Abertura do mercado | mercadomacro.com.br' }); msg(''); }
+        try { const bs = await imagens(); await navigator.share({ files: bs.map((b, i) => new File([b], nome(i + 1), { type: 'image/png' })), text: 'Abertura do mercado | mercadomacro.com.br' }); msg(''); }
         catch (e) { if (e && e.name !== 'AbortError') msg('Não foi possível compartilhar.', true); } finally { this.disabled = false; }
       };
     }
@@ -126,13 +145,16 @@
       if (!dados) return;
       this.disabled = true; msg('Mandando no Telegram…');
       try {
-        const fd = new FormData();
-        fd.append('foto', await imagem(), nome());
-        fd.append('legenda', dados.legenda || '');
-        const r = await fetch('/api/admin/fechamento-foto', { method: 'POST', credentials: 'same-origin', body: fd });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
-        msg('Enviado. Confira o Telegram.');
+        const bs = await imagens();
+        for (let i = 0; i < bs.length; i++) {
+          const fd = new FormData();
+          fd.append('foto', bs[i], nome(i + 1));
+          fd.append('legenda', i === 0 ? (dados.legenda || '') : '');
+          const r = await fetch('/api/admin/fechamento-foto', { method: 'POST', credentials: 'same-origin', body: fd });
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
+        }
+        msg('As duas imagens foram enviadas. Confira o Telegram.');
       } catch (e) { msg(e.message, true); } finally { this.disabled = false; }
     };
   }

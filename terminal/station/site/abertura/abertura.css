@@ -53,3 +53,55 @@
 .claro .rod { background: #fff3dc; border-top-color: #f3dfb8; }
 .claro .rod b { color: #b45309; }
 .claro .rod span { color: #7c6f5a; }
+
+/* duas páginas no formato do status do WhatsApp (9:16): 540 x 960 na tela, 1080 x 1920 na imagem */
+.paginas { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+.pg { width: 540px; height: 960px; flex: 0 0 540px; display: flex; flex-direction: column; }
+.pg .corpo { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 4px 0 10px; }
+.pg .corpo .sub { margin-top: 0; }
+.pg .corpo .bloco { margin: 0 16px; }
+.pg .rod { margin-top: 0; }
+.pg .cab h1 { font-size: 32px; }
+.pg .sol { right: -44px; }
+.pg .cab small { font-size: 12.5px; }
+.pg .sub { font-size: 12.5px; }
+.pg .sub small { font-size: 11.5px; }
+.pg .grade { gap: 10px; }
+.pg .cd { padding: 14px 14px; }
+.pg .cd span { font-size: 11.5px; }
+.pg .cd b { font-size: 23px; }
+.pg .cd i { font-size: 13px; }
+.pg .cd em { font-size: 11px; }
+.pg .g3 .cd { padding: 12px 11px; }
+.pg .g3 .cd span { font-size: 10.5px; }
+.pg .g3 .cd b { font-size: 19px; }
+.pg .g3 .cd i { font-size: 12px; }
+.pg .bloco { padding: 16px 16px; }
+.pg .bloco h2 { font-size: 12.5px; margin-bottom: 10px; }
+.pg .agenda { font-size: 14.5px; }
+.pg .agenda td { padding: 8px 0; }
+.pg .agenda .h { font-size: 14px; width: 54px; }
+.pg .agenda .p { width: 44px; }
+.pg .agenda .p b { font-size: 10.5px; }
+.pg .agenda .t span { font-size: 12px; }
+.pg .nots li { padding: 9px 0 9px 16px; }
+.pg .nots li::before { top: 17px; }
+.pg .nots li:first-child::before { top: 10px; }
+.pg .nots p { font-size: 15.5px; line-height: 1.4; }
+.pg .nots span { font-size: 12px; }
+.pg .rod span { font-size: 10.5px; }
+.pg .rod b { font-size: 14px; }
+.pg .cab, .pg .rod { flex-shrink: 0; }
+.pg .corpo { min-height: 0; overflow: hidden; }
+/* agenda cheia: tudo um pouco mais compacto para caber na página 2 */
+.pg.cheio .grade { gap: 8px; }
+.pg.cheio .cd { padding: 10px 14px; }
+.pg.cheio .cd b { font-size: 20px; }
+.pg.cheio .bloco { padding: 12px 16px; }
+.pg.cheio .agenda { font-size: 13.5px; }
+.pg.cheio .agenda td { padding: 5px 0; }
+.pg.cheio .agenda .t span { font-size: 11px; }
+.pg.cheio .nots li { padding: 6px 0 6px 16px; }
+.pg.cheio .nots li::before { top: 13px; }
+.pg.cheio .nots li:first-child::before { top: 8px; }
+.pg.cheio .nots p { font-size: 14px; }

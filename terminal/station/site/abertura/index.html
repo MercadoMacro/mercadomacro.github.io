@@ -9,23 +9,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/fechamento/fechamento.css?v=4">
-<link rel="stylesheet" href="abertura.css?v=2">
+<link rel="stylesheet" href="abertura.css?v=3">
 </head>
 <body>
 <div class="ferr">
   <a href="/admin" class="fb">Voltar</a>
   <button type="button" class="fb" id="f-atualizar">Atualizar números</button>
-  <button type="button" class="fb pri" id="f-baixar">Baixar imagem</button>
+  <button type="button" class="fb pri" id="f-baixar">Baixar as 2 imagens</button>
   <button type="button" class="fb" id="f-compartilhar" hidden>Compartilhar</button>
-  <button type="button" class="fb" id="f-telegram">Mandar imagem no Telegram</button>
+  <button type="button" class="fb" id="f-telegram">Mandar as 2 imagens no Telegram</button>
   <button type="button" class="fb" id="f-telegram-txt">Mandar só texto no Telegram</button>
   <button type="button" class="fb" id="f-copiar">Copiar texto</button>
   <span id="f-msg" role="status"></span>
 </div>
 <div class="abas" role="tablist"><button type="button" role="tab" data-ver="imagem" aria-selected="true">Com imagem</button><button type="button" role="tab" data-ver="texto" aria-selected="false">Sem imagem (texto)</button></div>
 <pre id="texto" class="texto" hidden></pre>
-<div class="palco"><div id="card" class="card claro" aria-live="polite"><div class="car">Carregando os números da manhã…</div></div></div>
+<div class="palco"><div id="card" class="paginas" aria-live="polite"><div class="car">Carregando os números da manhã…</div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="abertura.js?v=2"></script>
+<script src="abertura.js?v=3"></script>
 </body>
 </html>
