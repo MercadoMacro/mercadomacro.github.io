@@ -90,6 +90,7 @@ export default {
       const conta = u ? { ...u, status: 'ativo' } : await contaDaSessao(req, env);
       if (conta) {
         if (p === '/assinar') return paginaAssinar();
+        if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
         if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
       }
       if (!u && conta) return navegacao(req) ? redirect('/assinar') : json({ erro: 'Seu acesso não está ativo.', assinar: true }, 403);
@@ -531,7 +532,7 @@ async function apiAuth(req, env, acao, ctx) {
 
   if (acao === 'senha') {
     // a própria pessoa troca a senha (precisa estar logada e saber a senha atual)
-    const eu = await usuarioDaSessao(req, env);
+    const eu = (await usuarioDaSessao(req, env)) || (await contaDaSessao(req, env));
     if (!eu) return json({ erro: 'Faça login para continuar.' }, 401);
     if (!(await dentroDoLimite(env, 'sen:' + eu.id, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
     const nova = String(b.nova || '');
@@ -550,8 +551,8 @@ async function apiAuth(req, env, acao, ctx) {
   }
 
   if (acao === 'excluir') {
-    // a própria pessoa apaga a conta (precisa estar logada e confirmar a senha)
-    const eu = await usuarioDaSessao(req, env);
+    // a própria pessoa apaga a conta (precisa estar logada e confirmar a senha); vale também com o acesso vencido
+    const eu = (await usuarioDaSessao(req, env)) || (await contaDaSessao(req, env));
     if (!eu) return json({ erro: 'Faça login para continuar.' }, 401);
     if (eu.admin) return json({ erro: 'A conta de administrador não pode ser excluída por aqui.' }, 400);
     if (!(await dentroDoLimite(env, 'sen:' + eu.id, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
@@ -573,7 +574,8 @@ async function apiAuth(req, env, acao, ctx) {
     if (!(await dentroDoLimite(env, 'esq:' + ip, 5, 3600))) return json({ erro: 'Muitos pedidos deste endereço. Tente mais tarde.' }, 429);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ erro: 'Digite seu e-mail.' }, 400);
     if (!(await config(env)).mail_key) return json({ erro: 'A troca de senha por e-mail ainda não está ligada. Escreva para contato@mercadomacro.com.br.' }, 400);
-    const u = await env.DB.prepare(`SELECT id, nome FROM usuarios WHERE email = ? AND status = 'ativo'`).bind(email).first();
+    // quem está com o acesso vencido ou aguardando também precisa entrar (para assinar)
+    const u = await env.DB.prepare(`SELECT id, nome FROM usuarios WHERE email = ? AND status IN ('ativo', 'pendente', 'expirado')`).bind(email).first();
     // a resposta é a mesma exista ou não a conta, para ninguém descobrir quem tem cadastro
     if (u && (await dentroDoLimite(env, 'esqu:' + u.id, 3, 3600))) {
       const tok = await criarLink(env, u.id, 'senha', 1);
@@ -584,7 +586,7 @@ async function apiAuth(req, env, acao, ctx) {
         nota: 'O link vale por 1 hora e só pode ser usado uma vez. Se não foi você, ignore este e-mail: sua senha continua a mesma.',
       }).catch(() => {}));
     }
-    return json({ ok: true, msg: 'Se esse e-mail tiver acesso liberado, enviamos um link para criar uma senha nova. Ele vale por 1 hora. Não chegou? Veja o spam.' });
+    return json({ ok: true, msg: 'Se esse e-mail tiver cadastro, enviamos um link para criar uma senha nova. Ele vale por 1 hora. Não chegou? Veja o spam.' });
   }
 
   if (acao === 'nova-senha') {
@@ -592,7 +594,7 @@ async function apiAuth(req, env, acao, ctx) {
     if (senha.length < 8) return json({ erro: 'A senha precisa ter pelo menos 8 caracteres.' }, 400);
     if (senha.length > 200) return json({ erro: 'Senha longa demais.' }, 400);
     const l = await lerLink(env, b.t, 'senha');
-    if (!l || l.status !== 'ativo') return json({ erro: 'Este link não vale mais. Peça outro em Esqueci minha senha.' }, 400);
+    if (!l || !['ativo', 'pendente', 'expirado'].includes(l.status)) return json({ erro: 'Este link não vale mais. Peça outro em Esqueci minha senha.' }, 400);
     await env.DB.batch([
       env.DB.prepare('UPDATE usuarios SET senha = ? WHERE id = ?').bind(await hashSenha(senha), l.id),
       env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(l.id),
@@ -604,16 +606,20 @@ async function apiAuth(req, env, acao, ctx) {
 
   if (acao === 'entrar') {
     // só senhas erradas contam: 10 erros em 15 minutos bloqueiam este endereço; acertar zera a conta
-    const chave = 'ent:' + ip;
-    const t = await env.DB.prepare('SELECT n, janela FROM tentativas WHERE chave = ?').bind(chave).first();
+    // também por conta: acertar a senha de OUTRA conta não zera os erros desta (senão dava para tentar sem parar)
+    const chave = 'ent:' + ip, chaveU = 'entu:' + email;
     const agoraS = Math.floor(Date.now() / 1000);
-    if (t && agoraS - t.janela <= 900 && t.n >= 10) return json({ erro: 'Muitas senhas erradas seguidas. Espere 15 minutos.' }, 429);
+    for (const [k, max] of [[chave, 10], [chaveU, 20]]) {
+      const t = await env.DB.prepare('SELECT n, janela FROM tentativas WHERE chave = ?').bind(k).first();
+      if (t && agoraS - t.janela <= 900 && t.n >= max) return json({ erro: 'Muitas senhas erradas seguidas. Espere 15 minutos.' }, 429);
+    }
     const u = await env.DB.prepare('SELECT id, senha, status FROM usuarios WHERE email = ?').bind(email).first();
     if (!u || !(await conferirSenha(senha, u.senha))) {
       await dentroDoLimite(env, chave, 10, 900);
+      await dentroDoLimite(env, chaveU, 20, 900);
       return json({ erro: 'E-mail ou senha incorretos.' }, 401);
     }
-    await env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(chave).run();
+    await env.DB.prepare('DELETE FROM tentativas WHERE chave IN (?, ?)').bind(chave, chaveU).run();
     if (u.status === 'confirmar') return json({ erro: 'Falta confirmar seu e-mail: abra o link que enviamos quando você pediu acesso (veja também o spam). Para receber outro link, peça acesso de novo com o mesmo e-mail.' }, 403);
     // aguardando liberação ou com a validade vencida também entra, mas só vê a página de assinatura
     if (!['ativo', 'pendente', 'expirado'].includes(u.status)) return json({ erro: 'Seu acesso não está liberado.' }, 403);
@@ -1422,7 +1428,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     bloqueado: [['liberar','Liberar de novo','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']]
   };
-  var US = [], PG = [], filtro = 'todos';
+  var US = [], PG = [], MES = null, filtro = 'todos';
   var SIT = { pendente: 'Aguardando', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
   var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
   var agora = function(){ return new Date().toISOString(); };
@@ -1478,14 +1484,14 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function geral(){
     var pend = US.filter(function(u){ return u.status === 'pendente'; }), env = PG.filter(function(p){ return p.status === 'enviado'; });
     var lib = US.filter(function(u){ return u.status === 'ativo' && !u.admin; }), venc = US.filter(em7).sort(function(a, b){ return a.expira < b.expira ? -1 : 1; });
-    var mes = agora().slice(0, 7), rec = PG.filter(function(p){ return p.status === 'aprovado' && String(p.decidido).slice(0, 7) === mes; }).reduce(function(a, p){ return a + p.valor; }, 0);
+    var rec = MES ? MES.total : 0, nrec = MES ? MES.n : 0;
     var novos = US.filter(function(u){ return u.criado > new Date(Date.now() - 7 * 864e5).toISOString(); }).length;
     var k = function(ir, rot, val, nota, alerta){ return '<button type="button" class="kpi' + (alerta ? ' alerta' : '') + '" data-ir="' + ir + '"><small>' + rot + '</small><strong>' + val + '</strong><em>' + nota + '</em></button>'; };
     document.getElementById('kpis').innerHTML = k('pessoas:pendente', 'Aguardando liberação', pend.length, pend.length ? 'toque para ver' : 'nenhum pedido', pend.length)
       + k('pagamentos', 'Pagamentos para conferir', env.length, env.length ? 'comprovantes novos' : 'tudo conferido', env.length)
       + k('pessoas:ativo', 'Com acesso liberado', lib.length, lib.filter(function(u){ return !u.expira; }).length + ' sem validade')
       + k('pessoas:vence', 'Vencem em 7 dias', venc.length, venc.length ? 'toque para ver' : 'nenhum')
-      + k('pagamentos', 'Recebido no mês', reais(rec), PG.filter(function(p){ return p.status === 'aprovado' && String(p.decidido).slice(0, 7) === mes; }).length + ' aprovado(s)')
+      + k('pagamentos', 'Recebido no mês', MES ? reais(rec) : '—', nrec + ' aprovado(s)')
       + k('pessoas:todos', 'Cadastros na semana', novos, US.length + ' no total');
     document.getElementById('acao').innerHTML = (pend.length || env.length) ? '<div class="lista">'
       + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
@@ -1497,7 +1503,10 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   }
   function carregar(){
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      eu = j.eu; US = j.usuarios; pessoas(); geral();
+      eu = j.eu; US = j.usuarios;
+      // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)
+      US.forEach(function(u){ if (u.status === 'ativo' && !u.admin && u.expira && u.expira <= agora()) u.status = 'expirado'; });
+      pessoas(); geral();
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
@@ -1542,7 +1551,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
   ];
   var dlg = document.getElementById('dlg-acesso'), AU = null, AT = 'cortesia';
-  function somar(base, per){ var d = new Date(base); if (per.dias) d.setTime(d.getTime() + per.dias * 864e5); else d.setUTCMonth(d.getUTCMonth() + per.meses); return d.toISOString(); }
+  function somar(base, per){ var d = new Date(base), n = d.getUTCDate(); if (per.dias) d.setTime(d.getTime() + per.dias * 864e5); else { d.setUTCMonth(d.getUTCMonth() + per.meses); if (d.getUTCDate() !== n) d.setUTCDate(0); } return d.toISOString(); }
   function vigente(u){ return u.status === 'ativo' && u.expira && u.expira > agora(); }
   function abrirAcesso(id){
     AU = US.filter(function(u){ return u.id === id; })[0]; if (!AU) return;
@@ -1726,7 +1735,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   var pg = document.getElementById('pags');
   function pagamentos(){
     fetch('/api/admin/pagamentos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      PG = j.pagamentos; geral();
+      PG = j.pagamentos; MES = j.mes || null; geral();
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
@@ -1876,5 +1885,5 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 </script></body></html>`;
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
-ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado });
+ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });

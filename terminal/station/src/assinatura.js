@@ -5,9 +5,9 @@
    Um robô diário (cron em wrangler.jsonc) avisa por e-mail 3 dias antes de vencer e desativa quem venceu (os dados ficam). */
 import qrcode from './qrcode.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
-let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado;
+let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite;
 export function ligarAssinatura(u) {
-  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado } = u);
+  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite } = u);
 }
 
 export const PLANOS = {
@@ -27,7 +27,12 @@ const dataBR = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZ
 export function somarPeriodo(baseIso, plano) {
   const d = new Date(baseIso);
   if (plano.dias) d.setTime(d.getTime() + plano.dias * 864e5);
-  else d.setUTCMonth(d.getUTCMonth() + plano.meses);
+  else {
+    // 31/01 + 1 mês = 28/02 (ou 29/02), não 03/03
+    const dia = d.getUTCDate();
+    d.setUTCMonth(d.getUTCMonth() + plano.meses);
+    if (d.getUTCDate() !== dia) d.setUTCDate(0);
+  }
   return d.toISOString();
 }
 // a validade nova conta a partir de hoje, ou do fim da validade atual se ela ainda não venceu
@@ -163,7 +168,8 @@ export async function rotinaAssinaturas(env) {
   // comprovantes saem do banco 30 dias depois da decisão; pedidos sem comprovante somem em 7 dias
   await env.DB.batch([
     env.DB.prepare('UPDATE pagamentos SET arquivo = NULL WHERE arquivo IS NOT NULL AND decidido IS NOT NULL AND decidido < ?').bind(new Date(Date.now() - ARQ_DIAS * 864e5).toISOString()),
-    env.DB.prepare(`DELETE FROM pagamentos WHERE status = 'aguardando' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()),
+    // pedido sem comprovante há 7 dias: fica guardado como "vencido" (se a pessoa pagar o QR antigo, dá para achar pelo número)
+    env.DB.prepare(`UPDATE pagamentos SET status = 'vencido' WHERE status = 'aguardando' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()),
   ]);
   if (venceram.length || vencendo.length) {
     await avisar(env, 'Assinaturas', [
@@ -230,7 +236,12 @@ export async function apiAssinatura(req, env, conta, acao) {
     if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo)) return json({ erro: 'Envie uma foto (JPG ou PNG) ou um PDF do comprovante.' }, 400);
     if (arq.size > ARQ_MAX) return json({ erro: 'Arquivo grande demais (máximo 1,9 MB). Tire uma captura da tela do comprovante.' }, 413);
     const p = await env.DB.prepare(`SELECT id, plano, valor, status FROM pagamentos WHERE id = ? AND usuario_id = ?`).bind(id, conta.id).first();
-    if (!p || !['aguardando', 'enviado'].includes(p.status)) return json({ erro: 'Pedido não encontrado. Escolha o plano de novo.' }, 400);
+    if (!p || !['aguardando', 'enviado', 'vencido'].includes(p.status)) return json({ erro: 'Pedido não encontrado. Escolha o plano de novo.' }, 400);
+    if (PLANOS[p.plano].unico && (await env.DB.prepare(`SELECT 1 FROM pagamentos WHERE usuario_id = ? AND id != ? AND status IN ('enviado', 'aprovado')`).bind(conta.id, id).first()))
+      return json({ erro: 'A degustação é só para quem ainda não assinou. Escolha outro plano.' }, 400);
+    const abertos = await env.DB.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE usuario_id = ? AND status = 'enviado' AND id != ?`).bind(conta.id, id).first();
+    if (abertos.n >= 2) return json({ erro: 'Você já tem comprovantes esperando conferência. Aguarde a resposta por e-mail.' }, 429);
+    if (!(await dentroDoLimite(env, 'comp:' + conta.id, 6, 3600))) return json({ erro: 'Muitos envios seguidos. Tente de novo mais tarde.' }, 429);
     const dados = new Uint8Array(await arq.arrayBuffer());
     await env.DB.prepare(`UPDATE pagamentos SET status = 'enviado', enviado = ?, arquivo = ?, tipo_arq = ? WHERE id = ?`).bind(new Date().toISOString(), dados, tipo, id).run();
     const plano = PLANOS[p.plano];
@@ -302,7 +313,10 @@ export async function apiAdminAssinatura(req, env, acao) {
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
       WHERE p.status = 'enviado' OR (p.status IN ('aprovado', 'recusado') AND p.decidido > ?) ORDER BY p.status = 'enviado' DESC, p.id DESC LIMIT 60`)
       .bind(new Date(Date.now() - 60 * 864e5).toISOString()).all();
-    return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
+    // recebido no mês, no horário de Brasília (UTC-3), somado no banco (a lista acima é limitada)
+    const ini = new Date(Date.now() - 3 * 36e5); ini.setUTCDate(1); ini.setUTCHours(3, 0, 0, 0);
+    const mes = await env.DB.prepare(`SELECT COUNT(*) n, COALESCE(SUM(valor), 0) total FROM pagamentos WHERE status = 'aprovado' AND decidido >= ?`).bind(ini.toISOString()).first();
+    return json({ mes, pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'comprovante' && req.method === 'GET') {
     const id = Number(new URL(req.url).searchParams.get('id'));
@@ -314,22 +328,23 @@ export async function apiAdminAssinatura(req, env, acao) {
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
     const b = await req.json().catch(() => ({}));
     const p = await env.DB.prepare(`SELECT p.id, p.plano, p.status, u.id uid, u.nome, u.email, u.status ustatus, u.expira FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id WHERE p.id = ?`).bind(Number(b.id)).first();
-    if (!p || !['enviado', 'aguardando'].includes(p.status)) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
+    if (!p || !['enviado', 'aguardando', 'vencido'].includes(p.status)) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
     if (!['ativo', 'pendente', 'expirado'].includes(p.ustatus)) return json({ erro: 'Essa conta está bloqueada ou recusada. Libere a conta antes.' }, 400);
     const plano = PLANOS[p.plano];
     const agora = new Date().toISOString();
     if (b.acao === 'aprovar') {
       const validade = somarPeriodo(baseValidade(p.ustatus === 'pendente' ? null : p.expira), plano);
-      await env.DB.batch([
-        env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ?`).bind(validade, agora, p.plano, p.uid),
-        env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ?`).bind(agora, validade, p.id),
-      ]);
+      // só aprova uma vez, mesmo com dois cliques ou duas abas ao mesmo tempo
+      const r1 = await env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, validade, p.id).run();
+      if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
+      await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ?`).bind(validade, agora, p.plano, p.uid).run();
       limparCacheSessao();
       const r = await emailAprovado(env, req, p, plano, validade).catch(() => ({ ok: false }));
       return json({ ok: true, validade, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
     }
     if (b.acao === 'recusar') {
-      await env.DB.prepare(`UPDATE pagamentos SET status = 'recusado', decidido = ? WHERE id = ?`).bind(agora, p.id).run();
+      const r1 = await env.DB.prepare(`UPDATE pagamentos SET status = 'recusado', decidido = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, p.id).run();
+      if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
       const r = await emailRecusado(env, req, p, plano).catch(() => ({ ok: false }));
       return json({ ok: true, email: r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
     }
@@ -375,7 +390,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
 .nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
 @media (max-width:600px){.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
 </style></head><body><main>
-<header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><button type="button" id="sair">Sair</button></header>
+<header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
 </main>
 <script>
@@ -385,7 +400,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
   function data(s){ return s ? new Date(s).toLocaleDateString('pt-BR') : '—'; }
   function api(u, o){ return fetch(u, Object.assign({ credentials: 'same-origin' }, o || {})).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw j; return j; }); }); }
-  var ST = { aguardando: 'aguardando comprovante', enviado: 'comprovante enviado, em conferência', aprovado: 'aprovado', recusado: 'não confirmado' };
+  var ST = { aguardando: 'aguardando comprovante', enviado: 'comprovante enviado, em conferência', aprovado: 'aprovado', recusado: 'não confirmado', vencido: 'pedido vencido (sem comprovante)' };
   document.getElementById('sair').onclick = function(){ fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin' }).then(function(){ location.href = '/entrar'; }); };
   function carregar(){
     api('/api/assinatura').then(function(j){

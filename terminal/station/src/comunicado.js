@@ -155,7 +155,7 @@ export async function apiComunicado(req, env, eu) {
   const c = COMUNICADO;
   const contar = async () => {
     const tot = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE ${DESTINO}`).first();
-    const env_ = await env.DB.prepare(`SELECT COUNT(*) n FROM comunicados_envios e JOIN usuarios u ON u.id = e.usuario_id WHERE e.comunicado = ? AND u.admin = 0`).bind(c.id).first();
+    const env_ = await env.DB.prepare(`SELECT COUNT(*) n FROM comunicados_envios e JOIN usuarios u ON u.id = e.usuario_id WHERE e.comunicado = ? AND u.admin = 0 AND u.sem_novidades = 0`).bind(c.id).first();
     const pend = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE ${DESTINO} AND id NOT IN (SELECT usuario_id FROM comunicados_envios WHERE comunicado = ?)`).bind(c.id).first();
     const sairam = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE sem_novidades = 1`).first();
     return { total: tot.n, enviados: env_.n, pendentes: pend.n, sairam: sairam.n };
@@ -177,10 +177,13 @@ export async function apiComunicado(req, env, eu) {
       AND id NOT IN (SELECT usuario_id FROM comunicados_envios WHERE comunicado = ?) ORDER BY id LIMIT ?`).bind(c.id, POR_VEZ).all()).results;
     let ok = 0; const falhas = [];
     for (const u of lista) {
+      // reserva antes de enviar: dois cliques ao mesmo tempo não mandam o e-mail duas vezes
+      const res = await env.DB.prepare('INSERT OR IGNORE INTO comunicados_envios (comunicado, usuario_id, enviado) VALUES (?, ?, ?)').bind(c.id, u.id, new Date().toISOString()).run();
+      if (!res.meta.changes) continue;
       const sair = await linkSair(env, u);
       const r = await enviar(env, u.email, c.assunto, montarEmail(c, u.nome, sair), sair);
-      if (r.ok) { ok++; await env.DB.prepare('INSERT OR IGNORE INTO comunicados_envios (comunicado, usuario_id, enviado) VALUES (?, ?, ?)').bind(c.id, u.id, new Date().toISOString()).run(); }
-      else falhas.push(r.erro);
+      if (r.ok) ok++;
+      else { falhas.push(r.erro); await env.DB.prepare('DELETE FROM comunicados_envios WHERE comunicado = ? AND usuario_id = ?').bind(c.id, u.id).run(); }
       await new Promise((f) => setTimeout(f, 600)); // o Resend aceita 2 e-mails por segundo
     }
     return json({ ok: true, enviados_agora: ok, falhas: falhas.length, erro: falhas[0] || null, ...(await contar()) });
