@@ -284,6 +284,12 @@
     obCel.observe($('phone'));
   } else cel.src = '/vitrine/fotos/celular.jpg';
 
+  // quantas empresas têm balanço no painel (some se o dado não vier)
+  fetch(RAW + 'fundamentos/index.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (d) {
+    var n = Array.isArray(d.empresas) ? d.empresas.length : (d.empresas ? Object.keys(d.empresas).length : 0);
+    if (n) { $('n-empresas').textContent = num(n, 0); $('li-empresas').hidden = false; }
+  }).catch(function () {});
+
   /* ---------------- entrada suave das seções ---------------- */
   var alvos = document.querySelectorAll('.vt-sec-head, .vt-board, .vt-macro, .vt-tour, .ft, .vt-duo-txt, .vt-phone, .vt-fontes, .vt-cta');
   if (!reduz && 'IntersectionObserver' in window) {
