@@ -187,10 +187,6 @@
     if (ok) macro.fluxoAno = { v: soma, ano: ano, ate: br(mes.ate) };
     desenharMacro();
   }).catch(function () {});
-  fetch(RAW + 'fundamentos/index.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (d) {
-    var n = Array.isArray(d.empresas) ? d.empresas.length : (d.empresas ? Object.keys(d.empresas).length : 0);
-    if (n) $('n-empresas').textContent = num(n, 0);
-  }).catch(function () {});
 
   /* ---------------- por dentro do painel ---------------- */
   var TOUR = [
