@@ -20,17 +20,39 @@ export const COMUNICADO = {
   abertura: 'Sabe aquele F5 nervoso para ver se o dólar mexeu? Pode aposentar.',
   // foto do painel: tirada a pedido do Severino (o teste com foto caiu no spam); para voltar: foto: ['/vitrine/fotos/mesa.jpg', 'texto alternativo']
   foto: null,
+  // o que é novo, com destaque
   itens: [
-    ['Cotações ao vivo', 'Dólar, euro, libra, petróleo, ouro, prata, café, VIX e as principais criptomoedas se atualizam sozinhos na tela, na aba Mercado e na Mesa.'],
+    ['Cotações ao vivo', 'Dólar, euro, libra, petróleo, ouro, prata, café, VIX e as principais criptomoedas se atualizam sozinhos na tela, sem apertar nada.'],
     ['Fundamentos com a fonte na mão', 'Abra o gráfico de uma ação da B3 e veja lucro, ROE, margem e endividamento logo acima. Cada balanço tem link para o documento original na CVM.'],
-    ['O que o mercado aposta para os juros', 'Probabilidades da próxima decisão do Copom, tiradas das opções de Copom da B3, e do Fed, além da curva de juros DI.'],
-    ['Quem está comprando a bolsa', 'O fluxo de estrangeiros e institucionais na B3, dia a dia.'],
-    ['Focus sem esperar', 'Saiu o boletim do Banco Central? Um botão puxa os números na hora.'],
+    ['Vai cortar ou subir os juros?', 'A chance de cada decisão do Copom, calculada pelas opções de Copom negociadas na B3, e a do Fed, no estilo do FedWatch da CME. Atualizado várias vezes por dia.'],
   ],
-  ferramentas: [
-    ['Indicadores com história', 'Os gráficos abrem em tela grande, com histórico longo e os governos e fatos que mexeram nos juros e no mercado marcados. Um clique mostra o que aconteceu.'],
-    ['Calculadoras', 'Planejamento financeiro, renda fixa, aposentadoria, inflação, moedas e preço médio, essencial para quem opera.'],
-    ['Opções para quem está começando', 'Montador de estratégias, trilha de estudo e um resumo preparado com banqueiros e tesoureiros que vivem o mercado.'],
+  // o resto do site, em grupos curtos
+  secoes: [
+    ['Mercado em tempo real', [
+      ['Mesa', 'índices, moedas, juros, commodities e cripto numa tela só.'],
+      ['Mapa de calor', 'quem subiu e quem caiu na bolsa, num olhar.'],
+      ['Suas listas', 'monte listas de ativos favoritos; elas aparecem iguais no celular e no computador.'],
+      ['Fluxo na B3', 'quanto estrangeiros e institucionais compraram ou venderam, dia a dia.'],
+    ]],
+    ['Juros e economia', [
+      ['Curva de juros DI', 'o que o mercado projeta para os juros nos próximos anos.'],
+      ['Boletim Focus', 'saiu no Banco Central, um botão traz na hora.'],
+      ['Indicadores com história', 'gráficos longos com os governos e os fatos que mexeram nos juros e no mercado marcados; um clique mostra o que aconteceu.'],
+      ['Calendário econômico', 'a agenda da semana e os balanços das empresas do Brasil e dos EUA.'],
+    ]],
+    ['Notícias', [
+      ['Mais de 25 veículos', 'Bloomberg, Valor, InfoMoney, CNBC, Money Times e outros num lugar só, com tradução para o português e as de maior impacto em destaque.'],
+      ['Leitura Rápida', 'destaca o começo de cada palavra para o olho correr mais rápido. Pensada para quem tem TDAH ou só quer ler mais em menos tempo.'],
+    ]],
+    ['Empresas e grandes investidores', [
+      ['Fundamentos de mais de 300 empresas', 'balanços da CVM, ranking por setor e também as empresas americanas.'],
+      ['Onde estão os grandes', 'a posição dos especuladores nos futuros (CFTC) e as carteiras das grandes gestoras americanas (13F).'],
+    ]],
+    ['Ferramentas', [
+      ['Calculadoras', 'planejamento financeiro, renda fixa, aposentadoria, inflação, moedas e preço médio, essencial para quem opera.'],
+      ['Opções', 'montador de estratégias com gráfico de resultado, volatilidade e probabilidades, e uma trilha para quem está começando, com um resumo preparado com banqueiros e tesoureiros que vivem o mercado.'],
+      ['Fechamento do mercado', 'todo dia útil às 18h, o resumo do dia em mercadomacro.com.br/fechamento-do-mercado.'],
+    ]],
   ],
   planos: [['Degustação', '7 dias', 'R$ 4,99'], ['Mensal', '1 mês', 'R$ 29,90'], ['Trimestral', '3 meses', 'R$ 79,90'], ['Semestral', '6 meses', 'R$ 149,90']],
   ps: 'O café continua por sua conta. A cotação dele, não.',
@@ -41,9 +63,10 @@ const primeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || 'olá';
 
 export function montarEmail(c, nome, linkSair) {
   const p = primeiroNome(nome);
-  const texto = [`Olá, ${p}.`, '', c.abertura, '', 'Chegou ao Mercado Macro:', '',
+  const texto = [`Olá, ${p}.`, '', c.abertura, '', 'O que chegou:', '',
     ...c.itens.map(([t, d]) => `- ${t}: ${d}`), '',
-    ...(c.ferramentas ? ['E as ferramentas de sempre, para usar no dia a dia:', ...c.ferramentas.map(([t, d]) => `- ${t}: ${d}`), ''] : []),
+    'E tudo o que já estava lá:', '',
+    ...(c.secoes || []).flatMap(([titulo, lista]) => [titulo.toUpperCase(), ...lista.map(([t, d]) => `- ${t}: ${d}`), '']),
     'E chegaram as assinaturas, pagas por Pix e sem renovação automática:',
     ...c.planos.map(([n, d, v]) => `- ${n} (${d}): ${v}`),
     'Os planos ficam em Ajustes > Conta > Assinatura.', '',
@@ -62,12 +85,14 @@ export function montarEmail(c, nome, linkSair) {
 <p style="margin:0 0 20px;font-size:18px;line-height:1.45;font-weight:700;color:#0b1220">${esc(c.abertura)}</p>
 </td></tr>
 ${c.foto ? `<tr><td style="padding:0 28px 22px"><a href="${SITE}/"><img src="${SITE}${c.foto[0]}" alt="${esc(c.foto[1])}" width="504" style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #dfe5ee;border-radius:8px"></a></td></tr>` : ''}
-<tr><td style="${td};padding:0 28px 8px;font-size:15px;line-height:1.6"><p style="margin:0 0 12px;color:#4a5568">Chegou ao Mercado Macro:</p></td></tr>
+<tr><td style="${td};padding:0 28px 8px;font-size:15px;line-height:1.6"><p style="margin:0 0 12px;color:#4a5568">O que chegou:</p></td></tr>
 ${c.itens.map(([t, d]) => `<tr><td style="${td};padding:0 28px 14px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
 <td width="4" style="background:#f0b90b;border-radius:2px"></td>
 <td style="${td};padding:2px 0 2px 14px;font-size:14.5px;line-height:1.55"><b style="color:#0b1220">${esc(t)}</b><br><span style="color:#4a5568">${esc(d)}</span></td></tr></table></td></tr>`).join('\n')}
-${c.ferramentas ? `<tr><td style="${td};padding:10px 28px 4px;font-size:15px;line-height:1.6"><p style="margin:0 0 10px;font-weight:700;color:#0b1220">E as ferramentas de sempre, para usar no dia a dia</p>
-<table role="presentation" cellpadding="0" cellspacing="0" width="100%">${c.ferramentas.map(([t, d]) => `<tr><td valign="top" style="${td};padding:0 10px 10px 0;font-size:14px;color:#b8860b">&#9679;</td><td style="${td};padding:0 0 10px;font-size:14px;line-height:1.55"><b style="color:#0b1220">${esc(t)}.</b> <span style="color:#4a5568">${esc(d)}</span></td></tr>`).join('')}</table></td></tr>` : ''}
+${c.secoes ? `<tr><td style="${td};padding:12px 28px 2px;font-size:15px;line-height:1.6"><p style="margin:0;font-weight:700;color:#0b1220;font-size:16px">E tudo o que já estava lá</p></td></tr>
+${c.secoes.map(([titulo, lista]) => `<tr><td style="${td};padding:12px 28px 0"><p style="margin:0 0 6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:#8a6d0b">${esc(titulo)}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">${lista.map(([t, d]) => `<tr><td valign="top" style="${td};padding:0 10px 7px 0;font-size:13px;color:#b8860b">&#9679;</td><td style="${td};padding:0 0 7px;font-size:14px;line-height:1.5"><b style="color:#0b1220">${esc(t)}:</b> <span style="color:#4a5568">${esc(d)}</span></td></tr>`).join('')}</table></td></tr>`).join('\n')}
+<tr><td style="padding:10px 28px 0"><div style="border-top:1px solid #dfe5ee"></div></td></tr>` : ''}
 <tr><td style="${td};padding:14px 28px 6px;font-size:15px;line-height:1.6">
 <p style="margin:0 0 4px;font-weight:700;color:#0b1220">E chegaram as assinaturas</p>
 <p style="margin:0 0 12px;color:#4a5568;font-size:14px">Pagas por Pix, sem renovação automática.</p>
