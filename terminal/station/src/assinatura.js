@@ -357,7 +357,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   var ST = { aguardando: 'aguardando comprovante', enviado: 'comprovante enviado, em conferência', aprovado: 'aprovado', recusado: 'não confirmado' };
   document.getElementById('sair').onclick = function(){ fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin' }).then(function(){ location.href = '/entrar'; }); };
   function carregar(){
-    api('/api/assinatura').then(function(j){ dados = j; desenhar(); }).catch(function(){ raiz.innerHTML = '<p class="nota">Não foi possível carregar. Atualize a página.</p>'; });
+    api('/api/assinatura').then(function(j){
+      dados = j;
+      // /assinar?plano=mensal (vindo do aviso no site) já abre o Pix daquele plano
+      var q = new URLSearchParams(location.search).get('plano');
+      if (q && !escolhido && j.planos.some(function(p){ return p.id === q; })) escolhido = q;
+      if (q) history.replaceState(null, '', '/assinar');
+      desenhar();
+    }).catch(function(){ raiz.innerHTML = '<p class="nota">Não foi possível carregar. Atualize a página.</p>'; });
   }
   function situacao(j){
     if (j.admin) return '<div class="sit">Conta de administrador: sem validade.</div>';

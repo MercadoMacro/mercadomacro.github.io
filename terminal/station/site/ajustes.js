@@ -379,7 +379,7 @@
     if (falta <= 3) {
       let hoje = false; const k = 'mm_venc_avisado', d = new Date().toDateString();
       try { hoje = localStorage.getItem(k) === d; localStorage.setItem(k, d); } catch (e) { /* nada */ }
-      if (!hoje) setTimeout(() => toast(`Seu acesso vai até ${new Date(c.expira).toLocaleDateString('pt-BR')}. Para renovar, abra Ajustes > Conta > Assinatura.`), 3000);
+      if (!hoje && !c.admin) setTimeout(() => avisoVencimento(c, falta), 1500);
     }
     if (c.admin && c.pendentes) {
       let avisado = false;
@@ -387,6 +387,33 @@
       if (!avisado) setTimeout(() => toast(`${c.pendentes} ${c.pendentes > 1 ? 'cadastros aguardam' : 'cadastro aguarda'} sua liberação. Veja em Ajustes > Conta.`), 2500);
     }
   }).catch(() => null);
+
+  /* ---------------- aviso de vencimento com os planos ---------------- */
+  function avisoVencimento(c, falta) {
+    const ate = new Date(c.expira).toLocaleDateString('pt-BR');
+    const reais = (v) => 'R$ ' + (v / 100).toFixed(2).replace('.', ',');
+    fetch('/api/assinatura', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((j) => {
+      const planos = (j && j.pix && j.planos) || [];
+      const dias = Math.ceil(falta);
+      const quando = falta <= 0 ? 'terminou' : dias <= 1 ? 'termina amanhã' : `termina em ${dias} dias`;
+      const el = document.createElement('div');
+      el.className = 'mm-venc';
+      el.innerHTML = `<div class="mm-venc-scrim"></div>
+        <div class="mm-venc-box" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="mm-venc-t">
+          <h2 id="mm-venc-t">Seu acesso ${quando}</h2>
+          <p>Ele vale até <b>${ate}</b>. Escolha um plano para continuar usando o Mercado Macro sem interrupção. Se renovar agora, o novo período começa depois dessa data.</p>
+          ${planos.length ? `<div class="mm-venc-pl">${planos.map((p) => `<a href="/assinar?plano=${encodeURIComponent(p.id)}"><b>${esc(p.nome)}</b><strong>${reais(p.valor)}</strong><span>${esc(p.periodo)}${p.id === 'trimestral' || p.id === 'semestral' ? ` · ${reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6)))} por mês` : ''}</span></a>`).join('')}</div>
+          <p class="mm-venc-nota">Pagamento por Pix, sem renovação automática.</p>` : ''}
+          <div class="mm-venc-ac"><button type="button" data-x>Agora não</button><a href="/assinar">Ver assinatura</a></div>
+        </div>`;
+      const fechar = () => { el.remove(); document.removeEventListener('keydown', esc_); };
+      const esc_ = (e) => { if (e.key === 'Escape') fechar(); };
+      el.addEventListener('click', (e) => { if (e.target.closest('[data-x]') || e.target.classList.contains('mm-venc-scrim')) fechar(); });
+      document.addEventListener('keydown', esc_);
+      document.body.appendChild(el);
+      el.querySelector('.mm-venc-box').focus();
+    });
+  }
 
   /* ---------------- pontos de entrada ---------------- */
   document.getElementById('settings-btn')?.addEventListener('click', open);
@@ -409,6 +436,21 @@
   /* ---------------- estilos do painel ---------------- */
   const css = document.createElement('style');
   css.textContent = `
+  .mm-venc { position:fixed; inset:0; z-index:9500; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .mm-venc-scrim { position:absolute; inset:0; background:rgba(3,6,12,.6); }
+  .mm-venc-box { position:relative; width:min(560px,100%); max-height:calc(100vh - 32px); overflow:auto; background:var(--surface); border:1px solid var(--line-2); border-radius:14px; box-shadow:var(--shadow-lg); padding:22px; color:var(--text); outline:none; }
+  .mm-venc-box h2 { margin:0 0 8px; font-size:20px; }
+  .mm-venc-box p { margin:0 0 14px; color:var(--text-2); font-size:14px; line-height:1.5; }
+  .mm-venc-box p b { color:var(--text); }
+  .mm-venc-pl { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin:0 0 10px; }
+  .mm-venc-pl a { display:flex; flex-direction:column; gap:3px; padding:12px; border:1px solid var(--line-2); border-radius:10px; background:var(--surface-2); color:var(--text); text-decoration:none; }
+  .mm-venc-pl a:hover, .mm-venc-pl a:focus-visible { border-color:var(--accent); outline:none; }
+  .mm-venc-pl b { font-size:13px; } .mm-venc-pl strong { font-size:19px; } .mm-venc-pl span { font-size:11.5px; color:var(--text-3); }
+  .mm-venc-box .mm-venc-nota { font-size:12px; color:var(--text-3); }
+  .mm-venc-ac { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .mm-venc-ac button, .mm-venc-ac a { min-height:40px; padding:9px 16px; border-radius:8px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+  .mm-venc-ac button { background:none; border:1px solid var(--line-2); color:var(--text-2); }
+  .mm-venc-ac a { background:var(--accent); color:var(--on-accent); border:1px solid transparent; }
   .aj { position:fixed; inset:0; z-index:9000; }
   .aj-scrim { position:absolute; inset:0; background:rgba(3,6,12,.45); opacity:0; transition:opacity .2s; }
   .aj.on .aj-scrim { opacity:1; }
