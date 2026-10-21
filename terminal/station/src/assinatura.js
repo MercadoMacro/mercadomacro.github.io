@@ -432,6 +432,7 @@ export function paginaAssinar() {
 main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 header h1{font-size:20px;margin:0;flex:1}
+@media (max-width:480px){header h1{flex-basis:100%}}
 header a,header button{color:var(--accent-text);font-size:13px;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
 .sit{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 18px;color:var(--text-2)}
 .sit b{color:var(--text)}

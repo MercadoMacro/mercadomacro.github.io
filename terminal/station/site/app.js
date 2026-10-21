@@ -791,7 +791,7 @@ async function updateMarketPanel(silent = false) {
 
   saveMarketCache();
 
-  const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
   const dotColor = liveMode ? 'var(--pos)' : 'var(--text-3)';
   info.innerHTML = fail === 0
     ? `<span class="dot" style="background:${dotColor}"></span>${liveMode ? 'Ao vivo' : 'Snapshot'}: <span id="market-last-update">${now}</span> · ${ok} ativos`
@@ -4134,7 +4134,7 @@ window.__onTabSwitch = (tabId) => {
   }
   const stamp = () => {
     const el = $('#tk-updated');
-    if (el) el.innerHTML = `Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>`;
+    if (el) el.innerHTML = `Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b>`;
   };
   // quando o topo termina de carregar (a classe "loading" sai), marca o horário e redesenha
   const tk = $('#ticker');
@@ -4377,6 +4377,7 @@ function newsReadMins(n) {
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-modal', 'true');
   panel.setAttribute('aria-label', 'Leitor de notícias');
+  panel.inert = true;
   panel.innerHTML = `
     <div class="nr-head">
       <button class="nr-ib" id="nr-prev" title="Anterior (←)"><i class="fas fa-chevron-up"></i></button>
@@ -4560,6 +4561,7 @@ function newsReadMins(n) {
     $('#nr-scroll').scrollTop = 0;
     if (!panel.classList.contains('on')) {
       overlay.hidden = false;
+      panel.inert = false;
       requestAnimationFrame(() => { overlay.classList.add('on'); panel.classList.add('on'); });
       document.body.style.overflow = 'hidden';
       setTimeout(() => $('#nr-close').focus({ preventScroll: true }), 50);
@@ -4568,6 +4570,7 @@ function newsReadMins(n) {
   function close() {
     overlay.classList.remove('on');
     panel.classList.remove('on');
+    panel.inert = true;
     document.body.style.overflow = '';
     setTimeout(() => { if (!panel.classList.contains('on')) overlay.hidden = true; }, 280);
   }
@@ -4681,7 +4684,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=17';
+    sc.src = 'mesa.js?v=18';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -4704,7 +4707,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'fundamentos.js?v=8';
+    sc.src = 'fundamentos.js?v=9';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('fund-root');

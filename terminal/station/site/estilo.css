@@ -2330,8 +2330,8 @@
   .nr-overlay.on { opacity: 1; }
   .nr { position: fixed; top: 0; right: 0; bottom: 0; z-index: 2500; width: min(760px, 94vw); display: flex; flex-direction: column;
     background: linear-gradient(180deg, var(--card-hi), transparent 20%), var(--surface); border-left: 1px solid var(--line-2);
-    box-shadow: -30px 0 80px -30px rgba(0,0,0,.6); transform: translateX(102%); transition: transform .28s var(--ease, ease); }
-  .nr.on { transform: none; }
+    transform: translateX(102%); visibility: hidden; transition: transform .28s var(--ease, ease), visibility 0s .28s; }
+  .nr.on { transform: none; visibility: visible; transition: transform .28s var(--ease, ease); box-shadow: -30px 0 80px -30px rgba(0,0,0,.6); }
   .nr-head { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
   .nr-head .sp { flex: 1; }
   .nr-head .pos { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); margin: 0 6px; }

@@ -476,9 +476,8 @@
   /* ---------------- início ---------------- */
   let booting = null, idxFalhou = false;
   function semIndice() {
-    root.querySelector('#fd-body').innerHTML = `<div class="fd-msg">Os balanços ainda não estão disponíveis.<br>
-      Eles são gerados toda semana a partir dos dados abertos da CVM pelo arquivo <b>cvm/gerar_fundamentos.py</b>.
-      Quando a pasta <b>fundamentos/</b> estiver publicada, esta aba mostra as empresas automaticamente.</div>`;
+    root.querySelector('#fd-body').innerHTML = `<div class="fd-msg">Os balanços não carregaram agora.<br>
+      Eles vêm dos dados abertos da CVM e são atualizados toda semana. Tente de novo em alguns minutos.</div>`;
   }
   // baixa o index.json uma vez; quem chama decide o que desenhar depois
   function boot() {

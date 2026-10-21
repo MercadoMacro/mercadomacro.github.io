@@ -465,7 +465,7 @@
     const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
-        <div class="ms-info"><span class="dot ${errMsg ? 'bad' : ''}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
+        <div class="ms-info"><span class="dot ${errMsg ? 'bad' : ''}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
         ${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}
         <button type="button" class="btn-sm ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo"><i class="fas fa-sync-alt"></i> Atualizar</button>
       </div>
@@ -604,6 +604,7 @@
   .ms-bar { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .ms-info { flex:1; min-width:0; font:11.5px 'JetBrains Mono', monospace; color:var(--text-3); }
   .ms-info b { color:var(--text-2); font-weight:600; }
+  @media (max-width:600px) { .ms-bar { flex-wrap:wrap; } .ms-info { flex-basis:100%; } }
   .ms-info .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--pos); margin-right:7px; vertical-align:1px; }
   .ms-info .dot.bad { background:var(--neg); }
   .ms-refresh { display:inline-flex; align-items:center; gap:6px; }

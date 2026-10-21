@@ -147,7 +147,7 @@
       </section>
       <section class="aj-sec">
         <h3>Painel</h3>
-        <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab" aria-label="Abrir sempre em"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${sw('ticker', P.ticker !== 'off', 'Faixa de cotações no topo')}
         ${sw('frases', P.frases !== 'off', 'Frases de investidores abaixo das cotações')}
         ${liveOn != null ? sw('live', liveOn, 'Atualização ao vivo das cotações') : ''}
