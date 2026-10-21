@@ -27,6 +27,11 @@ export const COMUNICADO = {
     ['Quem está comprando a bolsa', 'O fluxo de estrangeiros e institucionais na B3, dia a dia.'],
     ['Focus sem esperar', 'Saiu o boletim do Banco Central? Um botão puxa os números na hora.'],
   ],
+  ferramentas: [
+    ['Indicadores com história', 'Os gráficos abrem em tela grande, com histórico longo e os governos e fatos que mexeram nos juros e no mercado marcados. Um clique mostra o que aconteceu.'],
+    ['Calculadoras', 'Planejamento financeiro, renda fixa, aposentadoria, inflação, moedas e preço médio, essencial para quem opera.'],
+    ['Opções para quem está começando', 'Montador de estratégias, trilha de estudo e um resumo preparado com banqueiros e tesoureiros que vivem o mercado.'],
+  ],
   planos: [['Degustação', '7 dias', 'R$ 4,99'], ['Mensal', '1 mês', 'R$ 29,90'], ['Trimestral', '3 meses', 'R$ 79,90'], ['Semestral', '6 meses', 'R$ 149,90']],
   ps: 'O café continua por sua conta. A cotação dele, não.',
 };
@@ -38,6 +43,7 @@ export function montarEmail(c, nome, linkSair) {
   const p = primeiroNome(nome);
   const texto = [`Olá, ${p}.`, '', c.abertura, '', 'Chegou ao Mercado Macro:', '',
     ...c.itens.map(([t, d]) => `- ${t}: ${d}`), '',
+    ...(c.ferramentas ? ['E as ferramentas de sempre, para usar no dia a dia:', ...c.ferramentas.map(([t, d]) => `- ${t}: ${d}`), ''] : []),
     'E chegaram as assinaturas, pagas por Pix e sem renovação automática:',
     ...c.planos.map(([n, d, v]) => `- ${n} (${d}): ${v}`),
     'Os planos ficam em Ajustes > Conta > Assinatura.', '',
@@ -60,6 +66,8 @@ ${c.foto ? `<tr><td style="padding:0 28px 22px"><a href="${SITE}/"><img src="${S
 ${c.itens.map(([t, d]) => `<tr><td style="${td};padding:0 28px 14px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
 <td width="4" style="background:#f0b90b;border-radius:2px"></td>
 <td style="${td};padding:2px 0 2px 14px;font-size:14.5px;line-height:1.55"><b style="color:#0b1220">${esc(t)}</b><br><span style="color:#4a5568">${esc(d)}</span></td></tr></table></td></tr>`).join('\n')}
+${c.ferramentas ? `<tr><td style="${td};padding:10px 28px 4px;font-size:15px;line-height:1.6"><p style="margin:0 0 10px;font-weight:700;color:#0b1220">E as ferramentas de sempre, para usar no dia a dia</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">${c.ferramentas.map(([t, d]) => `<tr><td valign="top" style="${td};padding:0 10px 10px 0;font-size:14px;color:#b8860b">&#9679;</td><td style="${td};padding:0 0 10px;font-size:14px;line-height:1.55"><b style="color:#0b1220">${esc(t)}.</b> <span style="color:#4a5568">${esc(d)}</span></td></tr>`).join('')}</table></td></tr>` : ''}
 <tr><td style="${td};padding:14px 28px 6px;font-size:15px;line-height:1.6">
 <p style="margin:0 0 4px;font-weight:700;color:#0b1220">E chegaram as assinaturas</p>
 <p style="margin:0 0 12px;color:#4a5568;font-size:14px">Pagas por Pix, sem renovação automática.</p>
