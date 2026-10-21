@@ -41,8 +41,14 @@ function enderecoPublico(p) {
 export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
-    // todo dia às 9h (Brasília): avisa por e-mail quem vence em 3 dias e desativa quem venceu (src/assinatura.js)
-    if (ev.cron === '0 12 * * *') { ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message))); return; }
+    // todo dia às 9h17 (Brasília): avisa por e-mail quem vence em 3 dias e desativa quem venceu (src/assinatura.js)
+    // a cada hora (minuto 17): dispara o vigia (o agendador do GitHub chega a pular 5 a 10 horas);
+    // às 12:17 UTC também roda a rotina das assinaturas
+    if (ev.cron === '17 * * * *') {
+      ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
+      if (new Date(ev.scheduledTime).getUTCHours() === 12) ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
+      return;
+    }
     // 18:00 (Brasília) nos dias úteis: dispara o robô do fechamento (resumo.yml) na hora certa, porque o agendador
     // do GitHub às vezes atrasa, e guarda o fechamento do dia para a página pública /fechamento-do-mercado
     if (ev.cron === '0 23 * * 1-5') { ctx.waitUntil(completarJuros(env, jurosTesouro).catch(() => {})); return; }
@@ -1130,16 +1136,17 @@ async function avisoDoVigia(req, env) {
 
 // precisa do segredo GH_TOKEN no worker (token do GitHub só com Actions: leitura e escrita neste repositório).
 // Sem ele, fica valendo só o agendador do próprio GitHub.
-async function dispararFechamento(env) {
+async function dispararFechamento(env) { return dispararRobo(env, 'resumo.yml', { site: true }); }
+async function dispararRobo(env, arquivo, inputs) {
   if (!env.GH_TOKEN) return;
   try {
-    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/resumo.yml/dispatches`, {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/${arquivo}/dispatches`, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'User-Agent': 'mercadomacro-station', 'X-GitHub-Api-Version': '2022-11-28' },
-      body: JSON.stringify({ ref: 'main', inputs: { site: true } }),
+      body: JSON.stringify({ ref: 'main', inputs }),
     });
-    if (r.status !== 204) console.error('disparo do fechamento:', r.status, await r.text());
-  } catch (e) { console.error('disparo do fechamento:', e.message); }
+    if (r.status !== 204) console.error('disparo de ' + arquivo + ':', r.status, await r.text());
+  } catch (e) { console.error('disparo de ' + arquivo + ':', e.message); }
 }
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');

@@ -17,7 +17,7 @@
   ],
   // resumo semanal no Telegram: segunda 11:00 UTC (8h em Brasília); assinaturas: todo dia 12:00 UTC (avisos e vencimentos)
   // fechamento: dias úteis 21:00 UTC (18h em Brasília) dispara o robô resumo.yml e guarda a página pública
-  "triggers": { "crons": ["0 11 * * 1", "0 12 * * *", "0 21 * * 1-5", "0 23 * * 1-5"] },
+  "triggers": { "crons": ["0 11 * * 1", "17 * * * *", "0 21 * * 1-5", "0 23 * * 1-5"] },
   // cotações para o fechamento enviado pelo botão de /admin (worker da API, sem passar pela internet)
   "services": [{ "binding": "API", "service": "shrill-meadow-89c1" }],
   // repasse ao vivo da Capital.com (src/capital.js): um objeto só, uma conexão com a Capital

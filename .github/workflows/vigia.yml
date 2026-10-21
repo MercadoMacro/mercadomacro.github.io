@@ -7,7 +7,8 @@ name: Vigia do site
 
 on:
   schedule:
-    - cron: '17 * * * *'      # a cada hora, no minuto 17
+    # o site (station) dispara este robô toda hora no minuto 17; este horário é só a reserva, se o site cair
+    - cron: '47 */3 * * *'
   workflow_dispatch:
     inputs:
       teste:
