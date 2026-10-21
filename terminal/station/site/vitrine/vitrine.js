@@ -147,7 +147,7 @@
     $('pulse').innerHTML = PULSO.map(function (s) {
       var a = INFO[s], q = Q[s];
       return '<div class="pc' + (mudou.indexOf(s) >= 0 ? ' flash' : '') + '"><div class="pc-n"><span>' + esc(a[1]) + '</span><span class="' + (q ? tom(q.ch) : 'neu') + '">' + (q ? pct(q.ch) : '—') + '</span></div>'
-        + '<div class="pc-v">' + fmtV(s, q) + (S5[s] ? '<small class="pc-5d" title="Sem negócios agora: gráfico dos últimos 5 dias">5 dias</small>' : '') + '</div>' + spark(S5[s] || (q && q.c), q && q.ch >= 0, 200, 34) + '</div>';
+        + '<div class="pc-v">' + fmtV(s, q) + '</div>' + (S5[s] ? '<div title="Sem negócios agora: gráfico dos últimos 5 dias">' + spark(S5[s], q && q.ch >= 0, 200, 34) + '</div>' : spark(q && q.c, q && q.ch >= 0, 200, 34)) + '</div>';
     }).join('');
     // quadro
     [['col-br', BR], ['col-mundo', MUNDO], ['col-mc', MC]].forEach(function (x) {
