@@ -1330,6 +1330,18 @@ details.mais[open] .menu{display:flex}
 .cfg>div>h2:first-child{margin-top:4px}
 ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 [data-p][hidden]{display:none}
+.fun{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+.fun div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.fun small{display:block;color:var(--text-3);font-size:12px}.fun strong{font-size:22px}.fun em{display:block;font-style:normal;color:var(--text-3);font-size:12px}
+.mm{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:13px}
+.mm th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);text-align:right;padding:9px 12px;border-bottom:1px solid var(--line)}
+.mm th:first-child,.mm td:first-child{text-align:left}
+.mm td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.mm tr:last-child td{border-bottom:0}
+.mm .bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px;min-width:2px}
+.mm td.rc{width:38%}
+.mmw{overflow-x:auto}
+@media (max-width:820px){.fun{grid-template-columns:1fr 1fr}.mm td.rc .bar{display:none}.mm td.rc{width:auto}.mm th,.mm td{padding:8px 6px}.mm th{letter-spacing:0;font-size:10px}}
 dialog#dlg-acesso{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
 dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
 .dl{padding:20px}
@@ -1379,6 +1391,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <div><h2>Precisa de você</h2><div id="acao"><p class="vazio">Carregando…</p></div></div>
     <div><h2>Vencem nos próximos 7 dias</h2><div id="venc"><p class="vazio">Carregando…</p></div></div>
   </div>
+  <h2>Mês a mês</h2><div id="funil"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
   <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div></div>
@@ -1501,7 +1514,27 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     document.getElementById('cnt-pessoas').textContent = pend.length || '';
     document.getElementById('cnt-pag').textContent = env.length || '';
   }
+  var MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  function funil(){
+    fetch('/api/admin/numeros', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      // meses antes do primeiro movimento ficam de fora
+      var ms = j.meses.slice(); while (ms.length > 1 && !ms[0].cadastros && !ms[0].pagamentos) ms.shift();
+      var conv = j.liberados ? Math.round(100 * j.pagantes / j.liberados) + '%' : '—';
+      var max = Math.max.apply(null, j.meses.map(function(m){ return m.receita; }).concat([1]));
+      document.getElementById('funil').innerHTML = '<div class="fun">'
+        + '<div><small>Já tiveram acesso</small><strong>' + j.liberados + '</strong><em>liberados ou vencidos</em></div>'
+        + '<div><small>Já pagaram</small><strong>' + j.pagantes + '</strong><em>' + conv + ' de quem teve acesso</em></div>'
+        + '<div><small>Assinantes agora</small><strong>' + j.assinantes + '</strong><em>pagaram e estão com acesso</em></div>'
+        + '<div><small>Receita total</small><strong>' + reais(j.receita) + '</strong><em>desde o início</em></div></div>'
+        + '<div class="mmw"><table class="mm"><thead><tr><th>Mês</th><th>Cadastros</th><th title="Pessoas que pagaram pela primeira vez">1º pag.</th><th title="Pagamentos aprovados">Pagos</th><th>Receita</th></tr></thead><tbody>'
+        + ms.slice().reverse().map(function(m){
+          var x = m.mes.split('-');
+          return '<tr><td>' + MESES[+x[1] - 1] + '/' + x[0].slice(2) + '</td><td>' + m.cadastros + '</td><td>' + m.novos_pagantes + '</td><td>' + m.pagamentos + '</td><td class="rc"><span class="bar" style="width:' + Math.round(60 * m.receita / max) + '%"></span>' + reais(m.receita) + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).catch(function(){ document.getElementById('funil').innerHTML = '<p class="vazio">Não foi possível carregar os números.</p>'; });
+  }
   function carregar(){
+    funil();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       eu = j.eu; US = j.usuarios;
       // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)

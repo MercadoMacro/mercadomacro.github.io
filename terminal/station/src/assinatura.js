@@ -308,6 +308,27 @@ export async function apiAdminAssinatura(req, env, acao) {
     else if (u.status !== 'ativo') r = await emailLiberado(env, req, u.nome, u.email, false, validade).catch(() => ({ ok: false }));
     return json({ ok: true, expira: validade, email: !r ? null : r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
   }
+  if (acao === 'numeros' && req.method === 'GET') {
+    // funil mês a mês (horário de Brasília): cadastros, quem pagou pela primeira vez, pagamentos e receita
+    const mesBR = (col) => `strftime('%Y-%m', datetime(${col}, '-3 hours'))`;
+    const desde = new Date(Date.now() - 3 * 36e5); desde.setUTCDate(1); desde.setUTCMonth(desde.getUTCMonth() - 5); desde.setUTCHours(3, 0, 0, 0);
+    const d = desde.toISOString();
+    const [cad, pag, pri, tot] = await env.DB.batch([
+      env.DB.prepare(`SELECT ${mesBR('criado')} m, COUNT(*) n FROM usuarios WHERE admin = 0 AND criado >= ? GROUP BY m`).bind(d),
+      env.DB.prepare(`SELECT ${mesBR('decidido')} m, COUNT(*) n, SUM(valor) total FROM pagamentos WHERE status = 'aprovado' AND decidido >= ? GROUP BY m`).bind(d),
+      env.DB.prepare(`SELECT ${mesBR('p1')} m, COUNT(*) n FROM (SELECT MIN(decidido) p1 FROM pagamentos WHERE status = 'aprovado' GROUP BY usuario_id) WHERE p1 >= ? GROUP BY m`).bind(d),
+      env.DB.prepare(`SELECT
+        (SELECT COUNT(*) FROM usuarios WHERE admin = 0 AND status IN ('ativo', 'expirado')) liberados,
+        (SELECT COUNT(DISTINCT p.usuario_id) FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id WHERE p.status = 'aprovado' AND u.admin = 0) pagantes,
+        (SELECT COUNT(*) FROM usuarios WHERE admin = 0 AND status = 'ativo' AND (expira IS NULL OR expira > ?) AND id IN (SELECT usuario_id FROM pagamentos WHERE status = 'aprovado')) assinantes,
+        (SELECT COALESCE(SUM(valor), 0) FROM pagamentos WHERE status = 'aprovado') receita`).bind(new Date().toISOString()),
+    ]);
+    const meses = [];
+    for (let i = 0; i < 6; i++) { const x = new Date(desde); x.setUTCMonth(x.getUTCMonth() + i); meses.push(x.toISOString().slice(0, 7)); }
+    const por = (r, k) => Object.fromEntries(r.results.map((x) => [x.m, x[k]]));
+    const c = por(cad, 'n'), pn = por(pag, 'n'), pt = por(pag, 'total'), pr = por(pri, 'n');
+    return json({ meses: meses.map((m) => ({ mes: m, cadastros: c[m] || 0, novos_pagantes: pr[m] || 0, pagamentos: pn[m] || 0, receita: pt[m] || 0 })), ...tot.results[0] });
+  }
   if (acao === 'pagamentos' && req.method === 'GET') {
     const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
