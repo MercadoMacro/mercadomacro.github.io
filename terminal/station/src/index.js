@@ -75,6 +75,7 @@ export default {
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
+      if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
@@ -1205,6 +1206,26 @@ function redirect(to) {
   return new Response(null, { status: 302, headers: { Location: to, 'Cache-Control': 'no-store' } });
 }
 // a tela de entrada é a vitrine (station/site/vitrine/index.html)
+// gráfico de 5 dias para a vitrine quando o do dia está parado (o dólar fica sem negócio à noite)
+const SERIE_OK = new Set(['^BVSP', 'BRL=X', '^GSPC', 'BTC-USD', 'BZ=F', 'GC=F', 'EURBRL=X', 'DX-Y.NYB', 'ETH-USD']);
+async function serieCincoDias(req, ctx) {
+  const s = new URL(req.url).searchParams.get('s') || '';
+  if (!SERIE_OK.has(s)) return json({ erro: 'Símbolo inválido.' }, 400);
+  const chave = new Request('https://cache.local/serie5d?s=' + encodeURIComponent(s));
+  const hit = await caches.default.match(chave);
+  if (hit) return hit;
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(s) + '?interval=30m&range=5d', { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const c = ((j.chart?.result?.[0]?.indicators?.quote?.[0]?.close) || []).filter((v) => v != null);
+    if (c.length < 2) throw new Error('sem dados');
+    const out = new Response(JSON.stringify({ c }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=600' } });
+    ctx.waitUntil(caches.default.put(chave, out.clone()));
+    return out;
+  } catch (e) { return json({ erro: 'Fonte indisponível.' }, 502); }
+}
+
 async function paginaEntrar(req, env, jaSemLogin) {
   if (!jaSemLogin && (await usuarioDaSessao(req, env))) return redirect('/');
   const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url)));

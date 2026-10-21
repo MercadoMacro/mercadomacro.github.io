@@ -93,6 +93,16 @@
     var a = INFO[sym], pre = (a && a[3]) || '';
     return q ? pre + num(q.v, sym === 'BRL=X' || sym === 'EURBRL=X' ? 4 : casas(q.v)) : '—';
   }
+  // gráfico do dia parado (poucos pontos ou todos iguais, como o dólar à noite): usa o de 5 dias
+  var S5 = {}, S5pedido = {};
+  function parado(c) { if (!c || c.length < 8) return true; var mn = Math.min.apply(null, c), mx = Math.max.apply(null, c); return mx - mn < Math.abs(mx) * 1e-4; }
+  function completarParados() {
+    PULSO.forEach(function (s) {
+      if (!Q[s] || !parado(Q[s].c) || S5pedido[s]) return;
+      S5pedido[s] = 1;
+      fetch('/api/publico/serie?s=' + encodeURIComponent(s)).then(okJson).then(function (d) { if (d.c && d.c.length > 1 && !parado(d.c)) { S5[s] = d.c.length > 80 ? d.c.filter(function (v, i) { return i % Math.ceil(d.c.length / 80) === 0 || i === d.c.length - 1; }) : d.c; desenhar([]); } }).catch(function () {});
+    });
+  }
   function carregarCotacoes() {
     var lista = encodeURIComponent(TODOS.map(function (a) { return a[0]; }).join(','));
     return fetch(VT + '/quotes?symbols=' + lista).then(okJson)
@@ -104,7 +114,9 @@
         var mudou = [];
         Object.keys(novo).forEach(function (k) { if (Q[k] && Q[k].v !== novo[k].v) mudou.push(k); });
         Q = novo; ultima = Date.now();
-        desenhar(mudou);
+        // o dia voltou a ter movimento: volta para o gráfico do dia
+        Object.keys(S5).forEach(function (s) { if (Q[s] && !parado(Q[s].c)) { delete S5[s]; delete S5pedido[s]; } });
+        desenhar(mudou); completarParados();
       })
       .catch(function () { if (!ultima) desenhar([]); });
   }
@@ -121,7 +133,7 @@
     $('pulse').innerHTML = PULSO.map(function (s) {
       var a = INFO[s], q = Q[s];
       return '<div class="pc' + (mudou.indexOf(s) >= 0 ? ' flash' : '') + '"><div class="pc-n"><span>' + esc(a[1]) + '</span><span class="' + (q ? tom(q.ch) : 'neu') + '">' + (q ? pct(q.ch) : '—') + '</span></div>'
-        + '<div class="pc-v">' + fmtV(s, q) + '</div>' + spark(q && q.c, q && q.ch >= 0, 200, 34) + '</div>';
+        + '<div class="pc-v">' + fmtV(s, q) + (S5[s] ? '<small class="pc-5d" title="Sem negócios agora: gráfico dos últimos 5 dias">5 dias</small>' : '') + '</div>' + spark(S5[s] || (q && q.c), q && q.ch >= 0, 200, 34) + '</div>';
     }).join('');
     // quadro
     [['col-br', BR], ['col-mundo', MUNDO], ['col-mc', MC]].forEach(function (x) {
