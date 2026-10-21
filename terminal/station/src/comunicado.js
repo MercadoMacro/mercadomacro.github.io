@@ -9,7 +9,7 @@ export function ligarComunicado(u) {
 }
 
 const SITE = 'https://mercadomacro.com.br';
-const MAIL_DE = 'Mercado Macro <novidades@mercadomacro.com.br>';
+const MAIL_DE = 'Mercado Macro <acesso@mercadomacro.com.br>'; // o mesmo remetente dos e-mails da conta, que já chegam
 const MAIL_RESPONDER = 'contato@mercadomacro.com.br';
 const POR_VEZ = 40; // envios por clique (o Resend aceita poucos por segundo)
 
@@ -18,8 +18,8 @@ export const COMUNICADO = {
   assunto: 'O dólar mexeu. Agora você vê na hora.',
   previa: 'Cotações ao vivo, fundamentos com o balanço da CVM e as assinaturas chegaram ao Mercado Macro.',
   abertura: 'Sabe aquele F5 nervoso para ver se o dólar mexeu? Pode aposentar.',
-  // foto real do painel (a vitrine renova toda semana; o endereço é público)
-  foto: ['/vitrine/fotos/mesa.jpg', 'A Mesa do Mercado Macro com cotações, índices e moedas'],
+  // foto do painel: tirada a pedido do Severino (o teste com foto caiu no spam); para voltar: foto: ['/vitrine/fotos/mesa.jpg', 'texto alternativo']
+  foto: null,
   itens: [
     ['Cotações ao vivo', 'Dólar, euro, libra, petróleo, ouro, prata, café, VIX e as principais criptomoedas se atualizam sozinhos na tela, na aba Mercado e na Mesa.'],
     ['Fundamentos com a fonte na mão', 'Abra o gráfico de uma ação da B3 e veja lucro, ROE, margem e endividamento logo acima. Cada balanço tem link para o documento original na CVM.'],
