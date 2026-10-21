@@ -96,11 +96,25 @@
   // gráfico do dia parado (poucos pontos ou todos iguais, como o dólar à noite): usa o de 5 dias
   var S5 = {}, S5pedido = {};
   function parado(c) { if (!c || c.length < 8) return true; var mn = Math.min.apply(null, c), mx = Math.max.apply(null, c); return mx - mn < Math.abs(mx) * 1e-4; }
+  // 5 dias: tira o trecho parado do fim (madrugada sem negócio) e tira a média de cada bloco, para a linha não ficar serrilhada
+  function suave(c) {
+    c = (c || []).slice();
+    while (c.length > 2 && c[c.length - 1] === c[c.length - 2]) c.pop();
+    var n = 48, out = [];
+    if (c.length <= n) return c;
+    for (var i = 0; i < n; i++) {
+      var a = Math.floor(i * c.length / n), z = Math.floor((i + 1) * c.length / n), t = 0;
+      for (var k = a; k < z; k++) t += c[k];
+      out.push(t / (z - a));
+    }
+    out.push(c[c.length - 1]); // termina no último preço de verdade
+    return out;
+  }
   function completarParados() {
     PULSO.forEach(function (s) {
       if (!Q[s] || !parado(Q[s].c) || S5pedido[s]) return;
       S5pedido[s] = 1;
-      fetch('/api/publico/serie?s=' + encodeURIComponent(s)).then(okJson).then(function (d) { if (d.c && d.c.length > 1 && !parado(d.c)) { S5[s] = d.c.length > 80 ? d.c.filter(function (v, i) { return i % Math.ceil(d.c.length / 80) === 0 || i === d.c.length - 1; }) : d.c; desenhar([]); } }).catch(function () {});
+      fetch('/api/publico/serie?s=' + encodeURIComponent(s)).then(okJson).then(function (d) { var c = suave(d.c); if (c.length > 1 && !parado(c)) { S5[s] = c; desenhar([]); } }).catch(function () {});
     });
   }
   function carregarCotacoes() {
