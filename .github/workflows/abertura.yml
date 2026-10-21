@@ -1,0 +1,63 @@
+# Abertura do mercado: em dia útil, às 9h17 de Brasília, posta no canal público do Telegram as duas
+# imagens da abertura (página /abertura) com a legenda (terminal/abertura/abertura.mjs).
+# Só posta se o canal estiver ligado em /admin. A mensagem passa pelo site (https://mercadomacro.com.br/api/vigia),
+# que confere o token OIDC que o GitHub assina para este robô; não há senha guardada.
+name: Abertura do mercado
+run-name: ${{ inputs.teste && 'Teste da abertura' || 'Abertura do mercado' }}
+
+on:
+  schedule:
+    # o envio das 9h17 é disparado pelo site (worker station, cron de hora em hora, segredo GH_TOKEN);
+    # estes horários ficam de reserva (só mandam se ainda não saiu nenhuma abertura hoje)
+    - cron: '40 12 * * 1-5'
+    - cron: '20 13 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      teste:
+        description: 'Teste (manda mesmo se já saiu hoje)'
+        type: boolean
+        default: false
+      site:
+        description: 'Disparado pelo site (confere se já saiu hoje)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: abertura
+  cancel-in-progress: false
+
+jobs:
+  abertura:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Já saiu hoje?
+        id: ja
+        if: github.event_name == 'schedule' || inputs.site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HOJE=$(TZ=America/Sao_Paulo date +%Y-%m-%d)
+          N=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/abertura.yml/runs?status=success&per_page=10" \
+            --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID) | select(.display_title != \"Teste da abertura\") | select((.created_at | fromdateiso8601 - 10800 | strftime(\"%Y-%m-%d\")) == \"$HOJE\")] | length")
+          echo "Aberturas já postadas hoje: $N"
+          [ "$N" = "0" ] || echo "pular=1" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        if: steps.ja.outputs.pular != '1'
+      - uses: actions/setup-node@v5
+        if: steps.ja.outputs.pular != '1'
+        with:
+          node-version: '22'
+      - name: Instalar o navegador para fotografar as páginas
+        if: steps.ja.outputs.pular != '1'
+        run: |
+          npm i --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Montar e postar a abertura
+        if: steps.ja.outputs.pular != '1'
+        run: node terminal/abertura/abertura.mjs

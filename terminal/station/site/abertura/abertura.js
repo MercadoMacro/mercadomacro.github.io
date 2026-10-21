@@ -141,22 +141,24 @@
         catch (e) { if (e && e.name !== 'AbortError') msg('Não foi possível compartilhar.', true); } finally { this.disabled = false; }
       };
     }
-    $('f-telegram').onclick = async function () {
+    // as duas páginas vão juntas numa postagem só (álbum), com a legenda na primeira
+    async function mandar(bt, destino) {
       if (!dados) return;
-      this.disabled = true; msg('Mandando no Telegram…');
+      bt.disabled = true; msg(destino === 'canal' ? 'Postando no canal…' : 'Mandando no Telegram…');
       try {
         const bs = await imagens();
-        for (let i = 0; i < bs.length; i++) {
-          const fd = new FormData();
-          fd.append('foto', bs[i], nome(i + 1));
-          fd.append('legenda', i === 0 ? (dados.legenda || '') : '');
-          const r = await fetch('/api/admin/fechamento-foto', { method: 'POST', credentials: 'same-origin', body: fd });
-          const j = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
-        }
-        msg('As duas imagens foram enviadas. Confira o Telegram.');
-      } catch (e) { msg(e.message, true); } finally { this.disabled = false; }
-    };
+        const fd = new FormData();
+        bs.forEach((b, i) => fd.append('foto', b, nome(i + 1)));
+        fd.append('legenda', dados.legenda || '');
+        if (destino) fd.append('destino', destino);
+        const r = await fetch('/api/admin/fechamento-foto', { method: 'POST', credentials: 'same-origin', body: fd });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
+        msg(destino === 'canal' ? 'Postado no canal público.' : 'As duas imagens foram enviadas. Confira o Telegram.');
+      } catch (e) { msg(e.message, true); } finally { bt.disabled = false; }
+    }
+    $('f-telegram').onclick = function () { mandar(this, ''); };
+    $('f-canal').onclick = function () { if (confirm('Postar a abertura no canal público agora?')) mandar(this, 'canal'); };
   }
 
   if (window.__ABERTURA) { dados = window.__ABERTURA; desenha(dados); document.body.classList.add('robo'); }

@@ -46,7 +46,12 @@ export default {
     // às 12:17 UTC também roda a rotina das assinaturas
     if (ev.cron === '17 * * * *') {
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
-      if (new Date(ev.scheduledTime).getUTCHours() === 12) ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
+      const quando = new Date(ev.scheduledTime);
+      if (quando.getUTCHours() === 12) {
+        ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
+        // 9h17 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
+        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5) ctx.waitUntil(dispararRobo(env, 'abertura.yml', { site: true }));
+      }
       return;
     }
     // 18:00 (Brasília) nos dias úteis: dispara o robô do fechamento (resumo.yml) na hora certa, porque o agendador
@@ -78,6 +83,7 @@ export default {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
+      if (p === '/api/robo/abertura') return await roboAbertura(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
@@ -469,16 +475,32 @@ function textoAbertura(d, curto) {
   linhas.push('', 'Painel completo: https://mercadomacro.com.br');
   return linhas.join('\n');
 }
-async function telegramFoto(env, png, legenda) {
+// destino 'canal' = canal público do Telegram (config tg_canal); sem destino = conversa do administrador
+async function telegramFoto(env, png, legenda, destino) {
   const c = await config(env);
-  if (!(c.tg_token && c.tg_chat)) return { ok: false, erro: 'Conecte o Telegram primeiro.' };
+  const chat = destino === 'canal' ? c.tg_canal : c.tg_chat;
+  if (!(c.tg_token && chat)) return { ok: false, erro: destino === 'canal' ? 'Conecte o canal do Telegram primeiro (Ajustes, Avisos no Telegram).' : 'Conecte o Telegram primeiro.' };
   const fd = new FormData();
-  fd.append('chat_id', c.tg_chat);
+  fd.append('chat_id', chat);
   fd.append('caption', String(legenda || '').slice(0, 1024));
   fd.append('photo', new Blob([png], { type: 'image/png' }), 'fechamento.png');
   const r = await fetch(`https://api.telegram.org/bot${c.tg_token}/sendPhoto`, { method: 'POST', body: fd });
   const j = await r.json().catch(() => ({ ok: false }));
   return j.ok ? { ok: true } : { ok: false, erro: 'O Telegram recusou a imagem.' };
+}
+// várias imagens numa postagem só (álbum); a legenda vai na primeira
+async function telegramAlbum(env, pngs, legenda, destino) {
+  if (pngs.length === 1) return telegramFoto(env, pngs[0], legenda, destino);
+  const c = await config(env);
+  const chat = destino === 'canal' ? c.tg_canal : c.tg_chat;
+  if (!(c.tg_token && chat)) return { ok: false, erro: destino === 'canal' ? 'Conecte o canal do Telegram primeiro (Ajustes, Avisos no Telegram).' : 'Conecte o Telegram primeiro.' };
+  const fd = new FormData();
+  fd.append('chat_id', chat);
+  fd.append('media', JSON.stringify(pngs.map((_, i) => ({ type: 'photo', media: 'attach://f' + i, ...(i === 0 && legenda ? { caption: String(legenda).slice(0, 1024) } : {}) }))));
+  pngs.forEach((p, i) => fd.append('f' + i, new Blob([p], { type: 'image/png' }), 'pagina-' + (i + 1) + '.png'));
+  const r = await fetch(`https://api.telegram.org/bot${c.tg_token}/sendMediaGroup`, { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({ ok: false }));
+  return j.ok ? { ok: true } : { ok: false, erro: 'O Telegram recusou as imagens.' };
 }
 
 // avisa o relay da Capital que a chave mudou ou foi apagada: ele descarta a sessão antiga na hora
@@ -777,16 +799,18 @@ async function apiAdmin(req, env, acao, eu) {
     const t = String(b.texto || '').slice(0, 3500);
     if (!t) return json({ erro: 'Sem texto.' }, 400);
     const c = await config(env);
-    if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
-    const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: t, disable_web_page_preview: true });
+    const chat = b.destino === 'canal' ? c.tg_canal : c.tg_chat;
+    if (!(c.tg_token && chat)) return json({ erro: b.destino === 'canal' ? 'Conecte o canal do Telegram primeiro (Ajustes, Avisos no Telegram).' : 'Conecte o Telegram primeiro.' }, 400);
+    const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: t, disable_web_page_preview: true });
     return r.ok ? json({ ok: true }) : json({ erro: 'O Telegram não recebeu.' }, 502);
   }
   if (acao === 'fechamento-foto' && req.method === 'POST') {
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
     const fd = await req.formData().catch(() => null);
-    const foto = fd && fd.get('foto');
-    if (!foto || typeof foto === 'string' || foto.size > 5e6) return json({ erro: 'Imagem inválida.' }, 400);
-    const r = await telegramFoto(env, await foto.arrayBuffer(), fd.get('legenda'));
+    const fotos = fd ? fd.getAll('foto') : [];
+    if (!fotos.length || fotos.length > 4 || fotos.some((f) => !f || typeof f === 'string' || f.size > 5e6)) return json({ erro: 'Imagem inválida.' }, 400);
+    const pngs = await Promise.all(fotos.map((f) => f.arrayBuffer()));
+    const r = await telegramAlbum(env, pngs, fd.get('legenda'), fd.get('destino') === 'canal' ? 'canal' : '');
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
@@ -867,7 +891,7 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'avisos') {
     const c = await config(env);
-    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat) });
+    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat), canal: c.tg_canal_nome || null });
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
     if (b.acao === 'token') {
@@ -888,7 +912,20 @@ async function apiAdmin(req, env, acao, eu) {
       await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: 'Pronto. Os avisos de cadastro novo do Mercado Macro vão chegar aqui.' });
       return json({ ok: true });
     }
-    if (b.acao === 'desligar') { await salvarConfig(env, { tg_token: null, tg_bot: null, tg_chat: null }); return json({ ok: true }); }
+    if (b.acao === 'desligar') { await salvarConfig(env, { tg_token: null, tg_bot: null, tg_chat: null, tg_canal: null, tg_canal_nome: null }); return json({ ok: true }); }
+    // canal público: o robô precisa ser administrador do canal; aceita @usuario ou o link t.me
+    if (b.acao === 'canal') {
+      if (!c.tg_token) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
+      const m = String(b.canal || '').trim().match(/^(?:https?:\/\/)?(?:t\.me\/|@)?([A-Za-z][A-Za-z0-9_]{4,31})$/);
+      if (!m) return json({ erro: 'Escreva o usuário do canal, por exemplo @mercadomacro ou t.me/mercadomacro.' }, 400);
+      const ch = await telegram(c.tg_token, 'getChat', { chat_id: '@' + m[1] });
+      if (!ch.ok || ch.result.type !== 'channel') return json({ erro: 'Não achei esse canal. Confira se ele é público e se o usuário está certo.' }, 400);
+      const eu = await telegram(c.tg_token, 'getChatMember', { chat_id: ch.result.id, user_id: Number(String(c.tg_token).split(':')[0]) });
+      if (!eu.ok || eu.result.status !== 'administrator' || eu.result.can_post_messages === false) return json({ erro: 'Achei o canal, mas o robô @' + c.tg_bot + ' ainda não é administrador com permissão de publicar. Adicione nas configurações do canal e tente de novo.' }, 400);
+      await salvarConfig(env, { tg_canal: String(ch.result.id), tg_canal_nome: '@' + (ch.result.username || m[1]) });
+      return json({ ok: true, canal: '@' + (ch.result.username || m[1]) });
+    }
+    if (b.acao === 'canal-sair') { await salvarConfig(env, { tg_canal: null, tg_canal_nome: null }); return json({ ok: true }); }
     if (b.acao === 'teste') {
       if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
@@ -1167,7 +1204,7 @@ async function avisar(env, titulo, texto) {
 const GH_ISS = 'https://token.actions.githubusercontent.com';
 const GH_AUD = 'mercadomacro-vigia';
 const GH_REPO = 'MercadoMacro/mercadomacro.github.io';
-const ROBOS_AVISO = ['vigia.yml', 'resumo.yml']; // robôs que podem mandar mensagem no Telegram
+const ROBOS_AVISO = ['vigia.yml', 'resumo.yml', 'abertura.yml']; // robôs que podem mandar mensagem no Telegram
 let jwksCache = null; // { chaves, ate }
 const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
 async function tokenDoGitHub(tok) {
@@ -1195,19 +1232,24 @@ async function avisoDoVigia(req, env) {
   const quem = await tokenDoGitHub(tok).catch(() => null);
   if (!quem) return json({ erro: 'Não autorizado.' }, 401);
   const b = await req.json().catch(() => ({}));
-  if (b.foto) {
-    // fechamento das 18h: o robô manda o cartão em PNG (base64) com a legenda
-    let png;
-    try { png = Uint8Array.from(atob(String(b.foto)), (ch) => ch.charCodeAt(0)); } catch (e) { return json({ erro: 'Imagem inválida.' }, 400); }
-    if (png.length > 5e6) return json({ erro: 'Imagem grande demais.' }, 413);
-    const r = await telegramFoto(env, png, b.texto);
+  // o canal público só recebe o fechamento e a abertura (nunca os alertas do vigia)
+  const canal = b.canal === true && !String(quem.workflow_ref || '').includes('/vigia.yml@');
+  if (canal && !(await config(env)).tg_canal) return json({ ok: true, pulado: 'sem canal' });
+  const fotos = b.fotos || (b.foto ? [b.foto] : null);
+  if (fotos) {
+    // cartões em PNG (base64) com a legenda
+    let pngs;
+    try { pngs = fotos.slice(0, 4).map((f) => Uint8Array.from(atob(String(f)), (ch) => ch.charCodeAt(0))); } catch (e) { return json({ erro: 'Imagem inválida.' }, 400); }
+    if (pngs.some((p) => p.length > 5e6)) return json({ erro: 'Imagem grande demais.' }, 413);
+    const r = await telegramAlbum(env, pngs, b.texto, canal ? 'canal' : '');
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   const texto = String(b.texto || '').slice(0, 3500);
   if (!texto) return json({ erro: 'Sem texto.' }, 400);
   const c = await config(env);
-  if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Telegram não conectado.' }, 409);
-  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: texto, disable_web_page_preview: true });
+  const chat = canal ? c.tg_canal : c.tg_chat;
+  if (!(c.tg_token && chat)) return json({ erro: 'Telegram não conectado.' }, 409);
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true });
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
@@ -1231,6 +1273,13 @@ async function roboFechamento(req, env) {
   const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
   await salvarFechamento(env, d).catch(() => {}); // também vira página pública
   return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+}
+
+async function roboAbertura(req, env) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
+  const [d, c] = await Promise.all([dadosAbertura(env), config(env)]);
+  return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), canal: !!c.tg_canal }, 200, { 'Cache-Control': 'no-store' });
 }
 
 /* ---------------- utilidades ---------------- */
@@ -1893,7 +1942,13 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var h;
       if (j.conectado) {
         h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
-          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/abertura" style="' + bt + ';text-decoration:none;display:inline-block">Abertura do mercado (imagem)</a><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/abertura" style="' + bt + ';text-decoration:none;display:inline-block">Abertura do mercado (imagem)</a><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p>'
+          + '<p style="margin:14px 0 6px"><b>Canal público (divulgação)</b></p>'
+          + (j.canal
+            ? '<p class="d" style="margin:0 0 8px">Ligado em <a href="https://t.me/' + encodeURIComponent(j.canal.slice(1)) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">' + esc(j.canal) + '</a>. Em dia útil o robô posta sozinho a abertura do mercado (9h17) e o fechamento (18h), com o link do site.</p><div class="linha"><button type="button" id="av-canal-sair" style="' + bt + '">Desligar o canal</button></div>'
+            : '<ol style="margin:0 0 8px"><li>No Telegram, crie um canal <b>público</b> (por exemplo, Mercado Macro).</li><li>Nas configurações do canal, em Administradores, adicione o robô <b>@' + esc(j.bot) + '</b>.</li><li>Escreva aqui o usuário do canal:</li></ol>'
+              + '<div class="linha"><input id="av-canal" autocomplete="off" spellcheck="false" placeholder="@mercadomacro" style="flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="av-canal-ok" style="' + bt + '">Conectar canal</button></div>')
+          + '</div>';
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
@@ -1917,6 +1972,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       if ((el = document.getElementById('av-con'))) el.onclick = function(){ acao({ acao: 'conectar' }, this, avisos); };
       if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
       if ((el = document.getElementById('av-resumo'))) el.onclick = function(){ acao({ acao: 'resumo' }, this, function(){ diz(true, 'Resumo enviado. Confira o Telegram.'); }); };
+      if ((el = document.getElementById('av-canal-ok'))) el.onclick = function(){ acao({ acao: 'canal', canal: document.getElementById('av-canal').value }, this, avisos); };
+      if ((el = document.getElementById('av-canal-sair'))) el.onclick = function(){ if (confirm('Parar de postar no canal público?')) acao({ acao: 'canal-sair' }, this, avisos); };
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
   }

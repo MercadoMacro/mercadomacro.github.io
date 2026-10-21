@@ -129,19 +129,22 @@
         catch (e) { if (e && e.name !== 'AbortError') msg('Não foi possível compartilhar.', true); } finally { this.disabled = false; }
       };
     }
-    $('f-telegram').onclick = async function () {
+    async function mandar(bt, destino) {
       if (!dados) return;
-      this.disabled = true; msg('Mandando no Telegram…');
+      bt.disabled = true; msg(destino === 'canal' ? 'Postando no canal…' : 'Mandando no Telegram…');
       try {
         const fd = new FormData();
         fd.append('foto', await imagem(), nome());
         fd.append('legenda', dados.legenda || '');
+        if (destino) fd.append('destino', destino);
         const r = await fetch('/api/admin/fechamento-foto', { method: 'POST', credentials: 'same-origin', body: fd });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
-        msg('Enviado. Confira o Telegram.');
-      } catch (e) { msg(e.message, true); } finally { this.disabled = false; }
-    };
+        msg(destino === 'canal' ? 'Postado no canal público.' : 'Enviado. Confira o Telegram.');
+      } catch (e) { msg(e.message, true); } finally { bt.disabled = false; }
+    }
+    $('f-telegram').onclick = function () { mandar(this, ''); };
+    $('f-canal').onclick = function () { if (confirm('Postar o fechamento no canal público agora?')) mandar(this, 'canal'); };
   }
 
   if (window.__FECHAMENTO) { dados = window.__FECHAMENTO; desenha(dados); document.body.classList.add('robo'); }

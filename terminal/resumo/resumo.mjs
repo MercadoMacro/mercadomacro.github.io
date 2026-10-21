@@ -51,10 +51,19 @@ else try {
   console.log('\nFoto do cartão:', Math.round(foto.length * 0.75 / 1024), 'KB');
 } catch (e) { console.error('foto falhou, vai só o texto:', e.message); }
 
+const corpo = foto ? { foto, texto: dados.legenda } : { texto: dados.texto };
 const envio = await fetch(SITE + '/api/vigia', {
   method: 'POST', headers: { Authorization: 'Bearer ' + TOK, 'Content-Type': 'application/json' },
-  body: JSON.stringify(foto ? { foto, texto: dados.legenda } : { texto: dados.texto }),
+  body: JSON.stringify(corpo),
 });
 const resp = await envio.text();
 console.log(resp);
+// canal público de divulgação (se estiver ligado em /admin); falha aqui não derruba o envio principal
+try {
+  const c = await fetch(SITE + '/api/vigia', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + TOK, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...corpo, canal: true }),
+  });
+  console.log('canal:', await c.text());
+} catch (e) { console.error('canal falhou:', e.message); }
 if (!envio.ok || !resp.includes('"ok":true')) process.exit(1);
