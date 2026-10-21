@@ -193,9 +193,27 @@ def fechamentos():
                                    's': s})
 
 
+# ---------------------------------------------------------------- reserva dos Indicadores
+# cópia do pacote /ind/bundle (FRED e Banco Central): se a fonte sair do ar e o worker não tiver
+# cópia guardada, ele usa este arquivo e o site continua mostrando os últimos números bons
+def reserva_indicadores():
+    for g in ('us', 'mo', 'br'):
+        try:
+            j = json.loads(baixa(f'{API}/ind/bundle?g={g}', origem=True))
+            dados = j.get('data') or {}
+            antigo = le(f'ind-{g}.json', {}).get('data') or {}
+            # só grava se veio tudo novo (sem séries faltando nem emprestadas da cópia anterior)
+            if not dados or j.get('errors') or j.get('antigos') or len(dados) < len(antigo):
+                erros.append(f'Reserva {g}: pacote incompleto, mantida a cópia anterior')
+                continue
+            grava(f'ind-{g}.json', {'g': g, 'ts': j.get('ts'), 'data': dados})
+        except Exception as e:
+            erros.append(f'Reserva {g}: {e}')
+
+
 if __name__ == '__main__':
     os.makedirs(PASTA, exist_ok=True)
-    for f in (curva, focus, fechamentos):
+    for f in (curva, focus, fechamentos, reserva_indicadores):
         try:
             f()
         except Exception as e:

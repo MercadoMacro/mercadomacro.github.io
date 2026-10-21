@@ -308,16 +308,43 @@ async function indBuild(g, env) {
   res.forEach((r, i) => { if (r.status === 'fulfilled') data[specs[i].k] = r.value; else errors[specs[i].k] = String(r.reason?.message || r.reason); });
   return { g, ts: Date.now(), data, errors };
 }
+// última versão boa de cada série: cópia longa no cache e, se não houver, o arquivo que o robô
+// historico.yml grava no GitHub. Usada quando a fonte (FRED, Banco Central) sai do ar.
+const IND_BOM = 45 * 86400;
+async function indReserva(g, cache) {
+  try {
+    const hit = await cache.match(new Request(`https://ind-bundle.cache/${IND_VER}/${g}/bom`));
+    if (hit) return await hit.json();
+  } catch (e) { /* tenta o GitHub */ }
+  try {
+    const r = await fetch(`https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/historico/ind-${g}.json`, { signal: AbortSignal.timeout(8000), cf: { cacheTtl: 600 } });
+    if (r.ok) return await r.json();
+  } catch (e) { /* sem reserva */ }
+  return null;
+}
 async function handleIndBundle(url, env, ctx, cors) {
   const g = url.searchParams.get('g') || '';
   if (!indSpecs(g)) return json({ error: 'Grupo inválido' }, 400, cors);
   const cache = caches.default;
   const key = new Request(`https://ind-bundle.cache/${IND_VER}/${g}`);
+  const keyBom = new Request(`https://ind-bundle.cache/${IND_VER}/${g}/bom`);
+  const guarda = (k, b, ttl) => cache.put(k, new Response(JSON.stringify(b), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${ttl}` } }));
   const refresh = async () => {
     const b = await indBuild(g, env);
+    // série que falhou: usa a última versão boa (marcada em "antigos", com a data em que foi buscada)
+    if (Object.keys(b.errors).length) {
+      const r = await indReserva(g, cache);
+      if (r && r.data) {
+        for (const k of Object.keys(b.errors)) {
+          if (Array.isArray(r.data[k]) && r.data[k].length) { b.data[k] = r.data[k]; (b.antigos = b.antigos || {})[k] = r.ts || null; }
+        }
+      }
+    }
     // só guarda se veio a maior parte; senão mantém o que já havia
     if (Object.keys(b.data).length >= Math.ceil(indSpecs(g).length * 0.7)) {
-      await cache.put(key, new Response(JSON.stringify(b), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${IND_STALE}` } }));
+      await guarda(key, b, IND_STALE);
+      // a cópia longa só é trocada quando tudo veio novo da fonte
+      if (!b.antigos && !Object.keys(b.errors).length) await guarda(keyBom, { g, ts: b.ts, data: b.data }, IND_BOM);
     }
     return b;
   };

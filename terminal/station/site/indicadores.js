@@ -702,7 +702,7 @@
     }
     if (s.st === 'err' && !s.raw) {
       el.querySelector('[data-date]').textContent = '';
-      main.innerHTML = `<div class="ind-val">—</div><div class="ind-err">Fonte indisponível agora (${esc(s.err || 'erro')}).</div><div class="ind-foot"><span class="ind-src">${esc(d.src)}</span></div>`;
+      main.innerHTML = `<div class="ind-val">—</div><div class="ind-err" title="${esc(s.err || '')}">A fonte (${esc(String(d.src).split(' · ')[0])}) não respondeu agora. Os números voltam sozinhos quando ela responder.</div><div class="ind-foot"><span class="ind-src">${esc(d.src)}</span></div>`;
       return;
     }
     const variant = d.variants ? (prefs.var[d.id] || d.variants[d.vi || 0][0]) : null;
