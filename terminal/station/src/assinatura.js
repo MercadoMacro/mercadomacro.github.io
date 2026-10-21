@@ -413,6 +413,13 @@ export async function apiAdminAssinatura(req, env, acao) {
   return null;
 }
 
+/* ---------------- planos na vitrine (montados aqui para os preços nunca ficarem diferentes) ---------------- */
+export function planosVitrine() {
+  const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
+  const nota = { degustacao: 'Para conhecer, uma vez só', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
+  return Object.entries(PLANOS).map(([id, p]) => `<li class="vt-pl${id === 'semestral' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
+}
+
 /* ---------------- página /assinar ---------------- */
 export function paginaAssinar() {
   return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">

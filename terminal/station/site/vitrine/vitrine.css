@@ -276,3 +276,23 @@ main { width: 100%; }
 .vt-cad-priv { font-size: 12px; color: var(--text-3); margin: 10px 0 0; }
 .vt-cad-priv a, .vt-foot a { color: var(--text-2); }
 .vt-opc{font-weight:400;color:var(--vt-t3,#8591a8);font-size:.92em}
+
+/* ferramentas grátis e planos */
+.vt-gratis, .vt-planos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vt-gratis { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.vt-gratis a { display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 16px 18px; background: rgba(13,20,34,.85); border: 1px solid var(--line); border-radius: 14px; color: var(--text); text-decoration: none; transition: border-color .2s; }
+.vt-gratis a:hover, .vt-gratis a:focus-visible { border-color: var(--accent); }
+.vt-gratis b { font-size: 15px; } .vt-gratis b::after { content: " \2192"; color: var(--accent); }
+.vt-gratis span { color: var(--text-2); font-size: 13.5px; line-height: 1.45; }
+.vt-planos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.vt-pl { display: flex; flex-direction: column; gap: 3px; padding: 18px; background: rgba(13,20,34,.85); border: 1px solid var(--line); border-radius: 14px; }
+.vt-pl.destaque { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.vt-pl b { font-size: 14px; color: var(--text-2); font-weight: 600; }
+.vt-pl strong { font-size: 28px; letter-spacing: -.02em; }
+.vt-pl span { color: var(--text-2); font-size: 13.5px; }
+.vt-pl small { color: var(--text-3); font-size: 12.5px; }
+.vt-pl em { font-style: normal; color: var(--accent); font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+@media (max-width: 900px) { .vt-planos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .vt-gratis { grid-template-columns: 1fr; } .vt-pl { padding: 14px; } .vt-pl strong { font-size: 23px; } }
+.vt-top-bts .vt-bt { white-space: nowrap; }
+@media (max-width: 380px) { .vt-top-bts .vt-bt { padding: 8px 10px; font-size: 12.5px; } .vt-top-bts { gap: 6px; } }
