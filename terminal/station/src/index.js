@@ -2,6 +2,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
+import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 /* Mercado Macro: porteiro do site.
@@ -78,6 +79,7 @@ export default {
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
       if (p === '/esqueci') return paginaEsqueci();
+      if (p === '/sair-da-lista') return await paginaSairDaLista(req, env, paginaLink);
       if (p === '/nova-senha') return await paginaNovaSenha(req, env);
       if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
@@ -659,6 +661,7 @@ async function apiAdmin(req, env, acao, eu) {
     const r = await telegramFoto(env, await foto.arrayBuffer(), fd.get('legenda'));
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
+  if (acao === 'comunicado') return apiComunicado(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
   if (ass) return ass;
   if (acao === 'usuarios' && req.method === 'GET') {
@@ -1276,6 +1279,8 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 <div id="prov"></div>
 <div id="pags"></div>
 <div id="raiz"><p class="vazio">Carregando…</p></div>
+<h2>Comunicado de novidades</h2>
+<div id="com"><p class="vazio">Carregando…</p></div>
 <h2>Pix para assinaturas</h2>
 <div id="pix"><p class="vazio">Carregando…</p></div>
 <h2>Avisos de cadastro novo</h2>
@@ -1518,6 +1523,32 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       if (off) off.onclick = function(){ if (confirm('Desligar o pagamento por Pix? A página de assinatura deixa de mostrar o QR Code.')) post('/api/admin/pix', { acao: 'desligar' }).then(pix); };
     }).catch(function(){ px.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  var cm = document.getElementById('com');
+  function comunicado(){
+    fetch('/api/admin/comunicado', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      cm.innerHTML = '<div class="caixa"><p>Assunto: <b>' + esc(j.assunto) + '</b></p>'
+        + '<p>Vai para quem tem cadastro confirmado (fora você): <b>' + j.total + '</b> pessoas. Já enviados: <b>' + j.enviados + '</b>. Faltam: <b>' + j.pendentes + '</b>.' + (j.sairam ? ' Pediram para não receber: ' + j.sairam + '.' : '') + '</p>'
+        + (j.ligado ? '' : '<p>Ligue o e-mail (Resend) abaixo para poder enviar.</p>')
+        + '<div class="linha"><a href="/api/admin/comunicado?previa=1" target="_blank" rel="noopener" style="' + bt + ';text-decoration:none;display:inline-block">Ver o e-mail</a><button type="button" id="cm-teste" style="' + bt + '">Enviar teste para mim</button>'
+        + (j.pendentes ? '<button type="button" id="cm-enviar" style="' + bt + ';background:var(--accent);color:var(--on-accent);border-color:transparent">Enviar para ' + j.pendentes + ' pessoas</button>' : '') + '</div>'
+        + '<p class="d" style="margin:8px 0 0">Cada pessoa recebe uma vez só. O e-mail tem um link para parar de receber novidades.</p></div><p class="msg" id="cm-msg"></p>';
+      var m = document.getElementById('cm-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      document.getElementById('cm-teste').onclick = function(){ var b = this; b.disabled = true; diz(true, 'Enviando…');
+        post('/api/admin/comunicado', { acao: 'teste' }).then(function(r){ diz(true, 'Teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ b.disabled = false; }); };
+      var en = document.getElementById('cm-enviar');
+      if (en) en.onclick = function(){
+        if (!confirm('Enviar o comunicado para ' + j.pendentes + ' pessoas agora? Não dá para desfazer.')) return;
+        en.disabled = true; diz(true, 'Enviando… pode levar alguns segundos.');
+        post('/api/admin/comunicado', { acao: 'enviar' }).then(function(r){
+          comunicado();
+          setTimeout(function(){ var mm = document.getElementById('cm-msg'); mm.className = 'msg ' + (r.falhas ? 'erro' : 'ok'); mm.textContent = 'Enviados agora: ' + r.enviados_agora + '.' + (r.falhas ? ' Falharam ' + r.falhas + ' (' + (r.erro || '') + '); toque em Enviar de novo para tentar só esses.' : '') + (r.pendentes && !r.falhas ? ' Ainda faltam ' + r.pendentes + ': toque em Enviar de novo.' : ''); }, 400);
+        }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); en.disabled = false; });
+      };
+    }).catch(function(){ cm.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  comunicado();
   pix();
   pagamentos();
   capital();
@@ -1601,3 +1632,4 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao });
+ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
