@@ -73,10 +73,10 @@ export default {
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
-      if (p === '/sitemap.xml') return texto(await sitemap(env), 'application/xml');
+      if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
-      if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404));
+      if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
       if (p === '/esqueci') return paginaEsqueci();
@@ -137,12 +137,33 @@ export default {
       if (r.status === 404 && navegacao(req)) return paginaFixa(req, env, '/vitrine/404', 404);
       const out = new Response(r.body, r);
       out.headers.set('Cache-Control', 'private, no-cache');
+      out.headers.set('X-Content-Type-Options', 'nosniff');
+      if ((out.headers.get('Content-Type') || '').includes('text/html')) {
+        out.headers.set('X-Frame-Options', 'DENY');
+        out.headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+        out.headers.set('Referrer-Policy', 'same-origin');
+      }
       return out;
     } catch (e) {
       return json({ erro: 'Erro no servidor. Tente de novo.' }, 500);
     }
   },
 };
+
+// páginas públicas iguais para todos: guarda 10 minutos no servidor da Cloudflare (poupa leituras do banco)
+async function naBorda(req, ctx, gerar) {
+  if (req.method !== 'GET') return gerar();
+  const chave = new Request(new URL(req.url).origin + new URL(req.url).pathname);
+  const salvo = await caches.default.match(chave);
+  if (salvo) return salvo;
+  const r = await gerar();
+  if (r.status === 200) {
+    const c = new Response(r.clone().body, r);
+    c.headers.set('Cache-Control', 'public, max-age=600');
+    ctx.waitUntil(caches.default.put(chave, c).catch(() => {}));
+  }
+  return r;
+}
 
 /* ---------------- contador de visitas (só números por dia, nada pessoal) ---------------- */
 const ROBO = /bot|crawl|spider|slurp|lighthouse|headless|preview|facebookexternalhit|whatsapp|telegram|curl|wget|python|node-fetch|vigia/i;
@@ -320,6 +341,7 @@ async function noticiasDoDia() {
     lista = await r.json();
   }
   if (!Array.isArray(lista)) return [];
+  lista = lista.filter((n) => n && /^https?:\/\//i.test(n.link || ''));
   const desde = Date.now() - 16 * 3600000;
   const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
   const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));

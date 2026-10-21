@@ -14,8 +14,11 @@ const ddmmaaaa = (iso) => `${ddmm(iso)}/${iso.slice(0, 4)}`;
 const porExtenso = (iso) => { const d = new Date(iso + 'T12:00:00Z'); return `${DIAS[d.getUTCDay()]}, ${+iso.slice(8, 10)} de ${MESES[+iso.slice(5, 7) - 1]} de ${iso.slice(0, 4)}`; };
 const agoraBRT = () => new Date(Date.now() - 3 * 3600000);
 
+let tabelaOk = false;
 async function tabela(env) {
+  if (tabelaOk) return;
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS fechamentos (dia TEXT PRIMARY KEY, dados TEXT NOT NULL, criado INTEGER NOT NULL)').run();
+  tabelaOk = true;
 }
 
 // grava o pregão do dia só depois das 18h (ou num dia seguinte); a primeira gravação fica (não muda depois)
@@ -122,7 +125,7 @@ function corpoDia(d) {
   const cards = ORDEM.filter((k) => c[k]).map((k) => `<div class="card"><div class="n">${esc(c[k].nome)}</div><div class="v">${c[k].v != null ? esc(FMT[k](c[k].v)) : '—'}</div>${k === 'tnx' ? '' : `<div class="c ${cls(c[k].ch)}">${pct(c[k].ch)}</div>`}</div>`).join('');
   const linhas = (l) => l.length ? l.map((a) => `<tr><td>${esc(a.t)}</td><td>R$ ${brn(a.v, 2)}</td><td class="c ${cls(a.ch)}">${pct(a.ch)}</td></tr>`).join('') : '<tr><td colspan="3">—</td></tr>';
   const nots = (d.noticias || []).length
-    ? `<h2>Principais notícias do dia</h2><ul class="nots">${d.noticias.map((n) => `<li><a href="${esc(n.link)}" rel="nofollow noopener" target="_blank">${esc(n.t)}</a>${n.f ? ` <small>${esc(n.f)}</small>` : ''}</li>`).join('')}</ul>` : '';
+    ? `<h2>Principais notícias do dia</h2><ul class="nots">${d.noticias.filter((n) => /^https?:\/\//i.test(n.link || '')).map((n) => `<li><a href="${esc(n.link)}" rel="nofollow noopener" target="_blank">${esc(n.t)}</a>${n.f ? ` <small>${esc(n.f)}</small>` : ''}</li>`).join('')}</ul>` : '';
   const fl = d.fluxo;
   return `
 <p class="lead">${esc(paragrafo(d))}</p>
@@ -166,7 +169,7 @@ ${corpo}
 }
 
 function resposta(s, status = 200) {
-  return new Response(s, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=600', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin' } });
+  return new Response(s, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=600', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' } });
 }
 
 // tenta gravar o pregão que falta (no máximo uma vez a cada 15 minutos por servidor da Cloudflare)
@@ -178,9 +181,9 @@ async function completar(env, dadosFechamento) {
 }
 
 export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, pagina404) {
-  await tabela(env);
   const resto = p.slice(BASE.length).replace(/^\/|\/$/g, '');
   if (resto && !/^\d{4}-\d{2}-\d{2}$/.test(resto)) return pagina404();
+  await tabela(env);
   const dias = await listaDias(env, 60);
   if (!resto) {
     // índice: o último fechamento completo + a lista dos anteriores

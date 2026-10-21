@@ -145,9 +145,9 @@ export class CapitalRelay {
     this.ses = { base, cst: r.headers.get('CST'), sec: r.headers.get('X-SECURITY-TOKEN') };
     return this.ses;
   }
-  async rest(path) {
+  async rest(path, tentou) {
     const r = await fetch(this.ses.base + path, { headers: { CST: this.ses.cst, 'X-SECURITY-TOKEN': this.ses.sec } });
-    if (r.status === 401) { await this.sessao(); return this.rest(path); }
+    if (r.status === 401 && !tentou) { await this.sessao(); return this.rest(path, true); }
     if (!r.ok) throw new Error('Capital.com HTTP ' + r.status);
     return r.json();
   }
