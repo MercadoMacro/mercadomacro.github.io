@@ -35,7 +35,14 @@
     const ag = d.agenda || [];
     $('card').innerHTML = `
       <div class="cab manha">
-        <div class="cab-l"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous">
+        <svg class="sol" viewBox="0 0 200 110" aria-hidden="true">
+          <defs><radialGradient id="sg" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="#ffd76a"/><stop offset=".55" stop-color="#ffb627"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
+          <radialGradient id="hg" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="100" cy="110" r="100" fill="url(#hg)"/>
+          <g stroke="#f5a524" stroke-width="5" stroke-linecap="round" opacity=".85">${[-80, -60, -40, -20, 0, 20, 40, 60, 80].map((a) => { const r = (a - 90) * Math.PI / 180; return `<line x1="${(100 + Math.cos(r) * 58).toFixed(1)}" y1="${(110 + Math.sin(r) * 58).toFixed(1)}" x2="${(100 + Math.cos(r) * 80).toFixed(1)}" y2="${(110 + Math.sin(r) * 80).toFixed(1)}"/>`; }).join('')}</g>
+          <circle cx="100" cy="110" r="46" fill="url(#sg)"/>
+        </svg>
+        <div class="cab-l"><img src="/logo-mercado-macro-claro.png" alt="Mercado Macro" crossorigin="anonymous">
           <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
         <h1>Abertura <em>do mercado</em></h1>
         <small>O que mexe com a bolsa hoje · ${dt.getUTCFullYear()}</small>
@@ -73,7 +80,7 @@
   }
   async function imagem() {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const cv = await window.html2canvas($('card'), { scale: 2, backgroundColor: '#04070d', useCORS: true, logging: false });
+    const cv = await window.html2canvas($('card'), { scale: 2, backgroundColor: '#fffaf2', useCORS: true, logging: false });
     return new Promise((res) => cv.toBlob(res, 'image/png'));
   }
   const nome = () => 'abertura-' + (dados ? dados.data : 'mercado') + '.png';
