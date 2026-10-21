@@ -23,7 +23,7 @@ const PUBLICAS = {
   '/indicadores-hoje': ['/vitrine/indicadores', 'indicadores'],
 };
 // páginas que existem só para quem entrou (não são arquivos)
-const ROTAS_LOGADO = /^\/(admin|conta|fechamento|assinar)$/;
+const ROTAS_LOGADO = /^\/(admin|conta|fechamento|abertura|assinar)$/;
 const cacheSessao = new Map(); // token -> { u, ate }
 const limparCacheSessao = () => cacheSessao.clear();
 
@@ -113,7 +113,7 @@ export default {
         return json({ erro: 'Faça login para continuar.' }, 401);
       }
       if (p === '/admin') return u.admin ? html(PAGINA_ADMIN) : redirect('/');
-      if (p === '/fechamento' || p.startsWith('/fechamento/')) { if (!u.admin) return redirect('/'); }
+      if (p === '/fechamento' || p.startsWith('/fechamento/') || p === '/abertura' || p.startsWith('/abertura/')) { if (!u.admin) return redirect('/'); }
       if (p === '/conta') return html(PAGINA_CONTA);
       if (p === '/api/ativos/buscar') {
         // cada busca nova consulta o Yahoo: limite por conta
@@ -393,6 +393,79 @@ function textoFechamento(d, curto) {
     '');
   if (d.fluxo) linhas.push(`Estrangeiro na B3 (dados até ${ddmm(d.fluxo.data)}; a B3 publica com atraso)`, `No dia: ${bi(d.fluxo.dia)}`, `No mês: ${bi(d.fluxo.mes)}`, `No ano: ${bi(d.fluxo.ano)}`);
   else linhas.push('Estrangeiro na B3: —');
+  linhas.push('', 'Painel completo: https://mercadomacro.com.br');
+  return linhas.join('\n');
+}
+/* ---------------- abertura do mercado ----------------
+   Cartão da manhã (/abertura, só administrador): futuros de Nova York, Europa e Ásia agora, dólar, commodities,
+   como o Ibovespa fechou no último pregão, agenda do dia (Brasil e EUA) e notícias. O admin baixa ou manda no Telegram.
+   Valor que falhar fica null e aparece como "—"; nada é inventado. */
+const ABRE_CARDS = [
+  ['ibov', 'Ibovespa', '^BVSP'], ['ewz', 'EWZ (Brasil em NY)', 'EWZ'], ['dolar', 'Dólar', 'BRL=X'], ['dxy', 'DXY', 'DX-Y.NYB'],
+  ['spf', 'S&P 500 futuro', 'ES=F'], ['nqf', 'Nasdaq futuro', 'NQ=F'], ['dowf', 'Dow futuro', 'YM=F'], ['tnx', 'Treasury 10 anos', '^TNX'],
+  ['stoxx', 'Euro Stoxx 50', '^STOXX50E'], ['dax', 'DAX (Alemanha)', '^GDAXI'], ['ftse', 'FTSE (Londres)', '^FTSE'],
+  ['nikkei', 'Nikkei (Japão)', '^N225'], ['hsi', 'Hang Seng', '^HSI'], ['xangai', 'Xangai', '000001.SS'],
+  ['brent', 'Petróleo Brent', 'BZ=F'], ['ouro', 'Ouro', 'GC=F'], ['btc', 'Bitcoin', 'BTC-USD'],
+];
+async function dadosAbertura(env) {
+  const api = async (rota) => {
+    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
+    const r = env.API ? await env.API.fetch(req) : await fetch(req);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  };
+  const meta = (j, s) => {
+    const m = j?.[s]?.chart?.result?.[0]?.meta;
+    if (!m || typeof m.regularMarketPrice !== 'number') return null;
+    const ant = m.chartPreviousClose ?? m.previousClose;
+    const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
+    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
+  };
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  const out = { data: hoje, gerado: new Date().toISOString(), cards: {}, agenda: [] };
+  const [jc, cal] = await Promise.all([
+    api('/quotes?symbols=' + ABRE_CARDS.map((c) => encodeURIComponent(c[2])).join(',')).catch(() => ({})),
+    api('/calendar').catch(() => null),
+  ]);
+  for (const [k, nome, s] of ABRE_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, dia: null }) };
+  // agenda de hoje (horário de Brasília): Brasil de média e alta importância, EUA só alta
+  if (Array.isArray(cal)) {
+    const PAIS = { BRL: 'BR', USD: 'EUA', BR: 'BR', US: 'EUA' };
+    out.agenda = cal.map((e) => {
+      const t = Date.parse(e.date);
+      const p = PAIS[e.country];
+      if (!p || !isFinite(t)) return null;
+      const b = new Date(t - 3 * 3600000);
+      if (b.toISOString().slice(0, 10) !== hoje) return null;
+      if (!(e.impact === 'High' || (p === 'BR' && e.impact === 'Medium'))) return null;
+      return { t, hora: b.toISOString().slice(11, 16), pais: p, titulo: String(e.title || '').slice(0, 90), proj: String(e.forecast || '').slice(0, 14), ant: String(e.previous || '').slice(0, 14) };
+    }).filter(Boolean).sort((a, b) => a.t - b.t).slice(0, 8).map(({ t, ...x }) => x);
+  }
+  out.agendaOk = Array.isArray(cal);
+  out.noticias = await noticiasDoDia().catch(() => []);
+  return out;
+}
+function textoAbertura(d, curto) {
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
+  const c = d.cards;
+  const l = (k, fmt, nome) => `${nome || c[k].nome}: ${c[k].v != null ? fmt(c[k].v) + pct(c[k].ch) : '—'}`;
+  const n0 = (v) => brn(v, 0), n2 = (v) => brn(v, 2);
+  const linhas = [
+    `Mercado Macro | Abertura de ${ddmm(d.data)}`,
+    '',
+    l('ibov', (v) => brn(v, 0) + ' pts', `Ibovespa (fechamento${c.ibov.dia ? ' de ' + ddmm(c.ibov.dia) : ''})`),
+    l('dolar', (v) => 'R$ ' + brn(v, 4)), l('ewz', (v) => 'US$ ' + n2(v)),
+    '', 'Futuros em Nova York', l('spf', n2, 'S&P 500'), l('nqf', n2, 'Nasdaq'), l('dowf', n0, 'Dow Jones'),
+  ];
+  if (!curto) {
+    linhas.push('', 'Europa', l('stoxx', n2), l('dax', n2), l('ftse', n2),
+      '', 'Ásia (fechamento)', l('nikkei', n0), l('hsi', n0), l('xangai', n2),
+      '', l('brent', (v) => 'US$ ' + n2(v)), l('ouro', (v) => 'US$ ' + n0(v)), l('btc', (v) => 'US$ ' + n0(v)),
+      `Treasury 10 anos: ${c.tnx.v != null ? n2(c.tnx.v) + '%' : '—'}`);
+    if (d.agenda && d.agenda.length) linhas.push('', 'Agenda de hoje', ...d.agenda.map((a) => `${a.hora} ${a.pais} ${a.titulo}${a.proj ? ` (proj. ${a.proj})` : ''}`));
+    if (d.noticias && d.noticias.length) linhas.push('', 'Principais notícias', ...d.noticias.map((n) => `- ${n.t}${n.f ? ` (${n.f})` : ''}`));
+  }
   linhas.push('', 'Painel completo: https://mercadomacro.com.br');
   return linhas.join('\n');
 }
@@ -685,6 +758,10 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'fechamento' && req.method === 'GET') {
     const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
     return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+  }
+  if (acao === 'abertura' && req.method === 'GET') {
+    const d = await dadosAbertura(env);
+    return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true) }, 200, { 'Cache-Control': 'no-store' });
   }
   if (acao === 'fechamento-modo' && req.method === 'POST') {
     // como o robô das 18h manda o fechamento: 'imagem' (cartão com legenda) ou 'texto' (só a mensagem)
@@ -1816,7 +1893,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var h;
       if (j.conectado) {
         h = '<div class="caixa"><p>Ligado. Quando alguém pedir acesso, chega uma mensagem no seu Telegram pelo robô <b>@' + esc(j.bot) + '</b>.</p>'
-          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
+          + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/abertura" style="' + bt + ';text-decoration:none;display:inline-block">Abertura do mercado (imagem)</a><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p></div>';
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
