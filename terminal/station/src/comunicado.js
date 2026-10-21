@@ -18,6 +18,8 @@ export const COMUNICADO = {
   assunto: 'O dólar mexeu. Agora você vê na hora.',
   previa: 'Cotações ao vivo, fundamentos com o balanço da CVM e as assinaturas chegaram ao Mercado Macro.',
   abertura: 'Sabe aquele F5 nervoso para ver se o dólar mexeu? Pode aposentar.',
+  // foto real do painel (a vitrine renova toda semana; o endereço é público)
+  foto: ['/vitrine/fotos/mesa.jpg', 'A Mesa do Mercado Macro com cotações, índices e moedas'],
   itens: [
     ['Cotações ao vivo', 'Dólar, euro, libra, petróleo, ouro, prata, café, VIX e as principais criptomoedas se atualizam sozinhos na tela, na aba Mercado e na Mesa.'],
     ['Fundamentos com a fonte na mão', 'Abra o gráfico de uma ação da B3 e veja lucro, ROE, margem e endividamento logo acima. Cada balanço tem link para o documento original na CVM.'],
@@ -52,8 +54,9 @@ export function montarEmail(c, nome, linkSair) {
 <tr><td style="${td};padding:28px 28px 8px;font-size:15px;line-height:1.6">
 <p style="margin:0 0 14px">Olá, ${esc(p)}.</p>
 <p style="margin:0 0 20px;font-size:18px;line-height:1.45;font-weight:700;color:#0b1220">${esc(c.abertura)}</p>
-<p style="margin:0 0 12px;color:#4a5568">Chegou ao Mercado Macro:</p>
 </td></tr>
+${c.foto ? `<tr><td style="padding:0 28px 22px"><a href="${SITE}/"><img src="${SITE}${c.foto[0]}" alt="${esc(c.foto[1])}" width="504" style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #dfe5ee;border-radius:8px"></a></td></tr>` : ''}
+<tr><td style="${td};padding:0 28px 8px;font-size:15px;line-height:1.6"><p style="margin:0 0 12px;color:#4a5568">Chegou ao Mercado Macro:</p></td></tr>
 ${c.itens.map(([t, d]) => `<tr><td style="${td};padding:0 28px 14px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
 <td width="4" style="background:#f0b90b;border-radius:2px"></td>
 <td style="${td};padding:2px 0 2px 14px;font-size:14.5px;line-height:1.55"><b style="color:#0b1220">${esc(t)}</b><br><span style="color:#4a5568">${esc(d)}</span></td></tr></table></td></tr>`).join('\n')}
