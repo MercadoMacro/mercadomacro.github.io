@@ -246,7 +246,9 @@ main { width: 100%; }
 }
 @media (max-width: 380px) {
   .vt-feats { grid-template-columns: 1fr; }
-  .vt-pulse { grid-template-columns: 1fr; }
+  .vt-pulse { gap: 8px; }
+  .pc { padding: 10px 10px 6px; }
+  .pc-v { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .vt-grid, .vt-tape-track.run, .vt-dot, .sk { animation: none !important; }
