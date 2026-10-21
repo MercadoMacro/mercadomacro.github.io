@@ -377,9 +377,10 @@
     // acesso perto de terminar: lembra uma vez por dia
     const falta = c.expira ? (Date.parse(c.expira) - Date.now()) / 864e5 : Infinity;
     if (falta <= 3) {
-      let hoje = false; const k = 'mm_venc_avisado', d = new Date().toDateString();
-      try { hoje = localStorage.getItem(k) === d; localStorage.setItem(k, d); } catch (e) { /* nada */ }
-      if (!hoje && !c.admin) setTimeout(() => avisoVencimento(c, falta), 1500);
+      // uma vez por visita: aparece de novo ao abrir o site numa aba nova
+      let visto = false; const k = 'mm_venc_popup';
+      try { visto = sessionStorage.getItem(k) === c.expira; sessionStorage.setItem(k, c.expira); } catch (e) { /* nada */ }
+      if (!visto && !c.admin) setTimeout(() => avisoVencimento(c, falta), 1500);
     }
     if (c.admin && c.pendentes) {
       let avisado = false;
