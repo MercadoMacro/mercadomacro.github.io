@@ -36,7 +36,7 @@ export const COMUNICADO = {
     ]],
     ['Juros e economia', [
       ['Curva de juros DI', 'o que o mercado projeta para os juros nos próximos anos.'],
-      ['Boletim Focus', 'saiu no Banco Central, um botão traz na hora.'],
+      ['Boletim Focus', 'as projeções do mercado para Selic, inflação, dólar e PIB, direto do Banco Central, assim que saem.'],
       ['Indicadores com história', 'gráficos longos com os governos e os fatos que mexeram nos juros e no mercado marcados; um clique mostra o que aconteceu.'],
       ['Calendário econômico', 'a agenda da semana e os balanços das empresas do Brasil e dos EUA.'],
     ]],
