@@ -667,7 +667,9 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
     const r = await env.DB.prepare(
-      'SELECT id, nome, email, status, admin, criado, decidido, ultimo_acesso, expira FROM usuarios ORDER BY criado DESC').all();
+      `SELECT u.id, u.nome, u.email, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.expira,
+        COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano
+        FROM usuarios u ORDER BY u.criado DESC`).all();
     return json({ eu: eu.id, usuarios: r.results });
   }
   if (acao === 'decidir' && req.method === 'POST') {
@@ -717,7 +719,7 @@ async function apiAdmin(req, env, acao, eu) {
       let validade = antes && antes.expira > agora ? antes.expira : null;
       if (novo === 'ativo' && antes && antes.status !== 'ativo' && !validade) {
         validade = new Date(Date.now() + GRATIS_DIAS * 864e5).toISOString();
-        q.push(env.DB.prepare('UPDATE usuarios SET expira = ? WHERE id = ? AND admin = 0').bind(validade, id));
+        q.push(env.DB.prepare(`UPDATE usuarios SET expira = ?, plano = 'cortesia' WHERE id = ? AND admin = 0`).bind(validade, id));
       }
       if (novo !== 'ativo') q.push(env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id));
       await env.DB.batch(q);
@@ -1322,6 +1324,24 @@ details.mais[open] .menu{display:flex}
 .cfg>div>h2:first-child{margin-top:4px}
 ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
 [data-p][hidden]{display:none}
+dialog#dlg-acesso{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
+.dl{padding:20px}
+.dl-top{display:flex;gap:12px;align-items:flex-start}.dl-top>div{flex:1;min-width:0}
+.dl h3{margin:0;font-size:18px}.dl .e{margin:2px 0 0;color:var(--text-2);font-size:13px;word-break:break-all}
+.dl .x{background:none;border:0;color:var(--text-2);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.dl .hoje{margin:12px 0;font-size:13px;color:var(--text-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.op{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-2);color:var(--text);cursor:pointer;font:inherit}
+.op[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.op b{font-size:13px}.op strong{font-size:17px}.op span{font-size:11.5px;color:var(--text-3)}.op em{font-style:normal;font-size:12px;color:var(--accent-text);font-weight:600;margin-top:2px}
+.lin{margin:12px 0 0;font-size:13px;color:var(--text-2);border:0;padding:0;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.lin legend{float:left;margin-right:4px;color:var(--text-3);padding:0}
+.lin input[type=date]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px;color-scheme:dark light}
+.lin.pg{display:block;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;line-height:1.45}
+.lin[hidden]{display:none}
+.am{color:var(--neg);font-size:13px;margin:10px 0 0}.am:empty{display:none}
+.dl-ac{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 @media (max-width:820px){
   .grid2,.cfg{grid-template-columns:1fr}
   table.t,.t tbody,.t tr,.t td{display:block;width:100%}
@@ -1369,6 +1389,21 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div></div>
   </div>
 </section>
+<dialog id="dlg-acesso" aria-labelledby="ac-t">
+  <div class="dl">
+    <div class="dl-top"><div><h3 id="ac-t"></h3><p id="ac-e" class="e"></p></div><button type="button" class="x" data-fechar aria-label="Fechar">&times;</button></div>
+    <p id="ac-hoje" class="hoje"></p>
+    <div class="ops" id="ac-opc"></div>
+    <div id="ac-dt" class="lin" hidden><label>Vale até <input type="date" id="ac-data"></label></div>
+    <fieldset id="ac-ini" class="lin"><legend>Começa</legend>
+      <label><input type="radio" name="ac-ini" value="hoje" checked> hoje</label>
+      <label><input type="radio" name="ac-ini" value="somar"> depois de <span id="ac-somar-d"></span> (soma ao que já tem)</label>
+    </fieldset>
+    <label id="ac-pg" class="lin pg" hidden><input type="checkbox" id="ac-pago"> Recebi <span id="ac-pg-v"></span> por fora: contar em "Recebido no mês" e mandar o e-mail de pagamento confirmado</label>
+    <p id="ac-msg" class="am" role="alert"></p>
+    <div class="dl-ac"><button type="button" class="b" data-fechar>Cancelar</button><button type="button" class="b lib" id="ac-salvar">Salvar</button></div>
+  </div>
+</dialog>
 </main>
 <script>
 (function(){
@@ -1380,12 +1415,12 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
   function post(u, corpo){ return fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
   var EMAIL = { enviado: ' A pessoa recebeu um e-mail avisando.', falhou: ' O e-mail de aviso não foi enviado; avise a pessoa por outro meio.', desligado: ' (E-mail desligado: avise a pessoa por outro meio.)' };
   var BT = {
-    pendente: [['liberar','Liberar','lib'],['recusar','Recusar',''],['excluir','Excluir','del']],
-    ativo: [['v:dias3','+3 dias',''],['v:mes1','+1 mês',''],['v:sem','Sem validade',''],['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
-    expirado: [['v:dias3','Liberar 3 dias','lib'],['v:mes1','Liberar 1 mês',''],['excluir','Excluir','del']],
-    recusado: [['liberar','Liberar','lib'],['excluir','Excluir','del']],
-    bloqueado: [['liberar','Liberar de novo','lib'],['excluir','Excluir','del']],
-    confirmar: [['liberar','Liberar mesmo assim','lib'],['excluir','Excluir','del']]
+    pendente: [['liberar','Liberar 3 dias','lib'],['recusar','Recusar',''],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
+    ativo: [['acesso','Acesso',''],['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
+    expirado: [['acesso','Renovar','lib'],['excluir','Excluir','del']],
+    recusado: [['liberar','Liberar 3 dias','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
+    bloqueado: [['liberar','Liberar de novo','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
+    confirmar: [['liberar','Liberar mesmo assim','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']]
   };
   var US = [], PG = [], filtro = 'todos';
   var SIT = { pendente: 'Aguardando', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
@@ -1402,7 +1437,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     ['fora', 'Recusados e bloqueados', function(u){ return u.status === 'recusado' || u.status === 'bloqueado'; }]
   ];
   // botão principal de cada situação; o resto fica no menu (...)
-  var PRINCIPAL = { pendente: ['liberar', 'recusar'], ativo: ['v:mes1'], expirado: ['v:dias3'], confirmar: ['liberar'], recusado: ['liberar'], bloqueado: ['liberar'] };
+  var PRINCIPAL = { pendente: ['liberar', 'recusar'], ativo: ['acesso'], expirado: ['acesso'], confirmar: ['liberar'], recusado: ['liberar'], bloqueado: ['liberar'] };
   function botoes(u){
     if (u.id === eu || u.admin) return '<span class="pill admin">administrador</span>';
     var todos = BT[u.status] || [], pri = PRINCIPAL[u.status] || [];
@@ -1418,6 +1453,12 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     if (!u.expira) return 'sem validade';
     return '<span class="' + (em7(u) ? 'venc' : '') + '">até ' + dia(u.expira) + '</span>';
   }
+  var NOMEP = { cortesia: 'Cortesia', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', sem: 'Sem validade', data: 'Data definida' };
+  function plano(u){
+    if (u.admin) return '—';
+    if (u.plano) return NOMEP[u.plano] || u.plano;
+    return u.status === 'ativo' && !u.expira ? 'Sem validade' : '—';
+  }
   function pessoas(){
     var q = semAc(document.getElementById('busca').value.trim());
     var f = (FILTROS.filter(function(x){ return x[0] === filtro; })[0] || FILTROS[0])[2];
@@ -1425,11 +1466,11 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     var lista = US.filter(f).filter(function(u){ return !q || semAc(u.nome + ' ' + u.email).indexOf(q) >= 0; })
       .sort(function(a, b){ return (ordem[a.status] - ordem[b.status]) || (a.criado < b.criado ? 1 : -1); });
     document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
-    raiz.innerHTML = lista.length ? '<table class="t"><thead><tr><th>Pessoa</th><th>Situação</th><th>Validade</th><th>Último acesso</th><th>Cadastro</th><th></th></tr></thead><tbody>'
+    raiz.innerHTML = lista.length ? '<table class="t"><thead><tr><th>Pessoa</th><th>Situação</th><th>Plano</th><th>Validade</th><th>Último acesso</th><th>Cadastro</th><th></th></tr></thead><tbody>'
       + lista.map(function(u){
         return '<tr><td class="p"><b>' + esc(u.nome) + '</b><span>' + esc(u.email) + '</span></td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
-          + '<td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
+          + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
           + '<td class="ac">' + botoes(u) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vazio">Ninguém ' + (q ? 'com essa busca' : 'nesta lista') + '.</p>';
     document.getElementById('nota-pessoas').textContent = US.some(function(u){ return u.status === 'confirmar'; }) ? 'Quem está "Sem confirmar e-mail" pediu acesso mas não clicou no link de confirmação; some sozinho depois de 7 dias.' : '';
@@ -1482,19 +1523,71 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
     var dm = b.closest('details'); if (dm) dm.open = false;
     var a = b.dataset.a;
     if (a === 'senha') return novaSenha(b);
-    if (a.indexOf('v:') === 0) {
-      if (a === 'v:sem' && !confirm('Deixar o acesso de ' + b.dataset.n + ' sem data para terminar?')) return;
-      b.disabled = true;
-      return post('/api/admin/decidir', { id: +b.dataset.id, acao: 'validade', mais: a.slice(2) })
-        .then(function(j){ msg.className = 'msg ok'; msg.textContent = b.dataset.n + ': ' + (j.expira ? 'acesso vale até ' + dia(j.expira) + '.' : 'acesso sem validade.'); carregar(); })
-        .catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
-    }
+    if (a === 'acesso') return abrirAcesso(+b.dataset.id);
     if ((a === 'excluir' || a === 'bloquear') && !confirm((a === 'excluir' ? 'Excluir de vez o cadastro de ' + b.dataset.n + '? Nome, e-mail e senha são apagados e não dá para desfazer.' : 'Bloquear o acesso de ' + b.dataset.n + '?'))) return;
     b.disabled = true;
     fetch('/api/admin/decidir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.dataset.id, acao: a }) })
       .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); })
       .then(function(j){ msg.className = 'msg ok'; msg.textContent = { liberar: 'Acesso liberado para ', recusar: 'Cadastro recusado: ', bloquear: 'Acesso bloqueado: ', excluir: 'Cadastro excluído: ' }[a] + b.dataset.n + (j && j.validade ? ' até ' + dia(j.validade) : '') + '.' + (j && j.email === 'enviado' ? EMAIL.enviado : j && j.email === 'falhou' ? EMAIL.falhou : ''); carregar(); })
       .catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
+  });
+  // janela "Acesso": define o plano/validade de uma pessoa
+  var OPC = [
+    ['cortesia', 'Cortesia', '3 dias grátis', 0, { dias: 3 }],
+    ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
+    ['mensal', 'Mensal', '1 mês', 2990, { meses: 1 }],
+    ['trimestral', 'Trimestral', '3 meses', 7990, { meses: 3 }],
+    ['semestral', 'Semestral', '6 meses', 14990, { meses: 6 }],
+    ['sem', 'Sem validade', 'não vence', 0, null],
+    ['data', 'Até uma data', 'você escolhe o dia', 0, null]
+  ];
+  var dlg = document.getElementById('dlg-acesso'), AU = null, AT = 'cortesia';
+  function somar(base, per){ var d = new Date(base); if (per.dias) d.setTime(d.getTime() + per.dias * 864e5); else d.setUTCMonth(d.getUTCMonth() + per.meses); return d.toISOString(); }
+  function vigente(u){ return u.status === 'ativo' && u.expira && u.expira > agora(); }
+  function abrirAcesso(id){
+    AU = US.filter(function(u){ return u.id === id; })[0]; if (!AU) return;
+    AT = AU.status === 'ativo' && AU.plano && AU.plano !== 'cortesia' && AU.plano !== 'sem' && AU.plano !== 'data' ? AU.plano : AU.status === 'ativo' ? 'mensal' : 'cortesia';
+    document.getElementById('ac-t').textContent = AU.nome;
+    document.getElementById('ac-e').textContent = AU.email;
+    document.getElementById('ac-hoje').textContent = 'Situação: ' + (SIT[AU.status] || AU.status) + (AU.plano ? ' · ' + (NOMEP[AU.plano] || AU.plano) : '') + ' · ' + (AU.status === 'ativo' ? (AU.expira ? 'vale até ' + dia(AU.expira) : 'sem validade') : AU.status === 'expirado' ? 'venceu ' + dia(AU.expira) : 'sem acesso');
+    document.getElementById('ac-ini').hidden = !vigente(AU);
+    document.getElementById('ac-somar-d').textContent = vigente(AU) ? dia(AU.expira) : '';
+    document.querySelector('input[name=ac-ini][value=hoje]').checked = true;
+    document.getElementById('ac-pago').checked = false;
+    document.getElementById('ac-data').value = '';
+    document.getElementById('ac-msg').textContent = '';
+    desenharAcesso();
+    dlg.showModal();
+  }
+  function desenharAcesso(){
+    var somarIni = vigente(AU) && document.querySelector('input[name=ac-ini]:checked').value === 'somar';
+    var base = somarIni ? AU.expira : agora();
+    document.getElementById('ac-opc').innerHTML = OPC.map(function(o){
+      var ate = o[4] ? 'até ' + dia(somar(base, o[4])) : o[0] === 'sem' ? 'não vence' : 'escolha abaixo';
+      return '<button type="button" class="op" data-t="' + o[0] + '" aria-pressed="' + (AT === o[0]) + '"><b>' + o[1] + '</b><strong>' + (o[3] ? reais(o[3]) : o[0] === 'cortesia' ? 'Grátis' : '—') + '</strong><span>' + o[2] + '</span><em>' + ate + '</em></button>';
+    }).join('');
+    var o = OPC.filter(function(x){ return x[0] === AT; })[0];
+    document.getElementById('ac-dt').hidden = AT !== 'data';
+    document.getElementById('ac-ini').style.display = (vigente(AU) && o[4]) ? '' : 'none';
+    document.getElementById('ac-pg').hidden = !o[3];
+    document.getElementById('ac-pg-v').textContent = o[3] ? reais(o[3]) : '';
+  }
+  dlg.addEventListener('click', function(e){
+    var op = e.target.closest('.op'); if (op) { AT = op.dataset.t; desenharAcesso(); return; }
+    if (e.target === dlg || e.target.closest('[data-fechar]')) dlg.close();
+  });
+  dlg.addEventListener('change', function(e){ if (e.target.name === 'ac-ini') desenharAcesso(); });
+  document.getElementById('ac-salvar').addEventListener('click', function(){
+    var b = this, m = document.getElementById('ac-msg');
+    var corpo = { id: AU.id, tipo: AT, inicio: document.querySelector('input[name=ac-ini]:checked').value, pago: document.getElementById('ac-pago').checked && !document.getElementById('ac-pg').hidden, ate: document.getElementById('ac-data').value };
+    if (AT === 'data' && !corpo.ate) { m.textContent = 'Escolha a data.'; return; }
+    if (AT === 'sem' && !confirm('Deixar o acesso de ' + AU.nome + ' sem data para terminar?')) return;
+    b.disabled = true; m.textContent = '';
+    post('/api/admin/acesso', corpo).then(function(j){
+      dlg.close(); msg.className = 'msg ok';
+      msg.textContent = AU.nome + ': ' + (NOMEP[AT] || AT) + ', ' + (j.expira ? 'acesso até ' + dia(j.expira) : 'acesso sem validade') + '.' + (corpo.pago ? ' Pagamento registrado em Recebido no mês.' : '') + (EMAIL[j.email] || '');
+      carregar(); if (corpo.pago) pagamentos();
+    }).catch(function(j){ m.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
   });
   var prov = document.getElementById('prov');
   function novaSenha(b){
@@ -1637,7 +1730,7 @@ ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
-          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + ' · comprovante enviado ' + data(p.enviado) + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
+          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
           + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
           + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
       };
@@ -1783,5 +1876,5 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 </script></body></html>`;
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
-ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao });
+ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });

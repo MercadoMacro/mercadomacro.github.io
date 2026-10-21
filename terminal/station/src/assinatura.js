@@ -5,9 +5,9 @@
    Um robô diário (cron em wrangler.jsonc) avisa por e-mail 3 dias antes de vencer e desativa quem venceu (os dados ficam). */
 import qrcode from './qrcode.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
-let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao;
+let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado;
 export function ligarAssinatura(u) {
-  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao } = u);
+  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado } = u);
 }
 
 export const PLANOS = {
@@ -44,6 +44,8 @@ export async function garantirAssinatura(env) {
   const q = [];
   if (!cols.includes('expira')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN expira TEXT'));
   if (!cols.includes('aviso_venc')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN aviso_venc TEXT'));
+  // plano do acesso atual: cortesia, degustacao, mensal, trimestral, semestral, sem (sem validade) ou data (data escolhida)
+  if (!cols.includes('plano')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN plano TEXT'));
   q.push(env.DB.prepare(`CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL,
     plano TEXT NOT NULL, valor INTEGER NOT NULL, status TEXT NOT NULL, criado TEXT NOT NULL, enviado TEXT, decidido TEXT,
     validade TEXT, arquivo BLOB, tipo_arq TEXT)`));
@@ -266,6 +268,35 @@ export async function apiAdminAssinatura(req, env, acao) {
     await salvarConfig(env, { pix_chave: chave, pix_nome: nome, pix_cidade: cidade });
     return json({ ok: true, chave, nome, cidade });
   }
+  if (acao === 'acesso' && req.method === 'POST') {
+    // o administrador define o acesso de uma pessoa: cortesia de 3 dias, um dos planos, sem validade ou até uma data
+    if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+    const b = await req.json().catch(() => ({}));
+    const u = await env.DB.prepare('SELECT id, nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(Number(b.id)).first();
+    if (!u) return json({ erro: 'Usuário inválido.' }, 400);
+    const agora = new Date().toISOString();
+    const base = b.inicio === 'somar' ? baseValidade(u.expira) : agora;
+    let validade;
+    if (b.tipo === 'cortesia') validade = somarPeriodo(base, { dias: GRATIS_DIAS });
+    else if (PLANOS[b.tipo]) validade = somarPeriodo(base, PLANOS[b.tipo]);
+    else if (b.tipo === 'sem') validade = null;
+    else if (b.tipo === 'data' && /^\d{4}-\d{2}-\d{2}$/.test(b.ate || '')) {
+      validade = new Date(b.ate + 'T23:59:00-03:00').toISOString(); // fim do dia, horário de Brasília
+      if (validade <= agora) return json({ erro: 'Escolha uma data a partir de hoje.' }, 400);
+    } else return json({ erro: 'Escolha o tipo de acesso.' }, 400);
+    const pago = !!b.pago && !!PLANOS[b.tipo];
+    const q = [env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END WHERE id = ?`)
+      .bind(validade, b.tipo, agora, u.id)];
+    // pagamento recebido por fora (Pix direto, dinheiro): entra na conta do mês
+    if (pago) q.push(env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade) VALUES (?, ?, ?, 'aprovado', ?, ?, ?)`)
+      .bind(u.id, b.tipo, PLANOS[b.tipo].valor, agora, agora, validade));
+    await env.DB.batch(q);
+    limparCacheSessao();
+    let r = null;
+    if (pago) r = await emailAprovado(env, req, u, PLANOS[b.tipo], validade).catch(() => ({ ok: false }));
+    else if (u.status !== 'ativo') r = await emailLiberado(env, req, u.nome, u.email, false, validade).catch(() => ({ ok: false }));
+    return json({ ok: true, expira: validade, email: !r ? null : r.ok ? 'enviado' : r.desligado ? 'desligado' : 'falhou' });
+  }
   if (acao === 'pagamentos' && req.method === 'GET') {
     const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
@@ -290,7 +321,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     if (b.acao === 'aprovar') {
       const validade = somarPeriodo(baseValidade(p.ustatus === 'pendente' ? null : p.expira), plano);
       await env.DB.batch([
-        env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ? WHERE id = ?`).bind(validade, agora, p.uid),
+        env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ?`).bind(validade, agora, p.plano, p.uid),
         env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ?`).bind(agora, validade, p.id),
       ]);
       limparCacheSessao();
