@@ -267,7 +267,7 @@ const ORIGEM_SITE = 'https://station.danilo-nillo.workers.dev';
 const FECH_CARDS = [
   ['ibov', 'Ibovespa', '^BVSP'], ['dolar', 'Dólar', 'BRL=X'], ['sp', 'S&P 500', '^GSPC'], ['nasdaq', 'Nasdaq', '^IXIC'],
   ['dow', 'Dow Jones', '^DJI'], ['brent', 'Petróleo Brent', 'BZ=F'], ['ouro', 'Ouro', 'GC=F'], ['btc', 'Bitcoin', 'BTC-USD'],
-  ['euro', 'Euro', 'EURBRL=X'], ['tnx', 'Treasury 10 anos', '^TNX'],
+  ['euro', 'Euro', 'EURBRL=X'], ['tnx', 'Treasury 10 anos', '^TNX'], ['stoxx', 'Euro Stoxx 50', '^STOXX50E'],
 ];
 // as mesmas 45 ações do Ibovespa de "maiores altas e baixas" do site (app.js, IBOV_STOCKS)
 const FECH_ACOES = ['PETR4', 'PETR3', 'VALE3', 'ITUB4', 'BBDC4', 'BBAS3', 'B3SA3', 'ABEV3', 'WEGE3', 'ITSA4', 'SUZB3', 'RENT3', 'PRIO3',
@@ -302,7 +302,7 @@ async function dadosFechamento(env) {
     if (!m || typeof m.regularMarketPrice !== 'number') return null;
     const ant = m.chartPreviousClose ?? m.previousClose;
     const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
-    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
+    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia, a: ant ?? null };
   };
   const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
   const out = { data: hoje, gerado: new Date().toISOString(), cards: {}, altas: [], baixas: [], juros: {}, fluxo: null };
@@ -342,7 +342,36 @@ async function dadosFechamento(env) {
       ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
     };
   } catch (e) { /* fica "—" */ }
+  // IPCA em 12 meses (Banco Central, série 13522), para o texto do canal
+  try {
+    const j = await api('/bcb?c=13522&q=' + encodeURIComponent('/ultimos/1'));
+    const v = parseFloat(j?.[0]?.valor);
+    if (isFinite(v)) out.juros.ipca12 = v;
+  } catch (e) { /* fica de fora */ }
   out.noticias = await noticiasDoDia().catch(() => []);
+  out.notAcoes = await noticiasDasAcoes([...out.altas, ...out.baixas].map((a) => a.t)).catch(() => ({}));
+  return out;
+}
+// lista de notícias do site (cache) ou do worker antigo; só links http(s)
+async function listaNoticias() {
+  let lista = await noticiasSoCache();
+  if (!lista) {
+    const r = await fetch('https://news.cota-cotacao10.workers.dev/', { cf: { cacheTtl: 120 } });
+    if (!r.ok) return [];
+    lista = await r.json();
+  }
+  return Array.isArray(lista) ? lista.filter((n) => n && /^https?:\/\//i.test(n.link || '')) : [];
+}
+// para cada ação das maiores altas e baixas: a notícia do dia (fonte em português) que cita o código dela
+async function noticiasDasAcoes(tickers) {
+  const lista = await listaNoticias();
+  const desde = Date.now() - 16 * 3600000;
+  const out = {};
+  for (const t of tickers) {
+    const re = new RegExp('\\b' + t + '\\b', 'i');
+    const n = lista.filter((x) => x.titulo && +x.data >= desde && FONTES_PT.has(x.fonte) && re.test(x.titulo)).sort((a, b) => b.data - a.data)[0];
+    if (n) out[t] = { t: n.titulo.trim(), f: (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '' };
+  }
   return out;
 }
 // principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
@@ -350,14 +379,8 @@ async function dadosFechamento(env) {
 const FONTES_PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
 async function noticiasDoDia() {
   // usa a lista do site se estiver no cache (ler os 25 feeds aqui passaria do limite de pedidos do fechamento)
-  let lista = await noticiasSoCache();
-  if (!lista) {
-    const r = await fetch('https://news.cota-cotacao10.workers.dev/', { cf: { cacheTtl: 120 } });
-    if (!r.ok) return [];
-    lista = await r.json();
-  }
-  if (!Array.isArray(lista)) return [];
-  lista = lista.filter((n) => n && /^https?:\/\//i.test(n.link || ''));
+  const lista = await listaNoticias();
+  if (!lista.length) return [];
   const desde = Date.now() - 16 * 3600000;
   const PT = FONTES_PT;
   const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
@@ -480,6 +503,42 @@ function textoAbertura(d, curto) {
   return linhas.join('\n');
 }
 // destino 'canal' = canal público do Telegram (config tg_canal); sem destino = conversa do administrador
+// fechamento no canal público: só texto (HTML do Telegram), no modelo que o Severino escolheu
+function textoCanalFechamento(d) {
+  const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const e = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  const dt = new Date(d.data + 'T12:00:00Z');
+  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
+  const c = d.cards, j = d.juros || {};
+  const l = (k, fmt, nome) => `• ${e(nome || (c[k] && c[k].nome) || k)}: ${c[k] && c[k].v != null ? fmt(c[k].v) + pct(c[k].ch) : '—'}`;
+  const acao = (a) => {
+    const n = d.notAcoes && d.notAcoes[a.t];
+    return `• ${a.t}: R$ ${brn(a.v, 2)}${pct(a.ch)}` + (n ? `\n   ↳ ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}` : '');
+  };
+  const tnx = c.tnx || {};
+  const bp = tnx.v != null && tnx.a != null ? Math.round((tnx.v - tnx.a) * 100) : null;
+  const bi = (mil) => (mil == null ? '—' : `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${brn(Math.abs(mil) / 1e6, 2)} bi`);
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const L = [
+    `🌙 <b>Fechamento de mercado</b> — ${DIAS[dt.getUTCDay()]}, ${ddmm(d.data)}${!d.pregao && d.pregaoDia ? ` (sem pregão hoje; números de ${ddmm(d.pregaoDia)})` : ''}`,
+    '', '<b>Brasil</b>',
+    l('ibov', (v) => brn(v, 0)), l('dolar', (v) => 'R$ ' + brn(v, 4)), l('euro', (v) => 'R$ ' + brn(v, 4)),
+    `• Selic (meta): ${j.selic != null ? brn(j.selic, 2) + '% a.a.' : '—'}${j.ipca12 != null ? ` | IPCA (12 meses): ${brn(j.ipca12, 2)}%` : ''}`,
+  ];
+  if (d.altas && d.altas.length) L.push('', '📈 <b>Maiores altas do Ibovespa</b>', ...d.altas.slice(0, 3).map(acao));
+  if (d.baixas && d.baixas.length) L.push('', '📉 <b>Maiores baixas do Ibovespa</b>', ...d.baixas.slice(0, 3).map(acao));
+  L.push('', '<b>Exterior</b>',
+    l('sp', (v) => brn(v, 2)), l('nasdaq', (v) => brn(v, 2)), l('dow', (v) => brn(v, 2)), l('stoxx', (v) => brn(v, 0)),
+    `• Treasury 10Y: ${tnx.v != null ? brn(tnx.v, 2) + '%' + (bp != null ? ` (${bp > 0 ? '+' : bp < 0 ? '−' : ''}${Math.abs(bp)} bp)` : '') : '—'}`,
+    '', '<b>Commodities e cripto</b>',
+    l('brent', (v) => 'US$ ' + brn(v, 2)), l('ouro', (v) => 'US$ ' + brn(v, 2)), l('btc', (v) => 'US$ ' + brn(v, 0)),
+    '', '<b>Juros no Tesouro</b>',
+    `• ${e(j.pre ? j.pre.nome : 'Tesouro Prefixado')}: ${j.pre ? brn(j.pre.taxa, 2) + '% a.a.' : '—'}`,
+    `• ${e(j.ipca ? j.ipca.nome : 'Tesouro IPCA+')}: ${j.ipca ? 'IPCA + ' + brn(j.ipca.taxa, 2) + '%' : '—'}`);
+  if (d.fluxo) L.push('', `<b>Estrangeiro na B3</b> (até ${ddmm(d.fluxo.data)}; a B3 publica com atraso)`, `• No dia: ${bi(d.fluxo.dia)}`, `• No mês: ${bi(d.fluxo.mes)}`, `• No ano: ${bi(d.fluxo.ano)}`);
+  L.push('', 'Painel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>');
+  return L.join('\n').slice(0, 4000);
+}
 async function telegramFoto(env, png, legenda, destino) {
   const c = await config(env);
   const chat = destino === 'canal' ? c.tg_canal : c.tg_chat;
@@ -783,7 +842,7 @@ async function apiAuth(req, env, acao, ctx) {
 async function apiAdmin(req, env, acao, eu) {
   if (acao === 'fechamento' && req.method === 'GET') {
     const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
-    return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+    return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), textoCanal: textoCanalFechamento(d), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
   }
   if (acao === 'abertura' && req.method === 'GET') {
     const d = await dadosAbertura(env);
@@ -800,12 +859,12 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'fechamento-texto' && req.method === 'POST') {
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
     const b = await req.json().catch(() => ({}));
-    const t = String(b.texto || '').slice(0, 3500);
+    const t = String(b.texto || '').slice(0, 4000);
     if (!t) return json({ erro: 'Sem texto.' }, 400);
     const c = await config(env);
     const chat = b.destino === 'canal' ? c.tg_canal : c.tg_chat;
     if (!(c.tg_token && chat)) return json({ erro: b.destino === 'canal' ? 'Conecte o canal do Telegram primeiro (Ajustes, Avisos no Telegram).' : 'Conecte o Telegram primeiro.' }, 400);
-    const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: t, disable_web_page_preview: true });
+    const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: t, disable_web_page_preview: true, ...(b.html ? { parse_mode: 'HTML' } : {}) });
     return r.ok ? json({ ok: true }) : json({ erro: 'O Telegram não recebeu.' }, 502);
   }
   if (acao === 'fechamento-foto' && req.method === 'POST') {
@@ -1249,12 +1308,12 @@ async function avisoDoVigia(req, env) {
     const r = await telegramAlbum(env, pngs, b.texto, canal ? 'canal' : '');
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
-  const texto = String(b.texto || '').slice(0, 3500);
+  const texto = String(b.texto || '').slice(0, 4000);
   if (!texto) return json({ erro: 'Sem texto.' }, 400);
   const c = await config(env);
   const chat = canal ? c.tg_canal : c.tg_chat;
   if (!(c.tg_token && chat)) return json({ erro: 'Telegram não conectado.' }, 409);
-  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true });
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true, ...(b.html ? { parse_mode: 'HTML' } : {}) });
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
@@ -1277,7 +1336,7 @@ async function roboFechamento(req, env) {
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
   const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
   await salvarFechamento(env, d).catch(() => {}); // também vira página pública
-  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), textoCanal: textoCanalFechamento(d), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
 }
 
 // notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,

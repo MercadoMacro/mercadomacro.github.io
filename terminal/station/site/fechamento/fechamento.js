@@ -144,7 +144,13 @@
       } catch (e) { msg(e.message, true); } finally { bt.disabled = false; }
     }
     $('f-telegram').onclick = function () { mandar(this, ''); };
-    $('f-canal').onclick = function () { if (confirm('Postar o fechamento no canal público agora?')) mandar(this, 'canal'); };
+    // no canal o fechamento vai só em texto, no formato do canal
+    $('f-canal').onclick = async function () {
+      if (!dados || !confirm('Postar o fechamento no canal público agora (só texto)?')) return;
+      this.disabled = true; msg('Postando no canal…');
+      try { await post('fechamento-texto', { texto: dados.textoCanal || dados.texto, html: !!dados.textoCanal, destino: 'canal' }); msg('Postado no canal público.'); }
+      catch (e) { msg(e.message, true); } finally { this.disabled = false; }
+    };
   }
 
   if (window.__FECHAMENTO) { dados = window.__FECHAMENTO; desenha(dados); document.body.classList.add('robo'); }

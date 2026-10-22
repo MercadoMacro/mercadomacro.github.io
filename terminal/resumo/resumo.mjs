@@ -62,7 +62,8 @@ console.log(resp);
 try {
   const c = await fetch(SITE + '/api/vigia', {
     method: 'POST', headers: { Authorization: 'Bearer ' + TOK, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...corpo, canal: true }),
+    // no canal o fechamento vai só em texto, no formato próprio do canal (textoCanal)
+    body: JSON.stringify(dados.textoCanal ? { texto: dados.textoCanal, html: true, canal: true } : { ...corpo, canal: true }),
   });
   console.log('canal:', await c.text());
 } catch (e) { console.error('canal falhou:', e.message); }
