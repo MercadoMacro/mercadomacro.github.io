@@ -1,5 +1,5 @@
-# Abertura do mercado: em dia útil, às 9h15 de Brasília, posta no canal público do Telegram as duas
-# imagens da abertura (página /abertura) com a legenda (terminal/abertura/abertura.mjs).
+# Abertura do mercado: em dia útil, às 9h15 de Brasília, posta no canal público do Telegram
+# a abertura em texto (terminal/abertura/abertura.mjs).
 # Só posta se o canal estiver ligado em /admin. A mensagem passa pelo site (https://mercadomacro.com.br/api/vigia),
 # que confere o token OIDC que o GitHub assina para este robô; não há senha guardada.
 name: Abertura do mercado
@@ -53,11 +53,6 @@ jobs:
         if: steps.ja.outputs.pular != '1'
         with:
           node-version: '22'
-      - name: Instalar o navegador para fotografar as páginas
-        if: steps.ja.outputs.pular != '1'
-        run: |
-          npm i --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
       - name: Montar e postar a abertura
         if: steps.ja.outputs.pular != '1'
         run: node terminal/abertura/abertura.mjs

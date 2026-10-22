@@ -332,16 +332,7 @@ async function dadosFechamento(env) {
   if (!tj.pre || !tj.ipca) { await new Promise((r) => setTimeout(r, 15000)); const t2 = await jurosTesouro(env); tj = { pre: tj.pre || t2.pre, ipca: tj.ipca || t2.ipca }; }
   if (tj.pre) out.juros.pre = tj.pre;
   if (tj.ipca) out.juros.ipca = tj.ipca;
-  try {
-    const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 120 } })).json();
-    const ult = f.dias[f.dias.length - 1], mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
-    out.fluxo = {
-      data: ult.data,
-      dia: ult.tipos?.estrangeiro?.saldo ?? null,
-      mes: f.meses?.[mes]?.tipos?.estrangeiro?.saldo ?? null,
-      ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
-    };
-  } catch (e) { /* fica "—" */ }
+  out.fluxo = await fluxoEstrangeiro();
   // IPCA em 12 meses (Banco Central, série 13522), para o texto do canal
   try {
     const j = await api('/bcb?c=13522&q=' + encodeURIComponent('/ultimos/1'));
@@ -398,6 +389,19 @@ async function noticiasDoDia() {
   }
   return escolhidas.map(({ t, f, link }) => ({ t, f, link }));
 }
+// saldo do investidor estrangeiro na B3 (fluxo.json do robô da B3): último dia, mês e ano, em R$ mil; null se falhar
+async function fluxoEstrangeiro() {
+  try {
+    const f = await (await fetch('https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', { cf: { cacheTtl: 120 } })).json();
+    const ult = f.dias[f.dias.length - 1], mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
+    return {
+      data: ult.data,
+      dia: ult.tipos?.estrangeiro?.saldo ?? null,
+      mes: f.meses?.[mes]?.tipos?.estrangeiro?.saldo ?? null,
+      ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
+    };
+  } catch (e) { return null; }
+}
 const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
 function textoFechamento(d, curto) {
   const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
@@ -452,15 +456,15 @@ async function dadosAbertura(env) {
     if (!m || typeof m.regularMarketPrice !== 'number') return null;
     const ant = m.chartPreviousClose ?? m.previousClose;
     const dia = m.regularMarketTime ? new Date((m.regularMarketTime + (m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10) : null;
-    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, dia };
+    return { v: m.regularMarketPrice, ch: ant ? (m.regularMarketPrice / ant - 1) * 100 : null, a: ant ?? null, dia };
   };
   const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-  const out = { data: hoje, gerado: new Date().toISOString(), cards: {}, agenda: [] };
+  const out = { data: hoje, gerado: new Date().toISOString(), cards: {}, agenda: [], agendaCanal: [], semana: [] };
   const [jc, cal] = await Promise.all([
     api('/quotes?symbols=' + ABRE_CARDS.map((c) => encodeURIComponent(c[2])).join(',')).catch(() => ({})),
     api('/calendar').catch(() => null),
   ]);
-  for (const [k, nome, s] of ABRE_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, dia: null }) };
+  for (const [k, nome, s] of ABRE_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, a: null, dia: null }) };
   // agenda de hoje (horário de Brasília): Brasil de média e alta importância, EUA só alta
   if (Array.isArray(cal)) {
     const PAIS = { BRL: 'BR', USD: 'EUA', BR: 'BR', US: 'EUA' };
@@ -474,8 +478,29 @@ async function dadosAbertura(env) {
       return { t, hora: b.toISOString().slice(11, 16), pais: p, titulo: String(e.title || '').slice(0, 90), proj: String(e.forecast || '').slice(0, 14), ant: String(e.previous || '').slice(0, 14) };
     }).filter(Boolean).sort((a, b) => a.t - b.t).slice(0, 8).map(({ t, ...x }) => x);
   }
+  // para o texto do canal: hoje com as outras economias grandes (só alta importância; Brasil também média)
+  // e o resto da semana (Brasil e EUA, alta importância)
+  if (Array.isArray(cal)) {
+    const PAISC = { BRL: 'BR', USD: 'EUA', EUR: 'Zona do euro', GBP: 'Reino Unido', JPY: 'Japão', CNY: 'China' };
+    const evs = cal.map((e) => {
+      const t = Date.parse(e.date), p = PAISC[e.country];
+      if (!p || !isFinite(t) || !e.title) return null;
+      if (!(e.impact === 'High' || (p === 'BR' && e.impact === 'Medium'))) return null;
+      const b = new Date(t - 3 * 3600000);
+      return { t, dia: b.toISOString().slice(0, 10), hora: b.toISOString().slice(11, 16), pais: p, titulo: String(e.title).slice(0, 90), proj: String(e.forecast || '').slice(0, 14), alta: e.impact === 'High' };
+    }).filter(Boolean).sort((a, b) => a.t - b.t);
+    out.agendaCanal = evs.filter((e) => e.dia === hoje).slice(0, 10).map(({ t, dia, alta, ...x }) => x);
+    const fimSemana = new Date(Date.parse(hoje + 'T12:00:00Z') + (6 - new Date(hoje + 'T12:00:00Z').getUTCDay()) * 86400000).toISOString().slice(0, 10);
+    const porDia = {};
+    for (const e of evs) {
+      if (!(e.dia > hoje && e.dia < fimSemana && e.alta && (e.pais === 'BR' || e.pais === 'EUA'))) continue;
+      const l = (porDia[e.dia] = porDia[e.dia] || []);
+      if (l.length < 5 && !l.some((x) => x.titulo === e.titulo && x.pais === e.pais)) l.push({ pais: e.pais, titulo: e.titulo });
+    }
+    out.semana = Object.keys(porDia).sort().map((dia) => ({ dia, eventos: porDia[dia] }));
+  }
   out.agendaOk = Array.isArray(cal);
-  out.noticias = await noticiasDoDia().catch(() => []);
+  [out.noticias, out.fluxo] = await Promise.all([noticiasDoDia().catch(() => []), fluxoEstrangeiro()]);
   return out;
 }
 function textoAbertura(d, curto) {
@@ -501,6 +526,45 @@ function textoAbertura(d, curto) {
   }
   linhas.push('', 'Painel completo: https://mercadomacro.com.br');
   return linhas.join('\n');
+}
+// abertura no canal público: só texto (HTML do Telegram), no modelo que o Severino escolheu
+function textoCanalAbertura(d) {
+  const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const BAND = { BR: '🇧🇷', EUA: '🇺🇸', 'Zona do euro': '🇪🇺', 'Reino Unido': '🇬🇧', 'Japão': '🇯🇵', China: '🇨🇳' };
+  const e = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  const pct = (v) => (v == null || !isFinite(v) ? '' : ` (${v > 0 ? '+' : v < 0 ? '−' : ''}${brn(Math.abs(v), 2)}%)`);
+  const c = d.cards;
+  const l = (k, fmt, nome) => `• ${e(nome || (c[k] && c[k].nome) || k)}: ${c[k] && c[k].v != null ? fmt(c[k].v) + pct(c[k].ch) : '—'}`;
+  const n0 = (v) => brn(v, 0), n2 = (v) => brn(v, 2);
+  const tnx = c.tnx || {};
+  const bp = tnx.v != null && tnx.a != null ? Math.round((tnx.v - tnx.a) * 100) : null;
+  const bi = (mil) => (mil == null ? '—' : `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${brn(Math.abs(mil) / 1e6, 2)} bi`);
+  const dt = new Date(d.data + 'T12:00:00Z');
+  const L = [
+    `☀️ <b>Abertura de mercado</b> — ${DIAS[dt.getUTCDay()]}, ${ddmm(d.data)}`,
+    '', '<b>Ásia (fechamento)</b>',
+    l('nikkei', n0, 'Nikkei (Japão)'), l('hsi', n0, 'Hang Seng (Hong Kong)'), l('xangai', n0, 'Xangai (China)'),
+    '', '<b>Europa</b>',
+    l('stoxx', n0), l('dax', n0), l('ftse', n0, 'FTSE 100 (Reino Unido)'),
+    '', '<b>EUA (pré-abertura)</b>',
+    l('spf', n0), l('nqf', n0), l('dowf', n0),
+    `• Treasury 10Y: ${tnx.v != null ? n2(tnx.v) + '%' + (bp != null ? ` (${bp > 0 ? '+' : bp < 0 ? '−' : ''}${Math.abs(bp)} bp)` : '') : '—'}`,
+    l('dxy', n2, 'DXY (dólar global)'),
+    '', '<b>Brasil</b>',
+    l('ibov', n0, 'Ibovespa (último fechamento)'), l('dolar', (v) => 'R$ ' + brn(v, 4)), l('ewz', (v) => 'US$ ' + n2(v), 'EWZ (Brasil em NY)'),
+  ];
+  if (d.fluxo) L.push(`• Estrangeiro na B3 (até ${ddmm(d.fluxo.data)}): ${bi(d.fluxo.dia)} no dia, ${bi(d.fluxo.mes)} no mês, ${bi(d.fluxo.ano)} no ano`);
+  L.push('', '<b>Commodities e cripto</b>',
+    l('brent', (v) => 'US$ ' + n2(v)), l('ouro', (v) => 'US$ ' + n2(v)), l('btc', (v) => 'US$ ' + n0(v)));
+  const ag = d.agendaCanal || [];
+  if (ag.length) L.push('', '🗓️ <b>Agenda de hoje (horário de Brasília)</b>', ...ag.map((a) => `• ${a.hora} ${BAND[a.pais] || ''} ${e(a.titulo)}${a.proj ? ` (proj. ${e(a.proj)})` : ''}`));
+  const sem = d.semana || [];
+  if (sem.length) L.push('', '<b>No radar da semana</b>', ...sem.map((s) => `• ${CURTO[new Date(s.dia + 'T12:00:00Z').getUTCDay()]} ${ddmm(s.dia)}: ${s.eventos.map((x) => `${BAND[x.pais] || ''} ${e(x.titulo)}`).join(', ')}`));
+  if (d.noticias && d.noticias.length) L.push('', '<b>Destaques</b>', ...d.noticias.slice(0, 4).map((n) => `• ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}`));
+  L.push('', 'Painel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>');
+  return L.join('\n').slice(0, 4000);
 }
 // destino 'canal' = canal público do Telegram (config tg_canal); sem destino = conversa do administrador
 // fechamento no canal público: só texto (HTML do Telegram), no modelo que o Severino escolheu
@@ -846,7 +910,7 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'abertura' && req.method === 'GET') {
     const d = await dadosAbertura(env);
-    return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true) }, 200, { 'Cache-Control': 'no-store' });
+    return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), textoCanal: textoCanalAbertura(d) }, 200, { 'Cache-Control': 'no-store' });
   }
   if (acao === 'fechamento-modo' && req.method === 'POST') {
     // como o robô das 18h manda o fechamento: 'imagem' (cartão com legenda) ou 'texto' (só a mensagem)
@@ -1419,7 +1483,7 @@ async function roboAbertura(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
   const [d, c] = await Promise.all([dadosAbertura(env), config(env)]);
-  return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), canal: !!c.tg_canal }, 200, { 'Cache-Control': 'no-store' });
+  return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), textoCanal: textoCanalAbertura(d), canal: !!c.tg_canal }, 200, { 'Cache-Control': 'no-store' });
 }
 
 /* ---------------- utilidades ---------------- */

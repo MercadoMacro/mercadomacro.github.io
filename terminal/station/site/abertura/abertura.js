@@ -158,7 +158,17 @@
       } catch (e) { msg(e.message, true); } finally { bt.disabled = false; }
     }
     $('f-telegram').onclick = function () { mandar(this, ''); };
-    $('f-canal').onclick = function () { if (confirm('Postar a abertura no canal público agora?')) mandar(this, 'canal'); };
+    // no canal público vai só o texto (modelo do canal)
+    $('f-canal').onclick = async function () {
+      if (!dados || !confirm('Postar a abertura no canal público agora?')) return;
+      const bt = this; bt.disabled = true; msg('Postando no canal…');
+      try {
+        const r = await fetch('/api/admin/fechamento-texto', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: dados.textoCanal || dados.texto, html: !!dados.textoCanal, destino: 'canal' }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.erro || 'O Telegram não recebeu.');
+        msg('Postado no canal público.');
+      } catch (e) { msg(e.message, true); } finally { bt.disabled = false; }
+    };
   }
 
   if (window.__ABERTURA) { dados = window.__ABERTURA; desenha(dados); document.body.classList.add('robo'); }
