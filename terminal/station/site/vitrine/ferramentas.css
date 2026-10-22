@@ -17,7 +17,7 @@
 .cr-tab th:first-child, .cr-tab td:first-child { text-align: left; }
 .cr-tab td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; font-family: var(--mono); white-space: nowrap; }
 .cr-tab td:first-child { font-family: inherit; white-space: normal; }
-.cr-tab td small { display: block; color: var(--text-3); font: 400 12px Inter, system-ui, sans-serif; margin-top: 2px; }
+.cr-tab td small { display: block; color: var(--text-3); font: 400 12px Inter, system-ui, sans-serif; margin-top: 2px; white-space: normal; }
 .cr-tab tr.top td:first-child b { color: var(--accent); }
 .cr-tab .liq { color: var(--pos); font-weight: 600; }
 .cr-tab input { width: 76px; min-height: 34px; padding: 4px 8px; font-size: 13px; display: inline-block; text-align: right; }

@@ -452,7 +452,7 @@
 
   function newsHTML() {
     const list = (typeof newsAll !== 'undefined' && Array.isArray(newsAll) ? newsAll : []).filter((n) => n && n.titulo && n.data).slice().sort((a, b) => b.data - a.data).slice(0, 14);
-    if (!list.length) return '<div class="ms-empty">Carregando notícias…</div>';
+    if (!list.length) return window.__newsErro ? '<div class="ms-empty">Notícias indisponíveis agora.</div>' : '<div class="ms-empty">Carregando notícias…</div>';
     return `<ul class="ms-news">${list.map((n) => {
       const fonte = n.fonte === 'Google News' ? (n.veiculo || 'Google News') : n.fonte;
       const t = new Date(n.data), recent = Date.now() - n.data < 60 * 60 * 1000;
@@ -593,7 +593,9 @@
   new MutationObserver(() => { syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
-  setInterval(() => { if (active()) { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); } }, 60 * 1000);
+  const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); };
+  setInterval(() => { if (active()) redrawNews(); }, 60 * 1000);
+  window.addEventListener('mm-news-erro', redrawNews);
   document.addEventListener('visibilitychange', () => { syncCrypto(); syncForex(); if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); });
 
   /* ---------------- estilos ---------------- */
@@ -609,7 +611,7 @@
   .ms-info .dot.bad { background:var(--neg); }
   .ms-refresh { display:inline-flex; align-items:center; gap:6px; }
   .ms-refresh.busy i { animation:spin .8s linear infinite; }
-  .ms-wrap .up { color:var(--pos); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
+  .ms-wrap .up { color:var(--pos-ink); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
 
   /* faixa de cripto em carrossel: arrasta com o mouse, rola com a roda ou pelas setas; no celular, com o dedo */
   .ms-crypto { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
@@ -664,14 +666,14 @@
   .ms-tb td.px { width:92px; }
   .ms-tb td.ch { text-align:right; width:66px; font-family:'JetBrains Mono', monospace; font-size:11.5px; }
   .ms-tb td.tm { text-align:right; width:56px; font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding-right:12px; }
-  .ms-tb td.tm i { font-style:normal; color:var(--accent); }
+  .ms-tb td.tm i { font-style:normal; color:var(--accent-ink); }
   .ms-tb tr.old td.px { color:var(--text-3); }
   .ms-tb tr:not([data-sym]) { cursor:default; }
   .cc { display:inline-block; min-width:22px; margin-right:7px; padding:0 3px; border-radius:4px; background:var(--surface-3); color:var(--text-3); font:600 9px 'JetBrains Mono', monospace; text-align:center; vertical-align:1px; }
 
   .ms-seg { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
   .ms-seg button { border:0; background:none; color:var(--text-3); font:inherit; font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; cursor:pointer; }
-  .ms-seg button.on { background:var(--accent-soft); color:var(--accent); }
+  .ms-seg button.on { background:var(--accent-soft); color:var(--accent-ink); }
   .ms-curve-sub { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:8px 12px 0; font-size:11.5px; color:var(--text-3); }
   .ms-curve-sub b { color:var(--text); font-family:'JetBrains Mono', monospace; }
   .ms-curve-sub select { height:26px; padding:0 6px; font-size:11.5px; border-radius:7px; background:var(--surface-2); color:var(--text); border:1px solid var(--line-2); margin-left:4px; }
@@ -698,7 +700,7 @@
   .ms-news .src { grid-area:src; font-size:10.5px; color:var(--text-3); }
   .ms-news .hr { grid-area:hr; align-self:start; font:600 10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding:2px 6px; border-radius:6px; background:var(--surface-2); }
   .ms-news .hr.new { background:var(--neg); color:#fff; }
-  .ms-link { border:0; background:none; color:var(--accent); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
+  .ms-link { border:0; background:none; color:var(--accent-ink); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
   .ms-note { margin:14px 2px 0; font-size:11px; color:var(--text-3); }
   .ms-tb tr.ms-fx-live td.tm { position:relative; }
   .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
@@ -706,7 +708,7 @@
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
   @media (max-width: 1250px) { .ms-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
-  @media (max-width: 860px) { .ms-grid, .ms-c4 { grid-template-columns:minmax(0,1fr); display:flex; flex-direction:column; } }
+  @media (max-width: 860px) { .ms-grid, .ms-c4 { grid-template-columns:minmax(0,1fr); display:flex; flex-direction:column; } .ms-c4 { align-items:stretch; } }
   @media (max-width: 640px) {
     .ms-wrap { padding:8px 10px 90px; }
     .ms-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }

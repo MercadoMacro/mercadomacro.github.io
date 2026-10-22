@@ -334,10 +334,10 @@
   ${R} .ps-idx { display:inline-block; position:relative; width:90px; height:6px; border-radius:3px; vertical-align:middle; background:linear-gradient(90deg, color-mix(in srgb, var(--neg) 55%, transparent), var(--surface-3) 50%, color-mix(in srgb, var(--pos) 55%, transparent)); }
   ${R} .ps-idx i { position:absolute; top:-3px; width:3px; height:12px; margin-left:-1.5px; border-radius:2px; background:var(--text); }
   ${R} .ps-idxn { display:inline-block; width:28px; margin-left:6px; color:var(--text-2); }
-  ${R} .ps-novo { font:600 10.5px var(--font, inherit); color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+  ${R} .ps-novo { font:600 10.5px var(--font, inherit); color:var(--accent-ink); text-transform:uppercase; letter-spacing:.04em; }
   ${R} .ps-vazio { text-align:center !important; color:var(--text-3); font-family:inherit !important; padding:20px !important; }
   ${R} .ps-mais { padding:8px 14px 0; font-size:11.5px; color:var(--text-3); }
-  ${R} .ps-pos { color:var(--pos); } ${R} .ps-neg { color:var(--neg); }
+  ${R} .ps-pos { color:var(--pos-ink); } ${R} .ps-neg { color:var(--neg); }
   body.light ${R} .ps-pos { color:color-mix(in srgb, var(--pos) 72%, #000); }
   body.light ${R} .ps-neg { color:color-mix(in srgb, var(--neg) 85%, #000); }
   ${R} .ps-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; }
@@ -352,7 +352,7 @@
   ${R} .ps-bh { padding:10px 14px 6px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
   ${R} .ps-bh b { font-size:14px; color:var(--text); font-weight:600; }
   ${R} .ps-bh small { font-size:11px; color:var(--text-3); }
-  ${R} .ps-btk { font:600 12px 'JetBrains Mono', monospace; color:var(--accent); }
+  ${R} .ps-btk { font:600 12px 'JetBrains Mono', monospace; color:var(--accent-ink); }
   ${R} .ps-bsum { flex-basis:100%; font-size:12px; color:var(--text-2); }
   ${R} .ps-bout .ps-msg { border-top:1px solid var(--line); padding:18px; }
   ${R} .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }

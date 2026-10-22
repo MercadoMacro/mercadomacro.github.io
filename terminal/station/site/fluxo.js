@@ -439,7 +439,7 @@
   #fluxo-root .fx-tab tbody tr { cursor:pointer; }
   #fluxo-root .fx-tab tbody tr.on th { color:var(--text); font-weight:600; }
   #fluxo-root .fx-tab tbody tr:hover { background:var(--surface-2); }
-  #fluxo-root .fx-pos, #fluxo-root .fx-kpis b.fx-pos { color:var(--pos); }
+  #fluxo-root .fx-pos, #fluxo-root .fx-kpis b.fx-pos { color:var(--pos-ink); }
   #fluxo-root .fx-neg, #fluxo-root .fx-kpis b.fx-neg { color:var(--neg); }
   #fluxo-root .fx-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; }
   body.light #fluxo-root .fx-pos, body.light #fluxo-root .fx-kpis b.fx-pos { color:color-mix(in srgb, var(--pos) 72%, #000); }

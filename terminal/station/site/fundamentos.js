@@ -392,11 +392,11 @@
   .fd-none { padding:10px 12px; color:var(--text-3); font-size:12.5px; }
   .fd-views { display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .fd-views button { padding:8px 16px; border:0; background:var(--surface); color:var(--text-3); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
-  .fd-views button.on { background:var(--surface-2); color:var(--accent); }
+  .fd-views button.on { background:var(--surface-2); color:var(--accent-ink); }
   .fd-pop { display:flex; gap:6px; flex-wrap:wrap; }
   .fd-pop button { padding:5px 11px; border-radius:99px; border:1px solid var(--line); background:var(--surface); color:var(--text-2); font:600 11.5px 'JetBrains Mono', monospace; cursor:pointer; }
   .fd-pop button:hover { border-color:var(--line-2); }
-  .fd-pop button.on { border-color:var(--accent); color:var(--accent); }
+  .fd-pop button.on { border-color:var(--accent); color:var(--accent-ink); }
   .fd-msg { padding:48px 16px; text-align:center; color:var(--text-3); font-size:13px; line-height:1.6; }
   .fd-msg b { color:var(--text-2); }
   .fd-head { display:flex; gap:16px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
@@ -408,10 +408,10 @@
   .fd-tk b { font:600 12.5px 'JetBrains Mono', monospace; color:var(--text); }
   .fd-tk span { font:600 13px 'JetBrains Mono', monospace; }
   .fd-tk em { font:normal 11.5px 'JetBrains Mono', monospace; }
-  .fd-wrap .up { color:var(--pos); } .fd-wrap .dn { color:var(--neg); } .fd-wrap .eq { color:var(--text-3); }
+  .fd-wrap .up { color:var(--pos-ink); } .fd-wrap .dn { color:var(--neg); } .fd-wrap .eq { color:var(--text-3); }
   .fd-ref { font-size:12px; color:var(--text-3); }
   .fd-ref b { color:var(--text-2); }
-  .fd-doc { color:var(--accent); text-decoration:none; font-size:11px; font-weight:600; white-space:nowrap; }
+  .fd-doc { color:var(--accent-ink); text-decoration:none; font-size:11px; font-weight:600; white-space:nowrap; }
   .fd-doc:hover { text-decoration:underline; }
   .fd-doc i { font-size:9px; }
   th .fd-doc { display:block; margin-top:2px; font-size:10px; }
@@ -443,14 +443,14 @@
   .fd-tbl thead th { font-size:11px; color:var(--text-3); font-weight:600; }
   .fd-tbl thead th small { display:block; font-weight:400; font-size:10px; }
   .fd-tbl .ttm { background:color-mix(in srgb, var(--accent) 7%, transparent); }
-  .fd-tbl thead th.ttm { color:var(--accent); }
+  .fd-tbl thead th.ttm { color:var(--accent-ink); }
   .fd-tbl tr:last-child th, .fd-tbl tr:last-child td { border-bottom:0; }
   .fd-rk-bar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--text-3); }
   .fd-rk-bar select { height:32px; margin-left:6px; padding:0 10px; border-radius:9px; background:var(--surface); color:var(--text); border:1px solid var(--line-2); font:inherit; font-size:12.5px; max-width:260px; }
   .fd-rk { overflow-x:auto; }
   .fd-rk th, .fd-rk td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
   .fd-rk th { font-size:11px; color:var(--text-3); font-weight:600; cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface); }
-  .fd-rk th.on { color:var(--accent); }
+  .fd-rk th.on { color:var(--accent-ink); }
   .fd-rk .n { text-align:right; font-family:'JetBrains Mono', monospace; font-size:12px; font-variant-numeric:tabular-nums; }
   .fd-rk td b { font:600 12px 'JetBrains Mono', monospace; color:var(--text); margin-right:6px; }
   .fd-rk td span { color:var(--text-2); }

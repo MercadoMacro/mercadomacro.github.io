@@ -99,15 +99,25 @@
 
   /* ---------------- estado ---------------- */
   const DEF = {
-    asset: 'PETR4', S: 38, sSrc: '', r: 0.15, rSrc: '', q: 0, vol: 0.30, days: 30, lot: 100,
+    // preço e juros começam vazios: só entram quando vêm da fonte ou são digitados (nada inventado)
+    asset: 'PETR4', S: null, sSrc: '', r: null, rSrc: '', q: 0, vol: 0.30, days: 30, lot: 100,
     tEval: 0, volShift: 0, preset: 'long_call', legs: [], capital: 50000, riskPct: 2, sub: 'builder', hv: null
   };
   let st;
   try { st = { ...DEF, ...(JSON.parse(localStorage.getItem(KEY) || '{}') || {}) }; } catch (e) { st = { ...DEF }; }
   if (!Array.isArray(st.legs)) st.legs = [];
+  // estado salvo por versões antigas trazia preço 38 e juros de 15% fixos: sem fonte, volta a ficar vazio
+  if (!(st.S > 0) || !st.sSrc) { st.S = null; st.sSrc = ''; }
+  if (!st.rManual && !/^Selic meta/.test(st.rSrc || '')) { st.r = null; st.rSrc = ''; }
+  if (!(st.S > 0)) st.legs.forEach((l) => { if (l.theo) l.prem = null; });
   let saveT;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* sem espaço */ } }, 250); };
   const rC = () => Math.log(1 + st.r); // Selic anual → taxa contínua
+  // só simula com preço do ativo e juros conhecidos
+  const hasS = () => st.S > 0;
+  const ready = () => hasS() && st.r != null && isFinite(st.r);
+  const faltaMsg = () => !hasS() && !(st.r != null && isFinite(st.r)) ? 'Sem preço do ativo e sem juros: busque o código no topo ou digite o preço e os juros para simular.'
+    : !hasS() ? 'Sem preço do ativo: busque o código no topo ou digite o preço para simular.' : 'Sem taxa de juros: digite os juros (a.a.) no topo para simular.';
 
   /* ---------------- biblioteca de estratégias ---------------- */
   // cada perna: { type: call|put|stock, side: +1 compra / -1 venda, K, days, iv, prem, qty, theo }
@@ -165,7 +175,7 @@
     st.tEval = 0; st.volShift = 0;
     st.legs = s.legs.map((l) => ({
       id: uid(), type: l.type, side: l.side,
-      K: l.type === 'stock' ? null : roundK(st.S * l.kMul, st.S),
+      K: l.type === 'stock' || !hasS() ? null : roundK(st.S * l.kMul, st.S),
       days: l.type === 'stock' ? null : Math.round(st.days * (l.dMul || 1)),
       iv: st.vol, qty: st.lot * (l.qtyMul || 1), theo: true, prem: null
     }));
@@ -174,7 +184,8 @@
   // perna "teórica": prêmio = Black-Scholes com a vol da perna; perna de ação: preço de entrada = spot
   function reprice() {
     st.legs.forEach((l) => {
-      if (l.type === 'stock') { if (l.theo || l.prem == null) { l.prem = st.S; l.theo = true; } return; }
+      if (l.type === 'stock') { if (hasS() && (l.theo || l.prem == null)) { l.prem = st.S; l.theo = true; } return; }
+      if (!ready() || !(l.K > 0)) return;
       if (l.theo || l.prem == null) { l.prem = +bs(l.type, st.S, l.K, yearsOf(l.days), rC(), l.iv, st.q).price.toFixed(2); l.theo = true; }
     });
   }
@@ -213,7 +224,8 @@
     return op.reduce((a, l) => a + l.iv * l.qty, 0) / w + st.volShift;
   };
   function analyze() {
-    if (!st.legs.length) return null;
+    if (!st.legs.length || !ready()) return null;
+    if (st.legs.some((l) => l.prem == null || (l.type !== 'stock' && !(l.K > 0)))) return null;
     const tExp = isFinite(minDays()) ? minDays() : 0;
     const S = st.S;
     // grade fina para máximos, mínimos e pontos de equilíbrio
@@ -274,7 +286,7 @@
       st.asset = String(sym).trim().toUpperCase();
       st.S = +p.toFixed(2);
       // trocou de ativo (ou o preço andou muito): remonta os strikes em volta do preço novo
-      if (prevAsset !== st.asset || Math.abs(st.S / prevS - 1) > 0.2) { if (st.preset) buildPreset(st.preset); else st.legs.forEach((l) => { if (l.K) l.K = roundK(l.K * st.S / prevS, st.S); }); }
+      if (!(prevS > 0) || prevAsset !== st.asset || Math.abs(st.S / prevS - 1) > 0.2) { if (st.preset) buildPreset(st.preset); else st.legs.forEach((l) => { if (l.K) l.K = roundK(l.K * st.S / prevS, st.S); }); }
       st.sSrc = `Yahoo · ${new Date(hist.pt || Date.now()).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
       const hv = histVol(c, 21);
       st.hv = { v21: hv, v63: histVol(c, 63), v252: histVol(c, 252) };
@@ -305,7 +317,7 @@
       const last = Array.isArray(j) ? j[j.length - 1] : null, v = parseFloat(last?.valor);
       if (!isFinite(v)) throw new Error('sem valor');
       if (!st.rManual) { st.r = v / 100; st.rSrc = `Selic meta · BCB ${last.data}`; reprice(); save(); renderAll(); }
-    } catch (e) { if (!st.rSrc) st.rSrc = 'Selic indisponível agora: ajuste à mão'; renderTop(); }
+    } catch (e) { if (!st.rSrc) st.rSrc = 'Selic indisponível agora: digite os juros à mão'; renderTop(); }
   }
   let statusMsg = '', statusErr = false;
   function setStatus(m, err = false) { statusMsg = m; statusErr = err; const el = $o('#opt-status'); if (el) { el.textContent = m; el.classList.toggle('err', err); } }
@@ -334,9 +346,9 @@
     $o('#opt-top').innerHTML = `
       <div class="opt-fields">
         <label class="opt-f opt-asset"><span>Ativo</span><div class="opt-inp"><input id="opt-asset" value="${esc(st.asset)}" spellcheck="false" autocomplete="off" aria-label="Código do ativo"><button class="opt-go" id="opt-load" title="Buscar preço e histórico"><i class="fas fa-search"></i></button></div></label>
-        <label class="opt-f"><span>Preço do ativo</span><div class="opt-inp"><em>R$</em><input id="opt-S" type="number" step="0.01" value="${st.S}"></div></label>
-        <label class="opt-f"><span>Juros (a.a.)</span><div class="opt-inp"><input id="opt-r" type="number" step="0.05" value="${nf(st.r * 100, 2).replace(',', '.')}"><em>%</em></div></label>
-        <label class="opt-f"><span>Volatilidade (a.a.)</span><div class="opt-inp"><input id="opt-vol" type="number" step="0.5" value="${+(st.vol * 100).toFixed(1)}"><em>%</em></div></label>
+        <label class="opt-f"><span>Preço do ativo</span><div class="opt-inp"><em>R$</em><input id="opt-S" type="number" step="0.01" value="${hasS() ? st.S : ''}" placeholder="—"></div></label>
+        <label class="opt-f"><span>Juros (a.a.)</span><div class="opt-inp"><input id="opt-r" type="number" step="0.05" value="${st.r != null && isFinite(st.r) ? nf(st.r * 100, 2).replace(',', '.') : ''}" placeholder="—"><em>%</em></div></label>
+        <label class="opt-f" title="Valor suposto para o modelo, não é cotação: ajuste ou use a vol histórica"><span>Vol. suposta (a.a.)</span><div class="opt-inp"><input id="opt-vol" type="number" step="0.5" value="${+(st.vol * 100).toFixed(1)}"><em>%</em></div></label>
         <label class="opt-f"><span>Prazo</span><div class="opt-inp"><input id="opt-days" type="number" step="1" min="1" value="${st.days}"><em>dias</em></div></label>
         <label class="opt-f"><span>Lote padrão</span><div class="opt-inp"><input id="opt-lot" type="number" step="100" min="1" value="${st.lot}"><em>opções</em></div></label>
       </div>
@@ -393,7 +405,7 @@
     return `<tr data-leg="${l.id}">
       <td><button class="opt-side ${l.side > 0 ? 'buy' : 'sell'}" data-f="side">${l.side > 0 ? 'Compra' : 'Venda'}</button></td>
       <td><select data-f="type"><option value="call" ${l.type === 'call' ? 'selected' : ''}>Call</option><option value="put" ${l.type === 'put' ? 'selected' : ''}>Put</option><option value="stock" ${l.type === 'stock' ? 'selected' : ''}>Ação</option></select></td>
-      <td>${opt ? `<input type="number" step="${strikeStep(st.S)}" data-f="K" value="${l.K}">` : '<span class="mut">—</span>'}</td>
+      <td>${opt ? `<input type="number" step="${strikeStep(st.S)}" data-f="K" value="${l.K ?? ''}" placeholder="—">` : '<span class="mut">—</span>'}</td>
       <td>${opt ? `<input type="number" step="1" min="1" data-f="days" value="${l.days}">` : '<span class="mut">—</span>'}</td>
       <td>${opt ? `<input type="number" step="0.5" data-f="iv" value="${+(l.iv * 100).toFixed(1)}">` : '<span class="mut">—</span>'}</td>
       <td><input type="number" step="0.01" data-f="prem" class="${l.theo ? 'theo' : ''}" value="${l.prem != null ? (+l.prem).toFixed(2) : ''}">${opt && !l.theo ? `<button class="opt-link" data-f="theo" title="Voltar ao prêmio teórico">B-S</button>` : ''}</td>
@@ -412,6 +424,21 @@
     const a = analyze();
     const res = $o('#opt-res');
     if (!res) return;
+    if (!a && st.legs.length && !ready()) {
+      // sem preço ou sem juros: nada de simulação com número inventado, tudo fica em "—"
+      res.innerHTML = `
+      <div class="opt-kpis">
+        <div><span>Custo (débito)</span><b>—</b></div><div><span>Ganho máximo</span><b>—</b></div><div><span>Perda máxima</span><b>—</b></div>
+        <div><span>Ponto de equilíbrio</span><b>—</b></div><div><span>Chance de lucro</span><b>—</b></div><div><span>Ganho ÷ risco</span><b>—</b></div>
+      </div>
+      <p class="opt-note">${esc(faltaMsg())}</p>`;
+      const gk = $o('#opt-greeks');
+      if (gk) gk.innerHTML = `<div class="opt-h"><h3>Gregas da posição</h3><span>na data simulada</span></div>
+      <div class="opt-gk">${[['Δ', 'Delta'], ['Γ', 'Gamma'], ['Θ', 'Theta'], ['V', 'Vega'], ['ρ', 'Rho']].map(([i, n]) => `<div><i>${i}</i><b>—</b><span>${n}: aparece quando houver preço do ativo e juros.</span></div>`).join('')}</div>`;
+      const rk = $o('#opt-risk'); if (rk) rk.innerHTML = '';
+      const mx = $o('#opt-matrix'); if (mx) mx.innerHTML = `<div class="opt-h"><h3>Mapa de cenários</h3><span>resultado conforme o preço do ativo e o tempo</span></div><p class="mut">—</p>`;
+      drawChart(null, faltaMsg()); renderSaved(); return;
+    }
     if (!a) { res.innerHTML = '<p class="mut">Monte uma estratégia para ver o resultado.</p>'; ['#opt-greeks', '#opt-risk', '#opt-matrix'].forEach((s) => { const e = $o(s); if (e) e.innerHTML = ''; }); drawChart(null); renderSaved(); return; }
     const cost = a.cost;
     const rr = !a.unlimG && !a.unlimL && a.maxL < 0 ? a.maxG / -a.maxL : null;
@@ -455,13 +482,13 @@
 
   /* ---------- gráfico de resultado (SVG próprio) ---------- */
   let geo = null;
-  function drawChart(a) {
+  function drawChart(a, msg) {
     const wrap = $o('#opt-chart');
     if (!wrap) return;
     const tip = wrap.querySelector('.opt-tip');
     wrap.querySelectorAll('svg, .opt-empty').forEach((n) => n.remove());
     const tev = $o('#opt-tev'), vs = $o('#opt-vs');
-    if (!a) { wrap.insertAdjacentHTML('afterbegin', '<div class="opt-empty">Sem pernas para desenhar.</div>'); return; }
+    if (!a) { geo = null; wrap.insertAdjacentHTML('afterbegin', `<div class="opt-empty">${esc(msg || 'Sem pernas para desenhar.')}</div>`); const sub = $o('#opt-chart-sub'); if (sub) sub.textContent = ''; return; }
     if (tev) { tev.max = Math.max(0, a.tExp); tev.value = st.tEval = clamp(st.tEval, 0, a.tExp); $o('#opt-tev-l').textContent = st.tEval === 0 ? 'hoje' : st.tEval >= a.tExp ? 'vencimento' : `daqui a ${st.tEval} dias`; }
     if (vs) { vs.value = Math.round(st.volShift * 100); $o('#opt-vs-l').textContent = st.volShift === 0 ? 'nenhum' : `${st.volShift > 0 ? '+' : ''}${Math.round(st.volShift * 100)} pts`; }
     const S = st.S, sd = S * a.sig * Math.sqrt(Math.max(yearsOf(a.tExp), 1 / 365));
@@ -564,6 +591,7 @@
      ========================================================= */
   let chainSide = 1;
   function renderChain() {
+    if (!ready()) { body.innerHTML = `<section class="ana-card"><div class="opt-h"><h3>Cadeia teórica</h3><span>${esc(st.asset)} · —</span></div><p class="mut">${esc(faltaMsg())}</p></section>`; return; }
     const S = st.S, step = strikeStep(S);
     let k0 = roundK(S * 0.8, S), k1 = roundK(S * 1.2, S);
     let stp = step;
@@ -600,9 +628,9 @@
   const ivc = { type: 'call', K: null, days: null, prem: null };
   function renderVol() {
     const hv = st.hv || {};
-    const K = ivc.K ?? roundK(st.S, st.S), days = ivc.days ?? st.days;
+    const K = ivc.K ?? (hasS() ? roundK(st.S, st.S) : null), days = ivc.days ?? st.days;
     const T = yearsOf(days);
-    const iv = ivc.prem != null ? impliedVol(ivc.type, ivc.prem, st.S, K, T, rC(), st.q) : null;
+    const iv = ivc.prem != null && ready() && K > 0 ? impliedVol(ivc.type, ivc.prem, st.S, K, T, rC(), st.q) : null;
     const rolling = hist && hist.c && hist.c.length > 40 ? rollingHV(hist.c, 21) : null;
     const spark = rolling ? sparkSVG(rolling.filter((x) => x != null)) : '';
     const horizons = [[1, '1 dia'], [5, '1 semana'], [st.days, `Vencimento (${st.days}d)`], [30, '1 mês'], [91, '3 meses'], [365, '1 ano']];
@@ -621,19 +649,19 @@
           <div class="opt-h"><h3>Calculadora de volatilidade implícita</h3><span>a partir do prêmio do book</span></div>
           <div class="opt-fields sm">
             <label class="opt-f"><span>Tipo</span><div class="opt-inp"><select id="ivc-type"><option value="call" ${ivc.type === 'call' ? 'selected' : ''}>Call</option><option value="put" ${ivc.type === 'put' ? 'selected' : ''}>Put</option></select></div></label>
-            <label class="opt-f"><span>Strike</span><div class="opt-inp"><input id="ivc-K" type="number" step="0.01" value="${K}"></div></label>
+            <label class="opt-f"><span>Strike</span><div class="opt-inp"><input id="ivc-K" type="number" step="0.01" value="${K ?? ''}" placeholder="—"></div></label>
             <label class="opt-f"><span>Dias</span><div class="opt-inp"><input id="ivc-days" type="number" step="1" value="${days}"></div></label>
             <label class="opt-f"><span>Prêmio de mercado</span><div class="opt-inp"><em>R$</em><input id="ivc-prem" type="number" step="0.01" value="${ivc.prem ?? ''}" placeholder="ex.: 1,25"></div></label>
           </div>
-          <p class="opt-big">${ivc.prem == null ? 'Digite o prêmio negociado para descobrir a volatilidade que o mercado está cobrando.' : iv == null ? 'Prêmio abaixo do valor intrínseco ou fora do possível: confira os números.' : `Volatilidade implícita: <b>${pct(iv)}</b>`}</p>
+          <p class="opt-big">${!ready() ? esc(faltaMsg()) : ivc.prem == null ? 'Digite o prêmio negociado para descobrir a volatilidade que o mercado está cobrando.' : iv == null ? 'Prêmio abaixo do valor intrínseco ou fora do possível: confira os números.' : `Volatilidade implícita: <b>${pct(iv)}</b>`}</p>
           ${iv != null && hv.v21 ? `<p class="opt-note">Isso é ${iv > hv.v21 ? 'acima' : 'abaixo'} da vol histórica de 1 mês (${pct(hv.v21)}) em ${nf(Math.abs(iv - hv.v21) * 100, 1)} pontos. ${iv > hv.v21 ? 'Opção relativamente cara: costuma favorecer quem vende.' : 'Opção relativamente barata: costuma favorecer quem compra.'}</p>` : ''}
           ${iv != null ? `<button class="btn-sm" data-useiv="${iv}"><i class="fas fa-check"></i> Usar ${pct(iv)} no simulador</button>` : ''}
         </section>
       </div>
       <section class="ana-card">
-        <div class="opt-h"><h3>Movimento esperado</h3><span>pela vol de ${pct(st.vol)} · ${esc(st.asset)} a R$ ${nf(st.S)}</span></div>
+        <div class="opt-h"><h3>Movimento esperado</h3><span>pela vol de ${pct(st.vol)} · ${esc(st.asset)} a ${hasS() ? 'R$ ' + nf(st.S) : '—'}</span></div>
         <div class="opt-mx-wrap"><table class="opt-tbl em"><thead><tr><th>Horizonte</th><th>1 desvio (≈68%)</th><th>Faixa de preço</th><th>2 desvios (≈95%)</th><th>Faixa de preço</th></tr></thead>
-        <tbody>${horizons.map(([d, l]) => { const s1 = st.vol * Math.sqrt(d / 365); return `<tr><td>${l}</td><td>±${pct(s1)}</td><td>R$ ${nf(st.S * Math.exp(-s1))} a ${nf(st.S * Math.exp(s1))}</td><td>±${pct(2 * s1)}</td><td>R$ ${nf(st.S * Math.exp(-2 * s1))} a ${nf(st.S * Math.exp(2 * s1))}</td></tr>`; }).join('')}</tbody></table></div>
+        <tbody>${horizons.map(([d, l]) => { const s1 = st.vol * Math.sqrt(d / 365), S = hasS() ? st.S : NaN; const fx = (k) => hasS() ? `R$ ${nf(S * Math.exp(-k))} a ${nf(S * Math.exp(k))}` : '—'; return `<tr><td>${l}</td><td>±${pct(s1)}</td><td>${fx(s1)}</td><td>±${pct(2 * s1)}</td><td>${fx(2 * s1)}</td></tr>`; }).join('')}</tbody></table></div>
         <p class="opt-note">Faixas lognormais: o preço tem mais espaço para subir que para cair. É estatística, não previsão; eventos (balanço, Copom) costumam gerar movimentos maiores que o normal.</p>
       </section>`;
   }
@@ -650,6 +678,7 @@
      ========================================================= */
   let probX = null;
   function renderProb() {
+    if (!ready()) { body.innerHTML = `<section class="ana-card"><div class="opt-h"><h3>Calculadora de probabilidades</h3><span>${esc(st.asset)} · —</span></div><p class="mut">${esc(faltaMsg())}</p></section>`; return; }
     const X = probX ?? roundK(st.S * 1.05, st.S);
     const T = yearsOf(st.days), r = rC(), v = st.vol;
     const pa = probAbove(st.S, X, T, r, v, st.q);
@@ -863,7 +892,7 @@
     if (d.preset) { buildPreset(d.preset); save(); renderBuilder(); return; }
     if ('addleg' in d) {
       const last = st.legs.filter((l) => l.type !== 'stock').slice(-1)[0];
-      st.legs.push({ id: uid(), type: 'call', side: 1, K: last ? roundK(last.K * 1.05, st.S) : roundK(st.S, st.S), days: last ? last.days : st.days, iv: st.vol, qty: st.lot, theo: true, prem: null });
+      st.legs.push({ id: uid(), type: 'call', side: 1, K: !hasS() ? null : last && last.K > 0 ? roundK(last.K * 1.05, st.S) : roundK(st.S, st.S), days: last ? last.days : st.days, iv: st.vol, qty: st.lot, theo: true, prem: null });
       st.preset = null; reprice(); save(); renderBuilder(); return;
     }
     if ('save' in d) {
@@ -877,7 +906,7 @@
     if (d.load != null) {
       const x = saved[+d.load]; if (!x) return;
       st.legs = JSON.parse(JSON.stringify(x.legs)); st.preset = x.preset || null;
-      if (x.asset !== st.asset) { st.asset = x.asset; st.S = x.S; }
+      if (x.asset !== st.asset) { st.asset = x.asset; st.S = x.S > 0 ? x.S : null; }
       st.tEval = 0; save(); renderAll(); return;
     }
     if (d.delsv != null) { saved.splice(+d.delsv, 1); saveSaved(); renderSaved(); return; }
@@ -915,7 +944,15 @@
   // campos: atualiza o estado a cada digitação, sem perder o foco
   root.addEventListener('input', (e) => {
     const t = e.target, v = t.value;
-    if (t.id === 'opt-S') { const x = num(v, 0); if (x > 0) { st.S = x; st.sSrc = 'digitado à mão'; reprice(); save(); keepFocus(refresh); } return; }
+    if (t.id === 'opt-S') {
+      const x = num(v, 0);
+      if (x > 0) {
+        const prevS = st.S; st.S = x; st.sSrc = 'digitado à mão';
+        if (!(prevS > 0)) { if (st.preset) buildPreset(st.preset); else st.legs.forEach((l) => { if (l.type !== 'stock' && !(l.K > 0)) l.K = roundK(x, x); }); }
+        reprice(); save(); keepFocus(refresh);
+      }
+      return;
+    }
     if (t.id === 'opt-r') { const x = num(v, NaN); if (isFinite(x) && x >= 0) { st.r = x / 100; st.rManual = true; st.rSrc = 'juros digitados à mão'; reprice(); save(); keepFocus(refresh); } return; }
     if (t.id === 'opt-vol') { const x = num(v, 0); if (x > 0) { const old = st.vol; st.vol = x / 100; st.legs.forEach((l) => { if (l.type !== 'stock' && Math.abs(l.iv - old) < 1e-9) l.iv = st.vol; }); reprice(); save(); keepFocus(refresh); } return; }
     if (t.id === 'opt-days') { const x = Math.round(num(v, 0)); if (x >= 1) { const old = st.days; st.days = x; st.legs.forEach((l) => { if (l.type !== 'stock' && l.days > 0) l.days = Math.max(1, Math.round(l.days * x / old)); }); reprice(); save(); keepFocus(refresh); } return; }
@@ -936,7 +973,7 @@
     if (row && t.dataset.f) {
       const l = st.legs.find((x) => x.id === row.dataset.leg); if (!l) return;
       const f = t.dataset.f;
-      if (f === 'type') { l.type = v; if (v === 'stock') { l.K = null; l.days = null; l.prem = st.S; } else { l.K = l.K || roundK(st.S, st.S); l.days = l.days || st.days; l.iv = l.iv || st.vol; } l.theo = true; st.preset = null; reprice(); save(); renderBuilder(); return; }
+      if (f === 'type') { l.type = v; if (v === 'stock') { l.K = null; l.days = null; l.prem = st.S; } else { l.K = l.K || (hasS() ? roundK(st.S, st.S) : null); l.days = l.days || st.days; l.iv = l.iv || st.vol; } l.theo = true; st.preset = null; reprice(); save(); renderBuilder(); return; }
       const x = num(v, NaN);
       if (!isFinite(x)) return;
       if (f === 'K' && x > 0) { l.K = x; }
@@ -967,7 +1004,7 @@
   css.textContent = `
   #opt-root { --mono:'JetBrains Mono',monospace; }
   #opt-root .mut { color:var(--text-3); font-size:12.5px; }
-  #opt-root .pos { color:var(--pos); } #opt-root .neg { color:var(--neg); }
+  #opt-root .pos { color:var(--pos-ink); } #opt-root .neg { color:var(--neg); }
   .opt-head { display:flex; align-items:center; gap:14px 18px; flex-wrap:wrap; margin:4px 0 16px; }
   .opt-title { flex:1 1 260px; min-width:0; }
   .opt-title h2 { margin:0; font-size:20px; letter-spacing:-.015em; color:var(--text); }
@@ -977,7 +1014,7 @@
   .opt-subs button { position:relative; z-index:1; flex:0 0 auto; border:0; background:transparent; color:var(--text-3); font:inherit; font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:9px; cursor:pointer; transition:color .18s; display:flex; align-items:center; gap:7px; white-space:nowrap; }
   .opt-subs button i { font-size:11px; opacity:.8; }
   .opt-subs button.on { color:var(--text); }
-  .opt-subs button.on i { color:var(--accent); opacity:1; }
+  .opt-subs button.on i { color:var(--accent-ink); opacity:1; }
   .opt-subs-bar { position:absolute; top:3px; bottom:3px; left:0; width:0; border-radius:9px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--accent); transition:transform .3s var(--ease,ease), width .3s var(--ease,ease); }
   #opt-root .ana-card { margin-bottom:14px; }
   .opt-top { padding:14px 16px 10px; }
@@ -991,12 +1028,12 @@
   #opt-root .opt-inp input, #opt-root .opt-inp select { flex:1; min-width:0; width:100%; height:100%; border:0 !important; background:transparent !important; box-shadow:none !important; color:var(--text); font-family:var(--mono); font-size:13.5px; outline:none; padding:0; border-radius:0 !important; }
   #opt-root .opt-inp select { font-family:inherit; cursor:pointer; }
   .opt-asset input { text-transform:uppercase; font-weight:600; }
-  .opt-go { border:0; background:var(--accent-soft); color:var(--accent); width:28px; height:26px; border-radius:7px; cursor:pointer; flex:0 0 auto; margin-right:-4px; }
+  .opt-go { border:0; background:var(--accent-soft); color:var(--accent-ink); width:28px; height:26px; border-radius:7px; cursor:pointer; flex:0 0 auto; margin-right:-4px; }
   .opt-go:hover { background:var(--accent); color:#1a1205; }
   .opt-meta { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:10px; font-size:11.5px; color:var(--text-3); font-family:var(--mono); }
   .opt-meta b { color:var(--text-2); }
   .opt-meta .err { color:var(--neg); }
-  .opt-link { border:0; background:none; color:var(--accent); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; padding:0 2px; text-decoration:underline; text-underline-offset:2px; }
+  .opt-link { border:0; background:none; color:var(--accent-ink); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; padding:0 2px; text-decoration:underline; text-underline-offset:2px; }
   .opt-h { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; margin-bottom:12px; }
   .opt-h h3 { margin:0; font-size:14.5px; font-weight:600; color:var(--text); }
   .opt-h > span:not(.sp):not(.opt-bias) { font-size:11.5px; color:var(--text-3); font-family:var(--mono); }
@@ -1013,15 +1050,15 @@
   .opt-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .opt-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:6px 10px; border-radius:99px; cursor:pointer; transition:all .16s; }
   .opt-chip:hover { color:var(--text); border-color:var(--line-2); }
-  .opt-chip.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent); }
+  .opt-chip.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent-ink); }
   .lv { display:inline-block; width:14px; height:6px; border-radius:2px; background:linear-gradient(90deg, currentColor 0 30%, transparent 30% 35%, var(--line-2) 35% 65%, transparent 65% 70%, var(--line-2) 70%); opacity:.7; }
   .lv2 { background:linear-gradient(90deg, currentColor 0 30%, transparent 30% 35%, currentColor 35% 65%, transparent 65% 70%, var(--line-2) 70%); }
   .lv3 { background:linear-gradient(90deg, currentColor 0 30%, transparent 30% 35%, currentColor 35% 65%, transparent 65% 70%, currentColor 70%); }
   .opt-bias { font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:6px; }
-  .opt-bias.up { color:var(--pos); background:color-mix(in srgb, var(--pos) 12%, transparent); }
+  .opt-bias.up { color:var(--pos-ink); background:color-mix(in srgb, var(--pos) 12%, transparent); }
   .opt-bias.dn { color:var(--neg); background:color-mix(in srgb, var(--neg) 12%, transparent); }
   .opt-bias.nt { color:var(--info); background:color-mix(in srgb, var(--info) 12%, transparent); }
-  .opt-bias.vl { color:var(--accent); background:var(--accent-soft); }
+  .opt-bias.vl { color:var(--accent-ink); background:var(--accent-soft); }
   .opt-why { font-size:12.5px; color:var(--text-2); line-height:1.55; margin:0 0 12px; }
   .opt-why b { color:var(--text); font-weight:600; }
   .opt-legs-wrap, .opt-mx-wrap, .opt-chain-wrap { overflow-x:auto; margin:0 -4px; padding:0 4px; }
@@ -1035,19 +1072,19 @@
   #opt-legs input[data-f="qty"] { width:72px; } #opt-legs input[data-f="days"] { width:58px; } #opt-legs input[data-f="iv"] { width:62px; }
   #opt-legs input.theo { font-style:italic; color:var(--text-3); }
   .opt-side { border:0; font:inherit; font-size:11.5px; font-weight:700; padding:6px 10px; border-radius:8px; cursor:pointer; min-width:72px; }
-  .opt-side.buy { color:var(--pos); background:color-mix(in srgb, var(--pos) 13%, transparent); }
+  .opt-side.buy { color:var(--pos-ink); background:color-mix(in srgb, var(--pos) 13%, transparent); }
   .opt-side.sell { color:var(--neg); background:color-mix(in srgb, var(--neg) 13%, transparent); }
   .opt-x { border:0; background:transparent; color:var(--text-3); cursor:pointer; font-size:13px; width:26px; height:26px; border-radius:7px; }
   .opt-x:hover { color:var(--neg); background:color-mix(in srgb, var(--neg) 10%, transparent); }
   .opt-note { font-size:11.5px; color:var(--text-3); line-height:1.55; margin:10px 0 0; }
   .opt-warn { font-size:12px; color:var(--text-2); line-height:1.55; margin:0 0 12px; padding:9px 12px; border-radius:10px; border:1px solid var(--accent-line); background:var(--accent-soft); }
-  .opt-warn i { color:var(--accent); margin-right:4px; }
+  .opt-warn i { color:var(--accent-ink); margin-right:4px; }
   .opt-kpis { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:10px; }
   .opt-kpis.k3 { grid-template-columns:repeat(3, minmax(0, 1fr)); } .opt-kpis.k2 { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .opt-kpis > div { padding:11px 12px; border:1px solid var(--line); border-radius:11px; background:var(--surface-2); min-width:0; }
   .opt-kpis span { display:block; font-size:10.5px; color:var(--text-3); font-weight:600; letter-spacing:.04em; margin-bottom:5px; }
   .opt-kpis b { display:block; font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-  .opt-kpis b.pos { color:var(--pos); } .opt-kpis b.neg { color:var(--neg); }
+  .opt-kpis b.pos { color:var(--pos-ink); } .opt-kpis b.neg { color:var(--neg); }
   .opt-leg { display:flex; gap:14px; font-size:11px; color:var(--text-3); flex-wrap:wrap; }
   .opt-leg span { display:inline-flex; align-items:center; gap:6px; }
   .opt-leg i { display:inline-block; width:16px; height:0; border-top:2px solid var(--accent); }
@@ -1079,7 +1116,7 @@
   .opt-empty { padding:60px 0; text-align:center; color:var(--text-3); font-size:13px; }
   .opt-gk { display:flex; flex-direction:column; gap:9px; }
   .opt-gk > div { display:grid; grid-template-columns:28px 92px minmax(0, 1fr); align-items:baseline; gap:8px; font-size:12px; }
-  .opt-gk i { font-style:normal; font-family:var(--mono); font-weight:700; color:var(--accent); font-size:14px; text-align:center; }
+  .opt-gk i { font-style:normal; font-family:var(--mono); font-weight:700; color:var(--accent-ink); font-size:14px; text-align:center; }
   .opt-gk b { font-family:var(--mono); font-size:13.5px; color:var(--text); text-align:right; }
   .opt-gk span { color:var(--text-3); line-height:1.45; }
   .opt-big { font-size:14px; color:var(--text-2); line-height:1.5; margin:4px 0 0; }
@@ -1091,7 +1128,7 @@
   .opt-mx td { text-align:center; padding:7px 6px; border-radius:6px; white-space:nowrap; color:var(--text); }
   .opt-mx td.p { background:color-mix(in srgb, var(--pos) calc(var(--k) * 100%), transparent); }
   .opt-mx td.n { background:color-mix(in srgb, var(--neg) calc(var(--k) * 100%), transparent); }
-  .opt-mx tr.cur th { color:var(--accent); }
+  .opt-mx tr.cur th { color:var(--accent-ink); }
   .opt-saved { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:8px; }
   .opt-sv { display:flex; align-items:center; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); }
   .opt-sv > button:first-child { flex:1; min-width:0; text-align:left; border:0; background:none; color:var(--text); font:inherit; padding:9px 11px; cursor:pointer; }
@@ -1100,17 +1137,17 @@
   .opt-sv:hover { border-color:var(--accent-line); }
   .opt-seg { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--text-3); }
   .opt-seg button { border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:8px; cursor:pointer; }
-  .opt-seg button.on { border-color:var(--accent-line); color:var(--accent); background:var(--accent-soft); }
+  .opt-seg button.on { border-color:var(--accent-line); color:var(--accent-ink); background:var(--accent-soft); }
   .opt-chain { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; }
   .opt-chain th { font-size:10px; font-weight:600; color:var(--text-3); padding:6px; text-align:center; white-space:nowrap; letter-spacing:.04em; }
-  .opt-chain thead th.c { color:var(--pos); border-bottom:2px solid color-mix(in srgb, var(--pos) 40%, transparent); }
+  .opt-chain thead th.c { color:var(--pos-ink); border-bottom:2px solid color-mix(in srgb, var(--pos) 40%, transparent); }
   .opt-chain thead th.p { color:var(--neg); border-bottom:2px solid color-mix(in srgb, var(--neg) 40%, transparent); }
   .opt-chain td { padding:4px 6px; text-align:center; border-top:1px solid var(--line); color:var(--text-2); white-space:nowrap; }
   .opt-chain tbody th { border-top:1px solid var(--line); color:var(--text); font-size:12.5px; background:var(--surface-2); }
   .opt-chain td.itm { background:color-mix(in srgb, var(--accent) 6%, transparent); }
-  .opt-chain tr.atm th { color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-line); }
+  .opt-chain tr.atm th { color:var(--accent-ink); box-shadow:inset 0 0 0 1px var(--accent-line); }
   .opt-chain td button { border:1px solid transparent; background:none; color:var(--text); font:inherit; font-weight:600; padding:4px 8px; border-radius:7px; cursor:pointer; }
-  .opt-chain td button:hover { border-color:var(--accent-line); color:var(--accent); }
+  .opt-chain td button:hover { border-color:var(--accent-line); color:var(--accent-ink); }
   .opt-chain td button.added { background:var(--accent); color:#1a1205; }
   .opt-spark { margin-top:12px; }
   .opt-spark svg { width:100%; height:90px; display:block; }
@@ -1132,13 +1169,13 @@
   .opt-mods { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
   .opt-mod { border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surface-2); }
   .opt-mod-h { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:13px; color:var(--text); }
-  .opt-mod-h .lv { color:var(--accent); }
+  .opt-mod-h .lv { color:var(--accent-ink); }
   .opt-mod-h span:last-child { margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--text-3); }
   .opt-tp { border-top:1px solid var(--line); }
   .opt-tp summary { list-style:none; cursor:pointer; padding:8px 2px; font-size:12.5px; color:var(--text-2); display:flex; align-items:center; gap:8px; }
   .opt-tp summary::-webkit-details-marker { display:none; }
   .opt-tp summary i { font-size:11px; color:var(--text-3); }
-  .opt-tp.ok summary i { color:var(--pos); }
+  .opt-tp.ok summary i { color:var(--pos-ink); }
   .opt-tp[open] summary { color:var(--text); }
   .opt-tp > div { padding:0 2px 10px 21px; }
   .opt-tp p { margin:0 0 6px; font-size:12.5px; line-height:1.6; color:var(--text-2); }
@@ -1150,7 +1187,7 @@
   .opt-qops button { border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:6px 11px; border-radius:9px; cursor:pointer; }
   .opt-qops button:not([disabled]):hover { border-color:var(--accent-line); color:var(--text); }
   .opt-qops button[disabled] { cursor:default; opacity:.55; }
-  .opt-qops button.ok { opacity:1; border-color:color-mix(in srgb, var(--pos) 50%, transparent); color:var(--pos); background:color-mix(in srgb, var(--pos) 10%, transparent); }
+  .opt-qops button.ok { opacity:1; border-color:color-mix(in srgb, var(--pos) 50%, transparent); color:var(--pos-ink); background:color-mix(in srgb, var(--pos) 10%, transparent); }
   .opt-qops button.no { opacity:1; border-color:color-mix(in srgb, var(--neg) 50%, transparent); color:var(--neg); background:color-mix(in srgb, var(--neg) 10%, transparent); }
   .opt-ex { margin:8px 0 0; font-size:12px; color:var(--text-2); line-height:1.55; }
   #opt-root .ind-boot { padding:60px 20px; text-align:center; color:var(--text-3); font-size:13px; }
@@ -1161,7 +1198,7 @@
     .opt-subs { width:100%; }
     .opt-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); }
     .opt-asset { grid-column:1 / -1; }
-    .opt-kpis, .opt-kpis.k3 { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .opt-kpis, .opt-kpis.k3, .opt-col .opt-kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); }
     .opt-kpis b { font-size:14.5px; }
     .opt-sliders { grid-template-columns:1fr; }
     .opt-leg { width:100%; }

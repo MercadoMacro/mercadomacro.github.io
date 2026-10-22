@@ -163,7 +163,7 @@
   .bb-list { max-height:calc(100vh - 330px); min-height:420px; overflow:auto; }
   .bb-day { position:sticky; top:0; z-index:1; background:var(--surface-2); padding:7px 14px; font-size:11.5px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--line); }
   .bb-day small { color:var(--text-3); font-weight:500; margin-left:4px; }
-  .bb-day.today { color:var(--accent); }
+  .bb-day.today { color:var(--accent-ink); }
   .bb-row { display:grid; grid-template-columns:150px minmax(0,1fr) 54px 300px 118px; gap:12px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line); }
   .bb-row[data-t] { cursor:pointer; }
   .bb-row:hover { background:var(--surface-2); }
@@ -176,12 +176,12 @@
   .bb-res small { font-size:10.5px; color:var(--text-3); }
   .bb-res b { font:600 12.5px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; }
   .bb-res i { font-style:normal; font-size:11px; font-family:'JetBrains Mono', monospace; white-space:nowrap; }
-  .bb-up { color:var(--pos); } .bb-dn, .bb-res b.bb-dn { color:var(--neg); }
+  .bb-up { color:var(--pos-ink); } .bb-dn, .bb-res b.bb-dn { color:var(--neg); }
   body.light .bb-up { color:color-mix(in srgb, var(--pos) 72%, #000); }
   .bb-tri { font:12px 'JetBrains Mono', monospace; color:var(--text-2); }
   .bb-tag { justify-self:end; font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; border:1px solid var(--line); text-decoration:none; white-space:nowrap; }
-  .bb-feito { color:var(--pos); border-color:color-mix(in srgb, var(--pos) 40%, transparent); }
-  .bb-conf { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 45%, transparent); }
+  .bb-feito { color:var(--pos-ink); border-color:color-mix(in srgb, var(--pos) 40%, transparent); }
+  .bb-conf { color:var(--accent-ink); border-color:color-mix(in srgb, var(--accent) 45%, transparent); }
   .bb-prov { color:var(--text-3); border-style:dashed; }
   .bb-atr { color:var(--neg); border-color:color-mix(in srgb, var(--neg) 40%, transparent); }
   body.light .bb-feito { color:color-mix(in srgb, var(--pos) 72%, #000); }

@@ -2134,7 +2134,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   document.querySelector('main').addEventListener('click', function(e){ var b = e.target.closest('button[data-h]'); if (b) abrirHistorico(+b.dataset.h); });
   // planilhas (CSV com ; e vírgula decimal, abre direto no Excel em português)
   function baixarCsv(nome, cab, linhas){
-    var q = function(v){ v = v === null || v === undefined ? '' : String(v); return /[;"\\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    // valor que começa com = + - @ tab ou CR vira texto (o Excel não executa como fórmula)
+    var q = function(v){ v = v === null || v === undefined ? '' : String(v); if (/^[=+\\-@\\t\\r]/.test(v)) v = "'" + v; return /[;"\\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     var txt = '\ufeff' + [cab].concat(linhas).map(function(l){ return l.map(q).join(';'); }).join('\\r\\n');
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }));
     a.download = nome + '-' + agora().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -2202,7 +2203,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
           + '<li>No Telegram, abra <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--accent-text)">@BotFather</a> e mande <b>/newbot</b>.</li>'
           + '<li>Ele pede um nome (por exemplo, Avisos Mercado Macro) e depois um usuário terminado em bot (por exemplo, avisos_mercadomacro_bot).</li>'
           + '<li>Ele responde com um token, uma linha parecida com 1234567890:AAH... Copie e cole aqui:</li></ol>'
-          + '<div class="linha"><input id="av-token" autocomplete="off" spellcheck="false" placeholder="cole o token aqui" style="flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="av-salvar" style="' + bt + '">Salvar</button></div>'
+          + '<div class="linha"><input id="av-token" aria-label="Token do robô do Telegram" autocomplete="off" spellcheck="false" placeholder="cole o token aqui" style="flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="av-salvar" style="' + bt + '">Salvar</button></div>'
           + '<p>O token fica guardado só no servidor do site e não aparece de novo nesta página.</p></div>';
       }
       av.innerHTML = h + '<p class="msg" id="av-msg"></p>';
@@ -2271,10 +2272,10 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
           + '<div class="linha"><button type="button" id="cp-testar" style="' + bt + '">Testar</button><button type="button" id="cp-off" style="' + bt + '">Apagar chave</button></div><div id="cp-res"></div></div>';
       } else {
         h = '<div class="caixa"><p>Para testar as cotações da Capital.com. Na Capital.com, em Configurações, API, gere uma chave com uma <b>senha personalizada</b> (diferente da senha da conta). Use de preferência a <b>conta demo</b>: com esses dados dá para operar a conta.</p>'
-          + '<div class="linha"><input id="cp-chave" autocomplete="off" spellcheck="false" placeholder="chave da API" style="' + inp + '"></div>'
-          + '<div class="linha"><input id="cp-login" autocomplete="off" spellcheck="false" placeholder="e-mail de login da Capital.com" style="' + inp + '"></div>'
-          + '<div class="linha"><input id="cp-senha" type="password" autocomplete="new-password" placeholder="senha personalizada da API" style="' + inp + '"></div>'
-          + '<div class="linha"><select id="cp-amb" style="' + inp + ';flex:0 0 auto"><option value="demo">Conta demo (recomendado)</option><option value="real">Conta real</option></select><button type="button" id="cp-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<div class="linha"><input id="cp-chave" aria-label="Chave da API da Capital.com" autocomplete="off" spellcheck="false" placeholder="chave da API" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="cp-login" aria-label="E-mail de login da Capital.com" autocomplete="off" spellcheck="false" placeholder="e-mail de login da Capital.com" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="cp-senha" aria-label="Senha personalizada da API" type="password" autocomplete="new-password" placeholder="senha personalizada da API" style="' + inp + '"></div>'
+          + '<div class="linha"><select id="cp-amb" aria-label="Ambiente da conta Capital.com" style="' + inp + ';flex:0 0 auto"><option value="demo">Conta demo (recomendado)</option><option value="real">Conta real</option></select><button type="button" id="cp-salvar" style="' + bt + '">Salvar e conferir</button></div>'
           + '<p>Fica guardado só no servidor do site e não aparece de novo nesta página.</p></div>';
       }
       cp.innerHTML = h + '<p class="msg" id="cp-msg"></p>';
@@ -2330,8 +2331,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
       var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p><p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
-        + '<div class="linha"><input id="px-chave" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
-        + '<div class="linha"><input id="px-nome" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
+        + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
+        + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
         + '<div class="linha"><button type="button" id="px-salvar" style="' + bt + '">Salvar</button>' + (j.chave ? '<button type="button" id="px-off" style="' + bt + '">Desligar o Pix</button>' : '') + '</div></div>';
       px.innerHTML = h + '<p class="msg" id="px-msg"></p>';
       var m = document.getElementById('px-msg');

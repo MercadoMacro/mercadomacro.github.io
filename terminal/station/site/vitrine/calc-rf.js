@@ -96,7 +96,7 @@
   function campoTaxa(l) {
     if (l[3] === 'tselic') return ok(M.selicEfetiva)
       ? nf(M.selicEfetiva * 100, 2) + '% ao ano<small>Taxa usada na simulação' + (selicData ? ' · ' + selicData : '') + (selicReserva ? ' · última consulta disponível' : '') + '</small>'
-      : 'Taxa do Tesouro indisponível';
+      : '—<small>Taxa do Tesouro indisponível</small>';
     if (l[3] === 'poup') return 'regra';
     var suf = l[3] === 'pos' ? '% CDI' : l[3] === 'ipca' ? '% + IPCA' : '% a.a.';
     return '<input data-tx="' + l[0] + '" inputmode="decimal" value="' + taxas[l[0]] + '" aria-label="Taxa de ' + l[1] + '" placeholder="—"> ' + suf;

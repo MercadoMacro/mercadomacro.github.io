@@ -1324,7 +1324,7 @@ function checkNewsAlerts(list) {
     .slice(0, 3)
     .forEach(n => {
       const src = newsSourceLabel(n);
-      toast(`🚨 ${n.titulo}${src ? ` (${src})` : ''}`, 'info');
+      toast(`Alto impacto: ${n.titulo}${src ? ` (${src})` : ''}`, 'warning');
       try {
         if ('Notification' in window && Notification.permission === 'granted') {
           const note = new Notification('Notícia de alto impacto', { body: `${n.titulo}${src ? ` · ${src}` : ''}` });
@@ -1556,13 +1556,14 @@ async function fetchNewsFromWorker(silent = false) {
     if (!Array.isArray(data)) throw new Error('Formato inválido');
 
     newsAll = newsPrepara(data);
+    window.__newsErro = false; // a Mesa usa para trocar "Carregando" pelo aviso de falha
     checkNewsAlerts(newsAll);
     try {
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
     } catch (e) { /* silencioso */ }
 
     const cacheHeader = res.headers.get('X-Cache') || '';
-    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
     if (info) {
       info.innerHTML = `<span class="dot"></span>Última atualização: <span id="news-last-update">${now}</span> · ${newsAll.length} notícias${cacheHeader === 'HIT' ? ' (cache)' : ''}`;
       info.classList.remove('loading');
@@ -1589,6 +1590,8 @@ async function fetchNewsFromWorker(silent = false) {
         document.getElementById('news-view').innerHTML = '<div class="nl-empty">Não foi possível carregar as notícias.</div>';
       }
     }
+    window.__newsErro = !newsAll.length;
+    window.dispatchEvent(new Event('mm-news-erro'));
   }
 }
 
@@ -2420,7 +2423,8 @@ function calTitle(country, title) {
     .replace(/\((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\)/g, (_, m) => `(${CAL_MONTHS[m]})`);
 }
 const calIgnored = (e) => /CFTC|Sondas|GDPNow/i.test(e.title || '');
-const CAL_FLAGS = { USD: '🇺🇸', EUR: '🇪🇺', CNY: '🇨🇳', GBP: '🇬🇧', JPY: '🇯🇵', BRL: '🇧🇷' };
+const CAL_FLAGS = { USD: '🇺🇸', EUR: '🇪🇺', CNY: '🇨🇳', GBP: '🇬🇧', JPY: '🇯🇵', BRL: '🇧🇷' };   // só nos textos de WhatsApp/Telegram
+const CAL_CODES = { USD: 'EUA', EUR: 'UE', CNY: 'CN', GBP: 'UK', JPY: 'JP', BRL: 'BR' };       // na tela do site (sem emoji)
 
 const spDay = (d) => new Date(d).toLocaleDateString('sv-SE', { timeZone: SP_TZ });   // AAAA-MM-DD
 const spDayLabel = (key) => {
@@ -2717,7 +2721,7 @@ ecalPrefs.day = null;   // sempre abre no dia de hoje
 const saveEcalPrefs = () => { try { localStorage.setItem(ECAL_PREFS_KEY, JSON.stringify({ ...ecalPrefs, day: null })); } catch (e) { /* silencioso */ } };
 
 const ECAL_COUNTRIES = [
-  ['all', 'Todos'], ['BRL', '🇧🇷 Brasil'], ['USD', '🇺🇸 EUA'], ['EUR', '🇪🇺 Europa'], ['CNY', '🇨🇳 China']
+  ['all', 'Todos'], ['BRL', 'Brasil'], ['USD', 'EUA'], ['EUR', 'Europa'], ['CNY', 'China']
 ];
 const ECAL_IMPACTS = [['high', 'Alto'], ['mid', 'Médio e alto'], ['all', 'Todos']];
 const ECAL_RANK = { High: 3, Medium: 2, Low: 1 };
@@ -2729,9 +2733,9 @@ function computeCalKeyDays(feed) {
   feed.forEach(e => {
     if (!e || !e.date || e.impact !== 'High' || !['BRL', 'USD', 'EUR'].includes(e.country)) return;
     if (!ECAL_KEY_RE.test(e.title)) return;
-    add(spDay(e.date), `${CAL_FLAGS[e.country] || ''} ${calTitle(e.country, e.title).replace(/\s*\([^)]*\)/g, '')}`.trim());
+    add(spDay(e.date), `${CAL_CODES[e.country] || ''} ${calTitle(e.country, e.title).replace(/\s*\([^)]*\)/g, '')}`.trim());
   });
-  COPOM_DECISIONS.forEach(d => add(d, '🇧🇷 Decisão do Copom (Selic)'));
+  COPOM_DECISIONS.forEach(d => add(d, 'BR Decisão do Copom (Selic)'));
   return map;
 }
 
@@ -2758,9 +2762,9 @@ function ecalSetView(view) {
     setTimeout(fitCalendarIframe, 50);
   }
   if (view === 'earn') ecalEarn();
-  if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=4', '__focusRender', 'o Boletim Focus');
-  if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=2', '__bbrRender', 'a agenda de balanços do Brasil');
-  if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=1', '__provRender', 'a agenda de proventos');
+  if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=5', '__focusRender', 'o Boletim Focus');
+  if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=3', '__bbrRender', 'a agenda de balanços do Brasil');
+  if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=2', '__provRender', 'a agenda de proventos');
 }
 
 // carrega o arquivo da visão só na primeira vez que ela é aberta
@@ -2782,7 +2786,7 @@ function ecalEarn() {
   if (window.__earnRender) { window.__earnRender(el); return; }
   if (document.querySelector('script[data-earn]')) return;
   const sc = document.createElement('script');
-  sc.src = 'balancos.js?v=3'; sc.dataset.earn = '1';
+  sc.src = 'balancos.js?v=4'; sc.dataset.earn = '1';
   sc.onload = () => window.__earnRender && window.__earnRender(el);
   sc.onerror = () => { el.innerHTML = '<div class="er-msg" style="padding:40px;text-align:center">Não foi possível carregar os balanços.</div>'; sc.remove(); };
   document.head.appendChild(sc);
@@ -2841,7 +2845,7 @@ function renderEcal() {
         const key = ECAL_KEY_RE.test(e.title) && e.impact === 'High';
         return `<tr class="${i === nextIdx ? 'next' : ''}${key ? ' key' : ''}${e.actual ? ' done' : ''}">
           <td class="mono">${time}</td>
-          <td title="${escapeHTML(e.country)}">${CAL_FLAGS[e.country] || escapeHTML(e.country)}</td>
+          <td class="mono" title="${escapeHTML(e.country)}">${escapeHTML(CAL_CODES[e.country] || e.country)}</td>
           <td>${ecalBulls(e.impact)}</td>
           <td class="l">${escapeHTML(calTitle(e.country, e.title))}${i === nextIdx ? ' <span class="ecal-badge next">próximo</span>' : ''}</td>
           <td class="mono act ${e.surprise === 'better' ? 'up' : e.surprise === 'worse' ? 'dn' : ''}">${escapeHTML(e.actual || '')}${sup}</td>
@@ -2864,7 +2868,7 @@ async function refreshEcal(force = false) {
   renderEcal();
   if (st) {
     st.textContent = calFeed
-      ? `Fonte: Investing.com · horário de Brasília · atualizado às ${new Date(calFeedTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+      ? `Fonte: Investing.com · horário de Brasília · atualizado às ${new Date(calFeedTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: SP_TZ })}`
       : 'Calendário indisponível';
   }
 }
@@ -2966,9 +2970,9 @@ const alertedIds = new Set();
 function alertEvents() {
   const feed = (window.__calFeed || []).filter(e => e && e.date && e.impact === 'High'
     && ['BRL', 'USD', 'EUR'].includes(e.country) && ALERT_RE.test(e.title) && !/T00:00:00-/.test(e.date))
-    .map(e => ({ ts: new Date(e.date).getTime(), text: `${CAL_FLAGS[e.country]} ${calTitle(e.country, e.title)}${e.forecast ? ` (proj. ${e.forecast})` : ''}` }));
+    .map(e => ({ ts: new Date(e.date).getTime(), text: `${CAL_CODES[e.country] || e.country} ${calTitle(e.country, e.title)}${e.forecast ? ` (proj. ${e.forecast})` : ''}` }));
   // Copom: decisão por volta das 18h30 de Brasília
-  COPOM_DECISIONS.forEach(d => feed.push({ ts: new Date(`${d}T21:30:00Z`).getTime(), text: '🇧🇷 Decisão do Copom (Selic)' }));
+  COPOM_DECISIONS.forEach(d => feed.push({ ts: new Date(`${d}T21:30:00Z`).getTime(), text: 'BR Decisão do Copom (Selic)' }));
   return feed;
 }
 function checkEventAlerts() {
@@ -2981,7 +2985,7 @@ function checkEventAlerts() {
       alertedIds.add(id);
       const hora = new Date(ev.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: SP_TZ });
       const msg = `Às ${hora}: ${ev.text}`;
-      toast(`⏰ ${msg}`, 'info');
+      toast(msg, 'info');
       try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Evento em 5 minutos', { body: msg }); } catch (e) { /* silencioso */ }
     }
   });
@@ -3343,7 +3347,7 @@ setInterval(() => { if ($('#summary-modal')?.classList.contains('visible')) upda
 $('#summary-preview-btn')?.addEventListener('click', () => {
   const box = $('#summary-modal .modal-content');
   box.classList.toggle('summary-previewing');
-  $('#summary-preview-btn').textContent = box.classList.contains('summary-previewing') ? '✏️ Voltar a editar' : '👁 Ver como fica no WhatsApp';
+  $('#summary-preview-btn').innerHTML = box.classList.contains('summary-previewing') ? '<i class="fas fa-pen"></i> Voltar a editar' : '<i class="fas fa-eye"></i> Ver como fica no WhatsApp';
   updateSummaryExtras();
 });
 // Ctrl/Cmd + Enter copia o resumo
@@ -3592,7 +3596,7 @@ function anaRenderMood(rows) {
   if (!valid.length) { el.innerHTML = '<div class="ana-loading">Sem cotações do dia ainda.</div>'; return; }
   const score = Math.round(valid.reduce((a, c) => a + c.v, 0) / valid.length * 100);
   const label = score > 25 ? 'Apetite a risco' : score < -25 ? 'Aversão a risco' : 'Neutro';
-  const color = score > 25 ? 'var(--pos)' : score < -25 ? 'var(--neg)' : 'var(--text-2)';
+  const color = score > 25 ? 'var(--pos-ink)' : score < -25 ? 'var(--neg)' : 'var(--text-2)';
   el.innerHTML = `
     <div class="ana-mood-top"><span class="ana-mood-label" style="color:${color}">${label}</span><span class="ana-mood-score">nota ${score > 0 ? '+' : ''}${score}</span></div>
     <div class="ana-mood-bar" role="img" aria-label="Nota ${score} de -100 a +100"><span class="ana-mood-mark" style="left:${(score + 100) / 2}%"></span></div>
@@ -4134,7 +4138,13 @@ window.__onTabSwitch = (tabId) => {
   }
   const stamp = () => {
     const el = $('#tk-updated');
-    if (el) el.innerHTML = `Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b>`;
+    if (!el) return;
+    // só marca o horário se ao menos uma cotação do topo chegou agora (valor guardado de antes não conta)
+    const res = window.__lastTickerResults;
+    if (!Array.isArray(res)) { el.textContent = '—'; return; }
+    const algum = res.some(r => r.status === 'fulfilled' && r.value && r.value.value != null && isFinite(r.value.value));
+    if (!algum) { el.textContent = 'Sem atualização'; return; }
+    el.innerHTML = `Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b>`;
   };
   // quando o topo termina de carregar (a classe "loading" sai), marca o horário e redesenha
   const tk = $('#ticker');
@@ -4621,7 +4631,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=14';
+    sc.src = 'indicadores.js?v=15';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('ind-root');
@@ -4641,7 +4651,7 @@ function newsReadMins(n) {
     window.__indWarm = true;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=14';
+    sc.src = 'indicadores.js?v=15';
     sc.onerror = () => { asked = false; };
     document.body.appendChild(sc);
   };
@@ -4661,7 +4671,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'calculadoras.js?v=5';
+    sc.src = 'calculadoras.js?v=6';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('calc-root');
@@ -4684,7 +4694,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=18';
+    sc.src = 'mesa.js?v=19';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -4707,7 +4717,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'fundamentos.js?v=9';
+    sc.src = 'fundamentos.js?v=10';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('fund-root');
@@ -4731,7 +4741,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'fluxo.js?v=3';
+    sc.src = 'fluxo.js?v=4';
     sc.onload = () => window.__fluxoRender && window.__fluxoRender(el);
     sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fluxo.js</b>.</div>'; };
     document.body.appendChild(sc);
@@ -4750,8 +4760,8 @@ function newsReadMins(n) {
   const chave = document.getElementById('pj-chave');
   if (!sec || !chave) return;
   const LADOS = {
-    eua: { root: 'fed-root', js: 'fed.js?v=3', fn: '__fedRender', tit: 'Probabilidades do Fed', fonte: 'futuros de Fed Funds', ico: 'fa-landmark' },
-    br: { root: 'copom-root', js: 'copom.js?v=2', fn: '__copomRender', tit: 'Probabilidades do Copom', fonte: 'opções de Copom da B3', ico: 'fa-percent' },
+    eua: { root: 'fed-root', js: 'fed.js?v=4', fn: '__fedRender', tit: 'Probabilidades do Fed', fonte: 'futuros de Fed Funds', ico: 'fa-landmark' },
+    br: { root: 'copom-root', js: 'copom.js?v=3', fn: '__copomRender', tit: 'Probabilidades do Copom', fonte: 'opções de Copom da B3', ico: 'fa-percent' },
   };
   let lado = 'eua', visto = false;
   try { if (localStorage.getItem('juros_prob_lado') === 'br') lado = 'br'; } catch (e) { /* padrão */ }
@@ -4804,7 +4814,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'posicoes.js?v=2';
+    sc.src = 'posicoes.js?v=3';
     sc.onload = () => espera.forEach((x) => window.__posicoesRender && window.__posicoesRender(x.dataset.posicoes, x));
     sc.onerror = () => { pedido = false; espera.forEach((x) => { x.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>posicoes.js</b>.</div>'; }); espera.clear(); };
     document.body.appendChild(sc);
@@ -4826,7 +4836,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'opcoes.js?v=3';
+    sc.src = 'opcoes.js?v=4';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('opt-root');

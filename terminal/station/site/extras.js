@@ -177,7 +177,7 @@
       if (typeof saveMarketCache === 'function') saveMarketCache();
       wlLast = Date.now();
       const info = document.getElementById('wl-info');
-      if (info) info.innerHTML = `<span class="dot"></span>Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b> · atualiza a cada 5 min com a aba aberta`;
+      if (info) info.innerHTML = `<span class="dot"></span>Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · atualiza a cada 5 min com a aba aberta`;
     } catch (e) {
       [...grid.querySelectorAll('.wl-card')].forEach((card) => {
         const old = marketDataCache?.[card.dataset.symbol];
@@ -548,7 +548,7 @@
   .wlc-q { display:flex; align-items:baseline; gap:10px; font-family:'JetBrains Mono', monospace; }
   .wlc-q b { font-size:20px; color:var(--text); font-variant-numeric:tabular-nums; }
   .wlc-q em { font-style:normal; font-size:13px; font-weight:600; }
-  .wlc-q em.up { color:var(--pos); } .wlc-q em.dn { color:var(--neg); } .wlc-q em.na { color:var(--text-3); }
+  .wlc-q em.up { color:var(--pos-ink); } .wlc-q em.dn { color:var(--neg); } .wlc-q em.na { color:var(--text-3); }
   .wlc-b { display:inline-flex; align-items:center; gap:7px; height:34px; min-width:34px; justify-content:center; padding:0 10px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12.5px; cursor:pointer; text-decoration:none; }
   .wlc-b:hover { color:var(--text); border-color:var(--line-2); }
   .wlc-chart { position:relative; flex:1; min-height:0; }
@@ -560,15 +560,15 @@
   .wlc-fi small { font-size:10.5px; color:var(--text-3); }
   .wlc-fi b { font:600 13px 'JetBrains Mono', monospace; color:var(--text); }
   .wlc-fund .sp { flex:1; }
-  .wlc-fdoc { font-size:11.5px; color:var(--accent); }
+  .wlc-fdoc { font-size:11.5px; color:var(--accent-ink); }
   @media (max-width: 640px) { .wlc-fund { gap:6px 12px; padding:8px 10px 8px 14px; } .wlc-fund .sp { display:none; } }
   .wlc-load { position:absolute; inset:0; display:grid; place-items:center; color:var(--text-3); font-size:13px; pointer-events:none; z-index:0; text-align:center; padding:20px; }
   .wlc-chart .tradingview-widget-container { position:relative; z-index:1; }
-  .wlc-load a { pointer-events:auto; color:var(--accent); }
+  .wlc-load a { pointer-events:auto; color:var(--accent-ink); }
   body.wlc-open { overflow:hidden; }
   @media (max-width: 640px) { .wlc-box { inset:0; border-radius:0; } .wlc-ext span { display:none; } .wlc-head { padding:10px 10px 10px 14px; } .wlc-q b { font-size:17px; } }
   .wl-empty { grid-column:1 / -1; display:flex; align-items:center; gap:14px; padding:16px 18px; border:1px dashed var(--line-2); border-radius:14px; color:var(--text-3); font-size:12.5px; }
-  .wl-empty > i { font-size:18px; color:var(--accent); }
+  .wl-empty > i { font-size:18px; color:var(--accent-ink); }
   .wl-empty b { display:block; color:var(--text-2); font-size:13px; margin-bottom:2px; }
   .wl-x, .wl-star { border:0; background:transparent; color:var(--text-3); cursor:pointer; padding:2px 4px; margin-right:4px; font-size:11px; line-height:1; border-radius:6px; }
   .wl-x { opacity:0; transition:opacity .15s; }
@@ -576,7 +576,7 @@
   .wl-x:hover { color:var(--neg); }
   .wl-star { opacity:0; transition:opacity .15s, color .15s; }
   .quote-card:hover .wl-star, .wl-star:focus-visible, .wl-star.on { opacity:1; }
-  .wl-star:hover, .wl-star.on { color:var(--accent); }
+  .wl-star:hover, .wl-star.on { color:var(--accent-ink); }
   @media (hover: none) { .wl-x { opacity:.7; } .wl-star { opacity:.55; } }
   .quote-card .qc-head { align-items:flex-start; }
   .quote-card .qc-head > .wl-x, .quote-card .qc-head > .wl-star { margin-left:auto; }
@@ -621,6 +621,17 @@
       .replace(/\*\*(.+?)\*\*/g, '*$1*')
       .replace(/\n{3,}/g, '\n\n').trim();
   }
+  // data de fim da semana escrita no título ("Semana de 29 de Setembro a 3 de Outubro de 2025")
+  const RS_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  function rsTitleDate(title) {
+    const m = [...String(title || '').matchAll(/(\d{1,2})\s+de\s+([a-zà-ú]+)\s+de\s+(\d{4})/gi)].pop()
+      || [...String(title || '').matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g)].pop();
+    if (!m) return null;
+    const mes = /^\d+$/.test(m[2]) ? +m[2] - 1 : RS_MESES.indexOf(m[2].toLowerCase().replace('marco', 'março'));
+    if (mes < 0 || mes > 11) return null;
+    const dt = new Date(+m[3], mes, +m[1], 12);
+    return isNaN(dt) ? null : dt;
+  }
   let rsTxt = '', rsSrc = '', rsDate = null, rsEdit = false, rsLoaded = false;
   const rsRoot = document.getElementById('rs-root');
   let rsBox = null;
@@ -656,6 +667,11 @@
     }
     const d = rsParse(rsTxt);
     const when = rsDate ? rsDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    // idade do resumo: pela data do título; sem ela, pela data de publicação do arquivo
+    const ref = rsTitleDate(d.title) || rsDate;
+    const refTxt = ref ? ref.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const dias = ref ? Math.floor((Date.now() - ref.getTime()) / 86400000) : null;
+    const velho = dias != null && dias > 10;
     const body = `
       <div class="rs-body">
         ${d.intro.map((p) => `<p>${inline(p)}</p>`).join('')}
@@ -670,6 +686,7 @@
         <button type="button" class="rs-ic" data-rs="edit" title="Editar o texto da semana"><i class="fas fa-pen"></i><span>Editar</span></button>
       </div>
       <h3 class="rs-title">${inline(d.title || 'Resumo da semana')}</h3>
+      ${velho ? `<p class="rs-old" role="note"><i class="fas fa-exclamation-triangle"></i> Resumo antigo: ${rsTitleDate(d.title) ? 'semana encerrada em' : 'publicado em'} ${refTxt}, há ${dias} dias. Não reflete o mercado desta semana.</p>` : ''}
       ${d.days.length ? `<div class="rs-days">${d.days.map((x) => `<button type="button" class="rs-day ${x.mood}" data-rsday="${x.i}"><i class="rs-dot ${x.mood}"></i>${esc(x.h.replace(/-feira/i, ''))}${x.date ? `<em>${esc(x.date)}</em>` : ''}</button>`).join('')}</div>` : ''}
       ${body}`;
   }
@@ -729,8 +746,10 @@
   .rs-card { max-width:980px; margin:0 auto 16px; padding:20px 24px; border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
   .rs-top { display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; }
   .rs-top .sp { flex:1; }
-  .rs-kicker { font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); display:inline-flex; gap:7px; align-items:center; }
+  .rs-kicker { font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:inline-flex; gap:7px; align-items:center; }
   .rs-tag { font:11px 'JetBrains Mono', monospace; color:var(--text-3); border:1px solid var(--line); border-radius:99px; padding:2px 8px; }
+  .rs-old { margin:10px 0 0; padding:9px 12px; border:1px solid var(--accent-line); border-radius:10px; background:var(--accent-soft); color:var(--text); font-size:12.5px; line-height:1.5; }
+  .rs-old i { color:var(--accent-ink); margin-right:4px; }
   .rs-ic { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:5px 10px; border-radius:9px; cursor:pointer; }
   .rs-ic:hover { color:var(--text); border-color:var(--line-2); }
   .rs-title { margin:12px 0 0; font-size:20px; line-height:1.35; letter-spacing:-.01em; color:var(--text); }
@@ -750,12 +769,12 @@
   .rs-blk { margin-top:16px; padding:2px 0 0 12px; border-left:2px solid var(--line); transition:background .3s; border-radius:0 8px 8px 0; }
   .rs-blk.flash { background:var(--accent-soft); }
   .rs-blk h4 { margin:0 0 8px; font-size:14px; color:var(--text); display:flex; align-items:center; gap:8px; }
-  .rs-more { margin-top:12px; border:0; background:none; color:var(--accent); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; display:inline-flex; gap:7px; align-items:center; }
+  .rs-more { margin-top:12px; border:0; background:none; color:var(--accent-ink); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; display:inline-flex; gap:7px; align-items:center; }
   .rs-help { font-size:12px; line-height:1.55; color:var(--text-3); margin:10px 0; }
   #rs-ta { width:100%; min-height:300px; resize:vertical; padding:12px; font:12.5px/1.55 'JetBrains Mono', monospace; border-radius:10px; }
   .rs-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .rs-actions .btn-sm { display:inline-flex; align-items:center; gap:7px; }
-  .rs-actions .rs-pri { color:var(--accent); border-color:var(--accent-line); }
+  .rs-actions .rs-pri { color:var(--accent-ink); border-color:var(--accent-line); }
   @media (max-width: 640px) { .rs-card { padding:14px; } .rs-ic span { display:none; } .rs-title { font-size:16.5px; } .rs-body { font-size:14px; } }
   `;
 
@@ -829,7 +848,7 @@
   .topbar:has(> .qbanner) .brand-text .sub { flex-wrap:wrap; row-gap:3px; }
   .topbar:has(> .qbanner) .cmdk-hint { min-width:0; }
   .topbar:has(> .qbanner) .cmdk-hint .tx { display:none; }
-  .qb-ic { color:var(--accent); font-size:11px; opacity:.8; flex:0 0 auto; }
+  .qb-ic { color:var(--accent-ink); font-size:11px; opacity:.8; flex:0 0 auto; }
   .qb-txt { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .qb-txt span { font-style:italic; color:var(--text-2); }
   .qb-txt em { font-style:normal; margin-left:8px; font-size:11.5px; color:var(--text-3); font-family:'JetBrains Mono', monospace; }

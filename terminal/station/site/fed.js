@@ -326,8 +326,8 @@
   #fed-root .fw-top { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); }
   #fed-root .fw-chips { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; min-width:0; }
   #fed-root .fw-chips button { flex:none; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:6px 12px; border-radius:99px; cursor:pointer; white-space:nowrap; }
-  #fed-root .fw-chips button i { font-style:normal; color:var(--accent); margin-left:2px; }
-  #fed-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent); font-weight:600; }
+  #fed-root .fw-chips button i { font-style:normal; color:var(--accent-ink); margin-left:2px; }
+  #fed-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent-ink); font-weight:600; }
   #fed-root .fw-sp { flex:1; }
   #fed-root .fw-ib { height:32px; min-width:32px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:9px; cursor:pointer; flex:none; }
   #fed-root .fw-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-bottom:1px solid var(--line); }
@@ -338,7 +338,7 @@
   #fed-root .fw-kpis small { font-size:11px; color:var(--text-3); }
   #fed-root .fw-man { color:var(--info) !important; }
   #fed-root .fw-alta { color:var(--neg) !important; }
-  #fed-root .fw-corte { color:var(--pos) !important; }
+  #fed-root .fw-corte { color:var(--pos-ink) !important; }
   #fed-root .fw-sec { padding:14px 14px 6px; font-size:12.5px; font-weight:600; color:var(--text); }
   #fed-root .fw-sec small { font-weight:400; color:var(--text-3); }
   #fed-root .fw-bars { padding:4px 14px 10px; display:flex; flex-direction:column; gap:8px; }
@@ -362,12 +362,12 @@
   #fed-root .fw-tab td.mx { color:var(--text); font-weight:700; box-shadow:inset 0 -2px 0 var(--accent); }
   #fed-root .fw-tab td.fw-tx { color:var(--text); background:none; }
   #fed-root .fw-tab tr { cursor:pointer; }
-  #fed-root .fw-tab tr:hover td:first-child, #fed-root .fw-tab tr.sel td:first-child { color:var(--accent); font-weight:600; }
+  #fed-root .fw-tab tr:hover td:first-child, #fed-root .fw-tab tr.sel td:first-child { color:var(--accent-ink); font-weight:600; }
   #fed-root .fw-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; border-top:1px solid var(--line); margin-top:8px; }
   #fed-root .fw-ctr { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:2px 14px 8px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); font-size:11.5px; color:var(--text-3); }
   #fed-root .fw-ctr b { font:700 13px 'JetBrains Mono', monospace; color:var(--text); margin-right:-8px; }
   #fed-root .fw-ctr-t { text-transform:uppercase; letter-spacing:.06em; font-size:10px; font-weight:700; }
-  #fed-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent); }
+  #fed-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent-ink); }
   #fed-root .fw-tab td.fw-ct { background:none; color:var(--text-3); font-size:11px; }
   #fed-root .fw-tab td.fw-ct b { color:var(--text-2); font-weight:600; }
   #fed-root .fw-sec-b { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }

@@ -109,7 +109,7 @@
       <div class="er-bar">
         <div class="ecal-chips">${chip('per', 'passadas', 'Últimos 14 dias')}${chip('per', 'semana', 'Esta semana')}${chip('per', 'proxima', 'Próxima semana')}</div>
         <div class="ecal-chips">${chip('grupo', 'todas', 'Todas')}${chip('grupo', 'br', 'Brasileiras (ADR)')}</div>
-        <span class="er-st">${busy ? 'Atualizando…' : erro ? (c ? esc(erro) + ' Mostrando o último dado salvo.' : '') : c ? `Atualizado às ${new Date(c.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+        <span class="er-st">${busy ? 'Atualizando…' : erro ? (c ? esc(erro) + ' Mostrando o último dado salvo.' : '') : c ? `Atualizado às ${new Date(c.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}</span>
       </div>
       <div class="er-list">${!c ? `<div class="er-msg">${busy ? 'Carregando balanços…' : esc(erro || '—')}</div>`
         : !lista.length ? '<div class="er-msg">Nenhuma das empresas acompanhadas divulga resultado neste período.</div>'
@@ -138,7 +138,7 @@
   .er-st { margin-left:auto; font-size:11.5px; color:var(--text-3); }
   .er-list { max-height:calc(100vh - 330px); min-height:420px; overflow:auto; }
   .er-day { position:sticky; top:0; z-index:1; padding:7px 14px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); background:var(--surface-2); border-bottom:1px solid var(--line); }
-  .er-day.today { color:var(--accent); }
+  .er-day.today { color:var(--accent-ink); }
   .er-row { display:grid; grid-template-columns:150px minmax(0,1fr) 170px 190px; gap:12px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
   .er-row:hover { background:var(--surface-2); }
   .er-row:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
@@ -152,7 +152,7 @@
   .er-v { display:flex; flex-direction:column; align-items:flex-end; min-width:0; }
   .er-v small { font-size:10px; color:var(--text-3); }
   .er-v b { font:600 13px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; }
-  .er-v b.up { color:var(--pos); } .er-v b.dn { color:var(--neg); } .er-v b.na { color:var(--text-3); font-weight:500; }
+  .er-v b.up { color:var(--pos-ink); } .er-v b.dn { color:var(--neg); } .er-v b.na { color:var(--text-3); font-weight:500; }
   .er-v i { font-style:normal; font-size:10.5px; color:var(--text-3); white-space:nowrap; }
   .er-msg { padding:48px 16px; text-align:center; color:var(--text-3); font-size:13px; }
   .earn .calendar-footer { margin:0; border:0; border-top:1px solid var(--line); border-radius:0; }

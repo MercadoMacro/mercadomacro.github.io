@@ -168,7 +168,7 @@
         <div class="ecal-chips">${chip('todos', 'Todos os anos')}${chip(0, `${ano} e ${ano + 1}`)}${chip(1, `${ano + 2} e ${ano + 3}`)}</div>
         <span class="fo-leg"><span class="fo-c up">▲ Aumento</span><span class="fo-c dn">▼ Diminuição</span><span class="fo-c eq">= Estabilidade</span></span>
         <span class="fo-next">Próximo relatório: segunda, ${prox.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, 8h25</span>
-        <span class="er-st">${busy ? 'Atualizando…' : erro ? (cache ? esc(erro) + ' Mostrando o último dado salvo.' : '') : cache ? `Atualizado às ${new Date(cache.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+        <span class="er-st">${busy ? 'Atualizando…' : erro ? (cache ? esc(erro) + ' Mostrando o último dado salvo.' : '') : cache ? `Atualizado às ${new Date(cache.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}</span>
         <button type="button" class="btn-sm fo-atu" ${busy ? 'disabled' : ''} title="Buscar o Focus de novo no Banco Central"><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}" aria-hidden="true"></i> Atualizar</button>
       </div>
       <div class="fo-body">${corpo || `<div class="er-msg">${busy ? 'Carregando o Focus…' : esc(erro || '—')}</div>`}</div>
@@ -304,7 +304,7 @@
   .fo-row:hover, .fo-row.on { background:color-mix(in srgb, var(--accent) 6%, transparent); }
   .fo-row:hover th, .fo-row.on th { background:color-mix(in srgb, var(--accent) 6%, var(--surface)); }
   .fo-row th .fo-nm::before { content:'▸'; display:inline-block; width:12px; color:var(--text-3); transition:transform .15s; }
-  .fo-row.on th .fo-nm::before { transform:rotate(90deg); color:var(--accent); }
+  .fo-row.on th .fo-nm::before { transform:rotate(90deg); color:var(--accent-ink); }
   .fo-row th small { padding-left:12px; }
   .fo-row:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
   .fo-row.fim th, .fo-row.fim td { border-bottom:2px solid var(--line-2); }

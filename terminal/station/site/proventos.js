@@ -175,17 +175,17 @@
   .pv-tbl td.n:not(.k) { color:var(--text-2); }
   .pv-dia th { background:color-mix(in srgb, var(--surface-2) 75%, transparent); font-size:11.5px; font-weight:700; color:var(--text-2); text-transform:capitalize; }
   .pv-dia th span { float:right; font-weight:500; color:var(--text-3); text-transform:none; }
-  .pv-tbl em { font-style:normal; font-size:10px; font-weight:700; text-transform:uppercase; color:var(--accent); margin-left:6px; letter-spacing:.05em; }
+  .pv-tbl em { font-style:normal; font-size:10px; font-weight:700; text-transform:uppercase; color:var(--accent-ink); margin-left:6px; letter-spacing:.05em; }
   .pv-ev:hover { background:color-mix(in srgb, var(--accent) 5%, transparent); }
   .pv-at small { display:block; font-size:10.5px; color:var(--text-3); max-width:220px; overflow:hidden; text-overflow:ellipsis; }
-  .pv-tk { border:0; background:none; padding:0; font:700 12.5px 'JetBrains Mono', monospace; color:var(--accent); cursor:pointer; }
+  .pv-tk { border:0; background:none; padding:0; font:700 12.5px 'JetBrains Mono', monospace; color:var(--accent-ink); cursor:pointer; }
   .pv-tk:hover { text-decoration:underline; }
   .pv-tp { display:inline-block; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600; }
-  .pv-tp.div { background:color-mix(in srgb, var(--pos) 14%, transparent); color:var(--pos); }
-  .pv-tp.jcp { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); }
+  .pv-tp.div { background:color-mix(in srgb, var(--pos) 14%, transparent); color:var(--pos-ink); }
+  .pv-tp.jcp { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent-ink); }
   .pv-tp.out { background:color-mix(in srgb, var(--text-3) 14%, transparent); color:var(--text-2); }
   .pv-tbd { color:var(--text-3); font-family:inherit; }
-  .pv-av a { font-size:11.5px; font-weight:600; color:var(--accent); text-decoration:none; border:1px solid var(--line); border-radius:6px; padding:2px 7px; }
+  .pv-av a { font-size:11.5px; font-weight:600; color:var(--accent-ink); text-decoration:none; border:1px solid var(--line); border-radius:6px; padding:2px 7px; }
   .pv-av a:hover { border-color:var(--accent); }
   .prov .calendar-footer { margin:0; border:0; border-top:1px solid var(--line); border-radius:0; }
   @media (max-width: 760px) {
