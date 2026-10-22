@@ -922,7 +922,8 @@
   function moveBar() {
     const btn = $c(`.cl-subs [data-sub="${S.sub}"]`), bar = $c('.cl-subs-bar');
     if (!btn || !bar) return;
-    bar.style.width = btn.offsetWidth + 'px'; bar.style.transform = `translateX(${btn.offsetLeft}px)`;
+    // as abas quebram linha em tela estreita: a marca acompanha a linha do botão
+    bar.style.width = btn.offsetWidth + 'px'; bar.style.height = btn.offsetHeight + 'px'; bar.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
   }
   function renderSub(keepScroll) {
     const sub = SUBS.find((s) => s[0] === S.sub);
@@ -1040,18 +1041,18 @@
   #calc-root .pos { color:var(--pos-ink); } #calc-root .neg { color:var(--neg); }
   .cl-mut { color:var(--text-3); font-size:12px; }
   .cl-head { display:flex; align-items:center; gap:12px 16px; flex-wrap:wrap; margin:4px 0 12px; }
-  .cl-title { flex:1 1 220px; min-width:0; }
+  .cl-title { flex:1 1 320px; min-width:0; }
   .cl-title h2 { margin:0; font-size:20px; letter-spacing:-.015em; color:var(--text); }
   .cl-title p { margin:4px 0 0; font-size:12px; color:var(--text-3); font-family:var(--mono); }
   .cl-hp { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 12px; border-radius:10px; border:1px solid var(--line-2); background:linear-gradient(180deg, #2b2b2b, #161616); color:#e9e3d2; font:600 12px var(--mono); cursor:pointer; letter-spacing:.04em; }
   .cl-hp span { color:#f5a623; font-weight:800; }
   .cl-hp:hover { border-color:#f5a623; }
-  .cl-subs { position:relative; display:flex; padding:3px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow-x:auto; scrollbar-width:none; max-width:100%; }
+  .cl-subs { position:relative; display:flex; flex-wrap:wrap; padding:3px; border:1px solid var(--line); border-radius:12px; background:var(--surface); max-width:100%; }
   .cl-subs::-webkit-scrollbar { display:none; }
   .cl-subs button { position:relative; z-index:1; flex:0 0 auto; border:0; background:transparent; color:var(--text-3); font:inherit; font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:9px; cursor:pointer; transition:color .18s; display:flex; align-items:center; gap:7px; white-space:nowrap; }
   .cl-subs button i { font-size:11px; opacity:.8; }
   .cl-subs button.on { color:var(--text); } .cl-subs button.on i { color:var(--accent-ink); opacity:1; }
-  .cl-subs-bar { position:absolute; top:3px; bottom:3px; left:0; width:0; border-radius:9px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--accent); transition:transform .3s var(--ease,ease), width .3s var(--ease,ease); }
+  .cl-subs-bar { position:absolute; top:0; left:0; width:0; height:0; border-radius:9px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--accent); transition:transform .3s var(--ease,ease), width .3s var(--ease,ease); }
   .cl-strip { display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; margin:0 0 14px; padding:8px 12px; border:1px dashed var(--line-2); border-radius:10px; font:12px var(--mono); color:var(--text-3); }
   .cl-strip b { color:var(--text); font-weight:600; } .cl-strip em { margin-left:auto; font-style:normal; font-size:11px; }
   #calc-root .ana-card { margin-bottom:14px; }

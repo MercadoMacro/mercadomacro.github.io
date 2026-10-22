@@ -465,7 +465,7 @@
     const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
-        <div class="ms-info"><span class="dot ${errMsg ? 'bad' : ''}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
+        <div class="ms-info"><span class="dot ${errMsg ? 'bad' : lastTs ? '' : 'off'}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
         ${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}
         <button type="button" class="btn-sm ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo"><i class="fas fa-sync-alt"></i> Atualizar</button>
       </div>
@@ -602,13 +602,15 @@
   const css = document.createElement('style');
   css.textContent = `
   #mesa-root { padding:0; overflow:hidden; display:flex; flex-direction:column; }
-  .ms-wrap { flex:1; min-height:0; overflow-y:auto; padding:10px 18px 28px; }
+  .ms-wrap { flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; }
   .ms-bar { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-  .ms-info { flex:1; min-width:0; font:11.5px 'JetBrains Mono', monospace; color:var(--text-3); }
-  .ms-info b { color:var(--text-2); font-weight:600; }
+  .ms-info { flex:1; min-width:0; font-size:12.5px; line-height:1.5; color:var(--text-2); }
+  .ms-info b { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+  .ms-wrap .ms-info .dn { color:inherit; }
   @media (max-width:600px) { .ms-bar { flex-wrap:wrap; } .ms-info { flex-basis:100%; } }
   .ms-info .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--pos); margin-right:7px; vertical-align:1px; }
-  .ms-info .dot.bad { background:var(--neg); }
+  .ms-info .dot.bad { background:var(--accent); }
+  .ms-info .dot.off { background:var(--text-3); }
   .ms-refresh { display:inline-flex; align-items:center; gap:6px; }
   .ms-refresh.busy i { animation:spin .8s linear infinite; }
   .ms-wrap .up { color:var(--pos-ink); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
@@ -663,9 +665,9 @@
   .ms-tb tr:last-child td { border-bottom:0; }
   .ms-tb td.nm { color:var(--text-2); padding-left:12px; }
   .ms-tb td.px { text-align:right; font-family:'JetBrains Mono', monospace; color:var(--text); font-variant-numeric:tabular-nums; }
-  .ms-tb td.px { width:92px; }
-  .ms-tb td.ch { text-align:right; width:66px; font-family:'JetBrains Mono', monospace; font-size:11.5px; }
-  .ms-tb td.tm { text-align:right; width:56px; font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding-right:12px; }
+  .ms-tb td.px { width:80px; padding-left:4px; }
+  .ms-tb td.ch { text-align:right; width:58px; padding-left:4px; padding-right:6px; font-family:'JetBrains Mono', monospace; font-size:11.5px; }
+  .ms-tb td.tm { text-align:right; width:50px; padding-left:4px; font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding-right:10px; }
   .ms-tb td.tm i { font-style:normal; color:var(--accent-ink); }
   .ms-tb tr.old td.px { color:var(--text-3); }
   .ms-tb tr:not([data-sym]) { cursor:default; }
@@ -706,11 +708,13 @@
   .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
 
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
+  /* barra lateral aberta tira ~190px da mesa: a coluna da hora some até 2040px para o nome do ativo caber */
+  @media (min-width: 1851px) and (max-width: 2040px) { body.has-side:not(.side-collapsed) .ms-tb td.tm { display:none; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
   @media (max-width: 1250px) { .ms-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-width: 860px) { .ms-grid, .ms-c4 { grid-template-columns:minmax(0,1fr); display:flex; flex-direction:column; } .ms-c4 { align-items:stretch; } }
   @media (max-width: 640px) {
-    .ms-wrap { padding:8px 10px 90px; }
+    .ms-wrap { padding:8px 12px 90px; }
     .ms-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
     .ms-cv { font-size:17px; }
     .ms-tb td.tm { display:none; }

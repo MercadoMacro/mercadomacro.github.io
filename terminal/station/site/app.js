@@ -3274,9 +3274,18 @@ if (savedTab === 'heatmap-panel') {
     sec._flashT = setTimeout(() => sec.classList.remove('sec-flash'), 1600);
   }));
   // ao voltar para a aba Mercado, recalcula (o hook __onTabSwitch é redefinido mais abaixo, então observa a classe)
+  // trilho cortado: esmaece a borda que tem mais itens escondidos
+  const fade = () => {
+    const over = jump.scrollWidth > jump.clientWidth + 1;
+    jump.classList.toggle('fade-r', over && jump.scrollLeft + jump.clientWidth < jump.scrollWidth - 2);
+    jump.classList.toggle('fade-l', over && jump.scrollLeft > 2);
+  };
+  jump.addEventListener('scroll', fade, { passive: true });
+  window.addEventListener('resize', fade);
   const panel = document.getElementById('market-panel');
-  if (panel) new MutationObserver(() => { if (panel.classList.contains('active')) requestAnimationFrame(() => { const i = cur; cur = -2; setActive(i); spy(); }); })
+  if (panel) new MutationObserver(() => { if (panel.classList.contains('active')) requestAnimationFrame(() => { const i = cur; cur = -2; setActive(i); spy(); fade(); }); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
+  requestAnimationFrame(fade);
   requestAnimationFrame(spy);
   // filtro rápido por nome ou código
   $('#mkt-filter')?.addEventListener('input', (e) => {
@@ -3468,6 +3477,9 @@ function anaSetStatus(txt) {
   const el = $('#ana-hist-status');
   if (el) el.textContent = txt;
   $('#ana-info')?.classList.toggle('loading', /carregando/.test(txt));
+  // ponto verde só com histórico carregado; "não carregado" fica neutro e "indisponível" fica âmbar
+  const dot = $('#ana-info .dot');
+  if (dot) { dot.classList.toggle('off', /não carregado/.test(txt)); dot.classList.toggle('warn', /indispon/.test(txt)); }
 }
 
 /* ---- números ---- */
@@ -4075,6 +4087,13 @@ window.__onTabSwitch = (tabId) => {
       b.classList.toggle('active', b.dataset.tab === active);
       b.setAttribute('aria-current', b.dataset.tab === active ? 'page' : 'false');
     });
+    // janela baixa: rola só a lista lateral, o mínimo para mostrar a aba ativa (as primeiras abas não saem de vista à toa)
+    const nav = side.querySelector('.side-nav'), on = side.querySelector('.side-item.active');
+    if (nav && on && nav.scrollHeight > nav.clientHeight) {
+      const top = on.offsetTop - nav.offsetTop, bot = top + on.offsetHeight;
+      if (top < nav.scrollTop) nav.scrollTop = top - 28 < 40 ? 0 : top - 28;
+      else if (bot > nav.scrollTop + nav.clientHeight) nav.scrollTop = bot - nav.clientHeight + 4;
+    }
   };
   side.querySelectorAll('.side-item[data-tab]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   const prevHook = window.__onTabSwitch;
@@ -4710,7 +4729,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'calculadoras.js?v=6';
+    sc.src = 'calculadoras.js?v=7';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('calc-root');
@@ -4733,7 +4752,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=19';
+    sc.src = 'mesa.js?v=20';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -4756,7 +4775,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'fundamentos.js?v=10';
+    sc.src = 'fundamentos.js?v=11';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('fund-root');
@@ -4875,7 +4894,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'opcoes.js?v=4';
+    sc.src = 'opcoes.js?v=5';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('opt-root');

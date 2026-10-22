@@ -376,7 +376,7 @@
   /* ---------------- estilo ---------------- */
   const css = document.createElement('style');
   css.textContent = `
-  .fd-wrap { padding:10px 18px 28px; display:flex; flex-direction:column; gap:12px; }
+  .fd-wrap { padding:0; display:flex; flex-direction:column; gap:12px; }
   #fd-body { display:flex; flex-direction:column; gap:12px; min-width:0; }
   #fd-body > .fd-ref { margin-top:-6px; }
   .fd-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
@@ -463,7 +463,7 @@
   .fd-foot a { color:var(--text-2); }
   @media (max-width: 1100px) { .fd-grid { grid-template-columns:minmax(0,1fr); } }
   @media (max-width: 640px) {
-    .fd-wrap { padding:8px 4px 20px; }
+    .fd-wrap { padding:0; }
     .fd-views { width:100%; } .fd-views button { flex:1; }
     .fd-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
     .fd-kpi b { font-size:16px; }

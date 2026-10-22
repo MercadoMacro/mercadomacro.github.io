@@ -1030,9 +1030,10 @@
   .opt-asset input { text-transform:uppercase; font-weight:600; }
   .opt-go { border:0; background:var(--accent-soft); color:var(--accent-ink); width:28px; height:26px; border-radius:7px; cursor:pointer; flex:0 0 auto; margin-right:-4px; }
   .opt-go:hover { background:var(--accent); color:#1a1205; }
-  .opt-meta { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:10px; font-size:11.5px; color:var(--text-3); font-family:var(--mono); }
-  .opt-meta b { color:var(--text-2); }
-  .opt-meta .err { color:var(--neg); }
+  .opt-meta { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:10px; font-size:12.5px; line-height:1.5; color:var(--text-2); }
+  .opt-meta b { color:var(--text); font-family:var(--mono); font-weight:600; }
+  .opt-meta .err::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:7px; vertical-align:middle; }
+  .opt-meta .opt-link { font-size:12.5px; }
   .opt-link { border:0; background:none; color:var(--accent-ink); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; padding:0 2px; text-decoration:underline; text-underline-offset:2px; }
   .opt-h { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; margin-bottom:12px; }
   .opt-h h3 { margin:0; font-size:14.5px; font-weight:600; color:var(--text); }
@@ -1191,7 +1192,7 @@
   .opt-qops button.no { opacity:1; border-color:color-mix(in srgb, var(--neg) 50%, transparent); color:var(--neg); background:color-mix(in srgb, var(--neg) 10%, transparent); }
   .opt-ex { margin:8px 0 0; font-size:12px; color:var(--text-2); line-height:1.55; }
   #opt-root .ind-boot { padding:60px 20px; text-align:center; color:var(--text-3); font-size:13px; }
-  @media (max-width: 1180px) { .opt-kpis { grid-template-columns:repeat(3, minmax(0, 1fr)); } .opt-grid { grid-template-columns:1fr; } }
+  @media (max-width: 1340px) { .opt-kpis { grid-template-columns:repeat(3, minmax(0, 1fr)); } .opt-grid { grid-template-columns:1fr; } }
   @media (max-width: 760px) { .opt-grid2 { grid-template-columns:1fr; } }
   @media (max-width: 640px) {
     .opt-head { margin-bottom:12px; }

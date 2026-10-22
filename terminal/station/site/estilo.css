@@ -223,8 +223,6 @@
   }
   .market-section { margin-bottom: 28px; }
   .ana-extra { margin-top: 26px; min-width: 0; max-width: 100%; }
-  /* Análises não estica em monitor largo */
-  #analysis-panel { width: 100%; max-width: 1320px; margin-left: auto; margin-right: auto; }
   .market-section-head {
     display: flex;
     align-items: center;
@@ -394,6 +392,9 @@
     background: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
+  /* estados sem dado ao vivo: neutro (ainda não carregado) e âmbar (falhou ou parcial) */
+  .refresh-bar .info .dot.off { background: var(--text-3); box-shadow: none; animation: none; }
+  .refresh-bar .info .dot.warn { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); animation: none; }
 
   .btn-sm {
     display: inline-flex;
@@ -513,10 +514,9 @@
     font-size: 14px;
   }
   .heatmap-title h2 {
-    font-size: 13px;
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+    letter-spacing: -.015em;
     color: var(--text);
     margin: 0;
   }
@@ -1176,10 +1176,9 @@
     font-size: 14px;
   }
   .calendar-title h2 {
-    font-size: 13px;
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+    letter-spacing: -.015em;
     color: var(--text);
     margin: 0;
   }
@@ -1192,7 +1191,7 @@
     align-items: start;
   }
   @media (max-width: 1500px) {
-    .calendar-layout { grid-template-columns: minmax(0, 1fr) 480px; }
+    .calendar-layout { grid-template-columns: minmax(0, 1fr) 380px; }
   }
   @media (max-width: 1200px) {
     .calendar-layout { grid-template-columns: 1fr; }
@@ -1244,7 +1243,7 @@
   }
 
   .ecal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
-  .ecal-views { display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:3px; }
+  .ecal-views { display:flex; flex-wrap:wrap; max-width:100%; min-width:0; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:3px; }
   .ecal-view-btn { background:transparent; border:0; color:var(--text-3); font:inherit; font-size:11.5px; font-weight:600;
     padding:6px 12px; border-radius:6px; cursor:pointer; }
   .ecal-view-btn.active { background:var(--accent-soft); color:var(--accent-ink); }
@@ -2166,7 +2165,9 @@
   .market-section-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 14px; }
   .market-section-head h2 { font-size: 11.5px; letter-spacing: .14em; color: var(--text-2); }
   .market-section-head::after { content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--line-2), transparent); order:2; margin:0 4px; }
-  .market-section-head .sec-count { order:3; margin-left:0; padding:2px 8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); }
+  .market-section-head .sec-count { order:3; margin-left:0; padding:2px 8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); white-space:nowrap; }
+  /* título e selo quebram linha juntos (o selo nunca se parte em duas linhas) */
+  .market-section-head { flex-wrap:wrap; row-gap:6px; }
   .market-section-head .sec-icon { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; background:var(--surface-2); border:1px solid var(--line); font-size:13px; }
   .heatmap-header, .calendar-header { border-bottom: 1px solid var(--line); }
   .heatmap-title i, .calendar-title i { border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent-ink); }
@@ -2405,7 +2406,15 @@
     100% { box-shadow: 0 0 0 1px transparent, 0 0 0 14px transparent; background: transparent; }
   }
   @keyframes secFlashTxt { 0%, 100% { color: inherit; } 20%, 55% { color: var(--accent-ink); } }
-  @media (max-width: 640px) { .mkt-nav .mkt-filter { flex: 0 0 92px; min-width: 0; width: 92px; } }
+  .mkt-nav .mkt-filter { flex: 0 1 170px; min-width: 120px; }
+  .mkt-nav .mj.fade-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
+  .mkt-nav .mj.fade-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 44px); mask-image: linear-gradient(90deg, transparent, #000 44px); }
+  .mkt-nav .mj.fade-l.fade-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent); }
+  @media (max-width: 640px) {
+    .mkt-nav { flex-wrap: wrap; row-gap: 8px; }
+    .mkt-nav .mj { flex: 1 1 100%; }
+    .mkt-nav .mkt-filter { flex: 1 1 100%; width: 100%; min-width: 0; margin-left: 0; }
+  }
   @media (prefers-reduced-motion: reduce) { .mj-bar { transition: none; } .market-section.sec-flash, .market-section.sec-flash h2 { animation: none; } }
   #ind-root .ind-boot, #opt-root .ind-boot, #fund-root .ind-boot { padding:60px 20px; text-align:center; color:var(--text-3); font-size:13px; }
 
@@ -2436,7 +2445,8 @@ body.light :is(.ecal-view-btn.active, .side-item.active, .nm-toggle button.activ
   html body .topbar.topbar .topbar-right { grid-area:right; width:auto; gap:6px; justify-content:flex-end; }
   html body .topbar.topbar .topbar-right .icon-btn, html body .topbar.topbar .cmdk-hint { width:38px; height:38px; min-width:38px; }
   html body .topbar.topbar #summary-btn, html body .topbar.topbar .qbanner { display:none; }
-  html body .topbar.topbar .tk-updated { position:absolute; right:0; top:44px; margin:0; padding:0; font-size:10px; line-height:16px; }
+  /* "Sem atualização" na mesma linha da data (a linha dos botões tem 44px + 4px de espaço) */
+  html body .topbar.topbar .tk-updated { position:absolute; right:0; top:48px; margin:0; padding:0; font-size:10px; line-height:15px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   html body .topbar.topbar .ticker { grid-area:ticker; margin-top:6px; }
 }
 
@@ -2813,4 +2823,45 @@ html[data-card-time="on"] #market-panel .qc-time { display:inline; }
   body.has-side.side-collapsed .side .si-badge { position:absolute; top:2px; right:8px; min-width:17px; height:17px; font-size:10px; padding:0 4px; }
   body.has-side.side-collapsed .side .side-mkts { padding:4px 0; }
   body.has-side.side-collapsed .side .side-mkt { justify-content:center; gap:6px; padding:6px 0; }
+}
+
+/* Barra lateral v4 em janelas baixas: mesma aparência, espaçamento menor para as 12 abas e o rodapé caberem em 900px de altura.
+   O cartão B3/NYSE só some abaixo de 820px (o topo também mostra o pregão). Se ainda precisar rolar, a barra de rolagem aparece fina sobre o azul. */
+@media (min-width: 901px) {
+  body.has-side .side .side-nav { scrollbar-width:thin; scrollbar-color:rgba(148,163,184,.42) transparent; overscroll-behavior:contain; }
+  body.has-side .side .side-nav::-webkit-scrollbar { width:6px; }
+  body.has-side .side .side-nav::-webkit-scrollbar-track { background:transparent; }
+  body.has-side .side .side-nav::-webkit-scrollbar-thumb { background:rgba(148,163,184,.42); border-radius:6px; }
+}
+@media (min-width: 901px) and (max-height: 960px) {
+  html body.has-side .side { padding-top:14px; padding-bottom:10px; }
+  body.has-side .side-brand { padding-bottom:10px; }
+  body.has-side .side .side-item { padding-top:6px; padding-bottom:6px; }
+  body.has-side .side .side-search { padding-top:7px; padding-bottom:7px; margin-bottom:2px; }
+  body.has-side .side .side-group { padding-top:10px; padding-bottom:3px; }
+  body.has-side .side .side-foot { padding-top:6px; margin-top:4px; }
+  body.has-side .side .side-mkts { margin-bottom:6px; padding:3px 4px; }
+  body.has-side .side .side-mkt { padding-top:3px; padding-bottom:3px; }
+  body.has-side .side #side-collapse { margin-top:4px; padding-top:8px; }
+  body.has-side.side-collapsed .side-brand { padding-bottom:12px; }
+  body.has-side.side-collapsed .side .side-item, body.has-side.side-collapsed .side .side-search { padding-top:6px; padding-bottom:6px; }
+  body.has-side.side-collapsed .side .side-group { margin:7px 8px; }
+  body.has-side.side-collapsed .side .side-mkt { padding:4px 0; }
+}
+@media (min-width: 901px) and (max-height: 819px) {
+  body.has-side .side .side-mkts { display:none; }
+}
+
+/* Barra lateral aberta no computador: a marca já está nela, o logo do topo sai (recolhida e no celular, continua) */
+@media (min-width: 901px) {
+  body.has-side:not(.side-collapsed) .topbar .mm-logo { display:none; }
+}
+@media (min-width: 1101px) {
+  html body.has-side:not(.side-collapsed) .topbar.topbar:has(> .qbanner) { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"qb right" "sub sub" "ticker ticker"; }
+  html body.hdr2.has-side:not(.side-collapsed) .topbar.topbar:has(> .qbanner) { grid-template-areas:"qb right" "ticker ticker"; }
+}
+
+/* Celular e tablet: o botão flutuante do Resumo não cobre o fim das abas */
+@media (max-width: 900px) {
+  .market-wrap, .news-wrap, .generic-wrap, .heatmap-wrap, #mesa-root .ms-wrap { padding-bottom:calc(84px + env(safe-area-inset-bottom)); }
 }

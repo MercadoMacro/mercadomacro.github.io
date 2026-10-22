@@ -177,8 +177,17 @@
       if (typeof saveMarketCache === 'function') saveMarketCache();
       wlLast = Date.now();
       const info = document.getElementById('wl-info');
-      if (info) info.innerHTML = `<span class="dot"></span>Atualizado às <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · atualiza a cada 5 min com a aba aberta`;
+      if (info) {
+        const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }), n = wlTableFresh.size;
+        // ponto verde só quando chegaram cotações; sem nenhuma (ou só parte), ponto âmbar
+        info.innerHTML = n === wl.length
+          ? `<span class="dot"></span>Atualizado às <b>${hora}</b> · atualiza a cada 5 min com a aba aberta`
+          : n ? `<span class="dot warn"></span>Atualizado às <b>${hora}</b> · ${n} de ${wl.length} ativos com cotação`
+            : `<span class="dot warn"></span>Sem cotações na tentativa das <b>${hora}</b> · nova tentativa em 5 min com a aba aberta`;
+      }
     } catch (e) {
+      const info = document.getElementById('wl-info');
+      if (info) info.innerHTML = `<span class="dot warn"></span>Não foi possível atualizar as cotações agora · nova tentativa em 5 min com a aba aberta`;
       [...grid.querySelectorAll('.wl-card')].forEach((card) => {
         const old = marketDataCache?.[card.dataset.symbol];
         if (old && old.value !== undefined && typeof markStale === 'function') markStale(card, old.ts);
@@ -743,7 +752,7 @@
   rsLoad();
 
   css.textContent += `
-  .rs-card { max-width:980px; margin:0 auto 16px; padding:20px 24px; border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
+  .rs-card { --rs-px:24px; max-width:980px; margin:0 auto 16px; padding:20px var(--rs-px); border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
   .rs-top { display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; }
   .rs-top .sp { flex:1; }
   .rs-kicker { font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:inline-flex; gap:7px; align-items:center; }
@@ -753,7 +762,8 @@
   .rs-ic { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:5px 10px; border-radius:9px; cursor:pointer; }
   .rs-ic:hover { color:var(--text); border-color:var(--line-2); }
   .rs-title { margin:12px 0 0; font-size:20px; line-height:1.35; letter-spacing:-.01em; color:var(--text); }
-  .rs-days { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; position:sticky; top:0; z-index:2; padding:8px 0; background:var(--surface); }
+  .rs-days { display:flex; flex-wrap:wrap; gap:6px; margin:14px calc(-1 * var(--rs-px)) 0; position:sticky; top:0; z-index:2; padding:8px var(--rs-px);
+    background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
   .rs-day { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; font-weight:600; padding:5px 10px; border-radius:99px; cursor:pointer; }
   .rs-day em { font-style:normal; font:11px 'JetBrains Mono', monospace; color:var(--text-3); }
   .rs-day:hover { border-color:var(--line-2); color:var(--text); }
@@ -775,7 +785,7 @@
   .rs-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .rs-actions .btn-sm { display:inline-flex; align-items:center; gap:7px; }
   .rs-actions .rs-pri { color:var(--accent-ink); border-color:var(--accent-line); }
-  @media (max-width: 640px) { .rs-card { padding:14px; } .rs-ic span { display:none; } .rs-title { font-size:16.5px; } .rs-body { font-size:14px; } }
+  @media (max-width: 640px) { .rs-card { --rs-px:14px; padding:14px var(--rs-px); } .rs-ic span { display:none; } .rs-title { font-size:16.5px; } .rs-body { font-size:14px; } }
   `;
 
   /* =========================================================
