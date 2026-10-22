@@ -41,7 +41,13 @@ jobs:
           if git diff --cached --quiet; then echo "Nada mudou."; echo "mudou=0" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "mudou=1" >> "$GITHUB_OUTPUT"
           git commit -m "Vitrine: fotos do painel atualizadas"
-          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin main && break; sleep 5; done
+          ok=0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin main && { ok=1; break; }; sleep 5; done
+          # sem o push, as fotos não estão no main: não publica (o próximo publicar-site as desfaria)
+          [ "$ok" = "1" ] || { echo "Não consegui enviar as fotos para o main."; exit 1; }
+      - name: Validar o site antes de publicar
+        if: steps.salvar.outputs.mudou == '1'
+        run: node terminal/validar.mjs site
       # commits feitos por este robô não disparam o publicar-site, então publica aqui mesmo
       - name: Publicar na Cloudflare
         if: steps.salvar.outputs.mudou == '1'

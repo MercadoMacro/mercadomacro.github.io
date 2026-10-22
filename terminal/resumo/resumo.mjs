@@ -22,6 +22,11 @@ const r = await fetch(SITE + '/api/robo/fechamento', { headers: { Authorization:
 if (!r.ok) throw new Error('fechamento: HTTP ' + r.status + ' ' + (await r.text()));
 const dados = await r.json();
 console.log(dados.texto);
+if (dados.semDados && !FORCAR) {
+  // sem cotação do Ibovespa não dá para dizer se houve pregão: falha, para o robô tentar de novo no próximo horário
+  console.error('\nSem cotação do Ibovespa agora. Nada enviado; o robô tenta de novo mais tarde.');
+  process.exit(1);
+}
 if (!dados.pregao && !FORCAR) {
   console.log(`\nSem pregão hoje (${dados.data}); último Ibovespa: ${dados.pregaoDia || '—'}. Nada enviado.`);
   process.exit(0);
@@ -63,7 +68,8 @@ try {
   const c = await fetch(SITE + '/api/vigia', {
     method: 'POST', headers: { Authorization: 'Bearer ' + TOK, 'Content-Type': 'application/json' },
     // no canal o fechamento vai só em texto, no formato próprio do canal (textoCanal)
-    body: JSON.stringify(dados.textoCanal ? { texto: dados.textoCanal, html: true, canal: true } : { ...corpo, canal: true }),
+    // a chave do dia faz o site postar no canal uma vez só, mesmo quando o robô roda de novo depois de uma falha
+    body: JSON.stringify({ ...(dados.textoCanal ? { texto: dados.textoCanal, html: true } : corpo), canal: true, chave: 'fechamento-' + dados.data }),
   });
   console.log('canal:', await c.text());
 } catch (e) { console.error('canal falhou:', e.message); }

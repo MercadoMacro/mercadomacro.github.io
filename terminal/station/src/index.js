@@ -47,13 +47,14 @@ export default {
     // às 12:15 UTC também roda a rotina das assinaturas e a abertura do mercado
     if (ev.cron === '*/15 * * * *') {
       const quando = new Date(ev.scheduledTime);
-      ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
+      // às 12:15 UTC a rodada já leva assinaturas, vigia e abertura; as notícias ficam para a próxima
+      if (!(quando.getUTCHours() === 12 && quando.getUTCMinutes() === 15)) ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
         // 9h15 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
-        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5) ctx.waitUntil(dispararRobo(env, 'abertura.yml', { site: true }));
+        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(dispararRobo(env, 'abertura.yml', { site: true }));
       }
       return;
     }
@@ -313,6 +314,8 @@ async function dadosFechamento(env) {
   for (const [k, nome, s] of FECH_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, dia: null }) };
   out.pregaoDia = out.cards.ibov.dia;
   out.pregao = out.cards.ibov.dia === hoje;
+  // sem cotação do Ibovespa não dá para saber se houve pregão (o robô tenta de novo mais tarde)
+  out.semDados = out.cards.ibov.v == null;
   // altas e baixas: só ações com cotação do mesmo pregão do Ibovespa
   const acoes = FECH_ACOES.map((t) => ({ t, ...(meta(ja, t + '.SA') || {}) })).filter((a) => a.v != null && a.ch != null && a.dia === out.pregaoDia);
   acoes.sort((x, y) => y.ch - x.ch);
@@ -398,9 +401,26 @@ async function fluxoEstrangeiro() {
       data: ult.data,
       dia: ult.tipos?.estrangeiro?.saldo ?? null,
       mes: f.meses?.[mes]?.tipos?.estrangeiro?.saldo ?? null,
-      ano: Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).reduce((s, [, m]) => s + (m.tipos?.estrangeiro?.saldo || 0), 0),
+      ano: (() => {
+        const v = Object.entries(f.meses || {}).filter(([k]) => k.startsWith(ano)).map(([, m]) => m.tipos?.estrangeiro?.saldo).filter((x) => typeof x === 'number');
+        return v.length ? v.reduce((a, b) => a + b, 0) : null;
+      })(),
     };
   } catch (e) { return null; }
+}
+// feriados sem pregão na B3 (nacionais, Carnaval, Sexta-feira Santa, Corpus Christi, 24 e 31 de dezembro);
+// mesma conta de terminal/curva/gerar_curva.py
+function feriadoB3(iso) {
+  const a = +iso.slice(0, 4);
+  // Páscoa (algoritmo de Meeus/Jones/Butcher)
+  const g = a % 19, b = Math.floor(a / 100), c = a % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), gg = Math.floor((b - f + 1) / 3), h = (19 * g + b - d - gg + 15) % 30;
+  const l = (32 + 2 * e + 2 * Math.floor(c / 4) - h - (c % 4)) % 7, m = Math.floor((g + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  const p = Date.UTC(a, mes - 1, dia);
+  const rel = (n) => new Date(p + n * 864e5).toISOString().slice(5, 10);
+  const fixos = ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-24', '12-25', '12-31'];
+  return fixos.includes(iso.slice(5, 10)) || [-48, -47, -2, 60].map(rel).includes(iso.slice(5, 10));
 }
 const brn = (v, c) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
 function textoFechamento(d, curto) {
@@ -553,18 +573,24 @@ function textoCanalAbertura(d) {
     `• Treasury 10Y: ${tnx.v != null ? n2(tnx.v) + '%' + (bp != null ? ` (${bp > 0 ? '+' : bp < 0 ? '−' : ''}${Math.abs(bp)} bp)` : '') : '—'}`,
     l('dxy', n2, 'DXY (dólar global)'),
     '', '<b>Brasil</b>',
-    l('ibov', n0, 'Ibovespa (último fechamento)'), l('dolar', (v) => 'R$ ' + brn(v, 4)), l('ewz', (v) => 'US$ ' + n2(v), 'EWZ (Brasil em NY)'),
+    l('ibov', n0, 'Ibovespa (último fechamento)'), l('dolar', (v) => 'R$ ' + brn(v, 4)), l('ewz', (v) => 'US$ ' + n2(v), `EWZ (Brasil em NY${c.ewz && c.ewz.dia && c.ewz.dia !== d.data ? ', fechamento de ' + ddmm(c.ewz.dia) : ''})`),
   ];
   if (d.fluxo) L.push(`• Estrangeiro na B3 (até ${ddmm(d.fluxo.data)}): ${bi(d.fluxo.dia)} no dia, ${bi(d.fluxo.mes)} no mês, ${bi(d.fluxo.ano)} no ano`);
   L.push('', '<b>Commodities e cripto</b>',
     l('brent', (v) => 'US$ ' + n2(v)), l('ouro', (v) => 'US$ ' + n2(v)), l('btc', (v) => 'US$ ' + n0(v)));
-  const ag = d.agendaCanal || [];
-  if (ag.length) L.push('', '🗓️ <b>Agenda de hoje (horário de Brasília)</b>', ...ag.map((a) => `• ${a.hora} ${BAND[a.pais] || ''} ${e(a.titulo)}${a.proj ? ` (proj. ${e(a.proj)})` : ''}`));
-  const sem = d.semana || [];
-  if (sem.length) L.push('', '<b>No radar da semana</b>', ...sem.map((s) => `• ${CURTO[new Date(s.dia + 'T12:00:00Z').getUTCDay()]} ${ddmm(s.dia)}: ${s.eventos.map((x) => `${BAND[x.pais] || ''} ${e(x.titulo)}`).join(', ')}`));
-  if (d.noticias && d.noticias.length) L.push('', '<b>Destaques</b>', ...d.noticias.slice(0, 4).map((n) => `• ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}`));
-  L.push('', 'Painel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>');
-  return L.join('\n').slice(0, 4000);
+  // agenda, radar e destaques: se a mensagem passar do limite do Telegram, saem itens inteiros do fim
+  // (nunca se corta no meio de uma linha, o que quebraria o HTML)
+  const ag = (d.agendaCanal || []).map((a) => `• ${a.hora} ${BAND[a.pais] || ''} ${e(a.titulo)}${a.proj ? ` (proj. ${e(a.proj)})` : ''}`);
+  const sem = (d.semana || []).map((s) => `• ${CURTO[new Date(s.dia + 'T12:00:00Z').getUTCDay()]} ${ddmm(s.dia)}: ${s.eventos.slice(0, 3).map((x) => `${BAND[x.pais] || ''} ${e(x.titulo)}`).join(', ')}`);
+  const dest = (d.noticias || []).slice(0, 4).map((n) => `• ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}`);
+  const fim = ['', 'Painel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>'];
+  const monta = () => [...L,
+    ...(ag.length ? ['', '🗓️ <b>Agenda de hoje (horário de Brasília)</b>', ...ag] : []),
+    ...(sem.length ? ['', '<b>No radar da semana</b>', ...sem] : []),
+    ...(dest.length ? ['', '<b>Destaques</b>', ...dest] : []), ...fim].join('\n');
+  let t = monta();
+  while (t.length > 3900 && (sem.length || dest.length || ag.length)) { (sem.length ? sem : dest.length ? dest : ag).pop(); t = monta(); }
+  return t;
 }
 // destino 'canal' = canal público do Telegram (config tg_canal); sem destino = conversa do administrador
 // fechamento no canal público: só texto (HTML do Telegram), no modelo que o Severino escolheu
@@ -1026,7 +1052,8 @@ async function apiAdmin(req, env, acao, eu) {
       if (!/^\d{5,15}:[\w-]{30,60}$/.test(token)) return json({ erro: 'Esse código não parece o token do BotFather. Copie a linha inteira, com os números, os dois-pontos e as letras.' }, 400);
       const me = await telegram(token, 'getMe', {});
       if (!me.ok) return json({ erro: 'O Telegram não aceitou esse token. Confira se copiou certo.' }, 400);
-      await salvarConfig(env, { tg_token: token, tg_bot: me.result.username, tg_chat: null });
+      // bot novo: a conversa e o canal do bot antigo deixam de valer (o canal precisa ser ligado de novo com o bot novo)
+      await salvarConfig(env, { tg_token: token, tg_bot: me.result.username, tg_chat: null, tg_canal: null, tg_canal_nome: null });
       return json({ ok: true, bot: me.result.username });
     }
     if (b.acao === 'conectar') {
@@ -1346,7 +1373,8 @@ async function tokenDoGitHub(tok) {
     jwksCache = { chaves: (await r.json()).keys || [], ate: Date.now() + 3600e3 };
   }
   const jwk = jwksCache.chaves.find((k) => k.kid === cab.kid);
-  if (!jwk) { jwksCache = null; return null; }
+  // chave desconhecida: busca de novo no máximo uma vez por minuto (um token falso não força downloads seguidos)
+  if (!jwk) { if (jwksCache.ate - 3600e3 < Date.now() - 60e3) jwksCache.ate = 0; return null; }
   const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, b64url(sig), new TextEncoder().encode(h + '.' + p));
   const agora = Date.now() / 1000;
@@ -1362,22 +1390,28 @@ async function avisoDoVigia(req, env) {
   const b = await req.json().catch(() => ({}));
   // o canal público só recebe o fechamento e a abertura (nunca os alertas do vigia)
   const canal = b.canal === true && !String(quem.workflow_ref || '').includes('/vigia.yml@');
-  if (canal && !(await config(env)).tg_canal) return json({ ok: true, pulado: 'sem canal' });
+  const cfg = await config(env);
+  if (canal && !cfg.tg_canal) return json({ ok: true, pulado: 'sem canal' });
+  // chave do dia (ex.: fechamento-2026-10-22): o canal recebe cada postagem uma vez só, mesmo que o robô rode de novo
+  const chave = canal && /^[a-z]{3,20}-\d{4}-\d{2}-\d{2}$/.test(String(b.chave || '')) ? String(b.chave) : null;
+  const ck = chave ? 'canal_ult_' + chave.split('-')[0] : null;
+  if (ck && cfg[ck] === chave) return json({ ok: true, pulado: 'já postado' });
+  const feito = async (r) => { if (ck && r.ok) await salvarConfig(env, { [ck]: chave }); return r; };
   const fotos = b.fotos || (b.foto ? [b.foto] : null);
   if (fotos) {
     // cartões em PNG (base64) com a legenda
     let pngs;
     try { pngs = fotos.slice(0, 4).map((f) => Uint8Array.from(atob(String(f)), (ch) => ch.charCodeAt(0))); } catch (e) { return json({ erro: 'Imagem inválida.' }, 400); }
     if (pngs.some((p) => p.length > 5e6)) return json({ erro: 'Imagem grande demais.' }, 413);
-    const r = await telegramAlbum(env, pngs, b.texto, canal ? 'canal' : '');
+    const r = await feito(await telegramAlbum(env, pngs, b.texto, canal ? 'canal' : ''));
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   const texto = String(b.texto || '').slice(0, 4000);
   if (!texto) return json({ erro: 'Sem texto.' }, 400);
-  const c = await config(env);
+  const c = cfg;
   const chat = canal ? c.tg_canal : c.tg_chat;
   if (!(c.tg_token && chat)) return json({ erro: 'Telegram não conectado.' }, 409);
-  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true, ...(b.html ? { parse_mode: 'HTML' } : {}) });
+  const r = await feito(await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true, ...(b.html ? { parse_mode: 'HTML' } : {}) }));
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
 }
 
@@ -1446,7 +1480,7 @@ async function noticiasNoCanal(env, ctx) {
     let k = 0; for (const x of a.w) if (e.w.has(x)) k++;
     return k / Math.max(1, Math.min(a.w.size, e.w.size)) >= 0.5;
   });
-  const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   let postadas = 0;
   for (const n of cands) {
     if (postadas >= 2) break;
@@ -1467,11 +1501,14 @@ async function noticiasNoCanal(env, ctx) {
       link_preview_options: { url: n.link, prefer_large_media: true },
     }).catch((e) => ({ ok: false, description: String(e) }));
     if (!r || !r.ok) {
-      // não saiu: solta a reserva para a notícia voltar na próxima rodada
+      console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200));
+      const cod = (r && +r.error_code) || 0;
+      // recusa da própria mensagem (400): fica marcada e o robô segue para a próxima, sem travar as outras
+      if (cod >= 400 && cod < 500 && cod !== 429) continue;
+      // limite (429), Telegram fora do ar ou rede: solta a reserva para a notícia voltar na próxima rodada
       await env.DB.prepare('DELETE FROM canal_noticias WHERE link = ?').bind(n.link).run();
       const espera = r && r.parameters && +r.parameters.retry_after;
       if (espera > 0) await salvarConfig(env, { tg_canal_pausa: String(agora + espera * 1000) });
-      console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200));
       break;
     }
     vistos.push({ link: n.link, ...a });
@@ -1483,7 +1520,7 @@ async function roboAbertura(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
   const [d, c] = await Promise.all([dadosAbertura(env), config(env)]);
-  return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), textoCanal: textoCanalAbertura(d), canal: !!c.tg_canal }, 200, { 'Cache-Control': 'no-store' });
+  return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), textoCanal: textoCanalAbertura(d), canal: !!c.tg_canal, feriado: feriadoB3(d.data) }, 200, { 'Cache-Control': 'no-store' });
 }
 
 /* ---------------- utilidades ---------------- */

@@ -55,4 +55,6 @@ jobs:
           node-version: '22'
       - name: Montar e postar a abertura
         if: steps.ja.outputs.pular != '1'
+        env:
+          TESTE: ${{ inputs.teste && 'true' || 'false' }}
         run: node terminal/abertura/abertura.mjs

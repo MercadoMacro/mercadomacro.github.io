@@ -223,6 +223,14 @@ async function buildCalendar(ctx) {
   }
   throw new Error(errors.join(' | '));
 }
+// uma atualização em segundo plano por vez (por colo): marca a vez por alguns minutos para não repetir
+// a busca nas fontes a cada pedido quando elas estão fora do ar
+async function suaVez(nome, seg) {
+  const k = new Request('https://trava.mercadomacro/' + nome);
+  if (await caches.default.match(k).catch(() => null)) return false;
+  await caches.default.put(k, new Response('1', { headers: { 'Cache-Control': 'public, max-age=' + seg } })).catch(() => {});
+  return true;
+}
 async function handleCalendar(ctx, cors) {
   const cache = caches.default;
   const fresh = await cache.match(new Request(CAL_FRESH_KEY));
@@ -230,7 +238,7 @@ async function handleCalendar(ctx, cors) {
   // passou de 30 min: entrega a última lista boa na hora e atualiza em segundo plano
   const stale = await cache.match(new Request(CAL_STALE_KEY));
   if (stale) {
-    ctx.waitUntil(buildCalendar(ctx).catch(() => {}));
+    if (await suaVez('calendar', 300)) ctx.waitUntil(buildCalendar(ctx).catch(() => {}));
     return json(await stale.json(), 200, cors, { 'X-Cache': 'STALE' });
   }
   try {
@@ -353,7 +361,7 @@ async function handleIndBundle(url, env, ctx, cors) {
     const b = await hit.json();
     const age = (Date.now() - b.ts) / 1000;
     if (age < IND_STALE) {
-      if (age > IND_FRESH) ctx.waitUntil(refresh().catch(() => {}));
+      if (age > IND_FRESH && await suaVez('ind-' + g, 300)) ctx.waitUntil(refresh().catch(() => {}));
       return json(b, 200, cors, { 'Cache-Control': 'public, max-age=300' });
     }
   }
@@ -399,7 +407,9 @@ async function handleHistory(url, ctx, cors) {
   const ok = entries.filter(([, v]) => !v.error).length;
   const body = JSON.stringify(Object.fromEntries(entries));
   if (ok >= Math.ceil(entries.length * 0.7)) {
-    ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${HIST_TTL}` } })));
+    // com algum símbolo faltando, guarda só por 15 min para ele voltar logo
+    const ttl = ok === entries.length ? HIST_TTL : 900;
+    ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${ttl}` } })));
   }
   return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=900', 'X-Cache': 'MISS', ...cors } });
 }
@@ -531,12 +541,15 @@ function chaveReserva(url) {
   const sp = url.searchParams;
   let k = url.pathname;
   if (url.pathname === '/bcb') {
-    // o site manda dataInicial/dataFinal que mudam todo dia; a chave usa a série e o tamanho do período em anos
+    // janela que termina hoje (dataFinal muda todo dia): a chave usa a série e o tamanho do período em meses;
+    // período fechado no passado (calculadoras): a chave usa as datas exatas, para nunca servir outro período
     const q = sp.get('q') || '';
     const ult = q.match(/\/ultimos\/(\d{1,2})/);
     const di = q.match(/dataInicial=(\d{2})\/(\d{2})\/(\d{4})/), df = q.match(/dataFinal=(\d{2})\/(\d{2})\/(\d{4})/);
     const d = (m) => (m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : Date.now());
-    k += '/' + (sp.get('c') || '') + '/' + (ult ? 'u' + ult[1] : di ? 'a' + Math.round((d(df) - d(di)) / (365.25 * 864e5)) : 'tudo');
+    const recente = Date.now() - d(df) < 7 * 864e5;
+    k += '/' + (sp.get('c') || '') + '/' + (ult ? 'u' + ult[1] : !di ? 'tudo'
+      : recente ? 'm' + Math.round((d(df) - d(di)) / (30.4375 * 864e5)) : di.slice(1).join('') + '-' + (df ? df.slice(1).join('') : ''));
   } else if (url.pathname === '/focus') k += sp.get('full') === '1' ? '/full' : '/curto';
   return 'https://reserva.mercadomacro' + k;
 }
@@ -625,6 +638,7 @@ const rotas = async (request, env, ctx) => {
       try {
         // dado diário: cache de borda de 15 min
         const response = await fetch(fredUrl, { cf: { cacheTtl: 900, cacheEverything: true } });
+        if (!response.ok) return json({ error: 'FRED HTTP ' + response.status }, 502, cors);
         const data = await response.json();
         return json(data, 200, cors, { 'Cache-Control': 'public, max-age=300' });
       } catch (err) {
@@ -798,7 +812,7 @@ const rotas = async (request, env, ctx) => {
       if (path === '/finnhub/earnings') {
         const from = url.searchParams.get('from') || '', to = url.searchParams.get('to') || '';
         const re = /^\d{4}-\d{2}-\d{2}$/;
-        if (!re.test(from) || !re.test(to) || Date.parse(to) - Date.parse(from) > 45 * 86400000 || Date.parse(to) < Date.parse(from)) {
+        if (!re.test(from) || !re.test(to) || isNaN(Date.parse(from)) || isNaN(Date.parse(to)) || Date.parse(to) - Date.parse(from) > 45 * 86400000 || Date.parse(to) < Date.parse(from)) {
           return json({ error: 'Período inválido (máximo 45 dias)' }, 400, cors);
         }
         args = { from, to };
@@ -923,7 +937,7 @@ const rotas = async (request, env, ctx) => {
         });
         const xml = await response.text();
         return new Response(xml, {
-          status: 200,
+          status: response.ok ? 200 : 502,
           headers: {
             'Content-Type': 'application/xml; charset=utf-8',
             'Cache-Control': 'public, max-age=300',

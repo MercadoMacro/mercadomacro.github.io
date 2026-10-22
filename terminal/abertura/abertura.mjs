@@ -17,12 +17,14 @@ const r = await fetch(SITE + '/api/robo/abertura', { headers: { Authorization: '
 if (!r.ok) throw new Error('abertura: HTTP ' + r.status + ' ' + (await r.text()));
 const dados = await r.json();
 console.log(dados.textoCanal || dados.texto);
+if (dados.feriado && process.env.TESTE !== 'true') { console.log('\nFeriado na B3 hoje. Nada enviado.'); process.exit(0); }
 if (!dados.canal) { console.log('\nCanal público não está ligado em /admin. Nada enviado.'); process.exit(0); }
 
 // no canal vai só o texto, no modelo escolhido pelo Severino (as imagens ficam para /abertura)
 const envio = await fetch(SITE + '/api/vigia', {
   method: 'POST', headers: { Authorization: 'Bearer ' + TOK, 'Content-Type': 'application/json' },
-  body: JSON.stringify(dados.textoCanal ? { texto: dados.textoCanal, html: true, canal: true } : { texto: dados.texto, canal: true }),
+  body: // a chave do dia faz o site recusar uma segunda postagem da abertura no mesmo dia (teste manual passa sem chave)
+  JSON.stringify({ ...(dados.textoCanal ? { texto: dados.textoCanal, html: true } : { texto: dados.texto }), canal: true, ...(process.env.TESTE === 'true' ? {} : { chave: 'abertura-' + dados.data }) }),
 });
 const resp = await envio.text();
 console.log(resp);
