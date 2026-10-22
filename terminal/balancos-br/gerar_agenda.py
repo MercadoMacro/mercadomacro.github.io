@@ -11,7 +11,7 @@ Grava terminal/balancos-br/agenda.json com:
 Só entram empresas que estão em terminal/fundamentos/index.json (as que têm ação na B3).
 Uso: python3 gerar_agenda.py <pasta_saida> <index_fundamentos.json>
 """
-import csv, io, json, os, re, subprocess, sys, tempfile, time, urllib.request, zipfile
+import csv, io, json, os, re, subprocess, sys, tempfile, time, urllib.error, urllib.request, zipfile
 from datetime import date, datetime, timedelta, timezone
 
 # reaproveita a leitura da DRE do robô dos Fundamentos (mesmas regras de lucro e receita)
@@ -26,10 +26,17 @@ MESES["marco"] = 3
 
 
 def baixa(url, tentativas=4, timeout=180):
+    """Conteúdo do arquivo; b"" se a CVM respondeu 404 (arquivo ainda não existe); None se falhou."""
     for i in range(tentativas):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
                 return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                print(f"  {url}: 404")
+                return b""
+            print(f"  tentativa {i + 1} falhou em {url}: {e}")
+            time.sleep(4 * (i + 1))
         except Exception as e:  # noqa: BLE001
             print(f"  tentativa {i + 1} falhou em {url}: {e}")
             time.sleep(4 * (i + 1))
@@ -184,8 +191,13 @@ def main():
     for tipo, anos in (("ITR", (hoje.year - 1, hoje.year)), ("DFP", (hoje.year - 2, hoje.year - 1))):
         for ano in anos:
             z = baixa(f"{BASE}/{tipo}/DADOS/{tipo.lower()}_cia_aberta_{ano}.zip")
+            # sem o arquivo a agenda sairia vazia ou pela metade: mantém a anterior.
+            # 404 só é normal no ano mais novo de cada tipo (no começo do ano ainda não há entregas)
+            if z is None or (not z and ano != anos[-1]):
+                print(f"ERRO: sem {tipo} {ano}; agenda.json não foi alterado")
+                sys.exit(1)
             if not z:
-                print(f"  sem {tipo} {ano}")
+                print(f"  sem {tipo} {ano} (ainda não existe)")
                 continue
             zips[(tipo, ano)] = z
             linhas = le_csv(z, f"{tipo.lower()}_cia_aberta_{ano}.csv")
@@ -218,6 +230,10 @@ def main():
     confirmadas = {}
     for ano in sorted({alvo.year, hoje.year}):
         z = baixa(f"{BASE}/IPE/DADOS/ipe_cia_aberta_{ano}.zip")
+        if z is None or (not z and ano != hoje.year):
+            # sem os comunicados as datas confirmadas virariam "prováveis": mantém a agenda anterior
+            print(f"ERRO: sem IPE {ano}; agenda.json não foi alterado")
+            sys.exit(1)
         if not z:
             continue
         linhas = le_csv(z, f"ipe_cia_aberta_{ano}.csv")
@@ -279,6 +295,16 @@ def main():
         "divulgados": divulgados,
         "proximos": proximos,
     }
+    # trava: a CVM às vezes responde com arquivos incompletos; não troca a agenda por uma bem menor
+    try:
+        velho = json.load(open(f"{saida}/agenda.json", encoding="utf-8"))
+        n_velho = len(velho.get("divulgados", [])) + len(velho.get("proximos", []))
+    except (OSError, ValueError):
+        n_velho = 0
+    n_novo = len(divulgados) + len(proximos)
+    if n_novo < 0.5 * n_velho:
+        print(f"ERRO: agenda nova tem {n_novo} itens contra {n_velho} na anterior; agenda.json não foi alterado")
+        sys.exit(1)
     with open(f"{saida}/agenda.json", "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     n_conf = sum(1 for p in proximos if p["tipo"] == "confirmada")

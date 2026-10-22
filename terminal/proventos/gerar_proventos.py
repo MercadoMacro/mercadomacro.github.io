@@ -115,18 +115,19 @@ def ticker_por_isin(isin, tickers, especie):
 
 
 def b3(empresas):
-    eventos, falhas = [], []
+    eventos, falhas, sem_resposta = [], [], set()
     with ThreadPoolExecutor(max_workers=4) as ex:
         for res in ex.map(lambda e: (e, _seguro(b3_empresa, e)), empresas):
             e, r = res
             if isinstance(r, Exception):
                 falhas.append(str(r))
+                sem_resposta.add(str(e['cvm']))
             else:
                 eventos.extend(r)
     print(f'B3: {len(eventos)} proventos de {len(empresas) - len(falhas)} empresas ({len(falhas)} falharam)')
     if falhas:
         erros.append(f'B3: {len(falhas)} empresas falharam, ex.: {falhas[0]}')
-    return eventos, len(empresas) - len(falhas)
+    return eventos, len(empresas) - len(falhas), sem_resposta
 
 
 def _seguro(f, *a):
@@ -188,7 +189,7 @@ if __name__ == '__main__':
         empresas = [e for e in json.load(f)['empresas'] if e.get('tickers')]
     if os.environ.get('PROVENTOS_LIMITE'):
         empresas = empresas[:int(os.environ['PROVENTOS_LIMITE'])]
-    eventos, ok_b3 = b3(empresas)
+    eventos, ok_b3, sem_resposta = b3(empresas)
     avisos = _seguro(cvm, {str(int(e['cvm'])) for e in empresas})
     if isinstance(avisos, Exception):
         erros.append(f'CVM: {avisos}')
@@ -203,6 +204,13 @@ if __name__ == '__main__':
     if ok_b3 < len(empresas) * 0.5 and antigo.get('eventos'):
         erros.append('B3 respondeu para menos da metade das empresas: proventos da última rodada mantidos')
         eventos = antigo['eventos']
+    elif sem_resposta and antigo.get('eventos'):
+        # empresa que não respondeu desta vez: ficam os proventos dela da última rodada (só os ainda na janela)
+        mantidos = [e for e in antigo['eventos'] if str(e.get('cvm')) in sem_resposta
+                    and max(e.get('com') or '', e.get('pag') or '', e.get('aprov') or '') >= DESDE.isoformat()]
+        eventos.extend(mantidos)
+        if mantidos:
+            erros.append(f'B3: {len(mantidos)} proventos de {len(sem_resposta)} empresas sem resposta mantidos da última rodada')
     if not avisos and antigo.get('avisos'):
         avisos = antigo['avisos']
     eventos.sort(key=lambda e: (e['com'] or e['pag'] or e['aprov'] or '', e['tk']), reverse=True)

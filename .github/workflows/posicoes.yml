@@ -24,9 +24,12 @@ jobs:
       - uses: actions/checkout@v5
       - name: CFTC (posição dos especuladores)
         run: python3 terminal/posicoes/gerar_cot.py terminal/posicoes
+      # cada passo grava o seu arquivo: se a CFTC falhar, o 13F roda e é salvo assim mesmo (o run fica vermelho)
       - name: SEC 13F (carteiras dos fundos)
+        if: ${{ !cancelled() }}
         run: python3 terminal/posicoes/gerar_13f.py terminal/posicoes
       - name: Salvar no repositório
+        if: ${{ !cancelled() }}
         run: |
           git config user.name "posicoes-bot"
           git config user.email "actions@users.noreply.github.com"

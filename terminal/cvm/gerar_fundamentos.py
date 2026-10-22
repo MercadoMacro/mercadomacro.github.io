@@ -29,6 +29,8 @@ def norm(s):
 
 
 def baixar(url, local_dir=None, tentativas=4):
+    """Conteúdo do arquivo, ou None se a CVM respondeu 404 (arquivo que ainda não existe).
+    Qualquer outra falha levanta erro: sem um ano o histórico encolheria e empresas sumiriam."""
     nome = url.rsplit('/', 1)[-1]
     if local_dir:
         p = os.path.join(local_dir, nome)
@@ -48,8 +50,7 @@ def baixar(url, local_dir=None, tentativas=4):
         except Exception as e:  # rede
             erro = e
         time.sleep(2 ** (i + 1))
-    print(f'  falhou: {url} ({erro})', file=sys.stderr)
-    return None
+    raise RuntimeError(f'falhou: {url} ({erro}); nada foi gravado')
 
 
 def ler_csv(zbytes, padrao):
@@ -268,6 +269,9 @@ def main():
         print(f'Baixando DFP {ano}…')
         z = baixar(f'{BASE}/DFP/DADOS/dfp_cia_aberta_{ano}.zip', local)
         if not z:
+            # o DFP de um ano sai no ano seguinte: 404 só é normal no ano passado (começo do ano) e no atual
+            if ano < hoje.year - 1:
+                sys.exit(f'Sem o DFP {ano} da CVM (404): nada foi gravado.')
             continue
         docs_cvm.update(links_doc(z, 'dfp'))
         for cnpj, docs in carregar_demos(z, 'dfp').items():
@@ -289,6 +293,8 @@ def main():
         print(f'Baixando ITR {ano}…')
         z = baixar(f'{BASE}/ITR/DADOS/itr_cia_aberta_{ano}.zip', local)
         if not z:
+            if ano < hoje.year:  # 404 só é normal no ano atual (antes do primeiro ITR)
+                sys.exit(f'Sem o ITR {ano} da CVM (404): nada foi gravado.')
             continue
         docs_cvm.update(links_doc(z, 'itr'))
         for cnpj, docs in carregar_demos(z, 'itr').items():
@@ -309,6 +315,8 @@ def main():
             if cnpj not in qtd or v[0] >= qtd[cnpj][0]:
                 qtd[cnpj] = v
 
+    if not any(c in tick for c in set(anual) | set(trimestral)):
+        sys.exit('Nenhuma empresa lida nos balanços: confira se a CVM mudou o formato dos arquivos. Nada foi gravado.')
     gerado = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     indice = []
     escritos = set()

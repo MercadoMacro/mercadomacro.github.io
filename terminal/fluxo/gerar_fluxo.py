@@ -42,6 +42,7 @@ def carrega():
 
 
 def baixa(d):
+    """PDF do boletim; None se a B3 diz que não existe (403/404). Falha de rede levanta erro."""
     url = URL.format(iso=d.isoformat(), ymd=d.strftime('%Y%m%d'))
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (MercadoMacro fluxo)'})
     for tentativa in range(3):
@@ -54,10 +55,11 @@ def baixa(d):
         except urllib.error.HTTPError as e:
             if e.code in (403, 404):
                 return None
-        except Exception:
-            pass
+            erro = e
+        except Exception as e:
+            erro = e
         time.sleep(5 * (tentativa + 1))
-    return None
+    raise OSError(f'{url}: {erro}')
 
 
 API = 'https://arquivos.b3.com.br/bdi/table/SharesInvesVolum/{iso}/{iso}/1/50'
@@ -139,7 +141,12 @@ def main():
             acum[ref] = tab
             print(f'{iso}: (json) referente a {ref}, estrangeiro compras {tab["estrangeiro"][0]} vendas {tab["estrangeiro"][1]}')
             continue
-        pdf = baixa(d)
+        try:
+            pdf = baixa(d)
+        except OSError as e:
+            # erro de rede não quer dizer que não houve boletim: o dia fica para a próxima passagem
+            print(f'{iso}: falha ao baixar ({e})')
+            continue
         if not pdf:
             print(f'{iso}: sem boletim')
             if d < hoje - timedelta(days=3):
@@ -155,6 +162,11 @@ def main():
             novos += 1
         acum[ref] = tab
         print(f'{iso}: referente a {ref}, estrangeiro compras {tab["estrangeiro"][0]} vendas {tab["estrangeiro"][1]}')
+
+    # sem dado novo não grava (nem muda 'gerado'): dia marcado como lido sem boletim não gera commit
+    if not novos:
+        print('Nenhum acumulado novo; fluxo.json não foi alterado.')
+        return
 
     # saldo diário: diferença entre acumulados seguidos do mesmo mês
     datas = sorted(acum)
@@ -179,8 +191,7 @@ def main():
         meses[d[:7]] = {'ate': d, 'tipos': {k: {'c': c, 'v': v, 'saldo': c - v} for k, (c, v) in acum[d].items()}}
 
     out = {
-        # sem dado novo, mantém a data de geração para não gravar o arquivo à toa
-        'gerado': base['gerado'] if (not novos and base.get('gerado') and set(lidos) == set(base.get('boletins', []))) else datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'gerado': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'fonte': 'B3, Boletim Diário do Mercado (BDI), tabela Participação dos investidores',
         'unidade': 'R$ mil',
         'dias': dias[-260:],

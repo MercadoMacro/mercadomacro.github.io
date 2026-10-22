@@ -12,20 +12,25 @@ Fontes: Tesouro Transparente (CSV oficial), Banco Central (Olinda), Worker do si
 import csv, io, json, os, sys, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta, timezone
 
+# calendário de feriados da B3 (o mesmo do robô da curva DI)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'curva'))
+from gerar_curva import util as dia_util  # noqa: E402
+
 PASTA = sys.argv[1] if len(sys.argv) > 1 else 'historico'
 API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev'
 ORIGEM = 'https://station.danilo-nillo.workers.dev'
 UA = 'Mozilla/5.0 (compatible; MercadoMacro-Historico/1.0)'
-HOJE = datetime.now(timezone(timedelta(hours=-3))).date()   # Brasília
+BRT = timezone(timedelta(hours=-3))
+HOJE = datetime.now(BRT).date()   # Brasília
 erros = []
 
 
-def baixa(url, origem=False, tempo=120):
+def baixa(url, origem=False, tempo=120, cabecalhos=False):
     h = {'User-Agent': UA, 'Accept': '*/*'}
     if origem:
         h['Origin'] = ORIGEM
     with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=tempo) as r:
-        return r.read()
+        return (r.read(), r.headers) if cabecalhos else r.read()
 
 
 def le(nome, padrao):
@@ -91,9 +96,15 @@ def curva():
     except Exception as e:
         erros.append(f'Tesouro Transparente: {e}')
     # o dia de hoje (o CSV oficial chega um dia depois): taxa atual pelo Worker
-    if HOJE.weekday() < 5 and HOJE.isoformat() not in cur:
+    # só em dia útil da B3 e só com resposta fresca de hoje (não a cópia de reserva do Worker)
+    if dia_util(HOJE) and HOJE.isoformat() not in cur:
         try:
-            j = json.loads(baixa(API + '/tesouro', origem=True))
+            corpo, cab = baixa(API + '/tesouro', origem=True, cabecalhos=True)
+            j = json.loads(corpo)
+            ts = j.get('ts')
+            dia_ts = datetime.fromtimestamp(ts / 1000, BRT).date() if isinstance(ts, (int, float)) else None
+            if cab.get('X-Reserva') or dia_ts != HOJE:
+                raise ValueError(f'resposta de reserva ou antiga (X-Reserva={cab.get("X-Reserva")}, ts={dia_ts}), dia de hoje fora da curva')
             t = [[x['nome'], x['taxa'], x['vencimento']] for x in j.get('titulos', [])
                  if entra_na_curva(x['nome']) and isinstance(x.get('taxa'), (int, float))]
             if t:
@@ -116,7 +127,9 @@ IND = ['IPCA', 'PIB Total', 'Câmbio', 'Selic', 'IGP-M', 'IPCA Administrados', '
 def focus():
     desde = (HOJE - timedelta(days=740)).isoformat()
     anos = [HOJE.year + i for i in range(4)]
-    saida = {}
+    # parte do arquivo anterior: indicador que não respondeu fica como estava
+    saida = dict(le('focus.json', {}).get('ind') or {})
+    novos = 0
     for ind in IND:
         filtro = (f"Indicador eq '{ind}' and baseCalculo eq 0 and Data ge '{desde}' and ("
                   + ' or '.join(f"DataReferencia eq '{a}'" for a in anos) + ')')
@@ -137,11 +150,12 @@ def focus():
             por_ano.setdefault(str(r['DataReferencia']), {})[semana] = [d.isoformat(), round(float(r['Mediana']), 4)]
         if por_ano:
             saida[ind] = {a: [p for _, p in sorted(s.items())] for a, s in sorted(por_ano.items())}
-    if len(saida) >= 4:
+            novos += 1
+    if novos and len(saida) >= 4:
         grava('focus.json', {'gerado': datetime.now(timezone.utc).isoformat(timespec='seconds'),
                              'fonte': 'Banco Central do Brasil, sistema Expectativas de Mercado (Focus)', 'ind': saida})
     else:
-        erros.append('Focus: poucos indicadores, arquivo mantido')
+        erros.append('Focus: nenhum indicador novo, arquivo mantido')
 
 
 # ---------------------------------------------------------------- fechamentos

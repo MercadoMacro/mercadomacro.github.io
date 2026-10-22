@@ -78,15 +78,25 @@ def main():
     for l in linhas:
         por_codigo.setdefault(l.get("cftc_contract_market_code"), []).append(l)
 
+    # mercado que não veio desta vez fica com as semanas do arquivo anterior (não some do site)
+    try:
+        with open(f"{saida}/cot.json", encoding="utf-8") as f:
+            antigos = {m["k"]: m for m in json.load(f).get("mercados", [])}
+    except (OSError, ValueError, KeyError):
+        antigos = {}
+
     mercados = []
+    novos = 0
     for cod, chave, nome, grupo, palavra in MERCADOS:
         ls = por_codigo.get(cod, [])
-        if not ls:
-            print(f"  {cod} {nome}: sem dados, fica de fora")
-            continue
-        oficial = ls[-1].get("market_and_exchange_names", "")
-        if palavra not in oficial.upper():
-            print(f"  {cod} {nome}: nome oficial '{oficial}' não confere, fica de fora")
+        oficial = ls[-1].get("market_and_exchange_names", "") if ls else ""
+        if not ls or palavra not in oficial.upper():
+            motivo = "sem dados" if not ls else f"nome oficial '{oficial}' não confere"
+            if chave in antigos:
+                print(f"  {cod} {nome}: {motivo}, mantido o do arquivo anterior")
+                mercados.append(antigos[chave])
+            else:
+                print(f"  {cod} {nome}: {motivo}, fica de fora")
             continue
         semanas = []
         for l in ls:
@@ -104,8 +114,9 @@ def main():
         semanas = [unicas[k] for k in sorted(unicas)]
         print(f"  {cod} {nome}: {len(semanas)} semanas, última {semanas[-1]['d'] if semanas else '—'} ({oficial})")
         mercados.append({"k": chave, "codigo": cod, "nome": nome, "grupo": grupo, "oficial": oficial, "semanas": semanas})
+        novos += 1
 
-    if not mercados:
+    if not novos:
         raise SystemExit("nenhum mercado com dados")
     out = {
         "gerado": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

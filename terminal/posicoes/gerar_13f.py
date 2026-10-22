@@ -161,14 +161,48 @@ def arred(x):
     return round(x) if x is not None else None
 
 
+def le_json(caminho):
+    try:
+        with open(caminho, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 def main():
     saida = sys.argv[1] if len(sys.argv) > 1 else "."
     limite = (datetime.now(timezone.utc) - timedelta(days=300)).strftime("%Y-%m-%d")
+    # arquivos anteriores: fundo que a SEC não entregou desta vez fica como estava (não some do site)
+    velho = {f_["cik"]: f_ for f_ in le_json(f"{saida}/13f.json").get("fundos", [])}
+    velho_acoes = le_json(f"{saida}/13f-acoes.json")
     fundos = []
+    lidos = 0
     acoes = {}  # (cusip, put/call) -> {nome, classe, pc, h: [[índice do fundo, valor, qtd, qtd antes, % da carteira]]}
+
+    def mantem(cik, apelido, motivo):
+        """Repete o fundo do arquivo anterior (e as linhas dele no índice por ação). False se não havia."""
+        f_ = velho.get(cik)
+        if not f_:
+            print(f"  {cik} {apelido}: {motivo}, fica de fora")
+            return False
+        print(f"  {cik} {apelido}: {motivo}, mantido o do arquivo anterior ({f_.get('periodo')})")
+        fundos.append(f_)
+        fi = len(fundos) - 1
+        nomes_ant = velho_acoes.get("fundos", [])
+        fi_ant = nomes_ant.index(f_["apelido"]) if f_["apelido"] in nomes_ant else None
+        for x in velho_acoes.get("acoes", []) if fi_ant is not None else []:
+            for h in x.get("h", []):
+                if h[0] == fi_ant:
+                    a = acoes.setdefault((x["c"], x["pc"]), {"nome": x["n"], "classe": x["cl"], "pc": x["pc"], "h": []})
+                    a["h"].append([fi] + h[1:])
+        return True
+
     for cik, apelido, gestor, palavra in FUNDOS:
         nome, fs = filings(cik)
-        if not nome or palavra not in nome.upper():
+        if not nome:
+            mantem(cik, apelido, "a SEC não respondeu")
+            continue
+        if palavra not in nome.upper():
             print(f"  {cik} {apelido}: nome oficial '{nome}' não confere, fica de fora")
             continue
         if not fs:
@@ -179,9 +213,14 @@ def main():
             continue
         atual = carteira(cik, fs[0])
         if not atual:
-            print(f"  {cik} {apelido}: não li a tabela do 13F {fs[0]['acc']}")
+            mantem(cik, apelido, f"não li a tabela do 13F {fs[0]['acc']}")
             continue
         ant = carteira(cik, fs[1]) if len(fs) > 1 else None
+        if len(fs) > 1 and not ant:
+            # sem o trimestre anterior as listas de novas/zeradas sairiam vazias
+            mantem(cik, apelido, f"não li a tabela do 13F anterior {fs[1]['acc']}")
+            continue
+        lidos += 1
         total = sum(p["v"] for p in atual.values())
         tot_ant = sum(p["v"] for p in ant.values()) if ant else None
 
@@ -234,7 +273,7 @@ def main():
         print(f"  {cik} {apelido}: {fs[0]['periodo']} ({len(atual)} posições, US$ {total / 1e9:.1f} bi); "
               f"novas {len(novas)}, zeradas {len(zeradas)}, aumentou {len(mais)}, diminuiu {len(menos)}")
 
-    if not fundos:
+    if not lidos:
         raise SystemExit("nenhum fundo lido")
     out = {"gerado": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "fonte": "SEC EDGAR, formulário 13F-HR", "fundos": fundos}
@@ -243,12 +282,14 @@ def main():
     print(f"13f.json: {len(fundos)} fundos")
     # índice por ação, para a busca "quem tem essa ação?" (arquivo separado, só baixado ao buscar)
     tk = tickers_sec()
+    # sem a lista da SEC, cada ação fica com o ticker que tinha no arquivo anterior
+    t_ant = {} if tk else {(x["c"], x["pc"]): x.get("t") for x in velho_acoes.get("acoes", [])}
     lista = []
     for (cusip, pc), a in acoes.items():
         # empresa com mais de uma classe (GOOGL e GOOG): ficam todos os tickers, sem chutar qual é qual
         ts = tk.get(chave_nome(a["nome"]), [])
         ts = [x for x in ts if "-" not in x] or ts  # 'BAC BML-PG' -> 'BAC' (preferenciais e warrants fora)
-        t = " ".join(ts[:3]) or None
+        t = (" ".join(ts[:3]) or None) if tk else t_ant.get((cusip, pc))
         lista.append({"c": cusip, "n": a["nome"], "cl": a["classe"], "pc": pc, "t": t, "h": sorted(a["h"], key=lambda x: -(x[1] or 0))})
     lista.sort(key=lambda x: -sum(h[1] or 0 for h in x["h"]))
     com_t = sum(1 for x in lista if x["t"])
