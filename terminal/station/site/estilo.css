@@ -2751,3 +2751,66 @@ html[data-card-time="on"] #market-panel .qc-time { display:inline; }
 
 /* a aba inteira recebe foco para as setas rolarem a página; não precisa da moldura de foco em volta de tudo */
 .tab-panel:focus, .tab-panel:focus-visible { outline: none; }
+
+/* =====================================================================
+   BARRA LATERAL v4 (modelo do Severino, 22/10/2026): azul-noite nos dois temas,
+   marca no topo, Buscar (Ctrl+K), ícones próprios em traço, status B3/NYSE em cartão,
+   Aparência com chave, Ajustes e Recolher no rodapé. Recolhida: só ícones com divisórias.
+   ===================================================================== */
+@media (min-width: 901px) {
+  body.has-side { --side-w: 272px; }
+  body.has-side.side-collapsed { --side-w: 84px; }
+  html body.has-side .side {
+    --sb-bg:#0d1526; --sb-line:rgba(148,163,184,.14); --sb-text:#d7deea; --sb-mute:#8390a8; --sb-amber:#f5b544;
+    background:var(--sb-bg); color:var(--sb-text); border-right:1px solid var(--sb-line);
+    -webkit-backdrop-filter:none; backdrop-filter:none; padding:18px 14px 14px; box-shadow:4px 0 24px rgba(2,6,23,.18);
+  }
+  body.has-side .side-brand { display:flex; align-items:center; gap:12px; padding:2px 8px 14px; margin:0; border:0; }
+  body.has-side .side-brand .sb-mark { width:36px; height:36px; flex:0 0 36px; fill:var(--sb-amber); }
+  body.has-side .side-brand b { font-size:19px; line-height:1; font-weight:600; letter-spacing:-.01em; color:#f3f6fb; }
+  body.has-side .side .side-item { color:var(--sb-text); font-size:14.5px; font-weight:500; padding:8px 12px; margin:0; border-radius:10px; gap:14px; }
+  body.has-side .side .side-item:hover { background:rgba(148,163,184,.10); color:#fff; }
+  body.has-side .side .si-svg { width:20px; height:20px; flex:0 0 20px; color:#c3ccdb; }
+  body.has-side .side .side-item:hover .si-svg { color:#fff; }
+  body.has-side .side .side-item.active { background:rgba(245,181,68,.16); color:var(--sb-amber); box-shadow:inset 0 0 0 1px rgba(245,181,68,.38); font-weight:600; }
+  body.has-side .side .side-item.active .si-svg { color:var(--sb-amber); }
+  body.has-side .side .side-item.active::before { left:-14px; background:var(--sb-amber); }
+  body.has-side .side .side-group { color:var(--sb-mute); font-size:11px; letter-spacing:.12em; padding:12px 12px 4px; }
+  body.has-side .side .si-badge, body.has-side .side .si-badge.crit { background:var(--sb-amber); color:#111827; min-width:22px; height:22px; border-radius:99px; font-size:11.5px; }
+  /* Buscar */
+  body.has-side .side .side-search { border:1px solid rgba(148,163,184,.28); background:rgba(148,163,184,.06); padding:9px 12px; margin:0 0 6px; color:#c3ccdb; }
+  body.has-side .side .side-search .si-kbd { display:inline-flex; gap:4px; }
+  body.has-side .side .side-search kbd { font:inherit; font-size:10.5px; font-weight:500; color:#aab4c6; border:1px solid rgba(148,163,184,.3); border-radius:5px; padding:1px 5px; background:transparent; }
+  /* status das bolsas */
+  body.has-side .side .side-foot { border-top:1px solid var(--sb-line); padding-top:10px; margin-top:8px; }
+  body.has-side .side .side-mkts { border:1px solid var(--sb-line); border-radius:12px; padding:6px 4px; margin:0 0 10px; background:rgba(148,163,184,.04); }
+  body.has-side .side .side-mkt { display:flex; align-items:center; gap:8px; padding:5px 10px; font-size:12.5px; font-weight:600; color:#e7ecf4; }
+  body.has-side .side .side-mkt .sm-flag { width:20px; height:20px; flex:0 0 20px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.12); }
+  body.has-side .side .side-mkt span { flex:0 0 auto; }
+  body.has-side .side .side-mkt i { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#ef4444; box-shadow:none; margin-left:2px; }
+  body.has-side .side .side-mkt.open i { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+  body.has-side .side .side-mkt small { flex:1; font-size:12px; font-weight:400; color:#c3ccdb; }
+  body.has-side .side .side-mkt.open small { color:#4ade80; }
+  body.has-side .side .side-mkt time { font-size:12px; font-weight:400; color:var(--sb-mute); font-variant-numeric:tabular-nums; }
+  /* Aparência: chave liga no tema claro */
+  body.has-side .side .si-switch { margin-left:auto; width:36px; height:20px; flex:0 0 36px; border-radius:99px; background:#2a3550; position:relative; transition:background .2s; }
+  body.has-side .side .si-switch::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#e7ecf4; transition:transform .2s; }
+  body.has-side .side #side-theme[aria-checked="true"] .si-switch { background:var(--sb-amber); }
+  body.has-side .side #side-theme[aria-checked="true"] .si-switch::after { transform:translateX(16px); background:#111827; }
+  body.has-side .side #side-collapse { border-top:1px solid var(--sb-line); border-radius:0 0 10px 10px; margin-top:8px; padding-top:13px; animation:none; color:var(--sb-text); }
+  body.has-side .side #side-collapse:hover { background:rgba(148,163,184,.10); }
+  body.has-side.side-collapsed .side #side-collapse .si-ico, body.has-side.side-collapsed #side-collapse .si-svg { transform:none; }
+  /* recolhida */
+  body.has-side.side-collapsed .side { padding:18px 12px 14px; }
+  body.has-side.side-collapsed .side-brand { justify-content:center; padding:4px 0 18px; }
+  body.has-side.side-collapsed .side-brand b, body.has-side.side-collapsed .side .si-kbd, body.has-side.side-collapsed .side .si-switch,
+  body.has-side.side-collapsed .side .side-mkt span, body.has-side.side-collapsed .side .side-mkt small, body.has-side.side-collapsed .side .side-mkt time { display:none; }
+  body.has-side.side-collapsed .side .side-item { justify-content:center; padding:10px 0; }
+  body.has-side.side-collapsed .side .side-search { padding:10px 0; }
+  body.has-side.side-collapsed .side .side-group { display:block; font-size:0; height:1px; padding:0; margin:12px 8px; background:var(--sb-line); }
+  body.has-side.side-collapsed .side .side-group:first-child { display:none; }
+  body.has-side.side-collapsed .side .side-item.active::before { display:none; }
+  body.has-side.side-collapsed .side .si-badge { position:absolute; top:2px; right:8px; min-width:17px; height:17px; font-size:10px; padding:0 4px; }
+  body.has-side.side-collapsed .side .side-mkts { padding:4px 0; }
+  body.has-side.side-collapsed .side .side-mkt { justify-content:center; gap:6px; padding:6px 0; }
+}

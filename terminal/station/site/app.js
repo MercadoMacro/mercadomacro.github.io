@@ -4012,18 +4012,48 @@ window.__onTabSwitch = (tabId) => {
     const label = [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
     return { id, ico, soon, label };
   };
+  // ícones da barra lateral (desenho do Severino, traço em currentColor)
+  const SI = {
+    'market-panel': '<path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/>',
+    'mesa-panel': '<path d="M5 20V10m7 10V4m7 16V7"/>',
+    'watch-panel': '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',
+    'heatmap-panel': '<path d="M3 3h7v7H3Zm11 0h7v7h-7ZM3 14h7v7H3Zm11 0h7v7h-7Z"/>',
+    'news-panel': '<rect x="6" y="3" width="15" height="18" rx="2"/><path d="M6 7H3v12a2 2 0 0 0 2 2h3M10 7h7m-7 4h7m-7 4h4"/>',
+    'weekly-panel': '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6m-6 4h6m-6 4h4"/>',
+    'calendar-panel': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m4 0h2m-8 3h2"/>',
+    'analysis-panel': '<path d="M5 20V13m7 7V4m7 16V9"/>',
+    'fund-panel': '<path d="M12 3v9h9A9 9 0 1 1 12 3Zm4 1a9 9 0 0 1 4 4h-4Z"/>',
+    'indicators-panel': '<path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1"/><circle cx="15" cy="13" r="1"/>',
+    'calculator-panel': '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8v4H8Zm0 8h1m3 0h1m3 0h.01M8 18h1m3 0h1m3 0h.01"/>',
+    'options-panel': '<circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
+    'buscar': '<circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/>',
+    'resumo': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 12h8m-8 4h6"/>',
+    'aparencia': '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+    'ajustes': '<path d="m9 3-.6 2.3-2 .9-2.1-.7-2 3.5 1.6 1.6v2.8L2.3 15l2 3.5 2.1-.7 2 .9L9 21h6l.6-2.3 2-.9 2.1.7 2-3.5-1.6-1.6v-2.8L21.7 9l-2-3.5-2.1.7-2-.9L15 3Z"/><circle cx="12" cy="12" r="3"/>',
+    'recolher': '<path d="m14 6-6 6 6 6M8 12h13"/>',
+    'expandir': '<path d="m10 6 6 6-6 6M3 12h13"/>'
+  };
+  const svg = (k) => `<svg class="si-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SI[k] || ''}</svg>`;
+  // bandeiras desenhadas (não emoji): Brasil e EUA, recortadas em círculo
+  const FLAG = {
+    B3: '<svg class="sm-flag" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="10" fill="#1f9e57"/><path d="M10 3.6 17 10l-7 6.4L3 10Z" fill="#f7d117"/><circle cx="10" cy="10" r="3.6" fill="#1d3f8f"/><path d="M6.6 9.3c2.3-.6 4.7-.3 6.8.9" stroke="#fff" stroke-width=".8" fill="none"/></svg>',
+    NYSE: '<svg class="sm-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="sm-us"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#sm-us)"><rect width="20" height="20" fill="#fff"/><path d="M0 0h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20V7.7H0Zm0 3.08h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20V20H0Z" fill="#c8323a"/><rect width="10" height="10.8" fill="#26387a"/></g></svg>'
+  };
   const side = document.createElement('aside');
   side.className = 'side';
   side.setAttribute('aria-label', 'Navegação');
   side.innerHTML = `
+    <div class="side-brand"><svg class="sb-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg><b>mercado<br>macro</b></div>
+    <button class="side-item side-search" id="side-search" title="Buscar ativo, aba ou ação (Ctrl+K)">${svg('buscar')}<span class="si-lbl">Buscar</span><span class="si-kbd"><kbd>Ctrl</kbd><kbd>K</kbd></span></button>
     <nav class="side-nav">${GROUPS.map(([g, ids]) => `<div class="side-group">${g}</div>` + ids.map(tabInfo).filter(Boolean).map(t =>
-      `<button class="side-item" data-tab="${t.id}" title="${escapeHTML(t.label)}"><i class="si-ico ${t.ico}"></i><span class="si-lbl">${escapeHTML(t.label)}</span>${t.soon ? '<span class="si-soon">EM BREVE</span>' : `<span class="si-badge" data-badge="${t.id}" hidden></span>`}</button>`
+      `<button class="side-item" data-tab="${t.id}" title="${escapeHTML(t.label)}">${SI[t.id] ? svg(t.id) : `<i class="si-ico ${t.ico}"></i>`}<span class="si-lbl">${escapeHTML(t.label)}</span>${t.soon ? '<span class="si-soon">EM BREVE</span>' : `<span class="si-badge" data-badge="${t.id}" hidden></span>`}</button>`
     ).join('')).join('')}</nav>
     <div class="side-foot">
       <div class="side-mkts" id="side-mkts"></div>
-      <button class="side-item" id="side-summary" title="Resumo para o cliente (Alt+M)"><i class="si-ico fas fa-clipboard-list"></i><span class="si-lbl">Resumo para cliente</span></button>
-      <button class="side-item" id="side-theme" title="Alternar tema (Alt+L)"><i class="si-ico fas fa-adjust"></i><span class="si-lbl">Tema claro/escuro</span></button>
-      <button class="side-item" id="side-collapse" title="Recolher/expandir a barra"><i class="si-ico fas fa-chevron-left"></i><span class="si-lbl">Recolher</span></button>
+      <button class="side-item" id="side-summary" title="Resumo para o cliente (Alt+M)">${svg('resumo')}<span class="si-lbl">Resumo para cliente</span></button>
+      <button class="side-item" id="side-theme" title="Aparência: tema claro ou escuro (Alt+L)" role="switch" aria-checked="false">${svg('aparencia')}<span class="si-lbl">Aparência</span><span class="si-switch" aria-hidden="true"></span></button>
+      <button class="side-item" id="side-settings" title="Ajustes do painel (Alt+A)">${svg('ajustes')}<span class="si-lbl">Ajustes</span></button>
+      <button class="side-item" id="side-collapse" title="Recolher/expandir a barra">${svg('recolher')}<span class="si-lbl">Recolher</span></button>
     </div>`;
   document.body.prepend(side);
   document.body.classList.add('has-side');
@@ -4033,6 +4063,8 @@ window.__onTabSwitch = (tabId) => {
     document.body.classList.toggle('side-collapsed', collapsed);
     const lbl = $('#side-collapse .si-lbl');
     if (lbl) lbl.textContent = collapsed ? 'Expandir' : 'Recolher';
+    const ic = $('#side-collapse .si-svg');
+    if (ic) ic.innerHTML = SI[collapsed ? 'expandir' : 'recolher'];
     $('#side-collapse')?.setAttribute('title', collapsed ? 'Expandir o menu' : 'Recolher o menu');
   };
   applyCollapsed();
@@ -4050,7 +4082,13 @@ window.__onTabSwitch = (tabId) => {
   syncActive();
 
   $('#side-summary').addEventListener('click', () => openSummaryModal());
-  $('#side-theme').addEventListener('click', () => $('#theme-toggle')?.click());
+  // Aparência: a chave fica ligada no tema claro
+  const syncTheme = () => $('#side-theme')?.setAttribute('aria-checked', document.body.classList.contains('light') ? 'true' : 'false');
+  $('#side-theme').addEventListener('click', () => { $('#theme-toggle')?.click(); setTimeout(syncTheme, 0); });
+  new MutationObserver(syncTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  syncTheme();
+  $('#side-settings').addEventListener('click', () => (window.openSettings ? window.openSettings() : $('#settings-btn')?.click()));
+  $('#side-search').addEventListener('click', () => document.querySelector('.cmdk-hint')?.click());
   // Efeito "lupa" do Dock do Mac: com a barra recolhida, os ícones perto do mouse crescem
   (() => {
     if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -4091,9 +4129,10 @@ window.__onTabSwitch = (tabId) => {
     el.title = title || '';
   };
   const refreshSide = () => {
+    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     $('#side-mkts').innerHTML = MARKETS.map(m => {
       const open = marketIsOpen(m);
-      return `<div class="side-mkt${open ? ' open' : ''}" title="${m.label} ${open ? 'aberta' : 'fechada'}"><i></i><span>${m.label}</span><small>${open ? 'aberta' : 'fechada'}</small></div>`;
+      return `<div class="side-mkt${open ? ' open' : ''}" title="${m.label} ${open ? 'aberta' : 'fechada'} (horário de Brasília ${hora})">${FLAG[m.label] || ''}<span>${m.label}</span><i></i><small>${open ? 'Aberta' : 'Fechada'}</small><time>${hora}</time></div>`;
     }).join('');
     const crit = (Array.isArray(newsAll) ? newsAll : []).filter(n => n.nivel === 'CRITICO' && Date.now() - n.data < 3 * 3600 * 1000).length;
     setBadge('news-panel', crit, `${crit} notícia(s) de alto impacto nas últimas 3 h`, true);
