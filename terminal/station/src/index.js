@@ -1342,42 +1342,76 @@ async function roboFechamento(req, env) {
 // notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,
 // publicadas há menos de 45 minutos, das 7h às 22h de Brasília; no máximo 2 por rodada e 20 por dia,
 // sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
+// Matéria educativa (como investir, dicas, perguntas) fica de fora mesmo com palavra forte no título.
+// Se o Telegram recusar, a reserva é apagada e a notícia volta na rodada seguinte; num 429 o robô
+// espera o retry_after (config tg_canal_pausa) antes de tentar de novo.
+const CANAL_EDUCATIVO = /\?|^(como|por que|porque|o que|quanto|qual|quais|onde|quando|vale a pena|entenda|aprenda|saiba|veja|confira|descubra|guia|tutorial)\b|\b(dicas?|passo a passo|guia|aprenda|entenda|tire suas duvidas|para iniciantes|como investir|como funciona|vale a pena|quanto rende|melhores (investimentos|acoes|fundos|ativos|cdbs?|fiis)|onde investir|o que e|o que sao)\b/;
+const CANAL_SOBE = /\b(eleva|elevam|elevou|sobe|sobem|subiu|alta|altas|aumenta|aumentam|aumentou|amplia|acelera|acelerou|dispara|disparou|salta|saltou|avanca|avancou|ganha|ganhou|cresce|cresceu|recorde|maxima)\b/;
+const CANAL_DESCE = /\b(reduz|reduzem|reduziu|corta|cortam|cortou|corte|cai|caem|caiu|queda|baixa|baixas|diminui|diminuiu|recua|recuam|recuou|desacelera|desacelerou|despenca|despencou|tomba|tombou|perde|perdeu|encolhe|encolheu|minima)\b/;
 async function noticiasNoCanal(env, ctx) {
   const c = await config(env);
   if (!(c.tg_token && c.tg_canal) || c.tg_canal_noticias === 'nao') return;
-  const hora = new Date(Date.now() - 3 * 3600000).getUTCHours();
+  const agora = Date.now();
+  if (+c.tg_canal_pausa > agora) return;
+  const hora = new Date(agora - 3 * 3600000).getUTCHours();
   if (hora < 7 || hora >= 22) return;
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS canal_noticias (link TEXT PRIMARY KEY, titulo TEXT NOT NULL, quando INTEGER NOT NULL)').run();
   const { lista } = await noticiasCache(ctx);
-  const agora = Date.now();
+  const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   const cands = (lista || []).filter((n) => n && n.titulo && /^https?:\/\//i.test(n.link || '') && FONTES_PT.has(n.fonte)
-    && (n.nivel === 'CRITICO' || n.nivel === 'ALTO') && +n.data >= agora - 45 * 60000)
+    && (n.nivel === 'CRITICO' || n.nivel === 'ALTO') && +n.data >= agora - 45 * 60000 && !CANAL_EDUCATIVO.test(norm(n.titulo)))
     .sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
   if (!cands.length) return;
   const ja = (await env.DB.prepare('SELECT link, titulo, quando FROM canal_noticias WHERE quando > ?').bind(agora - 86400000).all()).results || [];
   const hojeIni = Date.parse(new Date(agora - 3 * 3600000).toISOString().slice(0, 10) + 'T03:00:00Z');
-  let hoje = ja.filter((x) => x.quando >= hojeIni).length;
-  const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
-  const vistos = ja.map((x) => ({ link: x.link, w: palavras(x.titulo) }));
-  const parecida = (w) => vistos.some((e) => { let k = 0; for (const x of w) if (e.w.has(x)) k++; return k / Math.max(1, Math.min(w.size, e.w.size)) >= 0.5; });
+  // assunto: palavras, números e direção (sobe/desce) do título
+  const assunto = (t) => {
+    const s = norm(t);
+    const sobe = CANAL_SOBE.test(s), desce = CANAL_DESCE.test(s);
+    return {
+      w: new Set(s.split(/[^a-z0-9]+/).filter((x) => x.length > 3)),
+      num: new Set((s.match(/\d+(?:[.,]\d+)?/g) || []).map((x) => x.replace(',', '.'))),
+      dir: sobe === desce ? 0 : (sobe ? 1 : -1),
+    };
+  };
+  const vistos = ja.map((x) => ({ link: x.link, ...assunto(x.titulo) }));
+  // mesma conversa só quando as palavras batem e nada mudou: números diferentes ou direção oposta é notícia nova
+  const parecida = (a) => vistos.some((e) => {
+    if (a.dir && e.dir && a.dir !== e.dir) return false;
+    if (a.num.size && e.num.size && [...a.num].some((x) => !e.num.has(x))) return false;
+    let k = 0; for (const x of a.w) if (e.w.has(x)) k++;
+    return k / Math.max(1, Math.min(a.w.size, e.w.size)) >= 0.5;
+  });
   const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
   let postadas = 0;
   for (const n of cands) {
-    if (postadas >= 2 || hoje >= 20) break;
-    const w = palavras(n.titulo);
-    if (vistos.some((e) => e.link === n.link) || parecida(w)) continue;
-    // grava antes de mandar: se duas rodadas se cruzarem, só uma posta
-    const ins = await env.DB.prepare('INSERT OR IGNORE INTO canal_noticias (link, titulo, quando) VALUES (?, ?, ?)').bind(n.link, n.titulo, agora).run();
-    if (!ins.meta || !ins.meta.changes) continue;
-    vistos.push({ link: n.link, w });
+    if (postadas >= 2) break;
+    const a = assunto(n.titulo);
+    if (vistos.some((e) => e.link === n.link) || parecida(a)) continue;
+    // reserva o link num INSERT só, que também confere o teto de 20 no dia: duas rodadas ao mesmo tempo não passam de 20
+    const ins = await env.DB.prepare('INSERT OR IGNORE INTO canal_noticias (link, titulo, quando) SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM canal_noticias WHERE quando >= ?) < 20')
+      .bind(n.link, n.titulo, agora, hojeIni).run();
+    if (!ins.meta || !ins.meta.changes) {
+      const t = await env.DB.prepare('SELECT COUNT(*) AS k FROM canal_noticias WHERE quando >= ?').bind(hojeIni).first();
+      if (t && t.k >= 20) break;
+      continue;
+    }
     const veiculo = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
     const r = await telegram(c.tg_token, 'sendMessage', {
       chat_id: c.tg_canal, parse_mode: 'HTML',
       text: `<b>${esc(n.titulo.trim())}</b>\n\n${veiculo ? esc(veiculo) + ' · ' : ''}<a href="${esc(n.link)}">Ler a notícia</a>\n\nMercado Macro | <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>`,
       link_preview_options: { url: n.link, prefer_large_media: true },
-    });
-    if (!r.ok) { console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200)); break; }
-    postadas++; hoje++;
+    }).catch((e) => ({ ok: false, description: String(e) }));
+    if (!r || !r.ok) {
+      // não saiu: solta a reserva para a notícia voltar na próxima rodada
+      await env.DB.prepare('DELETE FROM canal_noticias WHERE link = ?').bind(n.link).run();
+      const espera = r && r.parameters && +r.parameters.retry_after;
+      if (espera > 0) await salvarConfig(env, { tg_canal_pausa: String(agora + espera * 1000) });
+      console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200));
+      break;
+    }
+    vistos.push({ link: n.link, ...a });
+    postadas++;
   }
   await env.DB.prepare('DELETE FROM canal_noticias WHERE quando < ?').bind(agora - 7 * 86400000).run();
 }
