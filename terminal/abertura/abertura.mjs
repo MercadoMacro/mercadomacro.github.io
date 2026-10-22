@@ -1,4 +1,4 @@
-// Abertura do mercado no canal público do Telegram (robô .github/workflows/abertura.yml, 9h17 em dia útil).
+// Abertura do mercado no canal público do Telegram (robô .github/workflows/abertura.yml, 9h15 em dia útil).
 // Os números vêm do site (/api/robo/abertura, o mesmo de /abertura), autorizados pelo token OIDC que o
 // GitHub assina para este robô. As duas páginas (formato do status do WhatsApp) são a própria página
 // station/site/abertura, aberta aqui com os números já preenchidos e fotografada em 1080 x 1920.

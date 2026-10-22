@@ -1,4 +1,4 @@
-# Abertura do mercado: em dia útil, às 9h17 de Brasília, posta no canal público do Telegram as duas
+# Abertura do mercado: em dia útil, às 9h15 de Brasília, posta no canal público do Telegram as duas
 # imagens da abertura (página /abertura) com a legenda (terminal/abertura/abertura.mjs).
 # Só posta se o canal estiver ligado em /admin. A mensagem passa pelo site (https://mercadomacro.com.br/api/vigia),
 # que confere o token OIDC que o GitHub assina para este robô; não há senha guardada.
@@ -7,7 +7,7 @@ run-name: ${{ inputs.teste && 'Teste da abertura' || 'Abertura do mercado' }}
 
 on:
   schedule:
-    # o envio das 9h17 é disparado pelo site (worker station, cron de hora em hora, segredo GH_TOKEN);
+    # o envio das 9h15 é disparado pelo site (worker station, cron a cada 15 minutos, segredo GH_TOKEN);
     # estes horários ficam de reserva (só mandam se ainda não saiu nenhuma abertura hoje)
     - cron: '40 12 * * 1-5'
     - cron: '20 13 * * 1-5'

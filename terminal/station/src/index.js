@@ -42,14 +42,17 @@ export default {
   // toda segunda às 8h (Brasília) manda o resumo da semana no Telegram (cron em wrangler.jsonc)
   async scheduled(ev, env, ctx) {
     // todo dia às 9h17 (Brasília): avisa por e-mail quem vence em 3 dias e desativa quem venceu (src/assinatura.js)
-    // a cada hora (minuto 17): dispara o vigia (o agendador do GitHub chega a pular 5 a 10 horas);
-    // às 12:17 UTC também roda a rotina das assinaturas
-    if (ev.cron === '17 * * * *') {
-      ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
+    // a cada 15 minutos: notícias de alto impacto no canal público do Telegram;
+    // no minuto 15 de cada hora dispara o vigia (o agendador do GitHub chega a pular 5 a 10 horas);
+    // às 12:15 UTC também roda a rotina das assinaturas e a abertura do mercado
+    if (ev.cron === '*/15 * * * *') {
       const quando = new Date(ev.scheduledTime);
+      ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
+      if (quando.getUTCMinutes() !== 15) return;
+      ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
-        // 9h17 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
+        // 9h15 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
         if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5) ctx.waitUntil(dispararRobo(env, 'abertura.yml', { site: true }));
       }
       return;
@@ -344,6 +347,7 @@ async function dadosFechamento(env) {
 }
 // principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
 // publicadas nas últimas 16 horas, sem repetir assunto e só em português (título traduzido ou fonte brasileira)
+const FONTES_PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
 async function noticiasDoDia() {
   // usa a lista do site se estiver no cache (ler os 25 feeds aqui passaria do limite de pedidos do fechamento)
   let lista = await noticiasSoCache();
@@ -355,7 +359,7 @@ async function noticiasDoDia() {
   if (!Array.isArray(lista)) return [];
   lista = lista.filter((n) => n && /^https?:\/\//i.test(n.link || ''));
   const desde = Date.now() - 16 * 3600000;
-  const PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
+  const PT = FONTES_PT;
   const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
   const escolhidas = [];
   const cands = lista.filter((n) => n && n.titulo && n.link && +n.data >= desde && (n.traduzido || PT.has(n.fonte)))
@@ -891,7 +895,7 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'avisos') {
     const c = await config(env);
-    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat), canal: c.tg_canal_nome || null });
+    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat), canal: c.tg_canal_nome || null, canalNoticias: c.tg_canal_noticias !== 'nao' });
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
     if (b.acao === 'token') {
@@ -926,6 +930,7 @@ async function apiAdmin(req, env, acao, eu) {
       return json({ ok: true, canal: '@' + (ch.result.username || m[1]) });
     }
     if (b.acao === 'canal-sair') { await salvarConfig(env, { tg_canal: null, tg_canal_nome: null }); return json({ ok: true }); }
+    if (b.acao === 'canal-noticias') { await salvarConfig(env, { tg_canal_noticias: b.ligar ? null : 'nao' }); return json({ ok: true }); }
     if (b.acao === 'teste') {
       if (!(c.tg_token && c.tg_chat)) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
       const ok = await avisar(env, 'Teste do Mercado Macro', 'Se chegou, os avisos de cadastro novo estão funcionando.').catch(() => false);
@@ -1275,6 +1280,48 @@ async function roboFechamento(req, env) {
   return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
 }
 
+// notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,
+// publicadas há menos de 45 minutos, das 7h às 22h de Brasília; no máximo 2 por rodada e 20 por dia,
+// sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
+async function noticiasNoCanal(env, ctx) {
+  const c = await config(env);
+  if (!(c.tg_token && c.tg_canal) || c.tg_canal_noticias === 'nao') return;
+  const hora = new Date(Date.now() - 3 * 3600000).getUTCHours();
+  if (hora < 7 || hora >= 22) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS canal_noticias (link TEXT PRIMARY KEY, titulo TEXT NOT NULL, quando INTEGER NOT NULL)').run();
+  const { lista } = await noticiasCache(ctx);
+  const agora = Date.now();
+  const cands = (lista || []).filter((n) => n && n.titulo && /^https?:\/\//i.test(n.link || '') && FONTES_PT.has(n.fonte)
+    && (n.nivel === 'CRITICO' || n.nivel === 'ALTO') && +n.data >= agora - 45 * 60000)
+    .sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
+  if (!cands.length) return;
+  const ja = (await env.DB.prepare('SELECT link, titulo, quando FROM canal_noticias WHERE quando > ?').bind(agora - 86400000).all()).results || [];
+  const hojeIni = Date.parse(new Date(agora - 3 * 3600000).toISOString().slice(0, 10) + 'T03:00:00Z');
+  let hoje = ja.filter((x) => x.quando >= hojeIni).length;
+  const palavras = (t) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+  const vistos = ja.map((x) => ({ link: x.link, w: palavras(x.titulo) }));
+  const parecida = (w) => vistos.some((e) => { let k = 0; for (const x of w) if (e.w.has(x)) k++; return k / Math.max(1, Math.min(w.size, e.w.size)) >= 0.5; });
+  const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  let postadas = 0;
+  for (const n of cands) {
+    if (postadas >= 2 || hoje >= 20) break;
+    const w = palavras(n.titulo);
+    if (vistos.some((e) => e.link === n.link) || parecida(w)) continue;
+    // grava antes de mandar: se duas rodadas se cruzarem, só uma posta
+    const ins = await env.DB.prepare('INSERT OR IGNORE INTO canal_noticias (link, titulo, quando) VALUES (?, ?, ?)').bind(n.link, n.titulo, agora).run();
+    if (!ins.meta || !ins.meta.changes) continue;
+    vistos.push({ link: n.link, w });
+    const veiculo = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
+    const r = await telegram(c.tg_token, 'sendMessage', {
+      chat_id: c.tg_canal, parse_mode: 'HTML',
+      text: `<b>${esc(n.titulo.trim())}</b>\n\n${veiculo ? esc(veiculo) + ' · ' : ''}<a href="${esc(n.link)}">Ler a notícia</a>\n\nMercado Macro | <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>`,
+      link_preview_options: { url: n.link, prefer_large_media: true },
+    });
+    if (!r.ok) { console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200)); break; }
+    postadas++; hoje++;
+  }
+  await env.DB.prepare('DELETE FROM canal_noticias WHERE quando < ?').bind(agora - 7 * 86400000).run();
+}
 async function roboAbertura(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
@@ -1945,7 +1992,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
           + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/abertura" style="' + bt + ';text-decoration:none;display:inline-block">Abertura do mercado (imagem)</a><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p>'
           + '<p style="margin:14px 0 6px"><b>Canal público (divulgação)</b></p>'
           + (j.canal
-            ? '<p class="d" style="margin:0 0 8px">Ligado em <a href="https://t.me/' + encodeURIComponent(j.canal.slice(1)) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">' + esc(j.canal) + '</a>. Em dia útil o robô posta sozinho a abertura do mercado (9h17) e o fechamento (18h), com o link do site.</p><div class="linha"><button type="button" id="av-canal-sair" style="' + bt + '">Desligar o canal</button></div>'
+            ? '<p class="d" style="margin:0 0 8px">Ligado em <a href="https://t.me/' + encodeURIComponent(j.canal.slice(1)) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">' + esc(j.canal) + '</a>. Em dia útil o robô posta sozinho a abertura do mercado (9h15) e o fechamento (18h), com o link do site.</p>'
+              + '<label class="d" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px"><input type="checkbox" id="av-canal-not"' + (j.canalNoticias ? ' checked' : '') + ' style="margin-top:3px"><span>Postar também as notícias de alto impacto em tempo real (fontes em português, das 7h às 22h, no máximo 2 a cada 15 minutos e 20 por dia, sem repetir assunto).</span></label>'
+              + '<div class="linha"><button type="button" id="av-canal-sair" style="' + bt + '">Desligar o canal</button></div>'
             : '<ol style="margin:0 0 8px"><li>No Telegram, crie um canal <b>público</b> (por exemplo, Mercado Macro).</li><li>Nas configurações do canal, em Administradores, adicione o robô <b>@' + esc(j.bot) + '</b>.</li><li>Escreva aqui o usuário do canal:</li></ol>'
               + '<div class="linha"><input id="av-canal" autocomplete="off" spellcheck="false" placeholder="@mercadomacro" style="flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px"><button type="button" id="av-canal-ok" style="' + bt + '">Conectar canal</button></div>')
           + '</div>';
@@ -1973,6 +2022,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       if ((el = document.getElementById('av-off'))) el.onclick = function(){ if (confirm('Desligar os avisos pelo Telegram?')) acao({ acao: 'desligar' }, this, avisos); };
       if ((el = document.getElementById('av-resumo'))) el.onclick = function(){ acao({ acao: 'resumo' }, this, function(){ diz(true, 'Resumo enviado. Confira o Telegram.'); }); };
       if ((el = document.getElementById('av-canal-ok'))) el.onclick = function(){ acao({ acao: 'canal', canal: document.getElementById('av-canal').value }, this, avisos); };
+      if ((el = document.getElementById('av-canal-not'))) el.onchange = function(){ var on = this.checked; acao({ acao: 'canal-noticias', ligar: on }, null, function(){ diz(true, on ? 'Notícias no canal ligadas.' : 'Notícias no canal desligadas.'); }); };
       if ((el = document.getElementById('av-canal-sair'))) el.onclick = function(){ if (confirm('Parar de postar no canal público?')) acao({ acao: 'canal-sair' }, this, avisos); };
       if ((el = document.getElementById('av-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(){ diz(true, 'Aviso enviado. Confira o Telegram.'); }); };
     }).catch(function(){ av.innerHTML = '<p class="vazio">Não foi possível carregar os avisos.</p>'; });
