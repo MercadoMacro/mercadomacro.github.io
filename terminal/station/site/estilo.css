@@ -3004,3 +3004,35 @@ html body .mj-n { font-size:9.5px; }
   body.has-side.side-collapsed .side .side-group:first-child { background:none; }
   body.has-side.side-collapsed .side .side-group + .side-item { margin-top:0; }
 }
+
+/* =====================================================================
+   TOPO MAIS LIMPO (24/10/2026, teste aprovado pelo Severino: "vamos testar, qualquer coisa a gente volta").
+   1) sem o logo grande quando a barra lateral aparece (recolhida ou aberta); 2) frase como texto simples, sem caixa;
+   3) Atualização automática sem caixa verde; 4) relógio, data e B3/NYSE como texto discreto;
+   5) botão de atualizar fora da faixa (fica no menu "..." e no Alt+R).
+   Para desfazer: apagar este bloco e o item "Atualizar cotações" do menu em index.html.
+   ===================================================================== */
+@media (min-width: 901px) {
+  body.has-side .topbar .mm-logo { display:none; }
+}
+@media (min-width: 1101px) {
+  html body.has-side.side-collapsed .topbar.topbar:has(> .qbanner) { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"qb right" "sub sub" "ticker ticker"; }
+  html body.hdr2.has-side.side-collapsed .topbar.topbar:has(> .qbanner) { grid-template-areas:"qb right" "ticker ticker"; }
+  html body.hdr2.has-side.side-collapsed .topbar.topbar:not(:has(> .qbanner)) { grid-template-columns:minmax(0,1fr); grid-template-areas:"right" "ticker"; }
+
+  /* 2) frase: só texto */
+  html body.hdr2 .topbar .qbanner { background:none !important; border:0 !important; border-radius:0; box-shadow:none; padding-left:2px; }
+  html body.hdr2 .topbar .qbanner::before { display:none; }
+
+  /* 3) atualização automática: interruptor pequeno, sem caixa */
+  html body.hdr2 .topbar-right #live-toggle { background:none; border:0; box-shadow:none; padding:0 6px; color:var(--text-3); font-size:12px; font-weight:500; }
+  html body.hdr2 .topbar-right #live-toggle[aria-checked="true"] { color:var(--text-2); }
+  html body.hdr2 .topbar-right #live-toggle:hover { color:var(--text); }
+
+  /* 4) relógio, data e bolsas como texto */
+  html body.hdr2 .tk-status .ms-pill { background:none !important; border:0 !important; padding:0; margin:0 0 0 10px; font-size:11.5px; color:var(--text-3); }
+  html body.hdr2 .tk-status .ms-pill.open { color:var(--text-2); }
+
+  /* 5) sem o botão de atualizar na faixa */
+  html body.hdr2 .ticker .refresh-btn { display:none; }
+}
