@@ -1,17 +1,21 @@
 /* =========================================================
-   MESA NOVA (protótipo, 24/10/2026): cartões por região.
+   MERCADO NOVO (protótipo, 24/10/2026): aba Mercado em cartões por região.
    Cada cartão tem bandeira, situação do pregão, um gráfico (1D, 5D, 3M) do ativo escolhido,
    uma frase calculada dos números e 4 linhas; clicar numa linha troca o gráfico.
    A ordem dos cartões segue o horário: quem está aberto (ou abre logo) vem primeiro.
-   Só entra com ?mesa=nova (fica lembrado neste navegador); ?mesa=classica volta.
+   Só entra com ?mercado=novo (fica lembrado neste navegador); ?mercado=classico volta.
+   A aba Mercado de sempre continua por baixo, só escondida enquanto o protótipo está ligado.
    Fontes: lote /quotes e /history do worker (Yahoo). Sem dado, mostra "—"; a frase só aparece com números.
    ========================================================= */
 (() => {
-  if (window.__mesaLoaded) return;
-  window.__mesaLoaded = true;
-  const root = document.getElementById('mesa-root');
-  const panel = document.getElementById('mesa-panel');
-  if (!root || !panel) return;
+  if (window.__mercadoNovo) return;
+  window.__mercadoNovo = true;
+  const panel = document.getElementById('market-panel');
+  if (!panel) return;
+  const root = document.createElement('div');
+  root.className = 'market-wrap mn-root';
+  panel.prepend(root);
+  panel.classList.add('mn-on');
 
   const PROXY = (typeof CORS_PROXY !== 'undefined' && CORS_PROXY) || 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -112,7 +116,7 @@
   }
 
   /* ---------------- dados ---------------- */
-  const PREF = 'mesa_nova_v1';
+  const PREF = 'mercado_novo_v1';
   let pref = {};
   try { pref = JSON.parse(localStorage.getItem(PREF) || '{}') || {}; } catch (e) { pref = {}; }
   const salvaPref = () => { try { localStorage.setItem(PREF, JSON.stringify(pref)); } catch (e) { /* sem armazenamento */ } };
@@ -256,8 +260,8 @@
     const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
       <div class="mn-bar">
-        <div><h2>Mesa</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora} · a ordem dos cartões segue o horário dos mercados`}</span></div>
-        <div class="mn-acts"><span class="mn-tag">Protótipo</span><button type="button" class="mn-btn mn-refresh">Atualizar</button><button type="button" class="mn-btn" data-classica>Mesa clássica</button></div>
+        <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora} · a ordem dos cartões segue o horário dos mercados`}</span></div>
+        <div class="mn-acts"><span class="mn-tag">Protótipo</span><button type="button" class="mn-btn mn-refresh">Atualizar</button><button type="button" class="mn-btn" data-classica>Mercado clássico</button></div>
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
       <p class="mn-fonte">Fonte: Yahoo Finance pelo servidor do painel. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
@@ -270,8 +274,8 @@
     const fb = e.target.closest('.mn-faixas button');
     const mais = e.target.closest('[data-mais]');
     if (e.target.closest('[data-classica]')) {
-      try { localStorage.removeItem('mesa_nova'); } catch (err) { /* sem armazenamento */ }
-      location.search = '?mesa=classica';
+      try { localStorage.removeItem('mercado_novo'); } catch (err) { /* sem armazenamento */ }
+      location.search = '?mercado=classico';
       return;
     }
     if (e.target.closest('.mn-refresh')) { refresh(); return; }
@@ -309,6 +313,7 @@
   /* ---------------- estilos ---------------- */
   const css = document.createElement('style');
   css.textContent = `
+  #market-panel.mn-on > .market-wrap:not(.mn-root) { display:none; }
   .mn { display:flex; flex-direction:column; gap:16px; }
   .mn-bar { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .mn-bar h2 { margin:0; font-size:20px; color:var(--text); }

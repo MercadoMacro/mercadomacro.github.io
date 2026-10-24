@@ -4782,6 +4782,23 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
+   MERCADO NOVO (protótipo): cartões por região no lugar da aba Mercado.
+   Entra com ?mercado=novo (fica lembrado neste navegador); ?mercado=classico volta.
+   ========================================================= */
+(() => {
+  let novo = false;
+  try {
+    const m = new URLSearchParams(location.search).get('mercado');
+    if (m === 'novo') localStorage.setItem('mercado_novo', '1');
+    if (m === 'classico') localStorage.removeItem('mercado_novo');
+    novo = localStorage.getItem('mercado_novo') === '1';
+  } catch (e) { /* sem armazenamento */ }
+  if (!novo) return;
+  const sc = document.createElement('script');
+  sc.src = 'mercado-novo.js?v=1';
+  document.body.appendChild(sc);
+})();
+/* =========================================================
    MESA: o código fica em mesa.js (mesma pasta do index.html)
    e só é baixado na primeira vez que a aba é aberta
    ========================================================= */
@@ -4792,16 +4809,8 @@ function newsReadMins(n) {
   const load = () => {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
-    // protótipo da Mesa nova: entra com ?mesa=nova (fica lembrado neste navegador), ?mesa=classica volta
-    let nova = false;
-    try {
-      const m = new URLSearchParams(location.search).get('mesa');
-      if (m === 'nova') localStorage.setItem('mesa_nova', '1');
-      if (m === 'classica') localStorage.removeItem('mesa_nova');
-      nova = localStorage.getItem('mesa_nova') === '1';
-    } catch (e) { /* sem armazenamento */ }
     const sc = document.createElement('script');
-    sc.src = nova ? 'mesa-nova.js?v=1' : 'mesa.js?v=20';
+    sc.src = 'mesa.js?v=20';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
