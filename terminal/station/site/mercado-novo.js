@@ -325,7 +325,8 @@
     el.hidden = !panel.classList.contains('active');
     el.classList.toggle('busy', busy);
     const t = el.querySelector('.qb-mn-t');
-    t.textContent = errMsg || `Atualizado às ${hora ?? (lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—')}`;
+    t.title = errMsg || '';
+    t.textContent = (errMsg && 'Sem conexão') || `Atualizado às ${hora ?? (lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—')}`;
     t.classList.toggle('err', !!errMsg);
     root.classList.add('mn-qb');
   }
@@ -422,6 +423,7 @@
   .qb-mn { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .qb-mn[hidden] { display:none; }
   .qb-mn-t.err { color:var(--neg); }
+  @media (max-width: 640px) { .qb-mn { max-width:45%; padding-left:6px; } .qb-mn-t { overflow:hidden; text-overflow:ellipsis; } }
   .qb-mn-r { width:22px; height:22px; border:0; border-radius:6px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; padding:0; }
   .qb-mn-r svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   .qb-mn-r:hover { color:var(--text); background:color-mix(in srgb, var(--text) 6%, transparent); }

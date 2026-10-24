@@ -3071,3 +3071,31 @@ html body .mj-n { font-size:9.5px; }
 /* FONTES E AVISOS: saem do rodapé das abas e ficam em Ajustes > Sobre (24/10/2026) */
 #site-foot { display:none !important; }
 .aj-sobre .site-foot { margin-top:0; padding:0; border-top:0; }
+
+/* =====================================================================
+   TOPO PADRONIZADO NAS TELAS MENORES (24/10/2026, Severino: "sim" a padronizar tudo).
+   Até 900 px (sem barra lateral): logo pequeno como o da barra lateral, ícones à direita sem caixa,
+   cotações em cima e a frase embaixo, sem caixa. A navegação continua a barra de abas do celular.
+   Para desfazer: apagar este bloco e o span .mm-mini do h1 em index.html.
+   ===================================================================== */
+.mm-mini { display:none; }
+@media (max-width: 900px) {
+  html body .topbar.topbar { display:grid !important; grid-template-columns:minmax(0,1fr) auto !important; grid-template-areas:"logo right" "ticker ticker" "qb qb" !important; row-gap:10px; column-gap:10px; align-items:center; padding-top:12px; }
+  html body .topbar.topbar > .brand { grid-area:logo; display:block; min-width:0; max-width:none; }
+  html body .topbar.topbar > .brand .brand-text { display:block; }
+  html body .topbar.topbar .brand-text .sub, html body .topbar.topbar .tk-updated { display:none !important; }
+  html body .topbar.topbar .mm-logo { margin:0; line-height:0; }
+  html body .topbar.topbar .mm-logo .mm-img { display:none !important; }
+  .mm-mini { display:inline-flex; align-items:center; gap:10px; line-height:1; }
+  .mm-mini svg { width:24px; height:24px; flex:0 0 24px; fill:var(--accent); }
+  .mm-mini b { font-size:17px; font-weight:600; letter-spacing:-.01em; color:var(--text); white-space:nowrap; }
+  html body .topbar.topbar > .topbar-right { grid-area:right; height:auto; gap:2px; justify-self:end; width:auto; }
+  html body .topbar.topbar > .topbar-right .cmdk-hint { flex:0 0 36px; width:36px; min-width:0; height:36px; padding:0; justify-content:center; background:none; border:0; box-shadow:none; color:var(--text-3); }
+  html body .topbar.topbar > .topbar-right .cmdk-hint:hover { color:var(--text); background:color-mix(in srgb, var(--text) 6%, transparent); }
+  html body .topbar.topbar > .topbar-right .icon-btn, html body .topbar.topbar > .topbar-right .topbar-more > summary { background:none; border:0; box-shadow:none; color:var(--text-3); width:36px; height:36px; }
+  html body .topbar.topbar > .topbar-right .icon-btn:hover, html body .topbar.topbar > .topbar-right .topbar-more > summary:hover { color:var(--text); background:color-mix(in srgb, var(--text) 6%, transparent); }
+  html body .topbar.topbar > .ticker { grid-area:ticker !important; margin:0; min-width:0; }
+  html body .topbar.topbar > .ticker .refresh-btn { display:none; }
+  html body .topbar.topbar > .qbanner { grid-area:qb !important; display:flex !important; max-width:none; min-width:0; background:none !important; border:0 !important; border-radius:0; box-shadow:none; padding:0 2px; }
+  html body .topbar.topbar > .qbanner::before { display:none; }
+}
