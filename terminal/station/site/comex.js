@@ -1,0 +1,107 @@
+/* =========================================================
+   BALANÇA COMERCIAL NA ABA INDICADORES (área Brasil), 24/10/2026.
+   Fonte: Comex Stat (MDIC/SECEX), lido pelo robô comex.yml do GitHub, que grava
+   terminal/comex/comex.json (exportações e importações do Brasil por mês, em US$ FOB).
+   Carregado pelo indicadores.js quando a área Brasil é aberta. Sem dado, mostra "—".
+   ========================================================= */
+(() => {
+  if (window.__comexRender) return;
+  const URL_DADOS = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/comex/comex.json';
+  const CACHE_KEY = 'comex_cache_v1', TTL = 6 * 3600 * 1000;
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ok = (v) => v != null && isFinite(v);
+  const bi = (v, d = 2) => (ok(v) ? (v / 1e9).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—');
+  const sgBi = (v) => (ok(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${bi(Math.abs(v))}` : '—');
+  const pct = (v) => (ok(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '—');
+  const cls = (v) => (!ok(v) ? 'na' : v > 0 ? 'up' : v < 0 ? 'dn' : 'eq');
+  const nomeMes = (m, longo) => { const [a, n] = m.split('-').map(Number); const t = MESES[n - 1]; return longo ? `${t}/${a}` : `${t}/${String(a).slice(2)}`; };
+
+  let cache = null, busy = false, err = false, host = null;
+  try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { cache = null; }
+
+  async function load(force) {
+    if (busy || (!force && cache && Date.now() - cache.ts < TTL)) return;
+    busy = true; draw();
+    try {
+      const r = await fetchT(URL_DADOS + '?t=' + Math.floor(Date.now() / 600000), {}, 20000);
+      const j = await r.json();
+      if (!r.ok || !Array.isArray(j.meses) || j.meses.length < 13) throw new Error('sem dados');
+      cache = { ts: Date.now(), d: j }; err = false;
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* cheio */ }
+    } catch (e) { err = true; }
+    finally { busy = false; draw(); }
+  }
+
+  function html(d) {
+    const ms = d.meses.map((x) => ({ ...x, s: ok(x.exp) && ok(x.imp) ? x.exp - x.imp : null }));
+    const ult = ms[ms.length - 1], [ano, mes] = ult.m.split('-').map(Number);
+    const ha12 = ms.find((x) => x.m === `${ano - 1}-${String(mes).padStart(2, '0')}`);
+    const var12 = (k) => (ha12 && ok(ha12[k]) && ha12[k] ? (ult[k] / ha12[k] - 1) * 100 : null);
+    const soma = (a, k) => ms.filter((x) => x.m.startsWith(a + '-') && +x.m.slice(5) <= mes).reduce((t, x) => t + (ok(x[k]) ? x[k] : 0), 0);
+    const ytd = soma(ano, 's'), ytdAnt = ms.some((x) => x.m.startsWith(ano - 1 + '-')) ? soma(ano - 1, 's') : null;
+    const ult24 = ms.slice(-24), sv = ult24.map((x) => x.s || 0);
+    // escala do menor ao maior saldo, sempre incluindo o zero (sem meia área vazia quando todos são positivos)
+    const hi = Math.max(0, ...sv), lo = Math.min(0, ...sv), amp = hi - lo || 1;
+    const W = 480, H = 110, bw = W / ult24.length, z = 4 + (hi / amp) * (H - 8);
+    const barras = ult24.map((x, i) => {
+      const h = ok(x.s) ? Math.abs(x.s) / amp * (H - 8) : 0, y = x.s >= 0 ? z - h : z;
+      return `<rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" class="${x.s >= 0 ? 'up' : 'dn'}${i === ult24.length - 1 ? ' last' : ''}"><title>${esc(nomeMes(x.m, true))}: saldo US$ ${sgBi(x.s)} bi (exportações ${bi(x.exp)} bi, importações ${bi(x.imp)} bi)</title></rect>`;
+    }).join('');
+    const rotulos = [0, 12, ult24.length - 1].filter((i, k, a) => ult24[i] && a.indexOf(i) === k).map((i) => `<text x="${i === 0 ? 0 : i === ult24.length - 1 ? W : (i * bw + bw / 2).toFixed(1)}" y="${H + 12}" style="text-anchor:${i === 0 ? 'start' : i === ult24.length - 1 ? 'end' : 'middle'}">${esc(nomeMes(ult24[i].m))}</text>`).join('');
+    const tab = ms.slice(-6).reverse().map((x) => `<tr><th>${esc(nomeMes(x.m, true))}</th><td>${bi(x.exp)}</td><td>${bi(x.imp)}</td><td class="${cls(x.s)}">${sgBi(x.s)}</td></tr>`).join('');
+    return `
+      <div class="cx-top">
+        <div><span>Saldo de ${esc(nomeMes(ult.m, true))}</span><b class="${cls(ult.s)}">US$ ${sgBi(ult.s)} bi</b><small>${ha12 ? `${esc(nomeMes(ha12.m, true))}: US$ ${sgBi(ha12.s)} bi` : ''}</small></div>
+        <div><span>Exportações</span><b>US$ ${bi(ult.exp)} bi</b><small class="${cls(var12('exp'))}">${pct(var12('exp'))} em 12 meses</small></div>
+        <div><span>Importações</span><b>US$ ${bi(ult.imp)} bi</b><small>${pct(var12('imp'))} em 12 meses</small></div>
+        <div><span>Saldo no ano (jan–${esc(MESES[mes - 1])})</span><b class="${cls(ytd)}">US$ ${sgBi(ytd)} bi</b><small>${ok(ytdAnt) ? `${ano - 1}: US$ ${sgBi(ytdAnt)} bi` : ''}</small></div>
+      </div>
+      <div class="cx-duas">
+        <div><p class="cx-leg">Saldo mês a mês, últimos 24 meses (US$ bi)</p>
+          <svg class="cx-svg" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Saldo da balança comercial nos últimos 24 meses"><line x1="0" x2="${W}" y1="${z}" y2="${z}" class="z"/>${barras}${rotulos}</svg></div>
+        <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Exportações</th><th>Importações</th><th>Saldo</th></tr></thead><tbody>${tab}</tbody></table>
+      </div>
+      <p class="ib-note">Valores em bilhões de dólares (FOB). O MDIC divulga o mês fechado na primeira semana do mês seguinte.</p>`;
+  }
+
+  function draw() {
+    if (!host || !host.isConnected) return;
+    const box = host.querySelector('.ib-in'), meta = host.querySelector('.ib-meta');
+    if (cache?.d) { try { box.innerHTML = html(cache.d); } catch (e) { box.innerHTML = '<div class="ib-msg">Não foi possível ler os dados do Comex Stat.</div>'; } }
+    else box.innerHTML = `<div class="ib-msg">${busy ? 'Carregando a balança comercial…' : err ? 'Dados da balança comercial indisponíveis agora.' : '—'}</div>`;
+    const at = cache?.d?.atualizado ? ` · divulgado em ${cache.d.atualizado.split('-').reverse().join('/')}` : '';
+    meta.innerHTML = `<a href="https://comexstat.mdic.gov.br" target="_blank" rel="noopener">Comex Stat (MDIC)</a>${at}${err && cache ? ' · último dado salvo' : ''}`;
+  }
+
+  // chamado pelo indicadores.js toda vez que a área Brasil é desenhada
+  window.__comexRender = (container, force = false) => {
+    let sec = container.querySelector('#comex-sec');
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.className = 'ind-sec'; sec.id = 'comex-sec';
+      sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-ship"></i></span><h2>Balança comercial</h2><span class="sec-count">mensal</span></div>
+        <div class="ib-box"><div class="ib-h"><h3>Exportações e importações do Brasil</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>`;
+      container.appendChild(sec);
+    }
+    host = sec; draw(); load(force);
+  };
+
+  const css = document.createElement('style');
+  css.textContent = `
+  .cx-top { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:12px; }
+  .cx-top > div { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .cx-top span { font-size:11.5px; color:var(--text-3); }
+  .cx-top b { font:600 19px 'JetBrains Mono', monospace; color:var(--text); letter-spacing:-.02em; white-space:nowrap; }
+  .cx-top small { font-size:11px; color:var(--text-3); }
+  #comex-sec .up { color:var(--pos-ink, var(--pos)); } #comex-sec .dn { color:var(--neg); } #comex-sec .na, #comex-sec .eq { color:var(--text-3); }
+  .cx-duas { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:18px; align-items:start; }
+  .cx-leg { margin:0 0 6px; font-size:11.5px; color:var(--text-3); }
+  .cx-svg { display:block; width:100%; height:auto; }
+  .cx-svg .z { stroke:var(--line-2, var(--line)); }
+  .cx-svg rect.up { fill:var(--pos); opacity:.65; } .cx-svg rect.dn { fill:var(--neg); opacity:.65; } .cx-svg rect.last { opacity:1; }
+  .cx-svg text { font:10px 'JetBrains Mono', monospace; fill:var(--text-3); text-anchor:middle; }
+  .cx-tb th:first-child { text-transform:none; }
+  @media (max-width: 900px) { .cx-top { grid-template-columns:repeat(2, minmax(0,1fr)); } .cx-duas { grid-template-columns:minmax(0,1fr); } #comex-sec .ib-h { flex-direction:column; align-items:flex-start; gap:4px; } }`;
+  document.head.appendChild(css);
+})();

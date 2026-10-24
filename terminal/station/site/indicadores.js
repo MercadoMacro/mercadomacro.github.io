@@ -762,7 +762,7 @@
         <div class="ind-grid">${ds.map(cardHTML).join('')}</div></section>`;
     }).join('');
     defs.forEach(fillCard);
-    if (area === 'br') ibge();
+    if (area === 'br') { ibge(); comex(); }
     updateSub();
   }
 
@@ -777,6 +777,20 @@
     sc.src = 'ibge.js?v=2';
     sc.onload = () => { if (prefs.area === 'br' && window.__ibgeRender) window.__ibgeRender(body); };
     sc.onerror = () => { ibgeAsked = false; };
+    document.body.appendChild(sc);
+  }
+
+  // Balança comercial (Comex Stat, mensal): código no comex.js, baixado na primeira vez
+  let comexAsked = false;
+  function comex(force = false) {
+    if (prefs.area !== 'br') return;
+    if (window.__comexRender) { window.__comexRender(body, force); return; }
+    if (comexAsked) return;
+    comexAsked = true;
+    const sc = document.createElement('script');
+    sc.src = 'comex.js?v=1';
+    sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
+    sc.onerror = () => { comexAsked = false; };
     document.body.appendChild(sc);
   }
 
@@ -831,7 +845,7 @@
       if (prefs.area !== areaBtn.dataset.a) { prefs.area = areaBtn.dataset.a; savePrefs(); renderArea(); loadArea(prefs.area); }
       return;
     }
-    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); return; }
+    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); return; }
     const card = e.target.closest('.ind-card');
     if (!card) return;
     const d = DEFS.find((x) => x.id === card.dataset.id);
