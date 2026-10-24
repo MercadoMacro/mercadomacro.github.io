@@ -418,15 +418,7 @@
 
   /* ---------------- pontos de entrada ---------------- */
   document.getElementById('settings-btn')?.addEventListener('click', open);
-  const sideFoot = document.querySelector('.side-foot');
-  if (sideFoot && !document.getElementById('side-settings')) {
-    const b = document.createElement('button');
-    b.className = 'side-item'; b.id = 'side-settings'; b.title = 'Ajustes do painel (Alt+A)';
-    b.innerHTML = '<i class="si-ico fas fa-cog"></i><span class="si-lbl">Ajustes</span>';
-    b.addEventListener('click', open);
-    const ref = document.getElementById('side-collapse');
-    ref ? sideFoot.insertBefore(b, ref) : sideFoot.appendChild(b);
-  }
+  // Ajustes fica só na engrenagem do topo (barra lateral v5)
   document.addEventListener('keydown', (e) => {
     if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyA') { e.preventDefault(); box && !box.hidden ? close() : open(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); open(); return; }

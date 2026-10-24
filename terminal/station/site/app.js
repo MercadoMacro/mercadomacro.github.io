@@ -4068,16 +4068,13 @@ window.__onTabSwitch = (tabId) => {
   side.className = 'side';
   side.setAttribute('aria-label', 'Navegação');
   side.innerHTML = `
-    <div class="side-brand"><svg class="sb-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg><b>mercado<br>macro</b></div>
-    <button class="side-item side-search" id="side-search" title="Buscar ativo, aba ou ação (Ctrl+K)">${svg('buscar')}<span class="si-lbl">Buscar</span><span class="si-kbd"><kbd>Ctrl</kbd><kbd>K</kbd></span></button>
+    <div class="side-brand"><svg class="sb-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg><b>mercado macro</b></div>
     <nav class="side-nav">${GROUPS.map(([g, ids]) => `<div class="side-group">${g}</div>` + ids.map(tabInfo).filter(Boolean).map(t =>
       `<button class="side-item" data-tab="${t.id}" title="${escapeHTML(t.label)}">${SI[t.id] ? svg(t.id) : `<i class="si-ico ${t.ico}"></i>`}<span class="si-lbl">${escapeHTML(t.label)}</span>${t.soon ? '<span class="si-soon">EM BREVE</span>' : `<span class="si-badge" data-badge="${t.id}" hidden></span>`}</button>`
     ).join('')).join('')}</nav>
     <div class="side-foot">
-      <div class="side-mkts" id="side-mkts"></div>
       <button class="side-item" id="side-summary" title="Resumo para o cliente (Alt+M)">${svg('resumo')}<span class="si-lbl">Resumo para cliente</span></button>
       <button class="side-item" id="side-theme" title="Aparência: tema claro ou escuro (Alt+L)" role="switch" aria-checked="false">${svg('aparencia')}<span class="si-lbl">Aparência</span><span class="si-switch" aria-hidden="true"></span></button>
-      <button class="side-item" id="side-settings" title="Ajustes do painel (Alt+A)">${svg('ajustes')}<span class="si-lbl">Ajustes</span></button>
       <button class="side-item" id="side-collapse" title="Recolher/expandir a barra">${svg('recolher')}<span class="si-lbl">Recolher</span></button>
     </div>`;
   document.body.prepend(side);
@@ -4123,8 +4120,7 @@ window.__onTabSwitch = (tabId) => {
   $('#side-theme').addEventListener('click', () => { $('#theme-toggle')?.click(); setTimeout(syncTheme, 0); });
   new MutationObserver(syncTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   syncTheme();
-  $('#side-settings').addEventListener('click', () => (window.openSettings ? window.openSettings() : $('#settings-btn')?.click()));
-  $('#side-search').addEventListener('click', () => document.querySelector('.cmdk-hint')?.click());
+  // busca (Ctrl+K), Ajustes e situação das bolsas ficam só no topo
   // Efeito "lupa" do Dock do Mac: com a barra recolhida, os ícones perto do mouse crescem
   (() => {
     if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -4167,7 +4163,7 @@ window.__onTabSwitch = (tabId) => {
   };
   const refreshSide = () => {
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-    $('#side-mkts').innerHTML = MARKETS.map(m => {
+    if ($('#side-mkts')) $('#side-mkts').innerHTML = MARKETS.map(m => {
       const open = marketIsOpen(m);
       return `<div class="side-mkt${open ? ' open' : ''}" title="${m.label} ${open ? 'aberta' : 'fechada'} (horário de Brasília ${hora})">${FLAG[m.label] || ''}<span>${m.label}</span><i></i><small>${open ? 'Aberta' : 'Fechada'}</small><time>${hora}</time></div>`;
     }).join('');

@@ -2937,3 +2937,40 @@ html body .mj-n { font-size:9.5px; }
   .mn-live { margin:8px 8px 0; font-size:12px; color:var(--text-2); }
   .mn-live:empty { display:none; }
 }
+
+/* =====================================================================
+   BARRA LATERAL v5 (24/10/2026, Severino aprovou a versão mais limpa): mesmo fundo do painel nos dois temas,
+   marca pequena numa linha, só as 12 abas; rodapé com Resumo, Aparência e Recolher.
+   Busca, Ajustes e situação das bolsas ficam só no topo.
+   ===================================================================== */
+@media (min-width: 901px) {
+  body.has-side { --side-w: 240px; }
+  body.has-side.side-collapsed { --side-w: 76px; }
+  html body.has-side .side {
+    --sb-bg:var(--bg); --sb-line:var(--line); --sb-text:var(--text-2); --sb-mute:var(--text-3); --sb-amber:var(--accent);
+    background:var(--bg); color:var(--text-2); border-right:1px solid var(--line); box-shadow:none; padding:16px 12px 12px;
+  }
+  body.has-side .side-brand { gap:10px; padding:2px 10px 14px; }
+  body.has-side .side-brand .sb-mark { width:24px; height:24px; flex:0 0 24px; fill:var(--accent); }
+  body.has-side .side-brand b { font-size:15.5px; font-weight:600; letter-spacing:-.01em; color:var(--text); white-space:nowrap; }
+  body.has-side .side .side-item { color:var(--text-2); font-size:14px; padding:8px 12px; gap:12px; }
+  body.has-side .side .side-item:hover { background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text); }
+  body.has-side .side .si-svg { width:19px; height:19px; flex:0 0 19px; color:var(--text-3); }
+  body.has-side .side .side-item:hover .si-svg { color:var(--text); }
+  body.has-side .side .side-item.active { background:var(--accent-soft); color:var(--accent-ink); box-shadow:none; }
+  body.has-side .side .side-item.active .si-svg { color:var(--accent-ink); }
+  body.has-side .side .side-item.active::before { left:-12px; background:var(--accent); }
+  body.has-side .side .side-group { color:var(--text-3); font-size:10.5px; padding:14px 12px 4px; }
+  body.has-side .side .si-badge, body.has-side .side .si-badge.crit { background:var(--accent); color:#111827; min-width:20px; height:20px; font-size:11px; }
+  body.has-side .side .side-foot { border-top:1px solid var(--line); padding-top:8px; margin-top:8px; }
+  body.has-side .side .si-switch { background:color-mix(in srgb, var(--text) 18%, transparent); }
+  body.has-side .side .si-switch::after { background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  body.has-side .side #side-theme[aria-checked="true"] .si-switch { background:var(--accent); }
+  body.has-side .side #side-theme[aria-checked="true"] .si-switch::after { background:#fff; }
+  body.has-side .side #side-collapse { border-top:0; margin-top:2px; padding-top:8px; color:var(--text-3); }
+  body.has-side .side #side-collapse:hover { background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text); }
+  body.has-side .side .side-nav { scrollbar-color:color-mix(in srgb, var(--text) 25%, transparent) transparent; }
+  body.has-side.side-collapsed .side { padding:16px 10px 12px; }
+  body.has-side.side-collapsed .side-brand { padding:2px 0 14px; }
+  body.has-side.side-collapsed .side .side-group { margin:10px 10px; background:var(--line); }
+}
