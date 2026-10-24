@@ -157,6 +157,7 @@
     if (busy) return;
     busy = true;
     root.querySelector('.mn-refresh')?.classList.add('busy');
+    carimbo();
     try {
       const [n] = await Promise.all([loadQuotes(), loadHist(SYMS, '3mo')]);
       errMsg = n ? '' : 'Sem conexão com o servidor de cotações agora.';
@@ -306,6 +307,27 @@
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
     </div>`;
+    carimbo(hora);
+  }
+  // hora da atualização e botão de atualizar ficam discretos à direita da linha da frase;
+  // sem a linha da frase visível (celular, por exemplo), volta o cabeçalho da aba
+  function carimbo(hora) {
+    const qb = document.querySelector('.qbanner');
+    if (!qb || !qb.offsetParent) { root.classList.remove('mn-qb'); return; }
+    let el = qb.querySelector('.qb-mn');
+    if (!el) {
+      el = document.createElement('span');
+      el.className = 'qb-mn';
+      el.innerHTML = '<span class="qb-mn-t"></span><button type="button" class="qb-mn-r" title="Atualizar cotações" aria-label="Atualizar cotações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>';
+      el.querySelector('button').addEventListener('click', () => refresh());
+      qb.appendChild(el);
+    }
+    el.hidden = !panel.classList.contains('active');
+    el.classList.toggle('busy', busy);
+    const t = el.querySelector('.qb-mn-t');
+    t.textContent = errMsg || `Atualizado às ${hora ?? (lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—')}`;
+    t.classList.toggle('err', !!errMsg);
+    root.classList.add('mn-qb');
   }
 
   /* ---------------- interação ---------------- */
@@ -396,6 +418,15 @@
   .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn .up { color:var(--pos-ink, var(--pos)); } .mn .dn { color:var(--neg); } .mn .na, .mn .eq { color:var(--text-3); }
+  .mn-root.mn-qb .mn-bar { display:none; }
+  .qb-mn { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .qb-mn[hidden] { display:none; }
+  .qb-mn-t.err { color:var(--neg); }
+  .qb-mn-r { width:22px; height:22px; border:0; border-radius:6px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; padding:0; }
+  .qb-mn-r svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .qb-mn-r:hover { color:var(--text); background:color-mix(in srgb, var(--text) 6%, transparent); }
+  .qb-mn.busy .qb-mn-r svg { animation:mn-gira 1s linear infinite; }
+  @keyframes mn-gira { to { transform:rotate(360deg); } }
   @media (max-width: 640px) { .mn-grid { grid-template-columns:1fr; } .mn-st { display:none; } .mn-mais { margin-left:auto; } }
   `;
   document.head.appendChild(css);
@@ -407,6 +438,6 @@
   let timer = setInterval(() => { if (!document.hidden && panel.classList.contains('active')) refresh(); }, 120000);
   // situação dos pregões muda com o relógio: redesenha a cada minuto
   setInterval(() => { if (!document.hidden && panel.classList.contains('active') && !busy) render(); }, 60000);
-  new MutationObserver(() => { if (panel.classList.contains('active') && Date.now() - lastTs > 60000) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => { carimbo(); if (panel.classList.contains('active') && Date.now() - lastTs > 60000) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
   void timer;
 })();
