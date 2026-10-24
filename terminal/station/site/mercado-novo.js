@@ -2,7 +2,7 @@
    MERCADO NOVO (protótipo, 24/10/2026): aba Mercado em cartões por região.
    Cada cartão tem bandeira, situação do pregão, um gráfico (1D, 5D, 3M) do ativo escolhido,
    uma frase calculada dos números e 4 linhas; clicar numa linha troca o gráfico.
-   A ordem dos cartões segue o horário: quem está aberto (ou abre logo) vem primeiro.
+   Ordem fixa: Ásia, Europa, EUA, Brasil, Juros, Moedas, Commodities e Cripto.
    Só entra com ?mercado=novo (fica lembrado neste navegador); ?mercado=classico volta.
    A aba Mercado de sempre continua por baixo, só escondida enquanto o protótipo está ligado.
    Fontes: lote /quotes e /history do worker (Yahoo). Sem dado, mostra "—"; a frase só aparece com números.
@@ -107,19 +107,9 @@
     while (d === 0 || d === 6) { falta += 1440; d = (d + 1) % 7; }
     return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, a))}`, falta };
   }
-  // ordem: abertos primeiro, depois quem abre antes; na mesma situação, a ordem do momento do dia
-  function ordem() {
-    const { min, dia } = agoraEm('America/Sao_Paulo');
-    const h = min / 60, fds = dia === 0 || dia === 6;
-    const base = fds ? ['cr', 'br', 'us', 'mo', 'eu', 'as', 'co', 'ju']
-      : h < 6 ? ['as', 'mo', 'cr', 'eu', 'us', 'br', 'co', 'ju']
-      : h < 10 ? ['eu', 'mo', 'as', 'br', 'us', 'co', 'ju', 'cr']
-      : h < 18 ? ['br', 'us', 'mo', 'ju', 'co', 'eu', 'as', 'cr']
-      : ['cr', 'mo', 'as', 'us', 'br', 'co', 'ju', 'eu'];
-    return base.map((id, i) => ({ r: REGIOES.find((x) => x.id === id), i }))
-      .map((o) => { const s = situacao(o.r); return { ...o, k: s.aberto ? 0 : 1, f: s.falta || 0 }; })
-      .sort((a, b) => a.k - b.k || (a.k ? a.f - b.f : a.i - b.i)).map((o) => o.r);
-  }
+  // ordem fixa escolhida pelo Severino (24/10/2026): segue o dia do mercado, da Ásia ao Brasil
+  const ORDEM = ['as', 'eu', 'us', 'br', 'ju', 'mo', 'co', 'cr'];
+  const ordem = () => ORDEM.map((id) => REGIOES.find((r) => r.id === id));
 
   /* ---------------- dados ---------------- */
   const PREF = 'mercado_novo_v1';
@@ -275,7 +265,7 @@
     const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
       <div class="mn-bar">
-        <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora} · a ordem dos cartões segue o horário dos mercados`}</span></div>
+        <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
         <div class="mn-acts"><span class="mn-tag">Protótipo</span><button type="button" class="mn-btn mn-refresh">Atualizar</button><button type="button" class="mn-btn" data-classica>Mercado clássico</button></div>
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
