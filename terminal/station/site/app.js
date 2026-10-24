@@ -4039,16 +4039,16 @@ window.__onTabSwitch = (tabId) => {
   };
   // ícones da barra lateral (desenho do Severino, traço em currentColor)
   const SI = {
-    'market-panel': '<path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/>',
-    'mesa-panel': '<path d="M5 20V10m7 10V4m7 16V7"/>',
+    'market-panel': '<path d="M3 21h18M4 9h16M12 3 3.5 9h17Z"/><path d="M6 12v6m4-6v6m4-6v6m4-6v6"/>',
+    'mesa-panel': '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4M7 12l3-3 2 2 5-4"/>',
     'watch-panel': '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',
-    'heatmap-panel': '<path d="M3 3h7v7H3Zm11 0h7v7h-7ZM3 14h7v7H3Zm11 0h7v7h-7Z"/>',
+    'heatmap-panel': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 13h9m0-4h9m-4.5 0v12"/>',
     'news-panel': '<rect x="6" y="3" width="15" height="18" rx="2"/><path d="M6 7H3v12a2 2 0 0 0 2 2h3M10 7h7m-7 4h7m-7 4h4"/>',
-    'weekly-panel': '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6m-6 4h6m-6 4h4"/>',
+    'weekly-panel': '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9ZM9 11h6m-6 4h6m-6 4h3"/>',
     'calendar-panel': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m4 0h2m-8 3h2"/>',
-    'analysis-panel': '<path d="M5 20V13m7 7V4m7 16V9"/>',
+    'analysis-panel': '<path d="M3 3v18h18"/><path d="M8 17v-5m4 5V8m4 9v-3m4 3V6"/>',
     'fund-panel': '<path d="M12 3v9h9A9 9 0 1 1 12 3Zm4 1a9 9 0 0 1 4 4h-4Z"/>',
-    'indicators-panel': '<path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1"/><circle cx="15" cy="13" r="1"/>',
+    'indicators-panel': '<path d="M5.6 18.4a9 9 0 1 1 12.8 0"/><path d="m12 12 4-4M7 12h1m8 0h1M12 6v1"/><circle cx="12" cy="12" r="1.4"/>',
     'calculator-panel': '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8v4H8Zm0 8h1m3 0h1m3 0h.01M8 18h1m3 0h1m3 0h.01"/>',
     'options-panel': '<circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
     'buscar': '<circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/>',
