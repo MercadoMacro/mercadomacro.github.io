@@ -1438,14 +1438,21 @@ async function roboFechamento(req, env) {
 }
 
 // notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,
-// publicadas há menos de 45 minutos, das 7h às 22h de Brasília; no máximo 2 por rodada e 20 por dia,
-// sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
-// Matéria educativa (como investir, dicas, perguntas) fica de fora mesmo com palavra forte no título.
-// Se o Telegram recusar, a reserva é apagada e a notícia volta na rodada seguinte; num 429 o robô
-// espera o retry_after (config tg_canal_pausa) antes de tentar de novo.
+// publicadas há menos de 45 minutos, das 7h às 22h de Brasília; no máximo 2 entregues e 3 tentativas por rodada,
+// 20 entregues por dia, sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
+// Seleção: fica de fora matéria educativa ou de opinião/expectativa, e o título precisa trazer um fato
+// (número ou verbo de acontecimento), não só uma palavra forte como "Selic" ou "balanço".
+// Entrega: a linha nasce 'reservada' e vira 'enviada' só com o ok do Telegram; reserva sem confirmação há mais de
+// 10 minutos (rodada interrompida) é solta e a notícia volta. Recusa da própria mensagem (400) vira 'falhou' e não
+// ocupa vaga; erro de permissão (401/403/404) pausa o canal por 1 hora e avisa o administrador; 429, Telegram fora
+// do ar ou demora acima de 10 segundos soltam a reserva e pausam pelo retry_after (config tg_canal_pausa).
 const CANAL_EDUCATIVO = /\?|^(como|por que|porque|o que|quanto|qual|quais|onde|quando|vale a pena|entenda|aprenda|saiba|veja|confira|descubra|guia|tutorial)\b|\b(dicas?|passo a passo|guia|aprenda|entenda|tire suas duvidas|para iniciantes|como investir|como funciona|vale a pena|quanto rende|melhores (investimentos|acoes|fundos|ativos|cdbs?|fiis)|onde investir|o que e|o que sao)\b/;
+const CANAL_OPINIAO = /\b(pode|podem|poderia|poderiam|deve|devem|deveria|deveriam|o que esperar|expectativa|expectativas|projeta|projetam|projecao|preve|preveem|previsao|analistas?|analise|opiniao|coluna|artigo|perspectiva|perspectivas|cenario|tendencia|estrategia|recomenda|recomendacao|carteira recomendada|previa|agenda|em foco|no radar|fique de olho)\b/;
+const CANAL_FATO = /\d|\b(eleva|elevou|corta|cortou|mantem|manteve|reduz|reduziu|aprova|aprovou|anuncia|anunciou|divulga|divulgou|decide|decidiu|decisao|confirma|confirmou|renuncia|renunciou|demite|demitiu|nomeia|compra|comprou|vende|vendeu|adquire|adquiriu|fecha|fechou|sobe|subiu|cai|caiu|dispara|disparou|despenca|despencou|recua|recuou|avanca|avancou|registra|registrou|atinge|atingiu|supera|superou|surpreende|rebaixa|rebaixou|suspende|suspendeu|proibe|sanciona|sancionou|veta|vetou|tarifa|tarifas|ataque|ataca|guerra|cessar-fogo|acordo|default|calote|falencia|recuperacao judicial|lucro|prejuizo|receita|dividendos|jcp|recompra|oferta|ipo|fusao|investigacao|prisao|preso|morre|morreu|renunci)\b/;
 const CANAL_SOBE = /\b(eleva|elevam|elevou|sobe|sobem|subiu|alta|altas|aumenta|aumentam|aumentou|amplia|acelera|acelerou|dispara|disparou|salta|saltou|avanca|avancou|ganha|ganhou|cresce|cresceu|recorde|maxima)\b/;
 const CANAL_DESCE = /\b(reduz|reduzem|reduziu|corta|cortam|cortou|corte|cai|caem|caiu|queda|baixa|baixas|diminui|diminuiu|recua|recuam|recuou|desacelera|desacelerou|despenca|despencou|tomba|tombou|perde|perdeu|encolhe|encolheu|minima)\b/;
+const CANAL_VAZIAS = new Set('para pela pelo pelos pelas como com sem sobre entre apos ante ate desde que diz dizem afirma segundo apos mais menos muito ainda este esta isso essa esse seus suas dele dela nesta neste numa num uma uns umas the and'.split(' '));
+const CANAL_TRAVA = 10 * 60000; // reserva sem confirmação depois disso = rodada interrompida
 async function noticiasNoCanal(env, ctx) {
   const c = await config(env);
   if (!(c.tg_token && c.tg_canal) || c.tg_canal_noticias === 'nao') return;
@@ -1454,65 +1461,93 @@ async function noticiasNoCanal(env, ctx) {
   const hora = new Date(agora - 3 * 3600000).getUTCHours();
   if (hora < 7 || hora >= 22) return;
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS canal_noticias (link TEXT PRIMARY KEY, titulo TEXT NOT NULL, quando INTEGER NOT NULL)').run();
+  // coluna do estado da entrega (as linhas de antes já tinham sido entregues)
+  await env.DB.prepare("ALTER TABLE canal_noticias ADD COLUMN estado TEXT NOT NULL DEFAULT 'enviada'").run().catch(() => {});
+  await env.DB.prepare("DELETE FROM canal_noticias WHERE estado = 'reservada' AND quando < ?").bind(agora - CANAL_TRAVA).run();
   const { lista } = await noticiasCache(ctx);
   const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
-  const cands = (lista || []).filter((n) => n && n.titulo && /^https?:\/\//i.test(n.link || '') && FONTES_PT.has(n.fonte)
-    && (n.nivel === 'CRITICO' || n.nivel === 'ALTO') && +n.data >= agora - 45 * 60000 && !CANAL_EDUCATIVO.test(norm(n.titulo)))
-    .sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
+  const cands = (lista || []).filter((n) => {
+    if (!(n && n.titulo && /^https?:\/\//i.test(n.link || '') && FONTES_PT.has(n.fonte))) return false;
+    if (!(n.nivel === 'CRITICO' || n.nivel === 'ALTO') || !(+n.data >= agora - 45 * 60000)) return false;
+    const t = norm(n.titulo);
+    return !CANAL_EDUCATIVO.test(t) && !CANAL_OPINIAO.test(t) && CANAL_FATO.test(t);
+  }).sort((a, b) => (b.finalScore - a.finalScore) || (b.data - a.data));
   if (!cands.length) return;
-  const ja = (await env.DB.prepare('SELECT link, titulo, quando FROM canal_noticias WHERE quando > ?').bind(agora - 86400000).all()).results || [];
+  const ja = (await env.DB.prepare('SELECT link, titulo, quando, estado FROM canal_noticias WHERE quando > ?').bind(agora - 86400000).all()).results || [];
   const hojeIni = Date.parse(new Date(agora - 3 * 3600000).toISOString().slice(0, 10) + 'T03:00:00Z');
-  // assunto: palavras, números e direção (sobe/desce) do título
+  // assunto: radicais das palavras (sem as vazias), números e direção (sobe/desce) do título
   const assunto = (t) => {
     const s = norm(t);
     const sobe = CANAL_SOBE.test(s), desce = CANAL_DESCE.test(s);
     return {
-      w: new Set(s.split(/[^a-z0-9]+/).filter((x) => x.length > 3)),
+      w: new Set(s.split(/[^a-z0-9]+/).filter((x) => x.length > 2 && !/^\d/.test(x) && !CANAL_VAZIAS.has(x)).map((x) => x.slice(0, 5))),
+      sujeito: (s.match(/[a-z]{3,}/) || [''])[0].slice(0, 5),
       num: new Set((s.match(/\d+(?:[.,]\d+)?/g) || []).map((x) => x.replace(',', '.'))),
       dir: sobe === desce ? 0 : (sobe ? 1 : -1),
     };
   };
-  const vistos = ja.map((x) => ({ link: x.link, ...assunto(x.titulo) }));
-  // mesma conversa só quando as palavras batem e nada mudou: números diferentes ou direção oposta é notícia nova
+  const links = new Set(ja.map((x) => x.link));
+  const vistos = ja.filter((x) => x.estado !== 'falhou').map((x) => assunto(x.titulo));
+  // mesma notícia: números diferentes ou direção oposta é notícia nova; senão, mesmas palavras (Jaccard >= 0,5,
+  // ou, com o mesmo sujeito, 75% do título menor ou os mesmos números com duas palavras em comum
   const parecida = (a) => vistos.some((e) => {
     if (a.dir && e.dir && a.dir !== e.dir) return false;
-    if (a.num.size && e.num.size && [...a.num].some((x) => !e.num.has(x))) return false;
+    const nums = a.num.size && e.num.size;
+    if (nums && [...a.num].some((x) => !e.num.has(x))) return false;
     let k = 0; for (const x of a.w) if (e.w.has(x)) k++;
-    return k / Math.max(1, Math.min(a.w.size, e.w.size)) >= 0.5;
+    const menor = Math.min(a.w.size, e.w.size), uniao = a.w.size + e.w.size - k;
+    return (uniao && k / uniao >= 0.5) || (a.sujeito === e.sujeito && ((menor >= 3 && k / menor >= 0.75) || (nums && k >= 2)));
   });
   const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-  let postadas = 0;
+  const conta = "(SELECT COUNT(*) FROM canal_noticias WHERE quando >= ? AND estado IN ('enviada', 'reservada'))";
+  let postadas = 0, tentativas = 0;
   for (const n of cands) {
-    if (postadas >= 2) break;
+    if (postadas >= 2 || tentativas >= 3) break;
     const a = assunto(n.titulo);
-    if (vistos.some((e) => e.link === n.link) || parecida(a)) continue;
-    // reserva o link num INSERT só, que também confere o teto de 20 no dia: duas rodadas ao mesmo tempo não passam de 20
-    const ins = await env.DB.prepare('INSERT OR IGNORE INTO canal_noticias (link, titulo, quando) SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM canal_noticias WHERE quando >= ?) < 20')
+    if (links.has(n.link) || parecida(a)) continue;
+    // reserva num INSERT só, que também confere o teto de 20 do dia: duas rodadas ao mesmo tempo não passam de 20
+    const ins = await env.DB.prepare(`INSERT OR IGNORE INTO canal_noticias (link, titulo, quando, estado) SELECT ?, ?, ?, 'reservada' WHERE ${conta} < 20`)
       .bind(n.link, n.titulo, agora, hojeIni).run();
     if (!ins.meta || !ins.meta.changes) {
-      const t = await env.DB.prepare('SELECT COUNT(*) AS k FROM canal_noticias WHERE quando >= ?').bind(hojeIni).first();
+      const t = await env.DB.prepare(`SELECT ${conta} AS k`).bind(hojeIni).first();
       if (t && t.k >= 20) break;
       continue;
     }
+    tentativas++;
+    links.add(n.link);
     const veiculo = (n.fonte === 'Google News' ? n.veiculo : n.fonte) || '';
-    const r = await telegram(c.tg_token, 'sendMessage', {
-      chat_id: c.tg_canal, parse_mode: 'HTML',
-      text: `<b>${esc(n.titulo.trim())}</b>\n\n${veiculo ? esc(veiculo) + ' · ' : ''}<a href="${esc(n.link)}">Ler a notícia</a>\n\nMercado Macro | <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>`,
-      link_preview_options: { url: n.link, prefer_large_media: true },
-    }).catch((e) => ({ ok: false, description: String(e) }));
-    if (!r || !r.ok) {
-      console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200));
-      const cod = (r && +r.error_code) || 0;
-      // recusa da própria mensagem (400): fica marcada e o robô segue para a próxima, sem travar as outras
-      if (cod >= 400 && cod < 500 && cod !== 429) continue;
-      // limite (429), Telegram fora do ar ou rede: solta a reserva para a notícia voltar na próxima rodada
-      await env.DB.prepare('DELETE FROM canal_noticias WHERE link = ?').bind(n.link).run();
-      const espera = r && r.parameters && +r.parameters.retry_after;
-      if (espera > 0) await salvarConfig(env, { tg_canal_pausa: String(agora + espera * 1000) });
+    const r = await fetch(`https://api.telegram.org/bot${c.tg_token}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({
+        chat_id: c.tg_canal, parse_mode: 'HTML',
+        text: `<b>${esc(n.titulo.trim())}</b>\n\n${veiculo ? esc(veiculo) + ' · ' : ''}<a href="${esc(n.link)}">Ler a notícia</a>\n\nMercado Macro | <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>`,
+        link_preview_options: { url: n.link, prefer_large_media: true },
+      }),
+    }).then((x) => x.json()).catch((e) => ({ ok: false, description: String(e) }));
+    if (r && r.ok) {
+      await env.DB.prepare("UPDATE canal_noticias SET estado = 'enviada' WHERE link = ?").bind(n.link).run();
+      vistos.push(a);
+      postadas++;
+      continue;
+    }
+    console.error('canal recusou a notícia:', JSON.stringify(r).slice(0, 200));
+    const cod = (r && +r.error_code) || 0;
+    if (cod === 400) {
+      // problema desta mensagem: não volta e não ocupa vaga do dia
+      await env.DB.prepare("UPDATE canal_noticias SET estado = 'falhou' WHERE link = ?").bind(n.link).run();
+      continue;
+    }
+    await env.DB.prepare('DELETE FROM canal_noticias WHERE link = ?').bind(n.link).run();
+    if (cod === 401 || cod === 403 || cod === 404) {
+      // o bot perdeu acesso ao canal: nenhuma notícia sai até alguém resolver; tenta de novo em 1 hora
+      await salvarConfig(env, { tg_canal_pausa: String(agora + 3600000) });
+      await avisar(env, 'Canal do Telegram recusou as notícias', `O Telegram respondeu "${String((r && r.description) || cod).slice(0, 150)}". Confira se o bot ainda é administrador do canal com permissão de publicar. As notícias ficam paradas por 1 hora e o robô tenta de novo.`).catch(() => {});
       break;
     }
-    vistos.push({ link: n.link, ...a });
-    postadas++;
+    // limite (429), Telegram fora do ar, rede ou demora: a notícia volta na próxima rodada
+    const espera = r && r.parameters && +r.parameters.retry_after;
+    if (espera > 0) await salvarConfig(env, { tg_canal_pausa: String(agora + espera * 1000) });
+    break;
   }
   await env.DB.prepare('DELETE FROM canal_noticias WHERE quando < ?').bind(agora - 7 * 86400000).run();
 }
