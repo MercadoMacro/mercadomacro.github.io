@@ -150,7 +150,6 @@
         <h3>Painel</h3>
         <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab" aria-label="Abrir sempre em"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${sw('ticker', P.ticker !== 'off', 'Faixa de cotações no topo')}
-        ${sw('mercadoClassico', (() => { try { return localStorage.getItem('mercado_novo') === '0'; } catch (e) { return false; } })(), 'Aba Mercado no modo clássico (grade antiga)')}
         ${liveOn != null ? sw('live', liveOn, 'Atualização automática das cotações (5 min no pregão, 15 min fora)') : ''}
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
@@ -281,11 +280,6 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
-      if (k === 'mercadoClassico') {
-        try { localStorage.getItem('mercado_novo') === '0' ? localStorage.removeItem('mercado_novo') : localStorage.setItem('mercado_novo', '0'); } catch (e2) { /* sem armazenamento */ }
-        location.href = location.pathname + location.hash;
-        return;
-      }
       save(); applyAll();
       return setTimeout(render, k === 'live' ? 60 : 0);
     }

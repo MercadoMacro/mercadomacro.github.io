@@ -4783,20 +4783,13 @@ function newsReadMins(n) {
 })();
 /* =========================================================
    MERCADO NOVO: cartões por região no lugar da grade da aba Mercado (padrão desde 24/10/2026).
-   A grade antiga continua por baixo (dá os preços ao vivo, Selic, IPCA e minério) e volta com
-   ?mercado=classico ou o botão "Mercado clássico" (lembrado neste navegador); ?mercado=novo traz de volta.
+   A grade antiga continua escondida por baixo (dá os preços ao vivo, Selic, IPCA e minério).
+   O modo clássico selecionável saiu em 24/10/2026; backup na tag git mercado-classico-backup.
    ========================================================= */
 (() => {
-  let novo = true;
-  try {
-    const m = new URLSearchParams(location.search).get('mercado');
-    if (m === 'novo') localStorage.removeItem('mercado_novo');
-    if (m === 'classico') localStorage.setItem('mercado_novo', '0');
-    novo = localStorage.getItem('mercado_novo') !== '0';
-  } catch (e) { /* sem armazenamento */ }
-  if (!novo) return;
+  try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=9';
+  sc.src = 'mercado-novo.js?v=10';
   document.body.appendChild(sc);
 })();
 /* =========================================================

@@ -3,7 +3,7 @@
    Cada cartão tem bandeira, situação do pregão, um gráfico (1D, 5D, 3M) do ativo escolhido,
    uma frase calculada dos números e 4 linhas; clicar numa linha troca o gráfico.
    Ordem fixa: Ásia, Europa, EUA, Brasil, Juros, Moedas, Commodities e Cripto.
-   É o padrão; a chave em Ajustes > Painel (ou ?mercado=classico) volta à grade antiga neste navegador e ?mercado=novo traz de volta.
+   Única visão da aba Mercado; o modo clássico selecionável saiu em 24/10/2026 (backup na tag git mercado-classico-backup).
    A aba Mercado de sempre continua por baixo, só escondida enquanto o protótipo está ligado.
    Fontes: lote /quotes e /history do worker (Yahoo). Sem dado, mostra "—"; a frase só aparece com números.
    ========================================================= */
