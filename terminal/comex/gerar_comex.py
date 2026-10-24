@@ -49,12 +49,14 @@ def main(saida):
     if not ano or not mes:
         hoje = datetime.date.today()
         ano, mes = hoje.year, hoje.month
-    periodo = {'from': f'{ano - 3}-01', 'to': f'{ano}-{mes:02d}'}
+    # o filtro de período vale mês a mês dentro de cada ano (2023-01 a 2026-09 traz só jan-set de cada ano):
+    # por isso uma consulta para os anos fechados e outra para o ano corrente
+    periodos = [{'from': f'{ano - 3}-01', 'to': f'{ano - 1}-12'}, {'from': f'{ano}-01', 'to': f'{ano}-{mes:02d}'}]
     meses = {}
-    for fluxo, campo in (('export', 'exp'), ('import', 'imp')):
+    for (fluxo, campo), periodo in [(f, p) for f in (('export', 'exp'), ('import', 'imp')) for p in periodos]:
         resp = pedir('/general', {'flow': fluxo, 'monthDetail': True, 'period': periodo, 'filters': [], 'details': [], 'metrics': ['metricFOB', 'metricKG']})
         itens = lista(resp)
-        print(f'{fluxo}: {len(itens)} linhas; exemplo:', json.dumps(itens[:2], ensure_ascii=False)[:400])
+        print(f'{fluxo} {periodo}: {len(itens)} linhas; exemplo:', json.dumps(itens[:2], ensure_ascii=False)[:400])
         for it in itens:
             a = it.get('year') or it.get('coAno') or it.get('ano')
             m = it.get('monthNumber') or it.get('coMes') or it.get('mes')
