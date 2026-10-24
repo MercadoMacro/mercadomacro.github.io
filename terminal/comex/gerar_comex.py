@@ -2,21 +2,26 @@
 """Balança comercial do Brasil (Comex Stat, MDIC): exportações e importações por mês, em US$ FOB.
 Grava terminal/comex/comex.json para o bloco "Balança comercial" da aba Indicadores (área Brasil).
 Só biblioteca padrão. Uso: python3 gerar_comex.py <pasta de saída>"""
-import json, sys, time, urllib.request, datetime
+import json, sys, time, urllib.request, urllib.error, datetime
 
 API = 'https://api-comexstat.mdic.gov.br'
 UA = {'User-Agent': 'MercadoMacro/1.0 (+https://mercadomacro.com.br)', 'Accept': 'application/json', 'Content-Type': 'application/json'}
 
 
-def pedir(caminho, corpo=None, tentativas=4):
+def pedir(caminho, corpo=None, tentativas=6):
+    time.sleep(12)  # a API limita o ritmo de consultas (HTTP 429): uma de cada vez, com folga
     for i in range(tentativas):
         try:
             req = urllib.request.Request(API + caminho, data=json.dumps(corpo).encode() if corpo is not None else None, headers=UA, method='POST' if corpo is not None else 'GET')
             with urllib.request.urlopen(req, timeout=90) as r:
                 return json.loads(r.read().decode('utf-8'))
-        except Exception as e:  # a API do governo às vezes demora ou recusa; tenta de novo
+        except urllib.error.HTTPError as e:  # 429 = muitas consultas: espera o que a API pedir
+            espera = int(e.headers.get('Retry-After') or 0) or 30 * (i + 1)
+            print(f'  tentativa {i + 1} em {caminho}: HTTP {e.code}; esperando {espera} s')
+            time.sleep(min(espera, 180))
+        except Exception as e:  # a API do governo às vezes demora; tenta de novo
             print(f'  tentativa {i + 1} em {caminho}: {e}')
-            time.sleep(10 * (i + 1))
+            time.sleep(15 * (i + 1))
     raise SystemExit(f'Comex Stat não respondeu em {caminho}')
 
 
