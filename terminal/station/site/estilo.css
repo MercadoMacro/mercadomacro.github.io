@@ -2980,6 +2980,27 @@ html body .mj-n { font-size:9.5px; }
 
 /* barra recolhida abre por cima ao passar o mouse (efeito do painel da Cloudflare) */
 @media (min-width:901px) {
-  body.has-side.side-peek { padding-left: calc(76px + 24px); }
+  body.has-side.side-peek { padding-left: calc(68px + 24px); }
   body.has-side.side-peek .side { z-index: 60; box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+}
+
+/* recolhida e aberta com o mesmo alinhamento: ícones, marca e linhas não mudam de lugar,
+   só o texto aparece ou some (24/10/2026, Severino: "meio desalinhado") */
+@media (min-width:901px) {
+  body.has-side.side-collapsed { --side-w: 68px; }
+  body.has-side .side-brand { padding:2px 9.5px 14px; justify-content:flex-start; }
+  body.has-side .side .si-lbl, body.has-side .side-brand b, body.has-side .side .si-switch,
+  body.has-side .side .si-badge, body.has-side .side .si-soon { transition:opacity .15s ease; }
+  html body.has-side.side-collapsed .side { padding:16px 12px 12px; }
+  body.has-side.side-collapsed .side-brand { padding:2px 9.5px 14px; justify-content:flex-start; }
+  body.has-side.side-collapsed .side-brand b { display:inline; opacity:0; }
+  body.has-side.side-collapsed .side .side-item { justify-content:flex-start; padding:8px 12px; gap:12px; overflow:hidden; }
+  body.has-side.side-collapsed .side .si-lbl { display:inline; opacity:0; white-space:nowrap; }
+  body.has-side.side-collapsed .side .si-switch, body.has-side.side-collapsed .side .si-badge,
+  body.has-side.side-collapsed .side .si-soon { opacity:0; }
+  body.has-side.side-collapsed .side .side-group, body.has-side.side-collapsed .side .side-group:first-child {
+    display:block; height:auto; margin:0; padding:14px 12px 4px; font-size:10.5px; color:transparent; overflow:hidden; white-space:nowrap;
+    background:linear-gradient(var(--line), var(--line)) no-repeat 12px 60% / 20px 1px; }
+  body.has-side.side-collapsed .side .side-group:first-child { background:none; }
+  body.has-side.side-collapsed .side .side-group + .side-item { margin-top:0; }
 }
