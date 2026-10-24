@@ -40,24 +40,30 @@
     as: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#f3f3f3"/><circle cx="10" cy="10" r="4.6" fill="#d22f3c"/></svg>',
     ju: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#5b6cff"/><path d="M6.5 13.5 13.5 6.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="7" r="1.6" fill="none" stroke="#fff" stroke-width="1.4"/><circle cx="13" cy="13" r="1.6" fill="none" stroke="#fff" stroke-width="1.4"/></svg>',
     co: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#b7791f"/><path d="M10 4.5c2.6 3 4 5 4 6.8a4 4 0 0 1-8 0c0-1.8 1.4-3.8 4-6.8Z" fill="#fff"/></svg>',
+    mo: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#0f9a68"/><text x="10" y="14.4" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="Arial, sans-serif">$</text></svg>',
     cr: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#f7931a"/><text x="10" y="14.2" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="Arial, sans-serif">₿</text></svg>'
   };
+  // os mesmos ativos da aba Mercado de sempre (MARKET_SECTIONS no app.js), agrupados por região.
+  // linhas com @ vêm de fontes próprias da aba (BCB, FRED, rota do minério) e não têm gráfico
   const REGIOES = [
-    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: '17:00', linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar comercial', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['EWZ', 'EWZ (Brasil em NY)', 2, 'US$ ']],
-      mais: [['EURBRL=X', 'Euro', 4, 'R$ '], ['PETR4.SA', 'Petrobras PN', 2, 'R$ '], ['VALE3.SA', 'Vale ON', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ ']] },
-    { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['DX-Y.NYB', 'Índice dólar (DXY)', 2]],
-      mais: [['^RUT', 'Russell 2000', 2], ['^VIX', 'VIX (volatilidade)', 2], ['ES=F', 'S&P 500 futuro', 2], ['NQ=F', 'Nasdaq futuro', 2]] },
-    { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ ']],
-      mais: [['^FCHI', 'CAC 40', 2], ['FTSEMIB.MI', 'FTSE MIB', 2], ['^IBEX', 'IBEX 35', 2], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']] },
-    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai', 2], ['^KS11', 'KOSPI', 2]],
-      mais: [['^TWII', 'Taiwan', 2], ['^AXJO', 'S&P/ASX 200', 2], ['^BSESN', 'Sensex', 2], ['JPY=X', 'Iene (USD/JPY)', 2]] },
-    { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 3 meses', 3], ['^FVX', 'Treasury 5 anos', 3], ['^TNX', 'Treasury 10 anos', 3], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
-    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo Brent', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['ZS=F', 'Soja', 2], ['KC=F', 'Café', 2]],
-      mais: [['CL=F', 'Petróleo WTI', 2, 'US$ '], ['SI=F', 'Prata', 3, 'US$ '], ['HG=F', 'Cobre', 3, 'US$ '], ['ZC=F', 'Milho', 2]] },
-    { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['BNB-USD', 'BNB', 2, 'US$ ']],
-      mais: [['XRP-USD', 'XRP', 4, 'US$ '], ['ADA-USD', 'Cardano', 4, 'US$ '], ['DOGE-USD', 'Dogecoin', 4, 'US$ ']] }
+    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: '17:00', linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['PETR4.SA', 'Petrobras PN', 2, 'R$ ']],
+      mais: [['VALE3.SA', 'Vale', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ '], ['BBAS3.SA', 'Banco do Brasil', 2, 'R$ '], ['@selic', 'Selic', 2], ['@ipca', 'IPCA (12 meses)', 2]] },
+    { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX (volatilidade)', 2]],
+      mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
+    { id: 'mo', t: 'Moedas', tz: 'America/New_York', cme: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
+      mais: [['JPY=X', 'Iene (USD/JPY)', 2], ['EURBRL=X', 'Euro (EUR/BRL)', 4, 'R$ '], ['GBPBRL=X', 'Libra (GBP/BRL)', 4, 'R$ ']] },
+    { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2]], mais: [] },
+    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2]], mais: [] },
+    { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
+    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério de ferro', 2]],
+      mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café', 2], ['ZS=F', 'Soja', 2]] },
+    { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['XRP-USD', 'Ripple', 4, 'US$ ']],
+      mais: [['ADA-USD', 'Cardano', 4, 'US$ '], ['DOGE-USD', 'Dogecoin', 4, 'US$ ']] }
   ];
-  const SYMS = [...new Set(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => l[0])))];
+  // chave de cada linha @ no cache da aba Mercado de sempre (marketDataCache, app.js)
+  const ESPECIAL = { '@selic': 'selic', '@ipca': 'ipca', '@fred': 'fred', '@minerio': 'TIO=F' };
+  const esp = (s) => { try { const d = marketDataCache[ESPECIAL[s]]; return d && ok(d.value) ? d : null; } catch (e) { return null; } };
+  const SYMS = [...new Set(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => l[0])))].filter((s) => !s.startsWith('@'));
   const INFO = Object.fromEntries(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => [l[0], { n: l[1], d: l[2], pre: l[3] || '', juros: !!r.juros }])));
 
   /* ---------------- horário ---------------- */
@@ -105,11 +111,11 @@
   function ordem() {
     const { min, dia } = agoraEm('America/Sao_Paulo');
     const h = min / 60, fds = dia === 0 || dia === 6;
-    const base = fds ? ['cr', 'br', 'us', 'eu', 'as', 'co', 'ju']
-      : h < 6 ? ['as', 'cr', 'eu', 'us', 'br', 'co', 'ju']
-      : h < 10 ? ['eu', 'as', 'br', 'us', 'co', 'ju', 'cr']
-      : h < 18 ? ['br', 'us', 'ju', 'co', 'eu', 'as', 'cr']
-      : ['cr', 'as', 'us', 'br', 'co', 'ju', 'eu'];
+    const base = fds ? ['cr', 'br', 'us', 'mo', 'eu', 'as', 'co', 'ju']
+      : h < 6 ? ['as', 'mo', 'cr', 'eu', 'us', 'br', 'co', 'ju']
+      : h < 10 ? ['eu', 'mo', 'as', 'br', 'us', 'co', 'ju', 'cr']
+      : h < 18 ? ['br', 'us', 'mo', 'ju', 'co', 'eu', 'as', 'cr']
+      : ['cr', 'mo', 'as', 'us', 'br', 'co', 'ju', 'eu'];
     return base.map((id, i) => ({ r: REGIOES.find((x) => x.id === id), i }))
       .map((o) => { const s = situacao(o.r); return { ...o, k: s.aberto ? 0 : 1, f: s.falta || 0 }; })
       .sort((a, b) => a.k - b.k || (a.k ? a.f - b.f : a.i - b.i)).map((o) => o.r);
@@ -179,7 +185,7 @@
     const prev = q.v / (1 + q.c / 100); return (q.v - prev) * 100;
   }
   function frase(r) {
-    const vivos = r.linhas.map((l) => ({ s: l[0], n: l[1], c: Q[l[0]]?.c })).filter((x) => ok(x.c));
+    const vivos = r.linhas.filter((l) => !l[0].startsWith('@')).map((l) => ({ s: l[0], n: l[1], c: Q[l[0]]?.c })).filter((x) => ok(x.c));
     if (vivos.length < 2) return '';
     const m = vivos.reduce((a, b) => (Math.abs(b.c) > Math.abs(a.c) ? b : a));
     if (Math.abs(m.c) < 0.005) return '';
@@ -232,7 +238,16 @@
 
   /* ---------------- tela ---------------- */
   const valor = (s) => { const i = INFO[s], q = Q[s]; return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
+  const linhaEsp = (r, l) => {
+    const d = esp(l[0]), pctUnid = l[0] !== '@minerio';
+    const v = d ? `${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
+    const ch = d ? (d.chgText || (pctUnid ? '—' : pct(d.change))) : '—';
+    const tom = d && ok(d.change) ? cls(d.change) : 'na';
+    return `<div class="mn-row mn-row-esp" title="${esc(d?.note || 'Sem gráfico nesta visão')}">
+      <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${v}</span><span class="mn-c ${tom}">${esc(ch)}</span></div>`;
+  };
   const linha = (r, l) => {
+    if (l[0].startsWith('@')) return linhaEsp(r, l);
     const s = l[0], q = Q[s], j = INFO[s].juros, ch = j ? bp(s) : q?.c;
     return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}" data-r="${r.id}" data-s="${esc(s)}" title="Ver ${esc(l[1])} no gráfico">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
@@ -270,7 +285,7 @@
 
   /* ---------------- interação ---------------- */
   root.addEventListener('click', async (e) => {
-    const row = e.target.closest('.mn-row');
+    const row = e.target.closest('.mn-row[data-s]');
     const fb = e.target.closest('.mn-faixas button');
     const mais = e.target.closest('[data-mais]');
     if (e.target.closest('[data-classica]')) {
@@ -285,7 +300,7 @@
     if (row) {
       if (escolha(r) === row.dataset.s && typeof window.openAssetChart === 'function') {
         // segundo clique na mesma linha abre o gráfico completo
-        window.openAssetChart(row.dataset.s, INFO[row.dataset.s].n, [...r.linhas, ...r.mais].map((l) => ({ s: l[0], n: l[1] })));
+        window.openAssetChart(row.dataset.s, INFO[row.dataset.s].n, [...r.linhas, ...r.mais].filter((l) => !l[0].startsWith('@')).map((l) => ({ s: l[0], n: l[1] })));
         return;
       }
       pref[r.id] = { ...(pref[r.id] || {}), s: row.dataset.s };
@@ -351,6 +366,7 @@
   .mn-frase { margin:0; font-size:12.5px; color:var(--text-2); line-height:1.4; border-left:2px solid var(--accent); padding-left:8px; }
   .mn-rows { display:flex; flex-direction:column; }
   .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
+  .mn-row-esp { cursor:default; }
   .mn-row:hover { background:color-mix(in srgb, var(--text) 4%, transparent); }
   .mn-row.on { color:var(--text); box-shadow:inset 2px 0 0 var(--accent); background:color-mix(in srgb, var(--accent) 7%, transparent); }
   .mn-n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:uppercase; font-size:12.5px; letter-spacing:.02em; }
@@ -365,6 +381,8 @@
 
   render();
   refresh();
+  // Selic, IPCA, Treasury 20 anos e minério chegam pela aba Mercado de sempre, que roda por baixo
+  [5000, 15000].forEach((ms) => setTimeout(() => { if (!busy) render(); }, ms));
   let timer = setInterval(() => { if (!document.hidden && panel.classList.contains('active')) refresh(); }, 120000);
   // situação dos pregões muda com o relógio: redesenha a cada minuto
   setInterval(() => { if (!document.hidden && panel.classList.contains('active') && !busy) render(); }, 60000);
