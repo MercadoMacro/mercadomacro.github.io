@@ -46,15 +46,15 @@
   // os mesmos ativos da aba Mercado de sempre (MARKET_SECTIONS no app.js), agrupados por região.
   // linhas com @ vêm de fontes próprias da aba (BCB, FRED, rota do minério) e não têm gráfico
   const REGIOES = [
-    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: '17:00', linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['PETR4.SA', 'Petrobras PN', 2, 'R$ ']],
+    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: '17:00', linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['PETR4.SA', 'Petrobras PN', 2, 'R$ ']],
       mais: [['VALE3.SA', 'Vale', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ '], ['BBAS3.SA', 'Banco do Brasil', 2, 'R$ '], ['@selic', 'Selic', 2], ['@ipca', 'IPCA (12 meses)', 2]] },
-    { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX (volatilidade)', 2]],
+    { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX', 2]],
       mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
-    { id: 'mo', t: 'Moedas', tz: 'America/New_York', cme: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
-      mais: [['JPY=X', 'Iene (USD/JPY)', 2], ['EURBRL=X', 'Euro (EUR/BRL)', 4, 'R$ '], ['GBPBRL=X', 'Libra (GBP/BRL)', 4, 'R$ ']] },
+    { id: 'mo', t: 'Moedas', tz: 'America/New_York', cme: true, linhas: [['DX-Y.NYB', 'Dólar Index', 2], ['BRL=X', 'USD/BRL', 4, 'R$ '], ['EURUSD=X', 'EUR/USD', 4, 'US$ '], ['GBPUSD=X', 'GBP/USD', 4, 'US$ ']],
+      mais: [['JPY=X', 'USD/JPY', 2], ['EURBRL=X', 'EUR/BRL', 4, 'R$ '], ['GBPBRL=X', 'GBP/BRL', 4, 'R$ ']] },
     { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
-    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
-    { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
+    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
+    { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 sem.', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
     { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério de ferro', 2]],
       mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café', 2], ['ZS=F', 'Soja', 2]] },
     { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['XRP-USD', 'Ripple', 4, 'US$ ']],
@@ -188,7 +188,7 @@
     root.querySelectorAll(`.mn-row[data-s="${CSS.escape(s)}"]`).forEach((row) => {
       row.querySelector('.mn-v').textContent = valor(s);
       const c = row.querySelector('.mn-c'); c.textContent = pct(a?.c); c.className = `mn-c ${cls(a?.c)}`;
-      row.classList.add('rt'); row.title = `Tempo real pela ${SRC[l.src] || l.src}; variação sobre o fechamento anterior do Yahoo`;
+      row.classList.add('rt'); row.title = `${INFO[s].n} · tempo real pela ${SRC[l.src] || l.src}; variação sobre o fechamento anterior do Yahoo`;
       if (dir) { row.classList.remove('fl-up', 'fl-dn'); void row.offsetWidth; row.classList.add(dir > 0 ? 'fl-up' : 'fl-dn'); }
     });
   };
@@ -258,15 +258,29 @@
     const v = d ? `${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
     const ch = d ? (d.chgText || (pctUnid ? '—' : pct(d.change))) : '—';
     const tom = d && ok(d.change) ? cls(d.change) : 'na';
-    return `<div class="mn-row mn-row-esp" title="${esc(d?.note || 'Sem gráfico nesta visão')}">
-      <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${v}</span><span class="mn-c ${tom}">${esc(ch)}</span></div>`;
+    const nota = [d?.date, d?.note].filter(Boolean).join(' · ');
+    return `<div class="mn-row mn-row-esp" title="${esc(nota || 'Sem gráfico nesta visão')}">
+      <span class="mn-star-vazio"></span><span class="mn-n">${esc(l[1])}${nota ? `<small>${esc(nota)}</small>` : ''}</span><span class="mn-mini"></span><span class="mn-v">${v}</span><span class="mn-c ${tom}">${esc(ch)}</span></div>`;
+  };
+  const hora = (ts) => (ts ? new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '');
+  // mini gráfico de 3 meses da linha (fechamentos diários)
+  function mini(s) {
+    const c = G[`3mo|${s}`]?.c;
+    if (!c || c.length < 2) return '<span class="mn-mini"></span>';
+    const lo = Math.min(...c), hi = Math.max(...c), sp = hi - lo || 1;
+    const pts = c.map((v, i) => `${((i / (c.length - 1)) * 56).toFixed(1)},${(2 + (1 - (v - lo) / sp) * 14).toFixed(1)}`).join(' ');
+    return `<span class="mn-mini" title="Últimos 3 meses"><svg viewBox="0 0 56 18" class="${c[c.length - 1] >= c[0] ? 'up' : 'dn'}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.3" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg></span>`;
+  }
+  const estrela = (s, n) => {
+    const on = !!window.MMWatch?.has(s);
+    return `<button type="button" class="mn-star${on ? ' on' : ''}" data-wlstar="${esc(s)}" data-wlname="${esc(n)}" title="${on ? 'Tirar da watchlist' : 'Adicionar à watchlist'}" aria-label="${on ? 'Tirar' : 'Adicionar'} ${esc(n)} ${on ? 'da' : 'à'} watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>`;
   };
   const linha = (r, l) => {
     if (l[0].startsWith('@')) return linhaEsp(r, l);
     const s = l[0], q = atual(s), j = INFO[s].juros, ch = j ? bp(s) : q?.c;
-    const rt = q?.src ? ` rt" title="Tempo real pela ${esc(SRC[q.src] || q.src)}; variação sobre o fechamento anterior do Yahoo` : `" title="Ver ${esc(l[1])} no gráfico`;
-    return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}${rt}" data-r="${r.id}" data-s="${esc(s)}">
-      <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
+    const quando = q?.src ? `tempo real pela ${SRC[q.src] || q.src}` : Q[s]?.ts ? `cotação de ${hora(Q[s].ts)}` : 'sem cotação';
+    return `<div role="button" tabindex="0" class="mn-row${escolha(r) === s ? ' on' : ''}${q?.src ? ' rt' : ''}" data-r="${r.id}" data-s="${esc(s)}" title="${esc(l[1])} · ${esc(quando)}${q?.src ? '; variação sobre o fechamento anterior do Yahoo' : ''}">
+      ${estrela(s, l[1])}<span class="mn-n">${esc(l[1])}</span>${mini(s)}<span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></div>`;
   };
   function cartao(r) {
     const st = situacao(r), s = escolha(r), f = faixa(r), fr = frase(r), aberto = abertos.has(r.id);
@@ -300,7 +314,17 @@
   }
 
   /* ---------------- interação ---------------- */
+  root.addEventListener('keydown', (e) => {
+    const row = e.target.closest?.('.mn-row[data-s]');
+    if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); row.click(); }
+  });
+  // estrela: quem trata é o extras.js (clique no painel do Mercado); aqui só repinta
+  document.addEventListener('mm-watch', () => root.querySelectorAll('.mn-star').forEach((b) => {
+    const on = !!window.MMWatch?.has(b.dataset.wlstar);
+    b.classList.toggle('on', on); b.title = on ? 'Tirar da watchlist' : 'Adicionar à watchlist';
+  }));
   root.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-wlstar]')) return;
     const row = e.target.closest('.mn-row[data-s]');
     const fb = e.target.closest('.mn-faixas button');
     const mais = e.target.closest('[data-mais]');
@@ -381,21 +405,28 @@
   .mn-tip { position:absolute; top:-4px; width:120px; text-align:center; font-size:11px; color:var(--text); background:var(--surface-2, var(--surface)); border:1px solid var(--line); border-radius:6px; padding:2px 4px; pointer-events:none; white-space:nowrap; }
   .mn-frase { margin:0; font-size:12.5px; color:var(--text-2); line-height:1.4; border-left:2px solid var(--accent); padding-left:8px; }
   .mn-rows { display:flex; flex-direction:column; }
-  .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
+  .mn-row { display:grid; grid-template-columns:18px minmax(0,1fr) 48px auto 64px; gap:8px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
   .mn-row-esp { cursor:default; }
+  .mn-n small { display:block; text-transform:none; letter-spacing:0; font-size:11px; color:var(--text-3); white-space:normal; margin-top:2px; }
+  .mn-star { width:20px; height:20px; padding:0; border:0; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; opacity:.55; }
+  .mn-star svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linejoin:round; }
+  .mn-star:hover, .mn-row:hover .mn-star { opacity:1; }
+  .mn-star.on { color:var(--accent); opacity:1; } .mn-star.on svg { fill:currentColor; }
+  .mn-mini svg { width:48px; height:18px; display:block; }
+  .mn-mini svg.up { color:var(--pos); } .mn-mini svg.dn { color:var(--neg); }
   .mn-row.rt .mn-n::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--pos); margin-left:6px; vertical-align:middle; }
   .mn-row.fl-up .mn-v { animation:mn-fl-up .8s; } .mn-row.fl-dn .mn-v { animation:mn-fl-dn .8s; }
   @keyframes mn-fl-up { from { background:color-mix(in srgb, var(--pos) 25%, transparent); } }
   @keyframes mn-fl-dn { from { background:color-mix(in srgb, var(--neg) 25%, transparent); } }
   .mn-row:hover { background:color-mix(in srgb, var(--text) 4%, transparent); }
   .mn-row.on { color:var(--text); box-shadow:inset 2px 0 0 var(--accent); background:color-mix(in srgb, var(--accent) 7%, transparent); }
-  .mn-n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:uppercase; font-size:12.5px; letter-spacing:.02em; }
+  .mn-n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
   .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn .up { color:var(--pos-ink, var(--pos)); } .mn .dn { color:var(--neg); } .mn .na, .mn .eq { color:var(--text-3); }
   .mn-svg.up { color:var(--pos); } .mn-svg.dn { color:var(--neg); }
   .mn-fonte { margin:0; font-size:12px; color:var(--text-3); }
-  @media (max-width: 640px) { .mn-grid { grid-template-columns:1fr; } .mn-st { display:none; } }
+  @media (max-width: 640px) { .mn-grid { grid-template-columns:1fr; } .mn-st { display:none; } .mn-row { grid-template-columns:20px minmax(0,1fr) auto 68px; } .mn-mini { display:none; } }
   `;
   document.head.appendChild(css);
 
