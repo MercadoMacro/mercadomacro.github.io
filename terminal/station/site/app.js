@@ -4784,7 +4784,7 @@ function newsReadMins(n) {
 /* =========================================================
    MERCADO NOVO: cartões por região no lugar da grade da aba Mercado (padrão desde 24/10/2026).
    A grade antiga continua escondida por baixo (dá os preços ao vivo, Selic, IPCA e minério).
-   O modo clássico selecionável saiu em 24/10/2026; backup na tag git mercado-classico-backup.
+   O modo clássico selecionável saiu em 24/10/2026; backup no ramo git backup-mercado-classico.
    ========================================================= */
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
