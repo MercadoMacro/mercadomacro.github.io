@@ -4,7 +4,7 @@
    uma frase calculada dos números e 4 linhas; clicar numa linha troca o gráfico.
    Ordem fixa: Ásia, Europa, EUA, Brasil, Juros, Moedas, Commodities e Cripto.
    Única visão da aba Mercado; o modo clássico selecionável saiu em 24/10/2026 (backup no ramo git backup-mercado-classico).
-   A aba Mercado de sempre continua por baixo, só escondida enquanto o protótipo está ligado.
+   A aba Mercado de sempre continua por baixo, escondida: ela traz os preços ao vivo, Selic, IPCA, Treasury 20 anos e minério.
    Fontes: lote /quotes e /history do worker (Yahoo). Sem dado, mostra "—"; a frase só aparece com números.
    ========================================================= */
 (() => {
@@ -33,6 +33,11 @@
   /* ---------------- regiões ---------------- */
   // linhas: [símbolo Yahoo, nome, casas, prefixo]; mais: aparecem ao abrir o cartão (›)
   // sessão: fuso da bolsa e horário local de abertura e fechamento (sem feriados neste protótipo)
+  // a B3 fecha às 17h enquanto vale o horário de verão nos EUA e às 18h no resto do ano
+  const veraoEUA = (d = new Date()) => {
+    const h = (tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(d);
+    return ((h('UTC') - h('America/New_York') + 24) % 24) === 4;
+  };
   const ICON = {
     br: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#1f9e57"/><path d="M10 3.6 17 10l-7 6.4L3 10Z" fill="#f7d117"/><circle cx="10" cy="10" r="3.6" fill="#1d3f8f"/><path d="M6.6 9.3c2.3-.6 4.7-.3 6.8.9" stroke="#fff" stroke-width=".8" fill="none"/></svg>',
     us: '<svg viewBox="0 0 20 20"><clipPath id="mn-us"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#mn-us)"><rect width="20" height="20" fill="#fff"/><path d="M0 0h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20V7.7H0Zm0 3.08h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20v1.54H0Zm0 3.08h20V20H0Z" fill="#c8323a"/><rect width="10" height="10.8" fill="#26387a"/></g></svg>',
@@ -46,7 +51,7 @@
   // os mesmos ativos da aba Mercado de sempre (MARKET_SECTIONS no app.js), agrupados por região.
   // linhas com @ vêm de fontes próprias da aba (BCB, FRED, rota do minério) e não têm gráfico
   const REGIOES = [
-    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: '17:00', linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['PETR4.SA', 'Petrobras PN', 2, 'R$ ']],
+    { id: 'br', t: 'Brasil', tz: 'America/Sao_Paulo', ab: '10:00', fe: () => (veraoEUA() ? '17:00' : '18:00'), linhas: [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['IFIX.SA', 'IFIX', 0], ['PETR4.SA', 'Petrobras PN', 2, 'R$ ']],
       mais: [['VALE3.SA', 'Vale', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ '], ['BBAS3.SA', 'Banco do Brasil', 2, 'R$ '], ['@selic', 'Selic', 2], ['@ipca', 'IPCA (12 meses)', 2]] },
     { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX (volatilidade)', 2]],
       mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
@@ -56,7 +61,7 @@
     { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
     { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
     { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério de ferro', 2]],
-      mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café', 2], ['ZS=F', 'Soja', 2]] },
+      mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café (US¢/lb)', 2], ['ZS=F', 'Soja (US¢/bushel)', 2]] },
     { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['XRP-USD', 'Ripple', 4, 'US$ ']],
       mais: [['ADA-USD', 'Cardano', 4, 'US$ '], ['DOGE-USD', 'Dogecoin', 4, 'US$ ']] }
   ];
@@ -100,7 +105,7 @@
       if (dia === 5 && min >= 1020) falta += 2 * 1440; else if (dia === 6) falta += 1440;
       return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, 1080))}`, falta };
     }
-    const a = hm(r.ab), f = hm(r.fe), util = dia >= 1 && dia <= 5;
+    const a = hm(r.ab), f = hm(typeof r.fe === 'function' ? r.fe() : r.fe), util = dia >= 1 && dia <= 5;
     if (util && min >= a && min < f) return { aberto: true, txt: `fecha ${quando(alvo(r.tz, f - min, f))}`, falta: 0 };
     let falta = a - min, d = dia;
     if (!(util && min < a)) { falta += 1440; d = (dia + 1) % 7; }
@@ -194,7 +199,7 @@
   };
 
   /* ---------------- frase do cartão (só com números) ---------------- */
-  const verbo = (c, juros) => (juros ? (c > 0 ? 'sobe' : 'cai') : c > 0 ? 'sobe' : 'cai');
+  const verbo = (c) => (c > 0 ? 'sobe' : 'cai');
   function bp(sym) { // variação em pontos-base para juros (o Yahoo dá o rendimento em %)
     const q = Q[sym]; if (!q || !ok(q.c) || !ok(q.v)) return null;
     const prev = q.v / (1 + q.c / 100); return (q.v - prev) * 100;
@@ -229,7 +234,8 @@
     const c = g.c, q = Q[s];
     // no 1D a linha de base é o fechamento anterior (mesma conta da variação do dia)
     const base = f === '1d' && q && ok(q.v) && ok(q.c) ? q.v / (1 + q.c / 100) : c[0];
-    const vals = f === '1d' && q && ok(q.v) ? [...c.slice(0, -1), c[c.length - 1]] : c;
+    const ag = atual(s);
+    const vals = f === '1d' && ag?.src && ok(ag.v) ? [...c.slice(0, -1), ag.v] : c;
     const lo = Math.min(...vals, base), hi = Math.max(...vals, base), span = hi - lo || 1;
     const x = (i) => (i / (vals.length - 1)) * W, y = (v) => 6 + (1 - (v - lo) / span) * (H - 12);
     const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
@@ -255,10 +261,14 @@
   const valor = (s) => { const i = INFO[s], q = atual(s); return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
   const linhaEsp = (r, l) => {
     const d = esp(l[0]), pctUnid = l[0] !== '@minerio';
-    const v = d ? `${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
-    const ch = d ? (d.chgText || (pctUnid ? '—' : pct(d.change))) : '—';
+    const pre = !d || pctUnid ? '' : /yuan/i.test(d.note || '') ? '¥ ' : 'US$ ';
+    const v = d ? `${pre}${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
+    // Treasury 20 anos (FRED): variação em p.b., como as outras linhas de juros
+    const pbFred = l[0] === '@fred' && d && ok(d.change) ? (d.value - d.value / (1 + d.change / 100)) * 100 : null;
+    const ch = d ? (d.chgText || (l[0] === '@fred' ? pb(pbFred) : pctUnid ? '—' : pct(d.change))) : '—';
     const tom = d && ok(d.change) ? cls(d.change) : 'na';
-    return `<div class="mn-row mn-row-esp" title="${esc(d?.note || 'Sem gráfico nesta visão')}">
+    const dica = l[0] === '@fred' && d?.date ? `FRED, dado de ${d.date.split('-').reverse().join('/')} (sai com 1 dia de atraso)` : d?.note || 'Sem gráfico nesta visão';
+    return `<div class="mn-row mn-row-esp" title="${esc(dica)}">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${v}</span><span class="mn-c ${tom}">${esc(ch)}</span></div>`;
   };
   const linha = (r, l) => {
@@ -288,7 +298,7 @@
     </article>`;
   }
   function render() {
-    const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+    const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
       <div class="mn-bar">
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
@@ -346,7 +356,6 @@
   .mn-sub { font-size:12.5px; color:var(--text-3); }
   .mn-err { color:var(--neg); }
   .mn-acts { display:flex; gap:8px; align-items:center; }
-  .mn-tag { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); padding:3px 8px; border-radius:6px; }
   .mn-btn { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
   .mn-btn:hover { color:var(--text); }
   .mn-refresh.busy { opacity:.6; pointer-events:none; }
@@ -388,7 +397,6 @@
   .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn .up { color:var(--pos-ink, var(--pos)); } .mn .dn { color:var(--neg); } .mn .na, .mn .eq { color:var(--text-3); }
-  .mn-svg.up { color:var(--pos); } .mn-svg.dn { color:var(--neg); }
   .mn-fonte { margin:0; font-size:12px; color:var(--text-3); }
   @media (max-width: 640px) { .mn-grid { grid-template-columns:1fr; } .mn-st { display:none; } .mn-mais { margin-left:auto; } }
   `;
