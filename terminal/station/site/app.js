@@ -4048,7 +4048,7 @@ window.__onTabSwitch = (tabId) => {
     'calendar-panel': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m4 0h2m-8 3h2"/>',
     'analysis-panel': '<path d="M3 3v18h18"/><path d="M8 17v-5m4 5V8m4 9v-3m4 3V6"/>',
     'fund-panel': '<path d="M12 3v9h9A9 9 0 1 1 12 3Zm4 1a9 9 0 0 1 4 4h-4Z"/>',
-    'indicators-panel': '<path d="M5.6 18.4a9 9 0 1 1 12.8 0"/><path d="m12 12 4-4M7 12h1m8 0h1M12 6v1"/><circle cx="12" cy="12" r="1.4"/>',
+    'indicators-panel': '<path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1"/><circle cx="15" cy="13" r="1"/>',
     'calculator-panel': '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8v4H8Zm0 8h1m3 0h1m3 0h.01M8 18h1m3 0h1m3 0h.01"/>',
     'options-panel': '<circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
     'buscar': '<circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/>',
