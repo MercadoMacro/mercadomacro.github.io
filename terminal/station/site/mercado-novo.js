@@ -3,7 +3,7 @@
    Cada cartão tem bandeira, situação do pregão, um gráfico (1D, 5D, 3M) do ativo escolhido,
    uma frase calculada dos números e 4 linhas; clicar numa linha troca o gráfico.
    Ordem fixa: Ásia, Europa, EUA, Brasil, Juros, Moedas, Commodities e Cripto.
-   É o padrão; o botão "Mercado clássico" (ou ?mercado=classico) volta à grade antiga neste navegador e ?mercado=novo traz de volta.
+   É o padrão; a chave em Ajustes > Painel (ou ?mercado=classico) volta à grade antiga neste navegador e ?mercado=novo traz de volta.
    A aba Mercado de sempre continua por baixo, só escondida enquanto o protótipo está ligado.
    Fontes: lote /quotes e /history do worker (Yahoo). Sem dado, mostra "—"; a frase só aparece com números.
    ========================================================= */
@@ -292,7 +292,7 @@
     root.innerHTML = `<div class="mn">
       <div class="mn-bar">
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
-        <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button><button type="button" class="mn-btn" data-classica>Mercado clássico</button></div>
+        <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
       <p class="mn-fonte">Fonte: Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv, dólar, VIX e futuros pela Capital.com em CFD, cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
@@ -304,11 +304,6 @@
     const row = e.target.closest('.mn-row[data-s]');
     const fb = e.target.closest('.mn-faixas button');
     const mais = e.target.closest('[data-mais]');
-    if (e.target.closest('[data-classica]')) {
-      try { localStorage.setItem('mercado_novo', '0'); } catch (err) { /* sem armazenamento */ }
-      location.search = '?mercado=classico';
-      return;
-    }
     if (e.target.closest('.mn-refresh')) { refresh(); return; }
     if (mais) { const id = mais.dataset.mais; abertos.has(id) ? abertos.delete(id) : abertos.add(id); render(); return; }
     if (!row && !fb) return;
