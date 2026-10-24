@@ -84,8 +84,8 @@
     return out;
   }
   function wlCardHTML(it) {
-    return quoteCardHTML({ name: it.n || nice(it.s), symbol: it.s, type: 'yahoo' })
-      .replace('class="quote-card"', `class="quote-card wl-card" role="button" tabindex="0" title="Abrir o gráfico de ${esc(it.n || nice(it.s))}"`)
+    return quoteCardHTML({ name: it.n || nice(it.s), symbol: it.s, type: 'yahoo' }, { cls: 'wl-card', label: `Abrir o gráfico de ${it.n || nice(it.s)} (${nice(it.s)})` })
+      .replace('class="quote-card wl-card"', `class="quote-card wl-card" title="Abrir o gráfico de ${esc(it.n || nice(it.s))}"`)
       .replace('<span class="qc-badge', `<button type="button" class="wl-x" data-wlrm="${esc(it.s)}" title="Tirar da watchlist" aria-label="Tirar ${esc(nice(it.s))} da watchlist"><i class="fas fa-times"></i></button><span class="qc-badge`);
   }
 
@@ -172,7 +172,7 @@
           if (old && old.value !== undefined) { applyQuoteToCard(card, old, ''); if (typeof markStale === 'function') markStale(card, old.ts); }
           else applyQuoteToCard(card, null);
         }
-        if (changed) { const it = wl.find((x) => x.s === s); const nm = card.querySelector('.qc-name'); if (it && nm) nm.textContent = it.n || nice(s); }
+        if (changed) { const it = wl.find((x) => x.s === s); const nm = card.querySelector('.qc-name'); if (it && nm) { nm.textContent = it.n || nice(s); card.setAttribute('aria-label', `Abrir o gráfico de ${it.n || nice(s)} (${nice(s)})`); } }
       });
       if (typeof saveMarketCache === 'function') saveMarketCache();
       wlLast = Date.now();
@@ -793,7 +793,7 @@
      ========================================================= */
   const ticker = document.getElementById('ticker');
   let frases = [], fi = -1, fTimer = null, fBar = null;
-  const fOn = () => prefs().frases !== 'off';
+  const fOn = () => prefs().frasesTopo === 'on';   // desligada por padrão; liga em Ajustes > Painel
   function fShow(step = 1) {
     if (!fBar || !frases.length) return;
     fi = fi < 0 ? Math.floor(Math.random() * frases.length) : (fi + step + frases.length) % frases.length;
@@ -827,7 +827,7 @@
       if (b.dataset.q === 'next') { fShow(1); fStart(); }
       else if (b.dataset.q === 'prev') { fShow(-1); fStart(); }
       else if (b.dataset.q === 'off') {
-        const p = prefs(); p.frases = 'off';
+        const p = prefs(); p.frasesTopo = 'off';
         try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (err) { /* nada */ }
         fMount();
         say('Frases escondidas. Para voltar: Ajustes > Painel.', 'info');

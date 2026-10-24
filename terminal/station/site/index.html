@@ -23,13 +23,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="estilo.css?v=37">
+<link rel="stylesheet" href="estilo.css?v=38">
 <link rel="stylesheet" href="watchlists-ui.css?v=2">
 <link rel="stylesheet" href="asset-search.css?v=2">
 <link rel="stylesheet" href="asset-history.css?v=4">
 <link rel="stylesheet" href="crypto-live.css?v=2">
 <link rel="stylesheet" href="mesa-layout.css?v=2">
-<link rel="stylesheet" href="watchlist-table.css?v=5">
+<link rel="stylesheet" href="watchlist-table.css?v=6">
 <style id="prefs-css">
   /* =====================================================================
      AJUSTES DO PAINEL (engrenagem): cor de destaque, papel de parede,
@@ -152,12 +152,13 @@
 </script>
 </head>
 <body>
+<script>/* barra lateral: recolhida só se a pessoa recolheu (o app.js monta a barra) */ try { if (localStorage.getItem('trader_side_collapsed') === '1') document.body.classList.add('side-collapsed'); } catch (e) { /* sem armazenamento */ }</script>
 
 <div class="topbar">
   <div class="brand mm-brand">
     <div class="brand-text">
       <h1 class="mm-logo"><img class="mm-img mm-dark" src="logo-mercado-macro.png" alt="Mercado Macro" width="624" height="128"><img class="mm-img mm-light" src="logo-mercado-macro-claro.png" alt="" width="624" height="128" aria-hidden="true"></h1>
-      <div class="sub"><span class="dot-live"></span>Mercado em tempo real · <span id="current-date"></span><span id="market-status"></span></div>
+      <div class="sub"><span class="dot-live"></span>Painel do mercado · <span id="current-date"></span><span id="market-status"></span></div>
     </div>
   </div>
 
@@ -269,10 +270,11 @@
   <div class="market-wrap">
     <div class="refresh-bar">
       <div class="info" id="market-info"><span class="dot"></span>Última atualização: <span id="market-last-update">—</span></div>
-      <label class="toggle-switch" id="live-toggle" title="Ao vivo: atualiza a cada 5 min (15 min fora do pregão). Desligado: usa o último snapshot.">
-        <span>Ao vivo</span>
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-      </label>
+      <button type="button" class="toggle-switch" id="live-toggle" role="switch" aria-checked="false" aria-describedby="live-toggle-tip" title="Atualização automática: busca as cotações a cada 5 min no pregão e a cada 15 min fora dele. Desligada: usa o último snapshot salvo.">
+        <span class="ts-lbl">Atualização automática</span>
+        <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+      </button>
+      <span class="sr-only" id="live-toggle-tip">Busca as cotações a cada 5 minutos no pregão e a cada 15 minutos fora dele.</span>
     </div>
 
     <div class="mkt-movers" id="mkt-movers"></div>
@@ -313,8 +315,7 @@
 
     <div class="market-note">
       <strong><i class="fas fa-info-circle"></i> Nota:</strong> Cotações via Yahoo Finance (delay de 15min), Banco Central, AwesomeAPI e FRED. Minério de ferro via Investing (SGX) ou Sina (Dalian).
-      Com <strong>Ao vivo</strong> ligado, atualização automática a cada 5 minutos no pregão (15 minutos fora dele). Desligado, usa o último snapshot salvo.
-    </div>
+      Com a <strong>Atualização automática</strong> ligada, as cotações são buscadas de novo a cada 5 minutos no pregão (15 minutos fora dele). Desligada, usa o último snapshot salvo. Só os cards com o selo <strong>tempo real</strong> (câmbio pela Deriv, dólar, VIX e futuros pela Capital.com, cripto pela Binance) recebem o preço continuamente.</div>
   </div>
 </div>
 
@@ -759,22 +760,22 @@
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
 <script src="crypto-live.js?v=2"></script>
 <script src="forex-live.js?v=7"></script>
-<script src="app.js?v=48"></script>
+<script src="app.js?v=49"></script>
 <script src="mesa-layout.js?v=1"></script>
-<script src="ajustes.js?v=13"></script>
+<script src="ajustes.js?v=14"></script>
 <script src="watchlists-core.js?v=1"></script>
 <script src="watchlists-store.js?v=2"></script>
 <script src="watchlists-ui.js?v=2"></script>
 <script src="watchlist-table-core.js?v=2"></script>
-<script src="watchlist-table.js?v=3"></script>
+<script src="watchlist-table.js?v=4"></script>
 <script src="asset-catalog.js?v=1"></script>
 <script src="asset-search-core.js?v=2"></script>
 <script src="asset-search.js?v=2"></script>
 <script src="asset-history.js?v=4"></script>
-<script src="extras.js?v=18"></script>
-<script src="cabecalho.js?v=1"></script>
+<script src="extras.js?v=19"></script>
+<script src="cabecalho.js?v=2"></script>
 <script src="noticias2.js?v=2"></script>
 <script src="topo-acoes.js?v=1"></script>
-<script src="navegacao-mobile.js?v=1"></script>
+<script src="navegacao-mobile.js?v=2"></script>
 </body>
 </html>

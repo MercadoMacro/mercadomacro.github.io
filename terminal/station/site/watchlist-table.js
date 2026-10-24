@@ -38,7 +38,9 @@
       const open = text('button', r.symbol.replace(/\.SA$/, ''), 'wt-symbol'); open.type = 'button';
       open.setAttribute('aria-label', 'Abrir gráfico de ' + r.symbol.replace(/\.SA$/, ''));
       open.addEventListener('click', () => original(r.symbol)?.click());
-      name.append(open, text('div', r.name, 'wt-name'));
+      // nome da empresa embaixo do código, dentro do mesmo botão (no celular, abreviado com reticências); não repete o código
+      if (r.name && r.name !== r.symbol.replace(/\.SA$/, '')) { const nm = text('span', r.name, 'wt-name'); open.title = r.name; open.append(nm); }
+      name.append(open);
       if (!r.fresh && r.quote) name.append(text('span', 'Salvo', 'wt-saved'));
       else if (!core.number(r.quote?.value)) name.append(text('span', state.loading ? 'Carregando' : 'Sem dados', 'wt-saved'));
       tr.append(name, text('td', core.price(r.quote), 'wt-number'), text('td', core.change(r.quote), 'wt-number ' + (core.number(r.quote?.change) ? r.quote.change > 0 ? 'wt-up' : r.quote.change < 0 ? 'wt-down' : '' : '')));

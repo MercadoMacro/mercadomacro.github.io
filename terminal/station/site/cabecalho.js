@@ -1,5 +1,5 @@
 /* Cabeçalho em duas faixas (computador, a partir de 1101 px):
-   1) logo, frase (com botão "Nova frase") e, à direita, Ao vivo, busca e ajustes;
+   1) logo, frase (só se ligada em Ajustes, com botão "Nova frase") e, à direita, Atualização automática, busca e ajustes;
    2) uma barra só: relógio de Brasília, data e B3/NYSE à esquerda, cotações correndo no meio, atualizar à direita.
    Os elementos são só mudados de lugar (mesmos ids); abaixo de 1101 px voltam para onde estavam. */
 (() => {

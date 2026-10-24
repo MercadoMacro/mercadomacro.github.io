@@ -634,14 +634,17 @@ function renderSparkline(container, values, isUp, volumes) {
   `;
 }
 
-function quoteCardHTML(item) {
+// opts (opcional): { cls, label } — a watchlist usa para abrir o gráfico em vez de atualizar a cotação
+function quoteCardHTML(item, opts = {}) {
   const key = item.symbol || item.type;
+  const code = item.symbol || item.type.toUpperCase();
+  const label = opts.label || `${item.name} (${code}): atualizar a cotação`;
   return `
-    <div class="quote-card" data-symbol="${escapeHTML(key)}">
+    <div class="quote-card${opts.cls ? ' ' + opts.cls : ''}" data-symbol="${escapeHTML(key)}" role="button" tabindex="0" aria-label="${escapeHTML(label)}">
       <div class="qc-head">
         <div>
           <div class="qc-name">${escapeHTML(item.name)}</div>
-          <div class="qc-symbol">${escapeHTML(item.symbol || item.type.toUpperCase())}</div>
+          <div class="qc-symbol">${escapeHTML(code)}</div>
         </div>
         <span class="qc-badge na" data-badge>Carregando</span>
       </div>
@@ -661,7 +664,7 @@ function renderMarketSections() {
   MARKET_SECTIONS.forEach(sec => {
     const grid = document.getElementById(sec.gridId);
     if (!grid) return;
-    grid.innerHTML = sec.items.map(quoteCardHTML).join('');
+    grid.innerHTML = sec.items.map((it) => quoteCardHTML(it)).join('');
     const c = document.getElementById(sec.countId);
     if (c) c.textContent = `${sec.items.length} ativos`;
   });
@@ -680,6 +683,7 @@ function applyQuoteToCard(card, data, unit) {
   const badgeEl = card.querySelector('[data-badge]');
   const timeEl = card.querySelector('[data-time]');
   const sparkEl = card.querySelector('[data-spark]');
+  card.classList.remove('qc-rt');   // o selo "tempo real" volta só se a transmissão repintar o card
 
   if (!data || data.value == null || !Number.isFinite(data.value)) {
     priceEl.textContent = '—';
@@ -794,8 +798,8 @@ async function updateMarketPanel(silent = false) {
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
   const dotColor = liveMode ? 'var(--pos)' : 'var(--text-3)';
   info.innerHTML = fail === 0
-    ? `<span class="dot" style="background:${dotColor}"></span>${liveMode ? 'Ao vivo' : 'Snapshot'}: <span id="market-last-update">${now}</span> · ${ok} ativos`
-    : `<span class="dot" style="background:var(--accent)"></span>${liveMode ? 'Ao vivo' : 'Snapshot'}: <span id="market-last-update">${now}</span> · ${ok}/${ok+fail} ativos`;
+    ? `<span class="dot" style="background:${dotColor}"></span>${liveMode ? 'Atualizado' : 'Snapshot'}: <span id="market-last-update">${now}</span> · ${ok} ativos`
+    : `<span class="dot" style="background:var(--accent)"></span>${liveMode ? 'Atualizado' : 'Snapshot'}: <span id="market-last-update">${now}</span> · ${ok}/${ok+fail} ativos`;
 
   info.classList.remove('loading');
   marketLoading = false;
@@ -898,23 +902,32 @@ function setLiveMode(on, silent = false) {
   liveMode = on;
   localStorage.setItem(STORAGE.liveMode, on ? 'true' : 'false');
   const toggle = $('#live-toggle');
-  if (toggle) toggle.classList.toggle('on', on);
+  if (toggle) { toggle.classList.toggle('on', on); toggle.setAttribute('aria-checked', String(on)); }
   if (on) {
     startAutoRefresh();
     updateTicker(true);
     updateMarketPanel(true);
-    if (!silent) toast('Ao vivo ativado · atualiza a cada 5 min (15 min fora do pregão)', 'success');
+    if (!silent) toast('Atualização automática ligada · a cada 5 min no pregão (15 min fora dele)', 'success');
   } else {
     stopAutoRefresh();
     saveMarketCache();
     saveTickerCache(window.__lastTickerResults || []);
-    if (!silent) toast('Ao vivo desativado · usando snapshot', 'info');
+    if (!silent) toast('Atualização automática desligada · usando o último snapshot', 'info');
   }
 }
 
 $('#live-toggle')?.addEventListener('click', (e) => {
   e.preventDefault();
   setLiveMode(!liveMode);
+});
+
+// teclado: Enter ou Espaço no card faz o mesmo que o clique (os cards da watchlist têm o próprio, no extras.js)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest?.('.quote-card[role="button"]');
+  if (!card || e.target !== card || card.classList.contains('wl-card')) return;
+  e.preventDefault();
+  card.click();
 });
 
 document.addEventListener('click', async (e) => {
@@ -3144,7 +3157,7 @@ renderMarketStatus();
 setInterval(renderMarketStatus, 60 * 1000);
 
 const liveToggle = $('#live-toggle');
-if (liveToggle) liveToggle.classList.toggle('on', liveMode);
+if (liveToggle) { liveToggle.classList.toggle('on', liveMode); liveToggle.setAttribute('aria-checked', String(liveMode)); }
 
 if (liveMode) {
   updateMarketPanel(true);
@@ -4070,7 +4083,10 @@ window.__onTabSwitch = (tabId) => {
   document.body.prepend(side);
   document.body.classList.add('has-side');
 
-  let collapsed = true;   // sempre abre recolhida
+  // na primeira visita abre aberta; depois lembra a escolha (chave própria, fora dos ajustes)
+  const SIDE_KEY = 'trader_side_collapsed';
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(SIDE_KEY) === '1'; } catch (e) { /* sem armazenamento */ }
   const applyCollapsed = () => {
     document.body.classList.toggle('side-collapsed', collapsed);
     const lbl = $('#side-collapse .si-lbl');
@@ -4078,6 +4094,7 @@ window.__onTabSwitch = (tabId) => {
     const ic = $('#side-collapse .si-svg');
     if (ic) ic.innerHTML = SI[collapsed ? 'expandir' : 'recolher'];
     $('#side-collapse')?.setAttribute('title', collapsed ? 'Expandir o menu' : 'Recolher o menu');
+    $('#side-collapse')?.setAttribute('aria-expanded', String(!collapsed));
   };
   applyCollapsed();
 
@@ -4134,6 +4151,7 @@ window.__onTabSwitch = (tabId) => {
   $('#side-collapse').addEventListener('click', () => {
     collapsed = !collapsed;
     applyCollapsed();
+    try { localStorage.setItem(SIDE_KEY, collapsed ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
     // gráficos que dependem da largura
     setTimeout(() => window.dispatchEvent(new Event('resize')), 250);
   });
@@ -5028,8 +5046,9 @@ function newsReadMins(n) {
         if (badgeEl) { badgeEl.textContent = chg > 0 ? '▲' : chg < 0 ? '▼' : '▲'; badgeEl.className = `qc-badge ${tone}`; }
         card.classList.remove('up', 'dn'); card.classList.add(tone);
       }
-      if (timeEl) timeEl.textContent = 'ao vivo · ' + l.src + ' ' + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      card.title = 'Preço ao vivo pela ' + l.src + (l.src === 'Capital.com' ? ' (CFD)' : '') + '; o gráfico e o fechamento anterior vêm do Yahoo.';
+      if (timeEl) timeEl.textContent = 'tempo real · ' + l.src + ' ' + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      card.classList.add('qc-rt');
+      card.title = 'Preço em tempo real pela ' + l.src + (l.src === 'Capital.com' ? ' (CFD)' : '') + '; o gráfico e o fechamento anterior vêm do Yahoo.';
       if (dir) flashCard(card, dir > 0 ? 'up' : 'dn');
     }
   }

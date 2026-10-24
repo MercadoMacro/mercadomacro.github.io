@@ -2865,3 +2865,75 @@ html[data-card-time="on"] #market-panel .qc-time { display:inline; }
 @media (max-width: 900px) {
   .market-wrap, .news-wrap, .generic-wrap, .heatmap-wrap, #mesa-root .ms-wrap { padding-bottom:calc(84px + env(safe-area-inset-bottom)); }
 }
+
+/* =====================================================================
+   PEDIDOS DO SEVERINO (24/10/2026)
+   atualização automática acessível, topo sem frase, textos de apoio maiores,
+   cards no teclado, áreas fixas na navegação do celular
+   ===================================================================== */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0; }
+
+/* Atualização automática: botão de verdade (role="switch"), mesmo desenho da chave antiga */
+button.toggle-switch { background:none; border:0; padding:0; margin:0; font-family:inherit; font-size:11px; line-height:1.2; text-align:left; }
+.toggle-switch:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
+@media (min-width: 1101px) {
+  body.hdr2 .topbar-right #live-toggle { text-transform:none; letter-spacing:0; font-size:12.5px; font-weight:600; gap:10px; }
+  body.hdr2 .topbar-right #live-toggle:focus-visible { outline-offset:2px; border-radius:11px; }
+}
+
+/* Cards clicáveis no teclado (Tab chega, Enter ou Espaço age) */
+html body .quote-card:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--radius, 10px); }
+/* selo "tempo real": só nos cards que recebem o preço continuamente (Deriv, Capital.com, Binance) */
+html body #market-panel .quote-card.qc-rt .qc-time { display:inline; color:var(--pos-ink); }
+
+/* Topo sem a faixa de frases (padrão): a busca ocupa o lugar e o horário da última atualização volta à vista */
+@media (min-width: 1101px) {
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) { grid-template-columns:auto minmax(0,1fr); column-gap:24px; row-gap:12px; align-items:center; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) .brand { grid-area:logo; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) .topbar-right { grid-area:right; min-width:0; height:42px; gap:8px; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) .topbar-right .icon-btn { height:42px; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) .cmdk-hint { order:-2; flex:1 1 auto; max-width:560px; min-width:200px !important; height:42px; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) .cmdk-hint .tx { display:inline !important; }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) #tk-updated { display:inline !important; order:-1; margin-left:auto; padding:0 4px 0 12px; font-size:12px; color:var(--text-2); }
+  html body.hdr2 .topbar.topbar:not(:has(> .qbanner)) #tk-updated b { color:var(--text); font-weight:600; }
+  /* barra lateral aberta: o logo do topo sai, a linha de cima é toda da busca e dos controles */
+  html body.hdr2.has-side:not(.side-collapsed) .topbar.topbar:not(:has(> .qbanner)) { grid-template-columns:minmax(0,1fr); grid-template-areas:"right" "ticker"; }
+  html body.hdr2.has-side:not(.side-collapsed) .topbar.topbar:not(:has(> .qbanner)) .brand { display:none; }
+}
+
+/* Leitura: código do ativo, fonte, horário e textos de apoio com 12-13px (antes 9-11px) */
+html body .quote-card .qc-symbol, html body #market-panel .qc-symbol { font-size:12px; letter-spacing:.01em; }
+html body #market-panel .qc-time, html[data-card-source="on"] body #market-panel .qc-source { font-size:12px; }
+html body #market-panel .qc-note { font-size:12px; }
+html body .qc-3m { font-size:12px; }
+html body .tk-updated { font-size:12px; }
+html body .refresh-bar .info { font-size:12.5px; }
+html body .ticker .label, html body .ticker .chg { font-size:12px; }
+html body .nc-source, html body .nc-time { font-size:12px; }
+html body .nc-mins { font-size:11.5px; }
+html body #mesa-root :is(.src, .ms-foot, .ms-note) { font-size:12px; }
+@media (min-width: 1101px) {
+  body.hdr2 .tk-status { font-size:12px; }
+  body.hdr2 .tk-status .ms-pill { font-size:11.5px; }
+}
+/* para compensar: numeração decorativa dos atalhos de seção menor */
+html body .mj-n { font-size:9.5px; }
+@media (max-width: 640px) {
+  html body .topbar.topbar .brand-text .sub > * { font-size:12px; }
+  html body .topbar.topbar .tk-updated { font-size:11.5px; }
+}
+
+/* Celular: áreas fixas na barra (1 a 3 + Todas) e alfinete em cada item de "Todas" */
+@media (max-width: 900px) {
+  .mn-bar { grid-template-columns:repeat(var(--mn-n, 4), minmax(0,1fr)); }
+  .mn-bar button span { max-width:100%; text-align:center; line-height:1.2; overflow-wrap:anywhere; }
+  .mn-row { display:flex; align-items:center; gap:4px; }
+  .mn-row > button[data-mobile-tab] { flex:1; min-width:0; }
+  #mobile-navigation .mn-pin { flex:0 0 44px; width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; color:var(--text-3); font-size:13px; }
+  #mobile-navigation .mn-pin i { transform:rotate(45deg); transition:transform .15s; }
+  #mobile-navigation .mn-pin[aria-pressed="true"] { color:var(--accent-ink); background:var(--accent-soft); }
+  #mobile-navigation .mn-pin[aria-pressed="true"] i { transform:none; }
+  .mn-hint { margin:10px 8px 0; font-size:12px; color:var(--text-3); }
+  .mn-live { margin:8px 8px 0; font-size:12px; color:var(--text-2); }
+  .mn-live:empty { display:none; }
+}

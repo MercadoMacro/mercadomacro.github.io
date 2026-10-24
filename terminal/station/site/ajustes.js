@@ -11,9 +11,10 @@
   window.__ajustesLoaded = true;
 
   const KEY = 'trader_prefs_v1', IMG_KEY = 'trader_wallpaper_img';
+  // frasesTopo: faixa de frases no topo, desligada por padrão (a chave antiga "frases" era salva como 'on' para todos e fica ignorada)
   const DEF = {
     mode: 'manual', dayFrom: 7, dayTo: 19, accent: 'ambar', wp: 'grade', wpOp: 1, wpUrl: '', wpDim: 55, wpBlur: 0,
-    mesaLayout: null, cardSource: false, cardTime: false, glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frases: 'on', startTab: ''
+    mesaLayout: null, cardSource: false, cardTime: false, glass: false, density: 'normal', scale: 1, updown: 'padrao', motion: 'on', ticker: 'on', frasesTopo: 'off', startTab: ''
   };
   let P;
   try { P = { ...DEF, ...(JSON.parse(localStorage.getItem(KEY) || '{}') || {}) }; } catch (e) { P = { ...DEF }; }
@@ -149,8 +150,8 @@
         <h3>Painel</h3>
         <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab" aria-label="Abrir sempre em"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${sw('ticker', P.ticker !== 'off', 'Faixa de cotações no topo')}
-        ${sw('frases', P.frases !== 'off', 'Frases de investidores abaixo das cotações')}
-        ${liveOn != null ? sw('live', liveOn, 'Atualização ao vivo das cotações') : ''}
+        ${sw('frasesTopo', P.frasesTopo === 'on', 'Frases de investidores no topo')}
+        ${liveOn != null ? sw('live', liveOn, 'Atualização automática das cotações (5 min no pregão, 15 min fora)') : ''}
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
       <section class="aj-sec">
@@ -238,7 +239,7 @@
     lastFocus?.focus?.();
   }
   window.openSettings = open;
-  window.addEventListener('prefs-changed', () => { try { P.frases = (JSON.parse(localStorage.getItem(KEY) || '{}') || {}).frases || 'on'; } catch (e) { /* nada */ } if (box && !box.hidden) render(); });
+  window.addEventListener('prefs-changed', () => { try { P.frasesTopo = (JSON.parse(localStorage.getItem(KEY) || '{}') || {}).frasesTopo === 'on' ? 'on' : 'off'; } catch (e) { /* nada */ } if (box && !box.hidden) render(); });
 
   /* ---------------- interação ---------------- */
   function onClick(e) {
@@ -278,7 +279,7 @@
       if (k === 'cardSource' || k === 'cardTime') P[k] = P[k] !== true;
       if (k === 'motion') P.motion = P.motion === 'off' ? 'on' : 'off';
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
-      if (k === 'frases') { P.frases = P.frases === 'off' ? 'on' : 'off'; save(); window.__frasesSync?.(); }
+      if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
       save(); applyAll();
       return setTimeout(render, k === 'live' ? 60 : 0);
