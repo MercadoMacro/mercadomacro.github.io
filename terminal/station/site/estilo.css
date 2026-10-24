@@ -3036,3 +3036,22 @@ html body .mj-n { font-size:9.5px; }
   /* 5) sem o botão de atualizar na faixa */
   html body.hdr2 .ticker .refresh-btn { display:none; }
 }
+
+/* TOPO SEM BOTÕES (24/10/2026, Severino): Atualização automática, Buscar, Ajustes e o menu "..." saem do topo
+   no computador e vão para a barra lateral. Topo fica só com a frase e a faixa de cotações.
+   Backup e Atualizar cotações seguem no Ctrl+K (e Alt+R). Celular continua como antes. */
+@media (min-width: 901px) {
+  body.has-side .topbar .topbar-right { display:none !important; }
+  html body.has-side .topbar.topbar:has(> .qbanner) { grid-template-columns:minmax(0,1fr) !important; grid-template-areas:"qb" "sub" "ticker" !important; }
+  html body.hdr2.has-side .topbar.topbar:has(> .qbanner) { grid-template-areas:"qb" "ticker" !important; }
+  html body.has-side .topbar.topbar:not(:has(> .qbanner)) { grid-template-columns:minmax(0,1fr) !important; grid-template-areas:"sub" "ticker" !important; }
+  html body.hdr2.has-side .topbar.topbar:not(:has(> .qbanner)) { grid-template-areas:"ticker" !important; }
+  body.has-side .side #side-search { margin-bottom:6px; color:var(--text-3); border:1px solid var(--line); }
+  body.has-side .side #side-search:hover { color:var(--text); }
+  body.has-side .side .si-kbd { margin-left:auto; font:500 10.5px/1 var(--mono, monospace); padding:3px 5px; border:1px solid var(--line); border-radius:5px; color:var(--text-3); white-space:nowrap; transition:opacity .15s ease; }
+  body.has-side.side-collapsed .side .si-kbd { opacity:0; }
+  body.has-side.side-collapsed .side #side-search { border-color:transparent; }
+  body.has-side .side #side-live[aria-checked="true"] .si-switch { background:var(--pos); }
+  body.has-side .side #side-live[aria-checked="true"] .si-switch::after { background:#fff; transform:translateX(16px); }
+  body.has-side .side #side-live[aria-checked="true"] .si-svg { color:var(--pos-ink, var(--pos)); }
+}

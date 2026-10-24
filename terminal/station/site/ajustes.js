@@ -113,7 +113,7 @@
         ${seg('mode', MODES, curMode())}
         <p class="aj-note">${P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
           ? `Claro das <select data-num="dayFrom">${[...Array(24).keys()].map((h) => `<option ${h === P.dayFrom ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select> às <select data-num="dayTo">${[...Array(24).keys()].map((h) => `<option ${h === P.dayTo ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select>, escuro no resto do dia.`
-          : 'O botão de lua e sol no topo (ou Alt+L) também troca.'}</p>
+          : 'A chave Aparência na barra lateral (ou Alt+L) também troca.'}</p>
       </section>
       <section class="aj-sec">
         <h3>Cor de destaque</h3>

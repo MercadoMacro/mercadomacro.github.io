@@ -4055,6 +4055,7 @@ window.__onTabSwitch = (tabId) => {
     'resumo': '<path class="f" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8h-6Z"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5"/>',
     'aparencia': '<circle class="f" cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
     'ajustes': '<path d="m9 3-.6 2.3-2 .9-2.1-.7-2 3.5 1.6 1.6v2.8L2.3 15l2 3.5 2.1-.7 2 .9L9 21h6l.6-2.3 2-.9 2.1.7 2-3.5-1.6-1.6v-2.8L21.7 9l-2-3.5-2.1.7-2-.9L15 3Z"/><circle cx="12" cy="12" r="3"/>',
+    'auto': '<path d="M20 11a8 8 0 0 0-14.9-3.6M4 4v4h4M4 13a8 8 0 0 0 14.9 3.6M20 20v-4h-4"/>',
     'recolher': '<path d="m14 6-6 6 6 6M8 12h13"/>',
     'expandir': '<path d="m10 6 6 6-6 6M3 12h13"/>'
   };
@@ -4069,12 +4070,15 @@ window.__onTabSwitch = (tabId) => {
   side.setAttribute('aria-label', 'Navegação');
   side.innerHTML = `
     <div class="side-brand"><svg class="sb-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg><b>mercado macro</b></div>
+    <button class="side-item" id="side-search" title="Buscar ativo, aba ou ação (Ctrl+K)">${svg('buscar')}<span class="si-lbl">Buscar</span><span class="si-kbd">Ctrl K</span></button>
     <nav class="side-nav">${GROUPS.map(([g, ids]) => `<div class="side-group">${g}</div>` + ids.map(tabInfo).filter(Boolean).map(t =>
       `<button class="side-item" data-tab="${t.id}" title="${escapeHTML(t.label)}">${SI[t.id] ? svg(t.id) : `<i class="si-ico ${t.ico}"></i>`}<span class="si-lbl">${escapeHTML(t.label)}</span>${t.soon ? '<span class="si-soon">EM BREVE</span>' : `<span class="si-badge" data-badge="${t.id}" hidden></span>`}</button>`
     ).join('')).join('')}</nav>
     <div class="side-foot">
       <button class="side-item" id="side-summary" title="Resumo para o cliente (Alt+M)">${svg('resumo')}<span class="si-lbl">Resumo para cliente</span></button>
+      <button class="side-item" id="side-live" title="Atualização automática: busca as cotações a cada 5 min no pregão e a cada 15 min fora dele" role="switch" aria-checked="false">${svg('auto')}<span class="si-lbl">Auto-atualizar</span><span class="si-switch" aria-hidden="true"></span></button>
       <button class="side-item" id="side-theme" title="Aparência: tema claro ou escuro (Alt+L)" role="switch" aria-checked="false">${svg('aparencia')}<span class="si-lbl">Aparência</span><span class="si-switch" aria-hidden="true"></span></button>
+      <button class="side-item" id="side-settings" title="Ajustes do painel (Alt+A)">${svg('ajustes')}<span class="si-lbl">Ajustes</span></button>
       <button class="side-item" id="side-collapse" title="Recolher/expandir a barra">${svg('recolher')}<span class="si-lbl">Recolher</span></button>
     </div>`;
   document.body.prepend(side);
@@ -4135,7 +4139,13 @@ window.__onTabSwitch = (tabId) => {
   $('#side-theme').addEventListener('click', () => { $('#theme-toggle')?.click(); setTimeout(syncTheme, 0); });
   new MutationObserver(syncTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   syncTheme();
-  // busca (Ctrl+K), Ajustes e situação das bolsas ficam só no topo
+  // busca, atualização automática e Ajustes moram na barra (o topo ficou só com a frase e as cotações)
+  $('#side-search').addEventListener('click', () => document.querySelector('.cmdk-hint')?.click());
+  $('#side-settings').addEventListener('click', () => window.openSettings?.());
+  const syncLive = () => $('#side-live')?.setAttribute('aria-checked', $('#live-toggle')?.getAttribute('aria-checked') === 'true' ? 'true' : 'false');
+  $('#side-live').addEventListener('click', () => { $('#live-toggle')?.click(); setTimeout(syncLive, 0); });
+  if ($('#live-toggle')) new MutationObserver(syncLive).observe($('#live-toggle'), { attributes: true, attributeFilter: ['aria-checked'] });
+  syncLive();
   // Efeito "lupa" do Dock do Mac: com a barra recolhida, os ícones perto do mouse crescem
   (() => {
     if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -4373,6 +4383,7 @@ window.__onTabSwitch = (tabId) => {
     ['fa-clipboard-list', 'Resumo para o cliente', 'whatsapp abertura fechamento', () => openSummaryModal()],
     ['fa-sync-alt', 'Atualizar cotações', 'refresh recarregar', () => updateTicker(false)],
     ['fa-adjust', 'Alternar tema claro/escuro', 'dark light modo', () => $('#theme-toggle')?.click()],
+    ['fa-database', 'Backup e restauração', 'exportar importar notas preferencias', () => $('#backup-btn')?.click()],
     ['fa-cog', 'Ajustes do painel', 'configuracoes tema papel de parede cor wallpaper fonte', () => window.openSettings?.()],
     ['fa-newspaper', 'Gerar briefing de notícias', 'briefing noticias', () => { switchTab('news-panel'); setTimeout(() => $('#briefing-btn')?.click(), 250); }],
     ['fa-calendar-week', 'Agenda da semana', 'calendario eventos', () => $('#ecal-week-btn')?.click()],
