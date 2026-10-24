@@ -3055,3 +3055,15 @@ html body .mj-n { font-size:9.5px; }
   body.has-side .side #side-live[aria-checked="true"] .si-switch::after { background:#fff; transform:translateX(16px); }
   body.has-side .side #side-live[aria-checked="true"] .si-svg { color:var(--pos-ink, var(--pos)); }
 }
+/* cotações em cima, frase embaixo (24/10/2026, Severino) */
+@media (min-width: 901px) {
+  html body.has-side .topbar.topbar:has(> .qbanner) { grid-template-areas:"ticker" "sub" "qb" !important; }
+  html body.hdr2.has-side .topbar.topbar:has(> .qbanner) { grid-template-areas:"ticker" "qb" !important; }
+  html body.has-side .topbar.topbar:has(> .qbanner) .ticker { margin-top:0; }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  html body.has-side .topbar.topbar { display:grid; grid-template-columns:minmax(0,1fr) !important; grid-template-areas:"ticker" "sub" "qb" !important; row-gap:10px; }
+  html body.has-side .topbar.topbar > .brand { grid-area:sub; }
+  html body.has-side .topbar.topbar > .qbanner { grid-area:qb; grid-column:auto; grid-row:auto; max-width:none; }
+  html body.has-side .topbar.topbar > .ticker { grid-area:ticker; margin-top:0; }
+}
