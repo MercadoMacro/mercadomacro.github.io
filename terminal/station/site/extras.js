@@ -77,6 +77,9 @@
           const v = parseYahooChart(chart);
           const meta = chart?.chart?.result?.[0]?.meta || {};
           v.currency = meta.currency || '';
+          // dados do dia para o painel do ativo (watchlist-table.js); sem dado, fica "—"
+          const op = (chart?.chart?.result?.[0]?.indicators?.quote?.[0]?.open || []).find((x) => x != null && isFinite(x));
+          v.dia = { abertura: op ?? null, max: meta.regularMarketDayHigh ?? null, min: meta.regularMarketDayLow ?? null, ant: meta.chartPreviousClose ?? meta.previousClose ?? null };
           out[sym] = { v, name: meta.shortName || meta.longName || '' };
         } catch (e) { /* sem dados para esse ativo */ }
       });

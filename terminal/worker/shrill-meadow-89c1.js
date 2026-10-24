@@ -377,10 +377,11 @@ async function handleIndBundle(url, env, ctx, cors) {
 // =========================================================
 // /history?symbols=^BVSP,PETR4.SA,...  — fechamentos diários dos últimos 3 meses (mini gráfico "3M" dos cards)
 // &r=1d (pregão do dia, de 5 em 5 min) ou &r=5d (5 dias, de 30 em 30 min): gráfico da Mesa.
+// &r=1mo e &r=1y (fechamentos diários): painel do ativo na Watchlist.
 // Devolve { "<símbolo>": { t: [segundos], c: [fechamentos], off } | { error } }. Cache de borda de 6 h (1d: 2 min, 5d: 15 min).
 // =========================================================
 const HIST_TTL = 6 * 3600;
-const HIST_FAIXAS = { '3mo': { iv: '1d', ttl: HIST_TTL }, '1d': { iv: '5m', ttl: 120 }, '5d': { iv: '30m', ttl: 900 } };
+const HIST_FAIXAS = { '3mo': { iv: '1d', ttl: HIST_TTL }, '1d': { iv: '5m', ttl: 120 }, '5d': { iv: '30m', ttl: 900 }, '1mo': { iv: '1d', ttl: 3600 }, '1y': { iv: '1d', ttl: HIST_TTL } };
 async function handleHistory(url, ctx, cors) {
   const faixa = HIST_FAIXAS[url.searchParams.get('r')] ? url.searchParams.get('r') : '3mo';
   const { iv, ttl: faixaTtl } = HIST_FAIXAS[faixa];
