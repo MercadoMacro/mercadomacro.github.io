@@ -3067,3 +3067,7 @@ html body .mj-n { font-size:9.5px; }
   html body.has-side .topbar.topbar > .qbanner { grid-area:qb; grid-column:auto; grid-row:auto; max-width:none; }
   html body.has-side .topbar.topbar > .ticker { grid-area:ticker; margin-top:0; }
 }
+
+/* FONTES E AVISOS: saem do rodapé das abas e ficam em Ajustes > Sobre (24/10/2026) */
+#site-foot { display:none !important; }
+.aj-sobre .site-foot { margin-top:0; padding:0; border-top:0; }

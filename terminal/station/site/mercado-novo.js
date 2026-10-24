@@ -305,7 +305,6 @@
         <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
-      <p class="mn-fonte">Fonte: Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv, dólar, VIX e futuros pela Capital.com em CFD, cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
     </div>`;
   }
 
@@ -397,7 +396,6 @@
   .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn .up { color:var(--pos-ink, var(--pos)); } .mn .dn { color:var(--neg); } .mn .na, .mn .eq { color:var(--text-3); }
-  .mn-fonte { margin:0; font-size:12px; color:var(--text-3); }
   @media (max-width: 640px) { .mn-grid { grid-template-columns:1fr; } .mn-st { display:none; } .mn-mais { margin-left:auto; } }
   `;
   document.head.appendChild(css);

@@ -4789,7 +4789,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=11';
+  sc.src = 'mercado-novo.js?v=12';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -4958,12 +4958,13 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
-   RODAPÉ (fontes e aviso do FRED): o painel rola por dentro de cada aba,
-   então o rodapé é colocado no fim da área que rola da aba aberta
+   RODAPÉ (fontes e aviso do FRED): desde 24/10/2026 fica só em Ajustes > Sobre (ajustes.js lê o
+   #site-foot escondido). O código abaixo, que levava o rodapé ao fim de cada aba, ficou desligado.
    ========================================================= */
 (() => {
   const foot = document.getElementById('site-foot');
-  if (!foot) return;
+  const DESLIGADO = true; // rodapé agora mora em Ajustes > Sobre
+  if (!foot || DESLIGADO) return;
   let host = null, mo = null;
   const scroller = (panel) => {
     const own = panel.querySelector(':scope > .market-wrap, :scope > .news-wrap, :scope > .generic-wrap');

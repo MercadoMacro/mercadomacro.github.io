@@ -177,6 +177,11 @@
           <dt><kbd>Alt</kbd> <kbd>M</kbd></dt><dd>Resumo para o cliente</dd>
           <dt><kbd>Esc</kbd></dt><dd>Fechar janelas</dd>
         </dl>
+      </section>
+      <section class="aj-sec aj-sobre">
+        <h3>Sobre</h3>
+        <div class="site-foot">${document.getElementById('site-foot')?.innerHTML || ''}</div>
+        <p class="aj-note"><b>Aba Mercado:</b> cotações do Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv; dólar, VIX e futuros pela Capital.com em CFD; cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
       </section>`;
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
