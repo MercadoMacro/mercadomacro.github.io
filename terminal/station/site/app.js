@@ -4095,6 +4095,21 @@ window.__onTabSwitch = (tabId) => {
   };
   applyCollapsed();
 
+  // recolhida: ao passar o mouse, abre por cima do painel (sem empurrar o conteúdo), como no Cloudflare
+  let peekT = 0;
+  const peek = (on) => {
+    clearTimeout(peekT);
+    peekT = setTimeout(() => {
+      if (on && !collapsed) return;
+      document.body.classList.toggle('side-peek', on);
+      document.body.classList.toggle('side-collapsed', on ? false : collapsed);
+    }, on ? 120 : 80);
+  };
+  if (matchMedia('(hover: hover)').matches) {
+    side.addEventListener('mouseenter', () => { if (collapsed) peek(true); });
+    side.addEventListener('mouseleave', () => { if (document.body.classList.contains('side-peek')) peek(false); });
+  }
+
   const syncActive = () => {
     const active = document.querySelector('.tab-btn.active')?.dataset.tab;
     side.querySelectorAll('.side-item[data-tab]').forEach(b => {
@@ -4146,6 +4161,7 @@ window.__onTabSwitch = (tabId) => {
   })();
   $('#side-collapse').addEventListener('click', () => {
     collapsed = !collapsed;
+    clearTimeout(peekT); document.body.classList.remove('side-peek');
     applyCollapsed();
     try { localStorage.setItem(SIDE_KEY, collapsed ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
     // gráficos que dependem da largura

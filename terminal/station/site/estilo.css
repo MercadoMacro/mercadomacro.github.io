@@ -2977,3 +2977,9 @@ html body .mj-n { font-size:9.5px; }
 
 /* ícones da barra lateral com leve preenchimento (conjunto novo, 24/10/2026) */
 .side .si-svg .f { fill: currentColor; fill-opacity: .18; stroke: none; }
+
+/* barra recolhida abre por cima ao passar o mouse (efeito do painel da Cloudflare) */
+@media (min-width:901px) {
+  body.has-side.side-peek { padding-left: calc(76px + 24px); }
+  body.has-side.side-peek .side { z-index: 60; box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+}
