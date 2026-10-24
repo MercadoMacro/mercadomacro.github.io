@@ -7,7 +7,7 @@
 (() => {
   if (window.__comexRender) return;
   const URL_DADOS = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/comex/comex.json';
-  const CACHE_KEY = 'comex_cache_v1', TTL = 6 * 3600 * 1000;
+  const CACHE_KEY = 'comex_cache_v2', TTL = 6 * 3600 * 1000;
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ok = (v) => v != null && isFinite(v);
@@ -21,7 +21,8 @@
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { cache = null; }
 
   async function load(force) {
-    if (busy || (!force && cache && Date.now() - cache.ts < TTL)) return;
+    // cópia sem commodities ou destinos é da primeira versão do arquivo: busca de novo
+    if (busy || (!force && cache?.d?.produtos && cache?.d?.paises && Date.now() - cache.ts < TTL)) return;
     busy = true; draw();
     try {
       const r = await fetchT(URL_DADOS + '?t=' + Math.floor(Date.now() / 600000), {}, 20000);

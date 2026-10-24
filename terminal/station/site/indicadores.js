@@ -788,7 +788,7 @@
     if (comexAsked) return;
     comexAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'comex.js?v=2';
+    sc.src = 'comex.js?v=3';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
     document.body.appendChild(sc);
