@@ -4782,20 +4782,21 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
-   MERCADO NOVO (protótipo): cartões por região no lugar da aba Mercado.
-   Entra com ?mercado=novo (fica lembrado neste navegador); ?mercado=classico volta.
+   MERCADO NOVO: cartões por região no lugar da grade da aba Mercado (padrão desde 24/10/2026).
+   A grade antiga continua por baixo (dá os preços ao vivo, Selic, IPCA e minério) e volta com
+   ?mercado=classico ou o botão "Mercado clássico" (lembrado neste navegador); ?mercado=novo traz de volta.
    ========================================================= */
 (() => {
-  let novo = false;
+  let novo = true;
   try {
     const m = new URLSearchParams(location.search).get('mercado');
-    if (m === 'novo') localStorage.setItem('mercado_novo', '1');
-    if (m === 'classico') localStorage.removeItem('mercado_novo');
-    novo = localStorage.getItem('mercado_novo') === '1';
+    if (m === 'novo') localStorage.removeItem('mercado_novo');
+    if (m === 'classico') localStorage.setItem('mercado_novo', '0');
+    novo = localStorage.getItem('mercado_novo') !== '0';
   } catch (e) { /* sem armazenamento */ }
   if (!novo) return;
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=7';
+  sc.src = 'mercado-novo.js?v=8';
   document.body.appendChild(sc);
 })();
 /* =========================================================
