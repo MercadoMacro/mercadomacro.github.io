@@ -242,6 +242,16 @@
       <polyline points="${pts.join(' ')}" fill="none" stroke="currentColor" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
     </svg><div class="mn-tip" hidden></div>`;
   }
+  // faixa "3M" abaixo do gráfico (como nos cartões antigos): tendência de 3 meses do ativo escolhido
+  function tres(r) {
+    const s = escolha(r), c = G[`3mo|${s}`]?.c;
+    if (!c || c.length < 2) return '';
+    const q = Q[s], ult = q && ok(q.v) ? q.v : c[c.length - 1];
+    const v = INFO[s].juros ? (ult - c[0]) * 100 : (ult / c[0] - 1) * 100;
+    const lo = Math.min(...c), hi = Math.max(...c), sp = hi - lo || 1;
+    const pts = c.map((x, i) => `${((i / (c.length - 1)) * 200).toFixed(1)},${(2 + (1 - (x - lo) / sp) * 14).toFixed(1)}`).join(' ');
+    return `<div class="mn-3m" title="Últimos 3 meses"><span>3M</span><svg viewBox="0 0 200 18" preserveAspectRatio="none" class="${cls(v)}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg><b class="${cls(v)}">${INFO[s].juros ? pb(v) : pct(v, 1)}</b></div>`;
+  }
   function varFaixa(r) {
     const s = escolha(r), f = faixa(r), q = Q[s];
     if (f === '1d') return INFO[s]?.juros ? pb(bp(s)) : pct(atual(s)?.c);
@@ -283,6 +293,7 @@
         <span class="mn-faixas" role="group" aria-label="Período do gráfico">${[['1d', '1D'], ['5d', '5D'], ['3mo', '3M']].map(([k, t]) => `<button type="button" data-f="${k}" data-r="${r.id}" class="${f === k ? 'on' : ''}" aria-pressed="${f === k}">${t}</button>`).join('')}</span>
       </div>
       <div class="mn-chart" data-r="${r.id}">${grafico(r)}</div>
+      ${faixa(r) === '3mo' ? '' : tres(r)}
       ${fr ? `<p class="mn-frase">${esc(fr)}</p>` : ''}
       <div class="mn-rows">${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
     </article>`;
@@ -379,6 +390,11 @@
   .mn-base { stroke:var(--text-3); stroke-width:1; stroke-dasharray:3 4; opacity:.55; vector-effect:non-scaling-stroke; }
   .mn-chart-vazio { height:96px; display:grid; place-items:center; font-size:12px; color:var(--text-3); border:1px dashed var(--line); border-radius:10px; }
   .mn-tip { position:absolute; top:-4px; width:120px; text-align:center; font-size:11px; color:var(--text); background:var(--surface-2, var(--surface)); border:1px solid var(--line); border-radius:6px; padding:2px 4px; pointer-events:none; white-space:nowrap; }
+  .mn-3m { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:center; font-size:12px; color:var(--text-3); }
+  .mn-3m span { font-family:var(--mono, monospace); letter-spacing:.04em; }
+  .mn-3m svg { width:100%; height:18px; display:block; }
+  .mn-3m svg.up { color:var(--pos); } .mn-3m svg.dn { color:var(--neg); } .mn-3m svg.na, .mn-3m svg.eq { color:var(--text-3); }
+  .mn-3m b { font-family:var(--mono, monospace); font-weight:500; }
   .mn-frase { margin:0; font-size:12.5px; color:var(--text-2); line-height:1.4; border-left:2px solid var(--accent); padding-left:8px; }
   .mn-rows { display:flex; flex-direction:column; }
   .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
