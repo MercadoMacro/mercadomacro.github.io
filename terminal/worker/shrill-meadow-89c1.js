@@ -376,22 +376,26 @@ async function handleIndBundle(url, env, ctx, cors) {
 
 // =========================================================
 // /history?symbols=^BVSP,PETR4.SA,...  — fechamentos diários dos últimos 3 meses (mini gráfico "3M" dos cards)
-// Devolve { "<símbolo>": { t: [segundos], c: [fechamentos], off } | { error } }. Cache de borda de 6 h.
+// &r=1d (pregão do dia, de 5 em 5 min) ou &r=5d (5 dias, de 30 em 30 min): gráfico da Mesa.
+// Devolve { "<símbolo>": { t: [segundos], c: [fechamentos], off } | { error } }. Cache de borda de 6 h (1d: 2 min, 5d: 15 min).
 // =========================================================
 const HIST_TTL = 6 * 3600;
+const HIST_FAIXAS = { '3mo': { iv: '1d', ttl: HIST_TTL }, '1d': { iv: '5m', ttl: 120 }, '5d': { iv: '30m', ttl: 900 } };
 async function handleHistory(url, ctx, cors) {
+  const faixa = HIST_FAIXAS[url.searchParams.get('r')] ? url.searchParams.get('r') : '3mo';
+  const { iv, ttl: faixaTtl } = HIST_FAIXAS[faixa];
   const symbols = [...new Set((url.searchParams.get('symbols') || '').split(',').map((s) => s.trim()).filter(Boolean))].sort();
   if (!symbols.length) return json({ error: 'Parâmetro symbols ausente' }, 400, cors);
   if (symbols.length > MAX_SYMBOLS) return json({ error: `Máximo de ${MAX_SYMBOLS} símbolos por chamada` }, 400, cors);
   if (!symbols.every((s) => SYMBOL_RE.test(s))) return json({ error: 'Símbolo inválido' }, 400, cors);
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/history-v1?symbols=' + encodeURIComponent(symbols.join(',')));
+  const cacheKey = new Request('https://cache.local/history-v1?symbols=' + encodeURIComponent(symbols.join(',')) + (faixa === '3mo' ? '' : '&r=' + faixa));
   const hit = await cache.match(cacheKey);
-  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=1800', 'X-Cache': 'HIT', ...cors } });
+  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${Math.min(1800, faixaTtl)}`, 'X-Cache': 'HIT', ...cors } });
   const entries = await Promise.all(symbols.map(async (sym) => {
     try {
-      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=3mo`, {
-        headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: HIST_TTL, cacheEverything: true }
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${iv}&range=${faixa}`, {
+        headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: faixaTtl, cacheEverything: true }
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const res = (await r.json())?.chart?.result?.[0];
@@ -408,10 +412,10 @@ async function handleHistory(url, ctx, cors) {
   const body = JSON.stringify(Object.fromEntries(entries));
   if (ok >= Math.ceil(entries.length * 0.7)) {
     // com algum símbolo faltando, guarda só por 15 min para ele voltar logo
-    const ttl = ok === entries.length ? HIST_TTL : 900;
+    const ttl = ok === entries.length ? faixaTtl : Math.min(900, faixaTtl);
     ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${ttl}` } })));
   }
-  return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=900', 'X-Cache': 'MISS', ...cors } });
+  return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${Math.min(900, faixaTtl)}`, 'X-Cache': 'MISS', ...cors } });
 }
 
 // Empresas dos EUA cujos balanços aparecem no Calendário (as maiores do S&P 500 + ADRs brasileiros e da América Latina)

@@ -4792,8 +4792,16 @@ function newsReadMins(n) {
   const load = () => {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
+    // protótipo da Mesa nova: entra com ?mesa=nova (fica lembrado neste navegador), ?mesa=classica volta
+    let nova = false;
+    try {
+      const m = new URLSearchParams(location.search).get('mesa');
+      if (m === 'nova') localStorage.setItem('mesa_nova', '1');
+      if (m === 'classica') localStorage.removeItem('mesa_nova');
+      nova = localStorage.getItem('mesa_nova') === '1';
+    } catch (e) { /* sem armazenamento */ }
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=20';
+    sc.src = nova ? 'mesa-nova.js?v=1' : 'mesa.js?v=20';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
