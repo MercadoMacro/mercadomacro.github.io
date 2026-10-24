@@ -97,3 +97,7 @@
   .wn-preco b { font-size:26px; }
 }
 html[data-motion="off"] .wn-side { animation:none; }
+
+.wn-cx h4 { margin-top:16px; }
+.wn-cx dd small { margin-left:6px; font-size:12px; }
+.wn-cx-nota { margin:6px 0 0; font-size:11.5px; color:var(--text-3); }

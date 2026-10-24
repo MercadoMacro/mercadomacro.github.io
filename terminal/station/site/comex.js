@@ -62,7 +62,47 @@
           <svg class="cx-svg" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Saldo da balança comercial nos últimos 24 meses"><line x1="0" x2="${W}" y1="${z}" y2="${z}" class="z"/>${barras}${rotulos}</svg></div>
         <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Exportações</th><th>Importações</th><th>Saldo</th></tr></thead><tbody>${tab}</tbody></table>
       </div>
+      ${extras(d, ult, ms)}
       <p class="ib-note">Valores em bilhões de dólares (FOB). O MDIC divulga o mês fechado na primeira semana do mês seguinte.</p>`;
+  }
+
+  const vol = (kg) => (!ok(kg) ? '—' : kg >= 1e9 ? `${(kg / 1e9).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi t` : `${Math.round(kg / 1e6).toLocaleString('pt-BR')} mil t`);
+  const r1 = (v) => (ok(v) ? Math.round(v * 10) / 10 || 0 : null); // arredonda antes do sinal: sem "−0,0"
+  const varr = (a, b) => (ok(a) && ok(b) && b ? r1((a / b - 1) * 100) : null);
+  const pp = (v) => (ok(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} p.p.` : '—');
+  const fat = (v) => (ok(v) ? `${v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '—');
+
+  // resumo de uma commodity no último mês: valor, volume, variação em 12 meses e acumulado do ano (usado também pela watchlist)
+  function resumoProduto(p, ult) {
+    const [ano, mes] = ult.split('-').map(Number), ant = `${ano - 1}-${String(mes).padStart(2, '0')}`;
+    const em = (m) => p.meses.find((x) => x.m === m);
+    const soma = (a, k) => p.meses.filter((x) => x.m.startsWith(a + '-') && +x.m.slice(5) <= mes).reduce((t, x) => t + (x[k] || 0), 0);
+    const u = em(ult), h = em(ant);
+    return { nome: p.nome, m: ult, fob: u?.fob, kg: u?.kg, vFob: varr(u?.fob, h?.fob), vKg: varr(u?.kg, h?.kg), ytd: soma(ano, 'fob'), vYtd: varr(soma(ano, 'fob'), soma(ano - 1, 'fob')) };
+  }
+
+  function extras(d, ult, ms) {
+    let out = '';
+    if (Array.isArray(d.produtos) && d.produtos.length) {
+      const [ano, mes] = ult.m.split('-').map(Number);
+      const linhas = d.produtos.map((p) => resumoProduto(p, ult.m)).sort((a, b) => (b.fob || 0) - (a.fob || 0)).map((r) => `<tr><th>${esc(r.nome)}</th><td>${bi(r.fob)}</td><td class="${cls(r.vFob)}">${pct(r.vFob)}</td><td>${vol(r.kg)}</td><td class="${cls(r.vKg)}">${pct(r.vKg)}</td><td>${bi(r.ytd, 1)}</td><td class="${cls(r.vYtd)}">${pct(r.vYtd)}</td></tr>`).join('');
+      out += `<h4 class="cx-sub">Commodities exportadas em ${esc(nomeMes(ult.m, true))}</h4>
+        <div class="cx-scroll"><table class="ib-tb cx-tb cx-pr"><thead><tr><th>Produto</th><th>US$ bi</th><th>12 meses</th><th>Volume</th><th>12 meses</th><th>No ano</th><th>vs ${ano - 1}</th></tr></thead><tbody>${linhas}</tbody></table></div>
+        <p class="ib-note">"12 meses" compara com ${esc(nomeMes(`${ano - 1}-${String(mes).padStart(2, '0')}`, true))}. "No ano" soma jan–${esc(MESES[mes - 1])} em US$ bi e compara com o mesmo período de ${ano - 1}. Volume em toneladas líquidas.</p>`;
+    }
+    if (Array.isArray(d.paises) && d.paises.length) {
+      const [ano, mes] = ult.m.split('-').map(Number);
+      const noAno = (a, get) => ms.filter((x) => x.m.startsWith(a + '-') && +x.m.slice(5) <= mes).reduce((t, x) => t + (get(x) || 0), 0);
+      const tot = noAno(ano, (x) => x.exp), totAnt = noAno(ano - 1, (x) => x.exp);
+      const somaP = (p, a) => Object.entries(p.m).filter(([m]) => m.startsWith(a + '-') && +m.slice(5) <= mes).reduce((t, [, v]) => t + v, 0);
+      const rows = d.paises.map((p) => { const v = somaP(p, ano), va = somaP(p, ano - 1); return { p: p.p, v, f: tot ? v / tot * 100 : null, fa: totAnt ? va / totAnt * 100 : null }; }).sort((a, b) => b.v - a.v).slice(0, 10);
+      const maxF = Math.max(...rows.map((r) => r.f || 0)) || 1;
+      const linhas = rows.map((r) => `<tr><th>${esc(r.p)}</th><td class="cx-barcel"><span class="cx-bar" style="width:${((r.f || 0) / maxF * 100).toFixed(1)}%"></span></td><td>${fat(r.f)}</td><td class="${cls(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}">${pp(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}</td><td>${bi(r.v, 1)}</td></tr>`).join('');
+      out += `<h4 class="cx-sub">Para onde o Brasil exporta (jan–${esc(MESES[mes - 1])}/${ano})</h4>
+        <div class="cx-scroll"><table class="ib-tb cx-tb cx-ds"><thead><tr><th>País</th><th></th><th>Fatia</th><th>vs ${ano - 1}</th><th>US$ bi</th></tr></thead><tbody>${linhas}</tbody></table></div>
+        <p class="ib-note">Fatia de cada país nas exportações do Brasil no ano. "vs ${ano - 1}" é a mudança em pontos percentuais contra o mesmo período do ano passado.</p>`;
+    }
+    return out;
   }
 
   function draw() {
@@ -73,6 +113,9 @@
     const at = cache?.d?.atualizado ? ` · divulgado em ${cache.d.atualizado.split('-').reverse().join('/')}` : '';
     meta.innerHTML = `<a href="https://comexstat.mdic.gov.br" target="_blank" rel="noopener">Comex Stat (MDIC)</a>${at}${err && cache ? ' · último dado salvo' : ''}`;
   }
+
+  // dados para outros módulos (watchlist): resumo da commodity pela chave, usando o mesmo cache
+  window.MMComex = { resumo: (k) => { const d = cache?.d, p = d?.produtos?.find((x) => x.k === k); return p ? resumoProduto(p, d.ultimo) : null; }, carregar: () => load(false), pronto: () => !!cache?.d };
 
   // chamado pelo indicadores.js toda vez que a área Brasil é desenhada
   window.__comexRender = (container, force = false) => {
@@ -102,6 +145,12 @@
   .cx-svg rect.up { fill:var(--pos); opacity:.65; } .cx-svg rect.dn { fill:var(--neg); opacity:.65; } .cx-svg rect.last { opacity:1; }
   .cx-svg text { font:10px 'JetBrains Mono', monospace; fill:var(--text-3); text-anchor:middle; }
   .cx-tb th:first-child { text-transform:none; }
+  .cx-sub { margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
+  .cx-scroll { overflow-x:auto; }
+  .cx-pr, .cx-ds { width:100%; }
+  .cx-pr td, .cx-ds td { white-space:nowrap; }
+  .cx-barcel { width:38%; }
+  .cx-bar { display:block; height:8px; border-radius:4px; background:var(--accent, var(--pos)); opacity:.75; min-width:2px; }
   @media (max-width: 900px) { .cx-top { grid-template-columns:repeat(2, minmax(0,1fr)); } .cx-duas { grid-template-columns:minmax(0,1fr); } #comex-sec .ib-h { flex-direction:column; align-items:flex-start; gap:4px; } }`;
   document.head.appendChild(css);
 })();

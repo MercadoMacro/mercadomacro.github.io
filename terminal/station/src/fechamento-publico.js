@@ -150,7 +150,7 @@ ${nots}
 </div>`;
 }
 
-function pagina({ titulo, descricao, canonico, h1, data, corpo, ld }) {
+export function pagina({ titulo, descricao, canonico, h1, data, corpo, ld, rodape }) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
 <meta name="robots" content="index,follow"><meta name="theme-color" content="#070b14"><link rel="icon" href="/icone-192.png">
@@ -163,12 +163,12 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <h1>${esc(h1)}</h1>
 ${corpo}
 <div class="box"><strong>Acompanhe o mercado ao vivo.</strong> No Mercado Macro você vê cotações em tempo real, mapa de calor, agenda econômica, fluxo do estrangeiro e notícias num só lugar. <a href="/entrar">Pedir acesso</a></div>
-<footer>Dados de fontes públicas (Yahoo Finance, Banco Central, Tesouro Direto, B3), registrados após o fechamento. Podem ter atraso ou diferenças em relação à fonte oficial. Conteúdo informativo, não é recomendação de investimento.
-<br><a href="${BASE}">Todos os fechamentos</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/calculadora-renda-fixa">Calculadora de renda fixa</a> · <a href="/privacidade">Privacidade</a></footer>
+<footer>${rodape || 'Dados de fontes públicas (Yahoo Finance, Banco Central, Tesouro Direto, B3), registrados após o fechamento. Podem ter atraso ou diferenças em relação à fonte oficial.'} Conteúdo informativo, não é recomendação de investimento.
+<br><a href="${BASE}">Todos os fechamentos</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/balanca-comercial">Balança comercial</a> · <a href="/calculadora-renda-fixa">Calculadora de renda fixa</a> · <a href="/privacidade">Privacidade</a></footer>
 </main></body></html>`;
 }
 
-function resposta(s, status = 200) {
+export function resposta(s, status = 200) {
   return new Response(s, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=600', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' } });
 }
 

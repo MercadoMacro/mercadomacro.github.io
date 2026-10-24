@@ -5,6 +5,7 @@ import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
+import { paginaBalanca } from './balanca-publica.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -93,6 +94,7 @@ export default {
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
+      if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
       if (p === '/esqueci') return paginaEsqueci();
@@ -1706,6 +1708,7 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mercadomacro.com.br/fechamento-do-mercado</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mercadomacro.com.br/balanca-comercial</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>
 `;
 // sitemap com uma página por fechamento guardado

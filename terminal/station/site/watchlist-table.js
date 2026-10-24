@@ -160,6 +160,7 @@
     <div class="wn-faixas" role="group" aria-label="Período do gráfico">${FAIXAS.map(([k, t]) => `<button type="button" data-f="${k}">${t}</button>`).join('')}</div>
     <h4>Detalhes do ativo</h4>
     <dl class="wn-dl"></dl>
+    <div class="wn-cx" hidden></div>
     <button type="button" class="wn-full">Ver análise completa <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;
   const fundo = document.createElement('div'); fundo.className = 'wn-fundo'; fundo.hidden = true; document.body.append(fundo);
   function fecharPainel() { side.hidden = true; fundo.hidden = true; lay.classList.remove('wn-com-painel'); document.body.classList.remove('wn-sheet-on'); sel = largo() ? sel : null; render(); }
@@ -189,8 +190,36 @@
     pe.classList.toggle('on', !!pg?.on);
     pe.querySelector('span').textContent = [pg?.t, q?.src ? `tempo real pela ${q.src}` : ''].filter(Boolean).join(' · ');
     const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant]];
-    side.querySelector('.wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
-    side.querySelectorAll('.wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = core.number(v) ? fmt(v, r.quote) : '—'; });
+    side.querySelector(':scope > .wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
+    side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = core.number(v) ? fmt(v, r.quote) : '—'; });
+    pintaComex(r.symbol);
+  }
+  // exportação da commodity ligada à empresa (Comex Stat, pelo comex.js da aba Indicadores)
+  const COMMODITY = { VALE3: 'minerio', CMIN3: 'minerio', VALE: 'minerio', PETR3: 'petroleo', PETR4: 'petroleo', PRIO3: 'petroleo', BRAV3: 'petroleo', RECV3: 'petroleo', PBR: 'petroleo', SUZB3: 'celulose', KLBN11: 'celulose', KLBN4: 'celulose', JBSS3: 'bovina', JBS: 'bovina', MRFG3: 'bovina', MBRF3: 'bovina', BEEF3: 'bovina', BRFS3: 'frango', SLCE3: 'soja', AGRO3: 'soja', CSAN3: 'acucar', RAIZ4: 'acucar', JALL3: 'acucar', SMTO3: 'acucar' };
+  let comexPedido = false;
+  function pintaComex(s) {
+    const box = side.querySelector('.wn-cx'), k = COMMODITY[String(s).replace(/\.SA$/, '')];
+    if (!k) { box.hidden = true; return; }
+    if (!window.MMComex) {
+      box.hidden = true;
+      if (!comexPedido) { comexPedido = true; const sc = document.createElement('script'); sc.src = 'comex.js?v=2'; sc.onload = () => pintaComex(sel); document.head.append(sc); }
+      return;
+    }
+    const r = window.MMComex.resumo(k);
+    if (!r) { box.hidden = true; if (!window.MMComex.pronto()) window.MMComex.carregar().then(() => { if (sel === s) pintaComex(s); }); return; }
+    const n = (v, d) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const pc = (v) => (core.number(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${n(Math.abs(v), 1)}%` : '—');
+    const c = (v) => (core.number(v) ? v > 0 ? 'wt-up' : v < 0 ? 'wt-down' : '' : '');
+    const [a, m] = r.m.split('-'), mes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+m - 1] + '/' + a;
+    const vol = !core.number(r.kg) ? '—' : r.kg >= 1e9 ? `${n(r.kg / 1e9, 1)} mi t` : `${n(Math.round(r.kg / 1e6), 0)} mil t`;
+    box.hidden = false;
+    box.innerHTML = `<h4>Exportação de ${r.nome.toLowerCase()} do Brasil</h4>
+      <dl class="wn-dl">
+        <div><dt>Valor em ${mes}</dt><dd>${core.number(r.fob) ? 'US$ ' + n(r.fob / 1e9, 2) + ' bi' : '—'} <small class="${c(r.vFob)}">${pc(r.vFob)}</small></dd></div>
+        <div><dt>Volume em ${mes}</dt><dd>${vol} <small class="${c(r.vKg)}">${pc(r.vKg)}</small></dd></div>
+        <div><dt>No ano</dt><dd>${core.number(r.ytd) ? 'US$ ' + n(r.ytd / 1e9, 1) + ' bi' : '—'} <small class="${c(r.vYtd)}">${pc(r.vYtd)}</small></dd></div>
+      </dl>
+      <p class="wn-cx-nota">Variações contra o mesmo período do ano passado. Fonte: Comex Stat (MDIC).</p>`;
   }
   async function carrega() {
     const s = sel, f = faixa, k = `${f}|${s}`;
