@@ -2974,3 +2974,6 @@ html body .mj-n { font-size:9.5px; }
   body.has-side.side-collapsed .side-brand { padding:2px 0 14px; }
   body.has-side.side-collapsed .side .side-group { margin:10px 10px; background:var(--line); }
 }
+
+/* ícones da barra lateral com leve preenchimento (conjunto novo, 24/10/2026) */
+.side .si-svg .f { fill: currentColor; fill-opacity: .18; stroke: none; }

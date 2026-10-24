@@ -4039,26 +4039,26 @@ window.__onTabSwitch = (tabId) => {
   };
   // ícones da barra lateral (desenho do Severino, traço em currentColor)
   const SI = {
-    'market-panel': '<path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/>',
-    'mesa-panel': '<path d="M5 20V10m7 10V4m7 16V7"/>',
-    'watch-panel': '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',
-    'heatmap-panel': '<path d="M3 3h7v7H3Zm11 0h7v7h-7ZM3 14h7v7H3Zm11 0h7v7h-7Z"/>',
-    'news-panel': '<rect x="6" y="3" width="15" height="18" rx="2"/><path d="M6 7H3v12a2 2 0 0 0 2 2h3M10 7h7m-7 4h7m-7 4h4"/>',
-    'weekly-panel': '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6m-6 4h6m-6 4h4"/>',
-    'calendar-panel': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m4 0h2m-8 3h2"/>',
-    'analysis-panel': '<path d="M5 20V13m7 7V4m7 16V9"/>',
-    'fund-panel': '<path d="M12 3v9h9A9 9 0 1 1 12 3Zm4 1a9 9 0 0 1 4 4h-4Z"/>',
-    'indicators-panel': '<path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1"/><circle cx="15" cy="13" r="1"/>',
-    'calculator-panel': '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8v4H8Zm0 8h1m3 0h1m3 0h.01M8 18h1m3 0h1m3 0h.01"/>',
-    'options-panel': '<circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
+    'market-panel': '<path class="f" d="M4 10h16v9H4z"/><path d="M3 20h18M4 10h16M12 3.5 3.5 9.5h17Z"/><path d="M7.5 13v4m4.5-4v4m4.5-4v4"/>',
+    'mesa-panel': '<rect class="f" x="3" y="4" width="18" height="12" rx="2.5"/><rect x="3" y="4" width="18" height="12" rx="2.5"/><path d="M9 20h6m-3-4v4M7 12l3-3 2 2 5-4"/>',
+    'watch-panel': '<path class="f" d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/>',
+    'heatmap-panel': '<rect class="f" x="3" y="3" width="9" height="10" rx="1.5"/><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M12 3v18M3 13h9m0-4h9m-4.5 0v12"/>',
+    'news-panel': '<rect class="f" x="7" y="3.5" width="14" height="17" rx="2"/><path d="M7 5.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8h4v10.5"/><path d="M11 8h6m-6 4h6m-6 4h3"/>',
+    'weekly-panel': '<rect class="f" x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 3h6v3H9ZM9 11h6m-6 4h6m-6 3h3"/>',
+    'calendar-panel': '<path class="f" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V10H3Z"/><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4m8-4v4M3 10h18M8 14h2m4 0h2m-8 3.5h2"/>',
+    'analysis-panel': '<path class="f" d="M7 12h3v6H7zm5-5h3v11h-3z"/><path d="M3 3v15a3 3 0 0 0 3 3h15"/><path d="M8.5 17v-4m5 4V8m5 9v-6"/>',
+    'fund-panel': '<path class="f" d="M13 3a8 8 0 0 1 8 8h-8Z"/><path d="M10.5 5.5A8 8 0 1 0 18.5 13.5h-8Z"/><path d="M13.5 3a7.5 7.5 0 0 1 7.5 7.5h-7.5Z"/>',
+    'indicators-panel': '<path class="f" d="m3 17 6-9 6 5 6-8v15H3Z" opacity=".6"/><path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1.3"/><circle cx="15" cy="13" r="1.3"/>',
+    'calculator-panel': '<rect class="f" x="8" y="5.5" width="8" height="4" rx="1"/><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="4" rx="1"/><path d="M8.5 13.5h.01m3.5 0h.01m3.5 0h.01M8.5 17.5h.01m3.5 0h.01m3.5 0h.01"/>',
+    'options-panel': '<circle class="f" cx="12" cy="5" r="3"/><circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
     'buscar': '<circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/>',
-    'resumo': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 12h8m-8 4h6"/>',
-    'aparencia': '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+    'resumo': '<path class="f" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8h-6Z"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5"/>',
+    'aparencia': '<circle class="f" cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
     'ajustes': '<path d="m9 3-.6 2.3-2 .9-2.1-.7-2 3.5 1.6 1.6v2.8L2.3 15l2 3.5 2.1-.7 2 .9L9 21h6l.6-2.3 2-.9 2.1.7 2-3.5-1.6-1.6v-2.8L21.7 9l-2-3.5-2.1.7-2-.9L15 3Z"/><circle cx="12" cy="12" r="3"/>',
     'recolher': '<path d="m14 6-6 6 6 6M8 12h13"/>',
     'expandir': '<path d="m10 6 6 6-6 6M3 12h13"/>'
   };
-  const svg = (k) => `<svg class="si-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SI[k] || ''}</svg>`;
+  const svg = (k) => `<svg class="si-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SI[k] || ''}</svg>`;
   // bandeiras desenhadas (não emoji): Brasil e EUA, recortadas em círculo
   const FLAG = {
     B3: '<svg class="sm-flag" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="10" fill="#1f9e57"/><path d="M10 3.6 17 10l-7 6.4L3 10Z" fill="#f7d117"/><circle cx="10" cy="10" r="3.6" fill="#1d3f8f"/><path d="M6.6 9.3c2.3-.6 4.7-.3 6.8.9" stroke="#fff" stroke-width=".8" fill="none"/></svg>',
