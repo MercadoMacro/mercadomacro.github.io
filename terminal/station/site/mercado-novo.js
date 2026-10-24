@@ -370,7 +370,6 @@
   /* ---------------- estilos ---------------- */
   const css = document.createElement('style');
   css.textContent = `
-  #market-panel.mn-on > .market-wrap:not(.mn-root) { display:none; }
   .mn { display:flex; flex-direction:column; gap:16px; }
   .mn-bar { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .mn-bar h2 { margin:0; font-size:20px; color:var(--text); }
@@ -419,6 +418,7 @@
   .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn .up { color:var(--pos-ink, var(--pos)); } .mn .dn { color:var(--neg); } .mn .na, .mn .eq { color:var(--text-3); }
   .mn-root.mn-qb .mn-bar { display:none; }
+  @media (min-width: 641px) { .mn-bar { display:none; } }
   .qb-mn { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .qb-mn[hidden] { display:none; }
   .qb-mn-t.err { color:var(--neg); }
@@ -438,6 +438,9 @@
   let timer = setInterval(() => { if (!document.hidden && panel.classList.contains('active')) refresh(); }, 120000);
   // situação dos pregões muda com o relógio: redesenha a cada minuto
   setInterval(() => { if (!document.hidden && panel.classList.contains('active') && !busy) render(); }, 60000);
+  // a linha da frase nasce depois (espera as frases): coloca a hora nela assim que aparecer
+  const topo = document.querySelector('.topbar');
+  if (topo) new MutationObserver(() => { if (!topo.querySelector('.qb-mn')) carimbo(); }).observe(topo, { childList: true });
   new MutationObserver(() => { carimbo(); if (panel.classList.contains('active') && Date.now() - lastTs > 60000) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
   void timer;
 })();

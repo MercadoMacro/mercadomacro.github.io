@@ -150,6 +150,15 @@
   } catch (e) { /* sem ajustes salvos */ }
 })();
 </script>
+<style>
+  /* carregando: a página fica escondida até os scripts montarem barra lateral, tema e aba (evita ver a página crua ao recarregar) */
+  html.mm-boot { background:#06090f; }
+  html.mm-boot.mm-boot-claro { background:#f3f5f9; }
+  html.mm-boot body { visibility:hidden; }
+  /* a aba Mercado só tem a visão em cartões (mercado-novo.js); a grade antiga roda escondida desde o início */
+  #market-panel > .market-wrap:not(.mn-root) { display:none !important; }
+</style>
+<script>(() => { const h = document.documentElement; h.classList.add('mm-boot'); try { if (localStorage.getItem('trader_theme') === 'light') h.classList.add('mm-boot-claro'); } catch (e) { /* sem armazenamento */ } setTimeout(() => h.classList.remove('mm-boot'), 5000); })();</script>
 </head>
 <body>
 <script>/* barra lateral: recolhida só se a pessoa recolheu (o app.js monta a barra) */ try { if (localStorage.getItem('trader_side_collapsed') === '1') document.body.classList.add('side-collapsed'); } catch (e) { /* sem armazenamento */ }</script>
@@ -761,7 +770,7 @@
 <button class="fab-summary" id="fab-summary" aria-label="Resumo de mercado"><i class="fas fa-clipboard-list"></i><span class="fab-txt"> Resumo</span></button>
 <script src="crypto-live.js?v=2"></script>
 <script src="forex-live.js?v=7"></script>
-<script src="app.js?v=71"></script>
+<script src="app.js?v=72"></script>
 <script src="mesa-layout.js?v=1"></script>
 <script src="ajustes.js?v=20"></script>
 <script src="watchlists-core.js?v=1"></script>
@@ -778,5 +787,6 @@
 <script src="noticias2.js?v=2"></script>
 <script src="topo-acoes.js?v=1"></script>
 <script src="navegacao-mobile.js?v=2"></script>
+<script>requestAnimationFrame(() => document.documentElement.classList.remove('mm-boot'));</script>
 </body>
 </html>
