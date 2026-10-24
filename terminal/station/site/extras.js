@@ -250,10 +250,7 @@
       b.setAttribute('aria-label', b.title);
       b.innerHTML = `<i class="${on ? 'fas' : 'far'} fa-star"></i>`;
     });
-    // o protótipo do Mercado novo (mercado-novo.js) pinta as próprias estrelas
-    document.dispatchEvent(new Event('mm-watch'));
   }
-  window.MMWatch = { has: (s) => inWl(s) };
 
   // histórico de 3 meses dos ativos da watchlist (1 vez por dia, como o dos outros cards)
   let wl3 = null;
@@ -324,7 +321,7 @@
       e.stopPropagation();
       const s = st.dataset.wlstar;
       if (inWl(s)) wlRemove(s);
-      else wlAdd(s, st.dataset.wlname || st.closest('.quote-card')?.querySelector('.qc-name')?.textContent || '');
+      else wlAdd(s, st.closest('.quote-card')?.querySelector('.qc-name')?.textContent || '');
     });
     const wp = document.getElementById('watch-panel');
     wp?.addEventListener('click', (e) => {

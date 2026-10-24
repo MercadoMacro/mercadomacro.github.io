@@ -4795,7 +4795,7 @@ function newsReadMins(n) {
   } catch (e) { /* sem armazenamento */ }
   if (!novo) return;
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=5';
+  sc.src = 'mercado-novo.js?v=6';
   document.body.appendChild(sc);
 })();
 /* =========================================================
