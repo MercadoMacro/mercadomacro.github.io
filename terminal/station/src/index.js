@@ -1439,7 +1439,7 @@ async function roboFechamento(req, env) {
 
 // notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,
 // publicadas há menos de 45 minutos, das 7h às 22h de Brasília; no máximo 2 entregues e 3 tentativas por rodada,
-// 20 entregues por dia, sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
+// 2 por hora e 20 por dia, sem repetir link nem assunto (tabela canal_noticias). Liga e desliga em /admin (config tg_canal_noticias).
 // Seleção: fica de fora matéria educativa ou de opinião/expectativa, e o título precisa trazer um fato
 // (número ou verbo de acontecimento), não só uma palavra forte como "Selic" ou "balanço".
 // Entrega: a linha nasce 'reservada' e vira 'enviada' só com o ok do Telegram; reserva sem confirmação há mais de
@@ -1500,17 +1500,19 @@ async function noticiasNoCanal(env, ctx) {
   });
   const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const conta = "(SELECT COUNT(*) FROM canal_noticias WHERE quando >= ? AND estado IN ('enviada', 'reservada'))";
+  // vagas espalhadas no dia: no máximo 2 por hora cheia de Brasília, para não gastar as 20 de manhã
+  const horaIni = agora - (agora % 3600000);
   let postadas = 0, tentativas = 0;
   for (const n of cands) {
     if (postadas >= 2 || tentativas >= 3) break;
     const a = assunto(n.titulo);
     if (links.has(n.link) || parecida(a)) continue;
     // reserva num INSERT só, que também confere o teto de 20 do dia: duas rodadas ao mesmo tempo não passam de 20
-    const ins = await env.DB.prepare(`INSERT OR IGNORE INTO canal_noticias (link, titulo, quando, estado) SELECT ?, ?, ?, 'reservada' WHERE ${conta} < 20`)
-      .bind(n.link, n.titulo, agora, hojeIni).run();
+    const ins = await env.DB.prepare(`INSERT OR IGNORE INTO canal_noticias (link, titulo, quando, estado) SELECT ?, ?, ?, 'reservada' WHERE ${conta} < 20 AND ${conta} < 2`)
+      .bind(n.link, n.titulo, agora, hojeIni, horaIni).run();
     if (!ins.meta || !ins.meta.changes) {
-      const t = await env.DB.prepare(`SELECT ${conta} AS k`).bind(hojeIni).first();
-      if (t && t.k >= 20) break;
+      const t = await env.DB.prepare(`SELECT ${conta} AS d, ${conta} AS h`).bind(hojeIni, horaIni).first();
+      if (t && (t.d >= 20 || t.h >= 2)) break;
       continue;
     }
     tentativas++;
