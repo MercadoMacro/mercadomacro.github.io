@@ -52,8 +52,8 @@
       mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
     { id: 'mo', t: 'Moedas', tz: 'America/New_York', cme: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
       mais: [['JPY=X', 'Iene (USD/JPY)', 2], ['EURBRL=X', 'Euro (EUR/BRL)', 4, 'R$ '], ['GBPBRL=X', 'Libra (GBP/BRL)', 4, 'R$ ']] },
-    { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2]], mais: [] },
-    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2]], mais: [] },
+    { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
+    { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
     { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
     { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério de ferro', 2]],
       mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café', 2], ['ZS=F', 'Soja', 2]] },
@@ -168,6 +168,31 @@
     }
   }
 
+  /* ---------------- tempo real ----------------
+     A aba Mercado de sempre já recebe preços ao vivo (Deriv, Capital.com e Binance) e avisa por window.__onMercadoVivo.
+     O preço ao vivo vale por 60 s; a variação do dia usa o fechamento anterior do Yahoo. */
+  const LV = {};
+  const vivo = (s) => { const l = LV[s]; return l && Date.now() - l.em < 60000 ? l : null; };
+  const SRC = { 'Deriv': 'Deriv', 'Capital.com': 'Capital.com (CFD)', 'Binance (USDT)': 'Binance (USDT)' };
+  function atual(s) {
+    const q = Q[s], l = vivo(s);
+    if (!q || !ok(q.v)) return l ? { v: l.v, c: null, src: l.src } : null;
+    if (!l) return { v: q.v, c: q.c };
+    const base = ok(q.c) ? q.v / (1 + q.c / 100) : null;
+    return { v: l.v, c: base ? (l.v / base - 1) * 100 : null, src: l.src };
+  }
+  window.__onMercadoVivo = (s, l, dir) => {
+    if (!INFO[s] || !l || !ok(l.v)) return;
+    LV[s] = { v: l.v, src: l.src, em: Date.now() };
+    const a = atual(s);
+    root.querySelectorAll(`.mn-row[data-s="${CSS.escape(s)}"]`).forEach((row) => {
+      row.querySelector('.mn-v').textContent = valor(s);
+      const c = row.querySelector('.mn-c'); c.textContent = pct(a?.c); c.className = `mn-c ${cls(a?.c)}`;
+      row.classList.add('rt'); row.title = `Tempo real pela ${SRC[l.src] || l.src}; variação sobre o fechamento anterior do Yahoo`;
+      if (dir) { row.classList.remove('fl-up', 'fl-dn'); void row.offsetWidth; row.classList.add(dir > 0 ? 'fl-up' : 'fl-dn'); }
+    });
+  };
+
   /* ---------------- frase do cartão (só com números) ---------------- */
   const verbo = (c, juros) => (juros ? (c > 0 ? 'sobe' : 'cai') : c > 0 ? 'sobe' : 'cai');
   function bp(sym) { // variação em pontos-base para juros (o Yahoo dá o rendimento em %)
@@ -175,7 +200,7 @@
     const prev = q.v / (1 + q.c / 100); return (q.v - prev) * 100;
   }
   function frase(r) {
-    const vivos = r.linhas.filter((l) => !l[0].startsWith('@')).map((l) => ({ s: l[0], n: l[1], c: Q[l[0]]?.c })).filter((x) => ok(x.c));
+    const vivos = r.linhas.filter((l) => !l[0].startsWith('@')).map((l) => ({ s: l[0], n: l[1], c: atual(l[0])?.c })).filter((x) => ok(x.c));
     if (vivos.length < 2) return '';
     const m = vivos.reduce((a, b) => (Math.abs(b.c) > Math.abs(a.c) ? b : a));
     if (Math.abs(m.c) < 0.005) return '';
@@ -219,7 +244,7 @@
   }
   function varFaixa(r) {
     const s = escolha(r), f = faixa(r), q = Q[s];
-    if (f === '1d') return INFO[s]?.juros ? pb(bp(s)) : pct(q?.c);
+    if (f === '1d') return INFO[s]?.juros ? pb(bp(s)) : pct(atual(s)?.c);
     const g = G[`${f}|${s}`]; if (!g) return '—';
     const ult = q && ok(q.v) ? q.v : g.c[g.c.length - 1];
     if (INFO[s]?.juros) return pb((ult - g.c[0]) * 100);
@@ -227,7 +252,7 @@
   }
 
   /* ---------------- tela ---------------- */
-  const valor = (s) => { const i = INFO[s], q = Q[s]; return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
+  const valor = (s) => { const i = INFO[s], q = atual(s); return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
   const linhaEsp = (r, l) => {
     const d = esp(l[0]), pctUnid = l[0] !== '@minerio';
     const v = d ? `${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
@@ -238,8 +263,9 @@
   };
   const linha = (r, l) => {
     if (l[0].startsWith('@')) return linhaEsp(r, l);
-    const s = l[0], q = Q[s], j = INFO[s].juros, ch = j ? bp(s) : q?.c;
-    return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}" data-r="${r.id}" data-s="${esc(s)}" title="Ver ${esc(l[1])} no gráfico">
+    const s = l[0], q = atual(s), j = INFO[s].juros, ch = j ? bp(s) : q?.c;
+    const rt = q?.src ? ` rt" title="Tempo real pela ${esc(SRC[q.src] || q.src)}; variação sobre o fechamento anterior do Yahoo` : `" title="Ver ${esc(l[1])} no gráfico`;
+    return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}${rt}" data-r="${r.id}" data-s="${esc(s)}">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
   };
   function cartao(r) {
@@ -269,7 +295,7 @@
         <div class="mn-acts"><span class="mn-tag">Protótipo</span><button type="button" class="mn-btn mn-refresh">Atualizar</button><button type="button" class="mn-btn" data-classica>Mercado clássico</button></div>
       </div>
       <div class="mn-grid">${ordem().map(cartao).join('')}</div>
-      <p class="mn-fonte">Fonte: Yahoo Finance pelo servidor do painel. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
+      <p class="mn-fonte">Fonte: Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv, dólar, VIX e futuros pela Capital.com em CFD, cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
     </div>`;
   }
 
@@ -357,6 +383,10 @@
   .mn-rows { display:flex; flex-direction:column; }
   .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
   .mn-row-esp { cursor:default; }
+  .mn-row.rt .mn-n::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--pos); margin-left:6px; vertical-align:middle; }
+  .mn-row.fl-up .mn-v { animation:mn-fl-up .8s; } .mn-row.fl-dn .mn-v { animation:mn-fl-dn .8s; }
+  @keyframes mn-fl-up { from { background:color-mix(in srgb, var(--pos) 25%, transparent); } }
+  @keyframes mn-fl-dn { from { background:color-mix(in srgb, var(--neg) 25%, transparent); } }
   .mn-row:hover { background:color-mix(in srgb, var(--text) 4%, transparent); }
   .mn-row.on { color:var(--text); box-shadow:inset 2px 0 0 var(--accent); background:color-mix(in srgb, var(--accent) 7%, transparent); }
   .mn-n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:uppercase; font-size:12.5px; letter-spacing:.02em; }

@@ -4795,7 +4795,7 @@ function newsReadMins(n) {
   } catch (e) { /* sem armazenamento */ }
   if (!novo) return;
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=3';
+  sc.src = 'mercado-novo.js?v=4';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -5071,6 +5071,8 @@ function newsReadMins(n) {
     if (!liveMode || !panel.classList.contains('active')) return;
     const l = vivo(s), d = marketDataCache[s];
     if (!l) return;
+    // o protótipo do Mercado novo (mercado-novo.js) recebe o mesmo preço ao vivo
+    try { window.__onMercadoVivo?.(s, l, dir); } catch (e) { /* protótipo não derruba a aba */ }
     for (const card of cards(s)) {
       const unit = d?.unit || '';
       const priceEl = card.querySelector('[data-price]'), changeEl = card.querySelector('[data-change]'), badgeEl = card.querySelector('[data-badge]'), timeEl = card.querySelector('[data-time]');
