@@ -793,7 +793,7 @@
      ========================================================= */
   const ticker = document.getElementById('ticker');
   let frases = [], fi = -1, fTimer = null, fBar = null;
-  const fOn = () => prefs().frasesTopo === 'on';   // desligada por padrão; liga em Ajustes > Painel
+  const fOn = () => true;   // frases sempre ligadas no topo (escolha do Severino, 24/10/2026)
   function fShow(step = 1) {
     if (!fBar || !frases.length) return;
     fi = fi < 0 ? Math.floor(Math.random() * frases.length) : (fi + step + frases.length) % frases.length;
@@ -816,8 +816,7 @@
     fBar.className = 'qbanner';
     fBar.innerHTML = `<i class="fas fa-quote-left qb-ic" aria-hidden="true"></i><div class="qb-txt" aria-live="polite"></div>
       <button type="button" class="qb-btn" data-q="prev" title="Frase anterior" aria-label="Frase anterior"><i class="fas fa-chevron-left"></i></button>
-      <button type="button" class="qb-btn" data-q="next" title="Próxima frase" aria-label="Próxima frase"><i class="fas fa-chevron-right"></i></button>
-      <button type="button" class="qb-btn" data-q="off" title="Esconder frases (volta em Ajustes)" aria-label="Esconder frases"><i class="fas fa-times"></i></button>`;
+      <button type="button" class="qb-btn" data-q="next" title="Próxima frase" aria-label="Próxima frase"><i class="fas fa-chevron-right"></i></button>`;
     // ao lado da marca, como no site antigo (sem a marca, cai abaixo da faixa)
     const right = document.querySelector('.topbar-right');
     if (right) right.before(fBar); else ticker.after(fBar);

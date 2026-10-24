@@ -150,7 +150,6 @@
         <h3>Painel</h3>
         <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab" aria-label="Abrir sempre em"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${sw('ticker', P.ticker !== 'off', 'Faixa de cotações no topo')}
-        ${sw('frasesTopo', P.frasesTopo === 'on', 'Frases de investidores no topo')}
         ${liveOn != null ? sw('live', liveOn, 'Atualização automática das cotações (5 min no pregão, 15 min fora)') : ''}
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
