@@ -1,9 +1,0 @@
-name: Sonda Comex (temporária)
-on: workflow_dispatch
-jobs:
-  sonda:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 terminal/comex/sondar.py

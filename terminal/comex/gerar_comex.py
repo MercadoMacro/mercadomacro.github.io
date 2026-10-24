@@ -41,6 +41,64 @@ def num(v):
         return None
 
 
+# commodities exportadas que mexem com a bolsa, por posição SH4 (a carne bovina soma fresca e congelada)
+PRODUTOS = [
+    ('minerio', 'Minério de ferro', ['2601']),
+    ('petroleo', 'Petróleo bruto', ['2709']),
+    ('soja', 'Soja em grão', ['1201']),
+    ('milho', 'Milho', ['1005']),
+    ('cafe', 'Café', ['0901']),
+    ('acucar', 'Açúcar', ['1701']),
+    ('bovina', 'Carne bovina', ['0201', '0202']),
+    ('frango', 'Carne de frango', ['0207']),
+    ('celulose', 'Celulose', ['4703']),
+]
+FIXOS = ['China', 'Estados Unidos', 'Argentina']  # sempre no arquivo, mesmo fora do top
+
+
+def chave_mes(it):
+    a = it.get('year') or it.get('coAno')
+    m = it.get('monthNumber') or it.get('coMes')
+    return f'{int(a)}-{int(str(m)[:2]):02d}' if a and m else None
+
+
+def produtos(periodos):
+    sh = {c: k for k, _, cs in PRODUTOS for c in cs}
+    acc = {}
+    for periodo in periodos:
+        resp = pedir('/general', {'flow': 'export', 'monthDetail': True, 'period': periodo, 'filters': [{'filter': 'heading', 'values': list(sh)}], 'details': ['heading'], 'metrics': ['metricFOB', 'metricKG']})
+        itens = lista(resp)
+        print(f'produtos {periodo}: {len(itens)} linhas')
+        for it in itens:
+            k, mm = sh.get(str(it.get('headingCode') or '').zfill(4)), chave_mes(it)
+            fob, kg = num(it.get('metricFOB')), num(it.get('metricKG'))
+            if k and mm and fob is not None:
+                d = acc.setdefault(k, {}).setdefault(mm, [0, 0])
+                d[0] += fob
+                d[1] += kg or 0
+    return [{'k': k, 'nome': nome, 'sh': cs, 'meses': [{'m': mm, 'fob': round(v[0]), 'kg': round(v[1])} for mm, v in sorted(acc[k].items())]} for k, nome, cs in PRODUTOS if acc.get(k)]
+
+
+def paises(periodos):
+    acc = {}
+    for periodo in periodos:
+        resp = pedir('/general', {'flow': 'export', 'monthDetail': True, 'period': periodo, 'filters': [], 'details': ['country'], 'metrics': ['metricFOB']})
+        itens = lista(resp)
+        print(f'países {periodo}: {len(itens)} linhas')
+        for it in itens:
+            p, mm, fob = it.get('country'), chave_mes(it), num(it.get('metricFOB'))
+            if p and mm and fob is not None:
+                acc.setdefault(p, {})[mm] = acc.get(p, {}).get(mm, 0) + round(fob)
+    if not acc:
+        return []
+    ult = max(mm for v in acc.values() for mm in v)
+    ano = ult[:4]
+    ytd = lambda p: sum(v for mm, v in acc[p].items() if mm.startswith(ano))
+    top = sorted(acc, key=ytd, reverse=True)[:12]
+    top += [p for p in FIXOS if p in acc and p not in top]
+    return [{'p': p, 'm': dict(sorted(acc[p].items()))} for p in top]
+
+
 def main(saida):
     upd = pedir('/general/dates/updated')
     print('atualizado:', json.dumps(upd, ensure_ascii=False)[:300])
@@ -68,12 +126,16 @@ def main(saida):
     if len(serie) < 12:
         raise SystemExit(f'Poucos meses lidos ({len(serie)}); arquivo mantido como estava')
     out = {'fonte': 'Comex Stat (MDIC/SECEX)', 'unidade': 'US$ FOB', 'atualizado': du.get('updated') or '', 'ultimo': serie[-1]['m'], 'meses': serie}
+    # do ano passado inteiro até o último mês divulgado: dá o mesmo mês de 12 meses atrás e o acumulado dos dois anos
+    recentes = [{'from': f'{ano - 1}-01', 'to': f'{ano - 1}-12'}, {'from': f'{ano}-01', 'to': f'{ano}-{mes:02d}'}]
+    out['produtos'] = produtos(recentes)
+    out['paises'] = paises(recentes)
     caminho = f'{saida}/comex.json'
     try:
         antigo = json.load(open(caminho, encoding='utf-8'))
     except Exception:
         antigo = None
-    if antigo and antigo.get('meses') == serie:
+    if antigo and all(antigo.get(k) == out[k] for k in ('meses', 'produtos', 'paises')):
         print('Sem dado novo')
         return
     out['gerado'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
