@@ -93,14 +93,13 @@
   new MutationObserver(agenda).observe($('#source-sidebar'), { childList: true });
   new MutationObserver(agenda).observe($('#news-view'), { childList: true });
 
-  // manchete principal na 2ª posição, como no modelo, com "Ler notícia completa"
+  // Mantém o destaque na ordem definida pelo leitor.
   function manchete() {
     const g = $('#news-view .nc-grid'), lead = g?.querySelector('.nc-lead');
     if (!lead) return;
     const r = lead.querySelector('.nc-readhere');
-    if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Ler notícia completa <i class="fas fa-arrow-right"></i>'; }
-    const alvo = g.children[1];
-    if (alvo && alvo !== lead && window.matchMedia('(min-width: 1100px)').matches) g.insertBefore(lead, alvo);
+    if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Abrir leitura <i class="fas fa-arrow-right"></i>'; }
+
   }
   new MutationObserver(manchete).observe($('#news-view'), { childList: true });
   manchete();
@@ -122,14 +121,14 @@
   if (info) subbar.append(info);
   const sourceButton = subbar.querySelector('button');
   const sidebar = $('#source-sidebar');
-  let sourcesOpen = window.matchMedia('(min-width: 901px)').matches;
+  let sourcesOpen = false;
   function sourceState() {
     sidebar.hidden = !sourcesOpen;
     layout.classList.toggle('nw-sources-closed', !sourcesOpen);
     sourceButton.setAttribute('aria-expanded', String(sourcesOpen));
     const names = [...newsActiveSources].map(k => NEWS_SOURCES[k]?.name || k);
-    sourceButton.textContent = 'Fontes: ' + (!names.length ? 'todas' : names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}`);
-    sourceButton.title = names.length ? names.join(', ') : 'Todas as fontes';
+    sourceButton.textContent = 'Fontes: ' + (names.length === 1 ? names[0] : names.length ? names.length + ' selecionadas' : 'todas');
+    sourceButton.title = names.join(', ') || 'Todas as fontes';
   }
   sourceButton.addEventListener('click', () => { sourcesOpen = !sourcesOpen; sourceState(); });
   const originalSourceStates = updateNewsBubbleStates;
@@ -141,4 +140,37 @@
   const originalMode = setNewsMode;
   setNewsMode = mode => { originalMode(mode); subbar.querySelector('label').hidden = mode === 'live'; };
   sourceState();
+
+  const intro = document.createElement('header');
+  intro.className = 'nw-intro';
+  intro.innerHTML = '<div><span class="nw-eyebrow">MERCADO MACRO</span><h1>Notícias</h1><p>Escolha um tema. Leia no seu ritmo.</p></div>';
+  barra.before(intro);
+  const context = document.createElement('div');
+  context.className = 'nw-context';
+  context.innerHTML = '<p id="nw-context-text" role="status" aria-live="polite"></p><button type="button" class="btn-sm" id="nw-clear" hidden>Limpar filtros</button>';
+  $('#news-assets').after(context);
+  const search = $('#news-search');
+  search.setAttribute('aria-label', 'Buscar notícias');
+  function orientation() {
+    const topic = NEWS_ASSETS.find(a => a[0] === newsAsset)?.[1] || 'Todos os temas';
+    const filtered = newsBusca(filterNewsByAsset(filterNewsBySources(newsAll)));
+    const count = newsCurrentMode === 'live' ? Math.min(100, filtered.length) : (window.__newsLeads || []).length;
+    const sort = newsCurrentMode === 'live' || newsOrder === 'recent' ? 'mais recentes primeiro' : 'por relevância';
+    $('#nw-context-text').textContent = topic + ' · ' + count + ' na seleção · ' + sort;
+    $('#nw-clear').hidden = newsAsset === 'all' && !newsActiveSources.size && !search.value;
+    painel.querySelectorAll('#news-assets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === newsAsset)));
+    painel.querySelectorAll('#nm-toggle button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === newsCurrentMode)));
+  }
+  const originalRender = renderNewsView;
+  renderNewsView = () => { originalRender(); orientation(); };
+  const originalLive = renderLiveView;
+  renderLiveView = () => { originalLive(); orientation(); };
+  $('#nw-clear').addEventListener('click', () => {
+    newsAsset = 'all'; newsActiveSources.clear(); search.value = '';
+    renderNewsAssets(); updateNewsBubbleStates(); renderNewsView();
+    if (newsCurrentMode === 'live') renderLiveView();
+  });
+  search.placeholder = 'Buscar assunto, empresa ou palavra';
+  new MutationObserver(() => { if (search.placeholder !== 'Buscar assunto, empresa ou palavra') search.placeholder = 'Buscar assunto, empresa ou palavra'; }).observe(search, { attributes:true, attributeFilter:['placeholder'] });
+  orientation();
 })();
