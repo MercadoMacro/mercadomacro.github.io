@@ -8,7 +8,7 @@
 (() => {
   if (window.__beaRender) return;
   const URL_DADOS = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/bea/bea.json';
-  const CACHE_KEY = 'bea_cache_v1', TTL = 6 * 3600 * 1000;
+  const CACHE_KEY = 'bea_cache_v2', TTL = 6 * 3600 * 1000;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ok = (v) => v != null && isFinite(v);
   const r1 = (v) => (ok(v) ? Math.round(v * 10) / 10 || 0 : null); // arredonda antes do sinal: sem "−0,0"
@@ -25,7 +25,7 @@
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { cache = null; }
 
   async function load(force) {
-    if (busy || (!force && cache?.d && Date.now() - cache.ts < TTL)) return;
+    if (busy || (!force && cache?.d?.familias && Date.now() - cache.ts < TTL)) return;
     busy = true; draw();
     try {
       const r = await fetchT(URL_DADOS + '?t=' + Math.floor(Date.now() / 600000), {}, 20000);
@@ -71,7 +71,45 @@
         <table class="ib-tb cx-tb"><thead><tr><th>Componente</th><th>${esc(triCurto(u.q))}</th><th>${ant ? esc(triCurto(ant.q)) : ''}</th></tr></thead><tbody>${linhas}
           <tr><th>PIB real</th><td class="${cls(u.pib)}">${pct(u.pib)}</td><td class="${cls(ant?.pib)}">${pct(ant?.pib)}</td></tr></tbody></table>
       </div>
-      <p class="ib-note">Variação do PIB real na taxa anualizada e quanto cada parte somou a ela, em pontos percentuais. A soma das partes dá o PIB, com diferença de arredondamento. Investimento inclui a variação de estoques. A BEA divulga cada trimestre em três estimativas e revisa os números anteriores.</p>`;
+      <p class="ib-note">Variação do PIB real na taxa anualizada e quanto cada parte somou a ela, em pontos percentuais. A soma das partes dá o PIB, com diferença de arredondamento. Investimento inclui a variação de estoques. A BEA divulga cada trimestre em três estimativas e revisa os números anteriores.</p>
+      ${familias(d.familias)}`;
+  }
+
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const nomeMes = (m) => `${MESES[+m.slice(5) - 1]}/${m.slice(0, 4)}`;
+  // renda, consumo e poupança das famílias (BEA, tabelas 2.6 e 2.8.6, mensal)
+  function familias(f) {
+    if (!f || !Array.isArray(f.meses) || f.meses.length < 13) return '';
+    const ms = f.meses, u = ms[ms.length - 1], a = ms[ms.length - 2], h = ms.find((x) => x.m === `${+u.m.slice(0, 4) - 1}${u.m.slice(4)}`);
+    const vm = (x, y, k) => (x && y && ok(x[k]) && ok(y[k]) && y[k] ? (x[k] / y[k] - 1) * 100 : null);
+    const prev = (x) => ms[ms.indexOf(x) - 1];
+    const kpi = (t, v, sub, c = cls(v)) => `<div><span>${esc(t)}</span><b class="${c}">${v === null ? '—' : pct(v)}</b><small>${sub}</small></div>`;
+    const top = [
+      kpi('Renda pessoal', vm(u, a, 'renda'), `no mês · ${pct(vm(u, h, 'renda'))} em 12 meses`),
+      kpi('Renda disponível real', vm(u, a, 'disponivel_real'), `no mês · ${pct(vm(u, h, 'disponivel_real'))} em 12 meses`),
+      kpi('Consumo', vm(u, a, 'consumo'), `no mês · ${pct(vm(u, h, 'consumo'))} em 12 meses`),
+      kpi('Consumo real', vm(u, a, 'consumo_real'), `no mês · ${pct(vm(u, h, 'consumo_real'))} em 12 meses`),
+      `<div><span>Taxa de poupança</span><b>${ok(u.poupanca) ? n1(u.poupanca) + '%' : '—'}</b><small>da renda disponível${a && ok(a.poupanca) ? ` · ${esc(nomeMes(a.m))}: ${n1(a.poupanca)}%` : ''}</small></div>`,
+    ].join('');
+    // taxa de poupança mês a mês
+    const pts = ms.filter((x) => ok(x.poupanca)), W = 480, H = 90;
+    let svg = '';
+    if (pts.length > 2) {
+      const vs = pts.map((x) => x.poupanca), lo = Math.min(...vs), hi = Math.max(...vs), amp = hi - lo || 1;
+      const X = (i) => 4 + i * (W - 8) / (pts.length - 1), Y = (v) => 8 + (hi - v) / amp * (H - 16);
+      const path = pts.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x.poupanca).toFixed(1)}`).join('');
+      const marcas = pts.map((x, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.poupanca).toFixed(1)}" r="${i === pts.length - 1 ? 3.6 : 2}" class="pt"><title>${esc(nomeMes(x.m))}: ${n1(x.poupanca)}%</title></circle>`).join('');
+      svg = `<p class="cx-leg">Taxa de poupança das famílias (% da renda disponível), de ${esc(nomeMes(pts[0].m))} a ${esc(nomeMes(pts[pts.length - 1].m))}. Mínimo ${n1(lo)}%, máximo ${n1(hi)}%.</p>
+        <svg class="be-svg be-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="Taxa de poupança das famílias nos EUA"><path d="${path}"/>${marcas}</svg>`;
+    }
+    const tab = ms.slice(-6).reverse().map((x) => { const p = prev(x); return `<tr><th>${esc(nomeMes(x.m))}</th><td class="${cls(vm(x, p, 'renda'))}">${pct(vm(x, p, 'renda'))}</td><td class="${cls(vm(x, p, 'disponivel_real'))}">${pct(vm(x, p, 'disponivel_real'))}</td><td class="${cls(vm(x, p, 'consumo_real'))}">${pct(vm(x, p, 'consumo_real'))}</td><td>${ok(x.poupanca) ? n1(x.poupanca) + '%' : '—'}</td></tr>`; }).join('');
+    return `<h4 class="be-sub">Renda e consumo das famílias em ${esc(nomeMes(u.m))}</h4>
+      <div class="be-top">${top}</div>
+      <div class="cx-duas">
+        <div>${svg}</div>
+        <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Renda</th><th>Renda disp. real</th><th>Consumo real</th><th>Poupança</th></tr></thead><tbody>${tab}</tbody></table>
+      </div>
+      <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p>`;
   }
 
   function draw() {
@@ -113,6 +151,9 @@
   .be-svg .pib { fill:var(--text); stroke:var(--surface, #fff); stroke-width:1.5; }
   #bea-sec .cx-sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:baseline; }
   #bea-sec .cx-sw.pib { border-radius:50%; background:var(--text); }
+  .be-sub { margin:22px 0 10px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
+  .be-linha path { fill:none; stroke:#3b82f6; stroke-width:2; stroke-linejoin:round; }
+  .be-linha .pt { fill:#3b82f6; }
   .be-leg { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0; font-size:11.5px; color:var(--text-2); }
   #bea-sec .cx-tb th:first-child { text-transform:none; }
   @media (max-width: 900px) { .be-top { grid-template-columns:repeat(2, minmax(0,1fr)); } #bea-sec .cx-duas { grid-template-columns:minmax(0,1fr); } #bea-sec .ib-h { flex-direction:column; align-items:flex-start; gap:4px; } }`;

@@ -4737,7 +4737,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=19';
+    sc.src = 'indicadores.js?v=20';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('ind-root');
@@ -4757,7 +4757,7 @@ function newsReadMins(n) {
     window.__indWarm = true;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'indicadores.js?v=19';
+    sc.src = 'indicadores.js?v=20';
     sc.onerror = () => { asked = false; };
     document.body.appendChild(sc);
   };
@@ -4796,7 +4796,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=17';
+  sc.src = 'mercado-novo.js?v=18';
   document.body.appendChild(sc);
 })();
 /* =========================================================

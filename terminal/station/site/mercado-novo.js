@@ -55,7 +55,7 @@
       mais: [['VALE3.SA', 'Vale', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ '], ['BBAS3.SA', 'Banco do Brasil', 2, 'R$ '], ['@selic', 'Selic', 2], ['@ipca', 'IPCA (12 meses)', 2]] },
     { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX (volatilidade)', 2]],
       mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
-    { id: 'mo', t: 'Moedas', tz: 'America/New_York', cme: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
+    { id: 'mo', t: 'Moedas', tz: 'America/New_York', fx: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
       mais: [['JPY=X', 'Iene (USD/JPY)', 2], ['EURBRL=X', 'Euro (EUR/BRL)', 4, 'R$ '], ['GBPBRL=X', 'Libra (GBP/BRL)', 4, 'R$ ']] },
     { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
     { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
@@ -97,6 +97,13 @@
   function situacao(r) {
     if (r.h24) return { aberto: true, txt: '24 horas' };
     const { min, dia } = agoraEm(r.tz);
+    if (r.fx) {
+      // câmbio à vista: negocia sem pausa de domingo 17h a sexta 17h (Nova York)
+      const fechado = dia === 6 || (dia === 0 && min < 1020) || (dia === 5 && min >= 1020);
+      if (!fechado) return { aberto: true, txt: '24h em dias úteis' };
+      const falta = (dia === 5 ? 2 * 1440 : dia === 6 ? 1440 : 0) + 1020 - min;
+      return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, 1020))}`, falta };
+    }
     if (r.cme) {
       // futuros na CME: domingo 18h até sexta 17h (Nova York), pausa diária das 17h às 18h
       const fechado = dia === 6 || (dia === 0 && min < 1080) || (dia === 5 && min >= 1020) || (min >= 1020 && min < 1080);
