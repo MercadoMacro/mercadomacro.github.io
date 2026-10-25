@@ -1676,6 +1676,14 @@ function newsBusca(list) {
   return list.filter(n => newsSemAcento([n.titulo, n.tituloOriginal, n.trecho, n.trechoPt, n.resumo, n.fonte, n.veiculo].join(' ')).includes(q));
 }
 
+let newsOrder = 'relevant';
+function newsUsefulExcerpt(title, excerpt) {
+  const norm = value => newsSemAcento(value).replace(/[^a-z0-9]+/g, ' ').trim();
+  const t = norm(title), e = norm(excerpt);
+  if (!e || e === t || t.startsWith(e)) return '';
+  if (e.startsWith(t) && e.length < t.length + 60) return '';
+  return excerpt;
+}
 function renderNewsView() {
   const view = document.getElementById('news-view');
   if (!view) return;
@@ -1684,12 +1692,12 @@ function renderNewsView() {
   const filtrado = newsBusca(filterNewsByAsset(filterNewsBySources(newsAll)));
   const leads = clusterNews(filtrado);
 
-  let destaques = leads.filter(n => n.impactScore >= 4);
-  if (destaques.length < 12) {
+  let destaques = newsOrder === 'recent' ? [...leads].sort((a,b) => b.data-a.data) : leads.filter(n => n.impactScore >= 4);
+  if (newsOrder !== 'recent' && destaques.length < 12) {
     const outras = leads.filter(n => n.impactScore < 4);
     destaques = [...destaques, ...outras];
   }
-  destaques = newsMistura(destaques).slice(0, busca ? 120 : 40);
+  destaques = (newsOrder === 'recent' ? destaques : newsMistura(destaques)).slice(0, busca ? 120 : 40);
 
   if (!destaques.length) {
     view.innerHTML = `<div class="nl-empty">${busca ? `Nenhuma notícia com "${escapeHTML(document.getElementById('news-search').value.trim())}" nesta seleção.` : newsAsset === 'movers' ? 'Nenhuma notícia sobre as maiores altas e baixas de hoje.' : 'Nenhuma notícia para esta seleção.'}</div>`;
@@ -1699,7 +1707,7 @@ function renderNewsView() {
   const picked = new Set(getNewsPicks().map(p => p.id));
   window.__newsLeads = destaques;
   // manchete principal: a mais relevante que tenha texto
-  const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
+  const leadIdx = newsOrder === 'recent' ? -1 : destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
   // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
   let criticos = 0;
   view.innerHTML = '<div class="nc-grid">' + destaques.map((n, idx) => {
@@ -1715,7 +1723,7 @@ function renderNewsView() {
     const isLead = idx === leadIdx;
     const falas = n.falas && n.falas.length
       ? `<ul class="nc-falas">${n.falas.slice(0, 4).map(f => `<li>${escapeHTML(f)}</li>`).join('')}${n.falas.length > 4 ? `<li class="nc-falas-mais">mais ${n.falas.length - 4}</li>` : ''}</ul>` : '';
-    const exc = falas ? '' : newsExcerpt(n, isLead ? 520 : 230);
+    const exc = falas ? '' : newsUsefulExcerpt(n.titulo, newsExcerpt(n, isLead ? 360 : 180));
     const img = n.imagem && /^https:\/\//.test(n.imagem)
       ? `<img class="nc-img" src="${escapeHTML(n.imagem)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
     const mins = newsReadMins(n);
@@ -1763,7 +1771,7 @@ function renderLiveView() {
   const counter = document.getElementById('live-count');
   if (!container) return;
 
-  const filtrado = newsBusca(filterNewsBySources(newsAll));
+  const filtrado = newsBusca(filterNewsByAsset(filterNewsBySources(newsAll)));
   const live = [...filtrado].sort((a, b) => b.data - a.data).slice(0, 100);
 
   if (!live.length) {

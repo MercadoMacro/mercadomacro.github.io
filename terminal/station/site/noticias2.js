@@ -93,16 +93,84 @@
   new MutationObserver(agenda).observe($('#source-sidebar'), { childList: true });
   new MutationObserver(agenda).observe($('#news-view'), { childList: true });
 
-  // manchete principal na 2ª posição, como no modelo, com "Ler notícia completa"
+  // Mantém o destaque na ordem definida pelo leitor.
   function manchete() {
     const g = $('#news-view .nc-grid'), lead = g?.querySelector('.nc-lead');
     if (!lead) return;
     const r = lead.querySelector('.nc-readhere');
-    if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Ler notícia completa <i class="fas fa-arrow-right"></i>'; }
-    const alvo = g.children[1];
-    if (alvo && alvo !== lead && window.matchMedia('(min-width: 1100px)').matches) g.insertBefore(lead, alvo);
+    if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Abrir leitura <i class="fas fa-arrow-right"></i>'; }
+
   }
   new MutationObserver(manchete).observe($('#news-view'), { childList: true });
   manchete();
   lateral();
+
+  // Controles compactos, preservando os botões e seus eventos existentes.
+  const actions = document.createElement('details');
+  actions.className = 'nw-actions';
+  actions.innerHTML = '<summary>Ações <i class="fas fa-chevron-down" aria-hidden="true"></i></summary><div class="nw-actions-body"></div>';
+  barra.append(actions);
+  if (brief) actions.lastElementChild.append(brief);
+  if (avisos) actions.lastElementChild.append(avisos);
+  actions.addEventListener('keydown', e => { if (e.key === 'Escape') { actions.open = false; actions.firstElementChild.focus(); } });
+  document.addEventListener('click', e => { if (!actions.contains(e.target)) actions.open = false; });
+  const subbar = document.createElement('div');
+  subbar.className = 'nw-subbar';
+  subbar.innerHTML = '<button type="button" class="btn-sm" id="nw-sources-toggle" aria-expanded="true" aria-controls="source-sidebar">Fontes</button><label>Ordenar <select id="nw-order"><option value="relevant">Mais relevantes</option><option value="recent">Mais recentes</option></select></label>';
+  barra.after(subbar);
+  if (info) subbar.append(info);
+  const sourceButton = subbar.querySelector('button');
+  const sidebar = $('#source-sidebar');
+  let sourcesOpen = false;
+  function sourceState() {
+    sidebar.hidden = !sourcesOpen;
+    layout.classList.toggle('nw-sources-closed', !sourcesOpen);
+    sourceButton.setAttribute('aria-expanded', String(sourcesOpen));
+    const names = [...newsActiveSources].map(k => NEWS_SOURCES[k]?.name || k);
+    sourceButton.textContent = 'Fontes: ' + (names.length === 1 ? names[0] : names.length ? names.length + ' selecionadas' : 'todas');
+    sourceButton.title = names.join(', ') || 'Todas as fontes';
+  }
+  sourceButton.addEventListener('click', () => { sourcesOpen = !sourcesOpen; sourceState(); });
+  const originalSourceStates = updateNewsBubbleStates;
+  updateNewsBubbleStates = () => { originalSourceStates(); sourceState(); };
+  // ordem escolhida fica salva neste navegador
+  const ordem = subbar.querySelector('select');
+  try { const o = localStorage.getItem('news_order_v1'); if (o === 'recent' || o === 'relevant') { newsOrder = o; ordem.value = o; if (o === 'recent') renderNewsView(); } } catch (e) {}
+  ordem.addEventListener('change', e => { newsOrder = e.target.value; try { localStorage.setItem('news_order_v1', newsOrder); } catch (er) {} renderNewsView(); });
+  const originalMode = setNewsMode;
+  setNewsMode = mode => { originalMode(mode); subbar.querySelector('label').hidden = mode === 'live'; };
+  sourceState();
+
+  const intro = document.createElement('header');
+  intro.className = 'nw-intro';
+  intro.innerHTML = '<div><span class="nw-eyebrow">MERCADO MACRO</span><h1>Notícias</h1><p>Escolha um tema. Leia no seu ritmo.</p></div>';
+  barra.before(intro);
+  const context = document.createElement('div');
+  context.className = 'nw-context';
+  context.innerHTML = '<p id="nw-context-text" role="status" aria-live="polite"></p><button type="button" class="btn-sm" id="nw-clear" hidden>Limpar filtros</button>';
+  $('#news-assets').after(context);
+  const search = $('#news-search');
+  search.setAttribute('aria-label', 'Buscar notícias');
+  function orientation() {
+    const topic = NEWS_ASSETS.find(a => a[0] === newsAsset)?.[1] || 'Todos os temas';
+    const filtered = newsBusca(filterNewsByAsset(filterNewsBySources(newsAll)));
+    const count = newsCurrentMode === 'live' ? Math.min(100, filtered.length) : (window.__newsLeads || []).length;
+    const sort = newsCurrentMode === 'live' || newsOrder === 'recent' ? 'mais recentes primeiro' : 'por relevância';
+    $('#nw-context-text').textContent = topic + ' · ' + count + ' na seleção · ' + sort;
+    $('#nw-clear').hidden = newsAsset === 'all' && !newsActiveSources.size && !search.value;
+    painel.querySelectorAll('#news-assets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === newsAsset)));
+    painel.querySelectorAll('#nm-toggle button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === newsCurrentMode)));
+  }
+  const originalRender = renderNewsView;
+  renderNewsView = () => { originalRender(); orientation(); };
+  const originalLive = renderLiveView;
+  renderLiveView = () => { originalLive(); orientation(); };
+  $('#nw-clear').addEventListener('click', () => {
+    newsAsset = 'all'; newsActiveSources.clear(); search.value = '';
+    renderNewsAssets(); updateNewsBubbleStates(); renderNewsView();
+    if (newsCurrentMode === 'live') renderLiveView();
+  });
+  search.placeholder = 'Buscar assunto, empresa ou palavra';
+  new MutationObserver(() => { if (search.placeholder !== 'Buscar assunto, empresa ou palavra') search.placeholder = 'Buscar assunto, empresa ou palavra'; }).observe(search, { attributes:true, attributeFilter:['placeholder'] });
+  orientation();
 })();
