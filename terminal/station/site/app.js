@@ -325,7 +325,7 @@ const YAHOO_SYMBOLS = [...new Set(
   MARKET_SECTIONS.flatMap(sec => sec.items)
     .filter(it => it.type === 'yahoo')
     .map(it => it.symbol)
-    .concat(['^BVSP', '^GSPC', 'ES=F', 'NQ=F', 'EURUSD=X', 'GBPUSD=X'])
+    .concat(['^BVSP', '^GSPC', 'ES=F', 'NQ=F', 'EURUSD=X', 'GBPUSD=X', '^FCHI', '^KS11']) // os dois últimos: só a aba Mercado (mercado-novo.js) usa
 )];
 const YAHOO_MEMO_TTL = 45 * 1000;
 let yahooMemo = {};        // símbolo -> valor já processado
@@ -2202,12 +2202,15 @@ renderMiniCalendar();
 renderUpcomingNotes();
 
 /* =========================================================
-   STATUS DOS MERCADOS (horário regular, sem feriados)
+   STATUS DOS MERCADOS (horário regular, com os feriados de feriados.js)
    ========================================================= */
+// a B3 fecha às 17h enquanto vale o horário de verão nos EUA e às 18h no resto do ano
+const b3Fecha = (d) => { const h = (tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(d); return ((h('UTC') - h('America/New_York') + 24) % 24) === 4 ? 17 * 60 : 18 * 60; };
 const MARKETS = [
-  { label: 'B3',   tz: 'America/Sao_Paulo', open: 10 * 60,     close: 18 * 60 },
-  { label: 'NYSE', tz: 'America/New_York',  open: 9 * 60 + 30, close: 16 * 60 }
+  { label: 'B3',   bolsa: 'b3',   tz: 'America/Sao_Paulo', open: 10 * 60,     close: b3Fecha },
+  { label: 'NYSE', bolsa: 'nyse', tz: 'America/New_York',  open: 9 * 60 + 30, close: () => 16 * 60 }
 ];
+const feriadoHoje = (m, d = new Date()) => { try { return window.MMFeriados?.[m.bolsa](MMFeriados.hojeEm(m.tz, d)) || null; } catch (e) { return null; } };
 const REFRESH_OPEN_MS = 5 * 60 * 1000;
 const REFRESH_CLOSED_MS = 15 * 60 * 1000;
 
@@ -2223,7 +2226,10 @@ function zonedParts(tz, d = new Date()) {
 function marketIsOpen(m, d = new Date()) {
   const { wd, min } = zonedParts(m.tz, d);
   if (wd === 'Sat' || wd === 'Sun') return false;
-  return min >= m.open && min < m.close;
+  const f = feriadoHoje(m, d);
+  if (f && !f.abre) return false;
+  const abre = f?.abre ? +f.abre.slice(0, 2) * 60 + +f.abre.slice(3) : m.open;
+  return min >= abre && min < m.close(d);
 }
 function currentRefreshMs() {
   return MARKETS.some(m => marketIsOpen(m)) ? REFRESH_OPEN_MS : REFRESH_CLOSED_MS;
@@ -2232,8 +2238,9 @@ function renderMarketStatus() {
   const el = $('#market-status');
   if (!el) return;
   el.innerHTML = MARKETS.map(m => {
-    const open = marketIsOpen(m);
-    return `<span class="ms-pill ${open ? 'open' : 'closed'}" title="Horário regular de negociação (não considera feriados)"><i></i>${m.label} ${open ? 'aberta' : 'fechada'}</span>`;
+    const open = marketIsOpen(m), f = feriadoHoje(m), wd = zonedParts(m.tz).wd;
+    const fer = f && !f.abre && wd !== 'Sat' && wd !== 'Sun';
+    return `<span class="ms-pill ${open ? 'open' : 'closed'}" title="${fer ? `Feriado: ${f.nome}` : 'Horário regular de negociação'}"><i></i>${m.label} ${open ? 'aberta' : fer ? 'feriado' : 'fechada'}</span>`;
   }).join('');
 }
 
@@ -4190,8 +4197,8 @@ window.__onTabSwitch = (tabId) => {
   const refreshSide = () => {
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     if ($('#side-mkts')) $('#side-mkts').innerHTML = MARKETS.map(m => {
-      const open = marketIsOpen(m);
-      return `<div class="side-mkt${open ? ' open' : ''}" title="${m.label} ${open ? 'aberta' : 'fechada'} (horário de Brasília ${hora})">${FLAG[m.label] || ''}<span>${m.label}</span><i></i><small>${open ? 'Aberta' : 'Fechada'}</small><time>${hora}</time></div>`;
+      const open = marketIsOpen(m), f = feriadoHoje(m), wd = zonedParts(m.tz).wd, fer = !open && f && !f.abre && wd !== 'Sat' && wd !== 'Sun';
+      return `<div class="side-mkt${open ? ' open' : ''}" title="${m.label} ${open ? 'aberta' : fer ? `fechada: feriado (${f.nome})` : 'fechada'} (horário de Brasília ${hora})">${FLAG[m.label] || ''}<span>${m.label}</span><i></i><small>${open ? 'Aberta' : fer ? 'Feriado' : 'Fechada'}</small><time>${hora}</time></div>`;
     }).join('');
     const crit = (Array.isArray(newsAll) ? newsAll : []).filter(n => n.nivel === 'CRITICO' && Date.now() - n.data < 3 * 3600 * 1000).length;
     setBadge('news-panel', crit, `${crit} notícia(s) de alto impacto nas últimas 3 h`, true);
@@ -4789,7 +4796,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=16';
+  sc.src = 'mercado-novo.js?v=17';
   document.body.appendChild(sc);
 })();
 /* =========================================================

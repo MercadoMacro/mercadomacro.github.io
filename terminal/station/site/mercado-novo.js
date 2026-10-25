@@ -32,7 +32,7 @@
 
   /* ---------------- regiões ---------------- */
   // linhas: [símbolo Yahoo, nome, casas, prefixo]; mais: aparecem ao abrir o cartão (›)
-  // sessão: fuso da bolsa e horário local de abertura e fechamento (sem feriados neste protótipo)
+  // sessão: fuso da bolsa e horário local de abertura e fechamento (feriados da B3 e de Nova York em situacao())
   // a B3 fecha às 17h enquanto vale o horário de verão nos EUA e às 18h no resto do ano
   const veraoEUA = (d = new Date()) => {
     const h = (tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(d);
@@ -105,12 +105,17 @@
       if (dia === 5 && min >= 1020) falta += 2 * 1440; else if (dia === 6) falta += 1440;
       return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, 1080))}`, falta };
     }
-    const a = hm(r.ab), f = hm(typeof r.fe === 'function' ? r.fe() : r.fe), util = dia >= 1 && dia <= 5;
+    // feriados da B3 e de Nova York (feriados.js); Europa e Ásia seguem só o relógio
+    const bolsa = r.id === 'br' ? 'b3' : r.id === 'us' ? 'nyse' : null;
+    const fer = (k) => { try { return bolsa && window.MMFeriados ? MMFeriados[bolsa](MMFeriados.hojeEm(r.tz, new Date(Date.now() + k * 86400000))) : null; } catch (e) { return null; } };
+    const abreEm = (k) => { const x = fer(k); return x?.abre ? hm(x.abre) : hm(r.ab); };
+    const fHoje = fer(0), a = abreEm(0), f = hm(typeof r.fe === 'function' ? r.fe() : r.fe), util = dia >= 1 && dia <= 5 && !(fHoje && !fHoje.abre);
     if (util && min >= a && min < f) return { aberto: true, txt: `fecha ${quando(alvo(r.tz, f - min, f))}`, falta: 0 };
-    let falta = a - min, d = dia;
-    if (!(util && min < a)) { falta += 1440; d = (dia + 1) % 7; }
-    while (d === 0 || d === 6) { falta += 1440; d = (d + 1) % 7; }
-    return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, a))}`, falta };
+    let k = util && min < a ? 0 : 1, d = (dia + k) % 7;
+    while (k < 15 && (d === 0 || d === 6 || (fer(k) && !fer(k).abre))) { k++; d = (d + 1) % 7; }
+    const ak = abreEm(k), falta = ak - min + k * 1440;
+    const feriadoHoje = dia >= 1 && dia <= 5 && fHoje && !fHoje.abre;
+    return { aberto: false, txt: `${feriadoHoje ? 'feriado · ' : ''}abre ${quando(alvo(r.tz, falta, ak))}`, falta, nome: feriadoHoje ? `Feriado: ${fHoje.nome}` : '' };
   }
   // ordem fixa escolhida pelo Severino (24/10/2026): segue o dia do mercado, da Ásia ao Brasil
   const ORDEM = ['as', 'eu', 'us', 'br', 'ju', 'mo', 'co', 'cr'];
@@ -128,10 +133,18 @@
   const G = {}; // gráficos: `${faixa}|${sym}` -> { t, c, ts }
   const abertos = new Set();
 
-  async function loadQuotes() {
-    const parts = [];
-    for (let i = 0; i < SYMS.length; i += 45) parts.push(SYMS.slice(i, i + 45));
+  // as cotações vêm do mesmo lote /quotes que o app.js já busca para o resto do site (ensureYahooBatch, yahooMemo);
+  // só os símbolos que não estão nesse lote são pedidos à parte. Antes eram dois lotes iguais a cada atualização.
+  const loteApp = () => { try { return typeof ensureYahooBatch === 'function' && Array.isArray(YAHOO_SYMBOLS) ? YAHOO_SYMBOLS : null; } catch (e) { return null; } };
+  async function loadQuotes(force) {
     let n = 0;
+    const lote = loteApp(), doApp = lote ? SYMS.filter((s) => lote.includes(s)) : [], fora = SYMS.filter((s) => !doApp.includes(s));
+    if (doApp.length) {
+      try { await ensureYahooBatch(!!force); } catch (e) { /* sem lote: fica com o último dado */ }
+      doApp.forEach((s) => { const v = yahooMemo[s]; if (v && ok(v.value)) { Q[s] = { v: v.value, c: v.change, ts: v.ts }; n++; } });
+    }
+    const parts = [];
+    for (let i = 0; i < fora.length; i += 45) parts.push(fora.slice(i, i + 45));
     const res = await Promise.allSettled(parts.map((p) => getJSON(`${PROXY}/quotes?symbols=${encodeURIComponent(p.join(','))}`)));
     res.forEach((r) => {
       if (r.status !== 'fulfilled') return;
@@ -147,19 +160,21 @@
     return n;
   }
   async function loadHist(syms, f) {
+    // 3 meses: aproveita o histórico do dia que o app.js já guardou (mkt3m), sem pedir de novo ao worker
+    if (f === '3mo') { try { if (mkt3m && mkt3m.day === anaToday()) syms.forEach((s) => { const v = mkt3m.data?.[s], k = `3mo|${s}`; if (v && Array.isArray(v.c) && v.c.length > 1 && !G[k]) G[k] = { t: v.t, c: v.c, ts: Date.now() }; }); } catch (e) { /* sem o cache do app.js */ } }
     const falta = syms.filter((s) => { const g = G[`${f}|${s}`]; return !g || Date.now() - g.ts > (f === '1d' ? 120000 : 900000); });
     for (let i = 0; i < falta.length; i += 45) {
       const j = await getJSON(`${PROXY}/history?symbols=${encodeURIComponent(falta.slice(i, i + 45).join(','))}${f === '3mo' ? '' : '&r=' + f}`).catch(() => null);
       Object.entries(j || {}).forEach(([s, v]) => { if (v && Array.isArray(v.c) && v.c.length > 1) G[`${f}|${s}`] = { t: v.t, c: v.c, ts: Date.now() }; });
     }
   }
-  async function refresh() {
+  async function refresh(force) {
     if (busy) return;
     busy = true;
     root.querySelector('.mn-refresh')?.classList.add('busy');
     carimbo();
     try {
-      const [n] = await Promise.all([loadQuotes(), loadHist(SYMS, '3mo')]);
+      const [n] = await Promise.all([loadQuotes(force), loadHist(SYMS, '3mo')]);
       errMsg = n ? '' : 'Sem conexão com o servidor de cotações agora.';
       if (n) lastTs = Date.now();
       // gráfico de cada cartão na faixa escolhida (um lote por faixa)
@@ -286,7 +301,7 @@
       <header class="mn-head">
         <span class="mn-flag">${ICON[r.id]}</span>
         <h3>${esc(r.t)}</h3>
-        <span class="mn-st ${st.aberto ? 'on' : ''}"><i></i>${st.aberto ? `Aberto · ${esc(st.txt)}` : esc(st.txt[0].toUpperCase() + st.txt.slice(1))}</span>
+        <span class="mn-st ${st.aberto ? 'on' : ''}"${st.nome ? ` title="${esc(st.nome)}"` : ''}><i></i>${st.aberto ? `Aberto · ${esc(st.txt)}` : esc(st.txt[0].toUpperCase() + st.txt.slice(1))}</span>
         ${r.mais.length ? `<button type="button" class="mn-mais" data-mais="${r.id}" aria-expanded="${aberto}" title="${aberto ? 'Mostrar menos' : 'Mostrar mais ativos'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>` : ''}
       </header>
       <div class="mn-chart-top">
@@ -319,7 +334,7 @@
       el = document.createElement('span');
       el.className = 'qb-mn';
       el.innerHTML = '<span class="qb-mn-t"></span><button type="button" class="qb-mn-r" title="Atualizar cotações" aria-label="Atualizar cotações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>';
-      el.querySelector('button').addEventListener('click', () => refresh());
+      el.querySelector('button').addEventListener('click', () => refresh(true));
       qb.appendChild(el);
     }
     el.hidden = !panel.classList.contains('active');
@@ -336,7 +351,7 @@
     const row = e.target.closest('.mn-row[data-s]');
     const fb = e.target.closest('.mn-faixas button');
     const mais = e.target.closest('[data-mais]');
-    if (e.target.closest('.mn-refresh')) { refresh(); return; }
+    if (e.target.closest('.mn-refresh')) { refresh(true); return; }
     if (mais) { const id = mais.dataset.mais; abertos.has(id) ? abertos.delete(id) : abertos.add(id); render(); return; }
     if (!row && !fb) return;
     const r = REGIOES.find((x) => x.id === (row || fb).dataset.r);

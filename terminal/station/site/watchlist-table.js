@@ -140,16 +140,22 @@
   const G = {}; // `${faixa}|${símbolo}` -> { t, c, em }
   const fmt = (v, q) => core.price({ value: v, currency: q?.currency });
   function pregao(s) {
-    // situação pelo relógio da bolsa (sem feriados)
+    // situação pelo relógio da bolsa, com os feriados da B3 e de Nova York (feriados.js)
+    const feriado = (b, tz) => { try { return window.MMFeriados ? MMFeriados[b](MMFeriados.hojeEm(tz)) : null; } catch (e) { return null; } };
     const agora = (tz) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value])); return { m: +p.hour * 60 + +p.minute, d: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) }; };
     if (/-USD$/.test(s)) return { on: true, t: 'Cripto · 24 horas' };
     if (/=X$/.test(s)) { const { m, d } = agora('America/New_York'); const on = !(d === 6 || (d === 0 && m < 1020) || (d === 5 && m >= 1020)); return { on, t: on ? 'Câmbio aberto' : 'Câmbio fechado' }; }
     if (/\.SA$/.test(s) || s === '^BVSP') {
       const ny = new Date(), h = (tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(ny);
       const fecha = ((h('UTC') - h('America/New_York') + 24) % 24) === 4 ? 1020 : 1080;
-      const { m, d } = agora('America/Sao_Paulo'); const on = d >= 1 && d <= 5 && m >= 600 && m < fecha; return { on, t: on ? 'B3 aberta' : 'B3 fechada' };
+      const { m, d } = agora('America/Sao_Paulo'), fer = feriado('b3', 'America/Sao_Paulo'), abre = fer?.abre ? 780 : 600;
+      const on = d >= 1 && d <= 5 && !(fer && !fer.abre) && m >= abre && m < fecha;
+      return { on, t: on ? 'B3 aberta' : d >= 1 && d <= 5 && fer && !fer.abre ? `B3 fechada · feriado (${fer.nome})` : 'B3 fechada' };
     }
-    if (/^[A-Z.-]+$/.test(s) || ['^GSPC', '^IXIC', '^DJI', '^NDX', '^RUT'].includes(s)) { const { m, d } = agora('America/New_York'); const on = d >= 1 && d <= 5 && m >= 570 && m < 960; return { on, t: on ? 'NYSE aberta' : 'NYSE fechada' }; }
+    if (/^[A-Z.-]+$/.test(s) || ['^GSPC', '^IXIC', '^DJI', '^NDX', '^RUT'].includes(s)) {
+      const { m, d } = agora('America/New_York'), fer = feriado('nyse', 'America/New_York'), on = d >= 1 && d <= 5 && !fer && m >= 570 && m < 960;
+      return { on, t: on ? 'NYSE aberta' : d >= 1 && d <= 5 && fer ? `NYSE fechada · feriado (${fer.nome})` : 'NYSE fechada' };
+    }
     return null;
   }
   side.innerHTML = `<div class="wn-sheet-grab" aria-hidden="true"></div>

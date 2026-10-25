@@ -181,7 +181,7 @@
       <section class="aj-sec aj-sobre">
         <h3>Sobre</h3>
         <div class="site-foot">${document.getElementById('site-foot')?.innerHTML || ''}</div>
-        <p class="aj-note"><b>Aba Mercado:</b> cotações do Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv; dólar, VIX e futuros pela Capital.com em CFD; cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília; feriados ainda não entram na situação do pregão.</p>
+        <p class="aj-note"><b>Aba Mercado:</b> cotações do Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv; dólar, VIX e futuros pela Capital.com em CFD; cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília. A situação do pregão considera os feriados da B3 e da bolsa de Nova York; Europa, Ásia e os futuros da CME seguem só o horário normal.</p>
       </section>`;
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
