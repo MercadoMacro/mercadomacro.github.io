@@ -3,9 +3,9 @@
    e usa a cópia guardada só quando está sem internet.
    Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
-const CACHE = 'mm-site-v133';
+const CACHE = 'mm-site-v134';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'estilo.css?v=53', 'crypto-live.js?v=2', 'forex-live.js?v=7', 'crypto-live.css?v=2', 'feriados.js?v=1', 'app.js?v=86', 'ajustes.js?v=22', 'asset-history.js?v=4', 'asset-history.css?v=4', 'extras.js?v=23', 'asset-catalog.js?v=1', 'asset-search-core.js?v=2', 'asset-search.js?v=2', 'asset-search.css?v=2', 'cabecalho.js?v=2', 'noticias2.js?v=5', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=2', 'watchlists-core.js?v=1', 'watchlists-store.js?v=2', 'watchlists-ui.js?v=2', 'watchlists-ui.css?v=2', 'mesa-layout.js?v=1', 'mesa-layout.css?v=2', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=11', 'watchlist-table.css?v=8', 'conforto.css?v=2',
+const BASE = ['./', 'index.html', 'estilo.css?v=53', 'crypto-live.js?v=2', 'forex-live.js?v=7', 'crypto-live.css?v=2', 'feriados.js?v=2', 'app.js?v=87', 'ajustes.js?v=23', 'asset-history.js?v=4', 'asset-history.css?v=4', 'extras.js?v=23', 'asset-catalog.js?v=1', 'asset-search-core.js?v=2', 'asset-search.js?v=2', 'asset-search.css?v=2', 'cabecalho.js?v=2', 'noticias2.js?v=5', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=2', 'watchlists-core.js?v=1', 'watchlists-store.js?v=2', 'watchlists-ui.js?v=2', 'watchlists-ui.css?v=2', 'mesa-layout.js?v=1', 'mesa-layout.css?v=2', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=11', 'watchlist-table.css?v=8', 'conforto.css?v=2',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

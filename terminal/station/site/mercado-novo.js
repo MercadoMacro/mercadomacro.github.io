@@ -105,15 +105,29 @@
       return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, 1020))}`, falta };
     }
     if (r.cme) {
-      // futuros na CME: domingo 18h até sexta 17h (Nova York), pausa diária das 17h às 18h
-      const fechado = dia === 6 || (dia === 0 && min < 1080) || (dia === 5 && min >= 1020) || (min >= 1020 && min < 1080);
-      if (!fechado) return { aberto: true, txt: 'quase 24h' };
+      // futuros na CME: domingo 18h até sexta 17h (Nova York), pausa diária das 17h às 18h.
+      // Feriados (feriados.js): Natal, Ano-Novo e Sexta-feira Santa fecham o dia todo (a sessão da véspera, das 18h, não abre);
+      // nos outros feriados de Nova York para às 13h e volta às 18h.
+      const cmeF = (d) => { try { return window.MMFeriados ? MMFeriados.cme(MMFeriados.hojeEm(r.tz, d)) : null; } catch (e) { return null; } };
+      const aberto = (d) => {
+        const { min, dia } = agoraEm(r.tz, d);
+        if (dia === 6 || (dia === 0 && min < 1080) || (dia === 5 && min >= 1020) || (min >= 1020 && min < 1080)) return false;
+        const hoje = cmeF(d);
+        if (hoje?.fechado && min < 1080) return false;
+        if (hoje?.ate && min >= hm(hoje.ate) && min < 1080) return false;
+        if (min >= 1080 && cmeF(new Date(d.getTime() + 8 * 3600000))?.fechado) return false;
+        return true;
+      };
+      const agora = new Date(), fh = cmeF(agora);
+      if (aberto(agora)) return fh?.ate && min < hm(fh.ate) ? { aberto: true, txt: `feriado · fecha ${quando(alvo(r.tz, hm(fh.ate) - min, hm(fh.ate)))}`, nome: `Feriado: ${fh.nome}` } : { aberto: true, txt: 'quase 24h' };
+      // próxima abertura: a CME sempre reabre às 18h de Nova York; procura o primeiro dia em que às 18h ela está aberta
       let falta = 1080 - min; if (falta <= 0) falta += 1440;
-      if (dia === 5 && min >= 1020) falta += 2 * 1440; else if (dia === 6) falta += 1440;
-      return { aberto: false, txt: `abre ${quando(alvo(r.tz, falta, 1080))}`, falta };
+      for (let i = 0; i < 6 && !aberto(new Date(alvo(r.tz, falta, 1080).getTime() + 60000)); i++) falta += 1440;
+      const fer = fh && (fh.fechado || min >= hm(fh.ate));
+      return { aberto: false, txt: `${fer ? 'feriado · ' : ''}abre ${quando(alvo(r.tz, falta, 1080))}`, falta, nome: fer ? `Feriado: ${fh.nome}` : '' };
     }
-    // feriados da B3 e de Nova York (feriados.js); Europa e Ásia seguem só o relógio
-    const bolsa = r.id === 'br' ? 'b3' : r.id === 'us' ? 'nyse' : null;
+    // feriados (feriados.js): B3, Nova York, Xetra (Europa) e Tóquio (Ásia)
+    const bolsa = { br: 'b3', us: 'nyse', eu: 'xetra', as: 'jpx' }[r.id] || null;
     const fer = (k) => { try { return bolsa && window.MMFeriados ? MMFeriados[bolsa](MMFeriados.hojeEm(r.tz, new Date(Date.now() + k * 86400000))) : null; } catch (e) { return null; } };
     const abreEm = (k) => { const x = fer(k); return x?.abre ? hm(x.abre) : hm(r.ab); };
     const fHoje = fer(0), a = abreEm(0), f = hm(typeof r.fe === 'function' ? r.fe() : r.fe), util = dia >= 1 && dia <= 5 && !(fHoje && !fHoje.abre);
