@@ -803,7 +803,7 @@
     if (beaAsked) return;
     beaAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'bea.js?v=2';
+    sc.src = 'bea.js?v=3';
     sc.onload = () => { if (prefs.area === 'us' && window.__beaRender) window.__beaRender(body); };
     sc.onerror = () => { beaAsked = false; };
     document.body.appendChild(sc);

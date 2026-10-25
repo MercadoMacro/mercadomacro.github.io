@@ -134,7 +134,25 @@
   };
 
   const css = document.createElement('style');
+  // estilos da caixa e da tabela (os mesmos do ibge.js, que só carrega na área Brasil; repetidos aqui para a área EUA aberta direto)
   css.textContent = `
+  .ib-box { border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden; min-width:0; }
+  .ib-h { display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--surface-2) 70%, transparent); }
+  .ib-h h3 { margin:0; flex:1; font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2); }
+  .ib-meta { font-size:10.5px; color:var(--text-3); white-space:nowrap; }
+  .ib-meta a { color:var(--text-3); text-decoration:none; } .ib-meta a:hover { color:var(--accent-ink); text-decoration:underline; }
+  .ib-in { padding:12px; }
+  .ib-msg { padding:36px 10px; text-align:center; font-size:12.5px; color:var(--text-3); }
+  .ib-tb { width:100%; border-collapse:collapse; font-size:12px; }
+  .ib-tb th, .ib-tb td { padding:6px 6px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .ib-tb td { font-family:'JetBrains Mono', monospace; font-size:11.5px; }
+  .ib-tb tbody th { text-align:left; font-weight:500; color:var(--text-2); white-space:normal; }
+  .ib-tb thead th { font-size:10.5px; color:var(--text-3); font-weight:600; }
+  .ib-tb thead th:first-child { text-align:left; }
+  .ib-tb tr:last-child th, .ib-tb tr:last-child td { border-bottom:0; }
+  .ib-note { margin:8px 0 0; font-size:10.5px; color:var(--text-3); line-height:1.5; }
+  .be-svg { max-height:260px; }
+  .be-linha { max-height:150px; }
   .be-top { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:14px; margin-bottom:12px; }
   .be-top > div { display:flex; flex-direction:column; gap:2px; min-width:0; }
   .be-top span { font-size:11.5px; color:var(--text-3); }
