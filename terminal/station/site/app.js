@@ -5120,3 +5120,43 @@ function newsReadMins(n) {
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }, { once: true });
 }
+
+/* Orientação global: a mesma referência em todas as abas, sem mudar seus eventos. */
+(() => {
+ const sections = {
+  'market-panel':['Visão geral','Mercado','Acompanhe os mercados. Selecione um ativo para explorar o gráfico.'],
+  'mesa-panel':['Visão geral','Mesa','Organize seus painéis e acompanhe os dados que importam para você.'],
+  'watch-panel':['Visão geral','Watchlist','Suas listas de ativos, reunidas para acompanhar e comparar.'],
+  'heatmap-panel':['Visão geral','Mapa de calor','Compare o desempenho dos ativos. Use os valores além das cores.'],
+  'news-panel':['Informação','Notícias','Escolha um tema e leia no seu ritmo.'],
+  'weekly-panel':['Informação','Resumo semanal','Revise os acontecimentos da semana em uma leitura organizada.'],
+  'calendar-panel':['Informação','Calendário','Consulte os eventos e filtre o período que deseja acompanhar.'],
+  'analysis-panel':['Análise','Análises','Explore os indicadores e compare cenários, uma seção por vez.'],
+  'fund-panel':['Análise','Fundamentos','Escolha uma empresa para consultar seus resultados e indicadores.'],
+  'indicators-panel':['Análise','Indicadores','Explore as séries econômicas e compare sua evolução.'],
+  'calculator-panel':['Ferramentas','Calculadoras','Escolha uma simulação e ajuste os valores para o seu cenário.'],
+  'options-panel':['Ferramentas','Opções','Monte uma estratégia e explore o resultado nos diferentes cenários.']
+ };
+ const header = document.createElement('header');
+ header.className='mm-location';
+ header.innerHTML='<div><span class="mm-path" id="mm-path"></span><h1 id="mm-page-title"></h1><p id="mm-page-description"></p></div><button type="button" id="mm-focus" aria-pressed="false" title="Ocultar cotações do topo e elementos secundários"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>Modo foco</button>';
+ const top=document.querySelector('.topbar');
+ if(!top)return;
+ top.after(header);
+ const skip=document.createElement('a');skip.className='mm-skip';skip.href='#mm-page-title';skip.textContent='Ir para o conteúdo';document.body.prepend(skip);
+ header.querySelector('h1').tabIndex=-1;
+ let focus=false;try{focus=localStorage.getItem('mm_focus_v1')==='1';}catch{}
+ const button=header.querySelector('button');
+ const setFocus=()=>{document.body.classList.toggle('mm-focus',focus);button.setAttribute('aria-pressed',String(focus));};
+ button.addEventListener('click',()=>{focus=!focus;setFocus();try{localStorage.setItem('mm_focus_v1',focus?'1':'0');}catch{}});setFocus();
+ function update(id){
+  const item=sections[id];if(!item)return;
+  header.querySelector('#mm-path').textContent='Mercado Macro / '+item[0];
+  header.querySelector('h1').textContent=item[1];header.querySelector('p').textContent=item[2];
+  document.querySelectorAll('.tab-panel').forEach(p=>{if(p.id===id)p.setAttribute('aria-describedby','mm-page-description');else p.removeAttribute('aria-describedby');});
+  skip.href='#'+id;
+ }
+ const old=window.__onTabSwitch;
+ window.__onTabSwitch=id=>{if(old)old(id);update(id);};
+ update(document.querySelector('.tab-panel.active')?.id||'market-panel');
+})();
