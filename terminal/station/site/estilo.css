@@ -3099,3 +3099,11 @@ html body .mj-n { font-size:9.5px; }
   html body .topbar.topbar > .qbanner { grid-area:qb !important; display:flex !important; max-width:none; min-width:0; background:none !important; border:0 !important; border-radius:0; box-shadow:none; padding:0 2px; }
   html body .topbar.topbar > .qbanner::before { display:none; }
 }
+
+/* Telas largas (25/10/2026): nas abas de leitura o conteúdo fica com no máximo 1440 px, centralizado.
+   Mercado, Mesa, Watchlist e Mapa de Calor continuam na largura toda. Camadas fixas (modais) ficam de fora. */
+@media (min-width: 1500px) {
+  :is(#indicators-panel, #news-panel, #weekly-panel, #calendar-panel, #fund-panel, #analysis-panel, #calculator-panel, #options-panel) > :not([style*="position: fixed"]):not(.modal):not([class*="overlay"]) {
+    max-width: 1440px; margin-left: auto; margin-right: auto; width: 100%;
+  }
+}
