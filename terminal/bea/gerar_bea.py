@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""PIB dos EUA por componente (BEA, tabela NIPA T10102: contribuições para a variação do PIB real, em p.p.
+anualizados) e a variação do PIB (T10101). Grava terminal/bea/bea.json para o bloco da aba Indicadores (área EUA).
+A chave fica só no segredo BEA_API_KEY do GitHub. Só biblioteca padrão. Uso: python3 gerar_bea.py <pasta de saída>"""
+import json, os, sys, time, urllib.request, urllib.parse, datetime
+
+API = 'https://apps.bea.gov/api/data'
+CHAVE = os.environ.get('BEA_API_KEY', '').strip()
+
+
+def pedir(tabela, anos, tentativas=5):
+    q = {'UserID': CHAVE, 'method': 'GetData', 'DataSetName': 'NIPA', 'TableName': tabela, 'Frequency': 'Q', 'Year': ','.join(map(str, anos)), 'ResultFormat': 'JSON'}
+    url = API + '?' + urllib.parse.urlencode(q)
+    for i in range(tentativas):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'MercadoMacro/1.0'}), timeout=90) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            res = j.get('BEAAPI', {}).get('Results', {})
+            if isinstance(res, list):
+                res = res[0] if res else {}
+            if res.get('Error') or j.get('BEAAPI', {}).get('Error'):
+                raise RuntimeError(str(res.get('Error') or j['BEAAPI']['Error'])[:300])
+            return res
+        except Exception as e:  # a API às vezes demora; tenta de novo sem mostrar a chave
+            print(f'  tentativa {i + 1} em {tabela}: {str(e).replace(CHAVE, "***")[:300]}')
+            time.sleep(15 * (i + 1))
+    raise SystemExit(f'BEA não respondeu na tabela {tabela}')
+
+
+def num(v):
+    try:
+        return float(str(v).replace(',', ''))
+    except Exception:
+        return None
+
+
+def linhas(res):
+    out = {}
+    for it in res.get('Data', []):
+        ln, tp, v = str(it.get('LineNumber')), it.get('TimePeriod'), num(it.get('DataValue'))
+        if not tp or v is None:
+            continue
+        d = out.setdefault(ln, {'d': (it.get('LineDescription') or '').strip(), 'v': {}})
+        d['v'][tp] = v
+    return out
+
+
+def main(saida):
+    if not CHAVE:
+        raise SystemExit('Falta o segredo BEA_API_KEY no GitHub')
+    ano = datetime.date.today().year
+    anos = list(range(ano - 3, ano + 1))
+    contrib = linhas(pedir('T10102', anos))
+    var = linhas(pedir('T10101', anos))
+    for ln in sorted(contrib, key=int):
+        print('T10102', ln, contrib[ln]['d'], list(contrib[ln]['v'].items())[-1])
+    print('T10101 1', var.get('1', {}).get('d'), list(var.get('1', {}).get('v', {}).items())[-2:])
+    # linhas da T10102: 1 PIB, 2 consumo das famílias, 7 investimento privado, 14 estoques, 15 exportações líquidas,
+    # 16 exportações, 19 importações, 22 governo (conferidas pela descrição antes de usar)
+    esperado = {'pib': ('1', 'gross domestic product'), 'consumo': ('2', 'personal consumption'), 'investimento': ('7', 'gross private domestic investment'),
+                'estoques': ('14', 'change in private inventories'), 'externo': ('15', 'net exports'), 'exportacoes': ('16', 'exports'),
+                'importacoes': ('19', 'imports'), 'governo': ('22', 'government')}
+    campos = {}
+    for k, (ln, desc) in esperado.items():
+        d = contrib.get(ln)
+        if not d or desc not in d['d'].lower():
+            raise SystemExit(f'Linha {ln} da T10102 mudou: {d and d["d"]!r}; arquivo mantido')
+        campos[k] = d['v']
+    pib = var.get('1', {}).get('v', {})
+    qs = sorted(set(campos['consumo']) & set(pib))
+    if len(qs) < 4:
+        raise SystemExit(f'Poucos trimestres ({len(qs)}); arquivo mantido')
+    tri = [{'q': q, 'pib': pib.get(q), **{k: campos[k].get(q) for k in campos if k != 'pib'}} for q in qs]
+    out = {'fonte': 'BEA (U.S. Bureau of Economic Analysis), tabelas NIPA 1.1.1 e 1.1.2', 'unidade': 'p.p. anualizados', 'ultimo': qs[-1], 'trimestres': tri}
+    caminho = f'{saida}/bea.json'
+    try:
+        antigo = json.load(open(caminho, encoding='utf-8'))
+    except Exception:
+        antigo = None
+    if antigo and antigo.get('trimestres') == tri:
+        print('Sem dado novo')
+        return
+    out['gerado'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    with open(caminho, 'w', encoding='utf-8') as f:
+        json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
+    print(f'Gravado: {len(tri)} trimestres, último {tri[-1]}')
+
+
+if __name__ == '__main__':
+    main(sys.argv[1] if len(sys.argv) > 1 else '.')
