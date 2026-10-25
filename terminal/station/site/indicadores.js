@@ -763,6 +763,7 @@
     }).join('');
     defs.forEach(fillCard);
     if (area === 'br') { ibge(); comex(); }
+    if (area === 'us') bea();
     updateSub();
   }
 
@@ -791,6 +792,20 @@
     sc.src = 'comex.js?v=3';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
+    document.body.appendChild(sc);
+  }
+
+  // PIB dos EUA por componente (BEA, trimestral): código no bea.js, baixado na primeira vez
+  let beaAsked = false;
+  function bea(force = false) {
+    if (prefs.area !== 'us') return;
+    if (window.__beaRender) { window.__beaRender(body, force); return; }
+    if (beaAsked) return;
+    beaAsked = true;
+    const sc = document.createElement('script');
+    sc.src = 'bea.js?v=1';
+    sc.onload = () => { if (prefs.area === 'us' && window.__beaRender) window.__beaRender(body); };
+    sc.onerror = () => { beaAsked = false; };
     document.body.appendChild(sc);
   }
 
@@ -845,7 +860,7 @@
       if (prefs.area !== areaBtn.dataset.a) { prefs.area = areaBtn.dataset.a; savePrefs(); renderArea(); loadArea(prefs.area); }
       return;
     }
-    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); return; }
+    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); bea(true); return; }
     const card = e.target.closest('.ind-card');
     if (!card) return;
     const d = DEFS.find((x) => x.id === card.dataset.id);
