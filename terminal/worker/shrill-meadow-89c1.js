@@ -393,18 +393,33 @@ async function handleHistory(url, ctx, cors) {
   const cacheKey = new Request('https://cache.local/history-v1?symbols=' + encodeURIComponent(symbols.join(',')) + (faixa === '3mo' ? '' : '&r=' + faixa));
   const hit = await cache.match(cacheKey);
   if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${Math.min(1800, faixaTtl)}`, 'X-Cache': 'HIT', ...cors } });
+  const serie = async (sym, range) => {
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${iv}&range=${range}`, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: faixaTtl, cacheEverything: true }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const res = (await r.json())?.chart?.result?.[0];
+    const ts = res?.timestamp || [], cl = res?.indicators?.quote?.[0]?.close || [];
+    const t = [], c = [];
+    for (let i = 0; i < ts.length; i++) if (cl[i] != null && isFinite(cl[i])) { t.push(ts[i]); c.push(+cl[i].toPrecision(7)); }
+    return { t, c, off: res?.meta?.gmtoffset || 0 };
+  };
   const entries = await Promise.all(symbols.map(async (sym) => {
     try {
-      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${iv}&range=${faixa}`, {
-        headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: faixaTtl, cacheEverything: true }
-      });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const res = (await r.json())?.chart?.result?.[0];
-      const ts = res?.timestamp || [], cl = res?.indicators?.quote?.[0]?.close || [];
-      const t = [], c = [];
-      for (let i = 0; i < ts.length; i++) if (cl[i] != null && isFinite(cl[i])) { t.push(ts[i]); c.push(+cl[i].toPrecision(7)); }
+      let s = await serie(sym, faixa);
+      // 1D com o mercado fechado (fim de semana, feriado, antes da abertura): o Yahoo devolve o dia vazio.
+      // Busca 5 dias de 5 em 5 min e fica só com o último pregão, no fuso da bolsa.
+      if (faixa === '1d' && s.c.length < 2) {
+        const w = await serie(sym, '5d');
+        if (w.c.length >= 2) {
+          const dia = (x) => Math.floor((x + w.off) / 86400), ult = dia(w.t[w.t.length - 1]);
+          const i0 = w.t.findIndex((x) => dia(x) === ult);
+          s = { t: w.t.slice(i0), c: w.c.slice(i0), off: w.off };
+        }
+      }
+      const { t, c, off } = s;
       if (c.length < 2) throw new Error('sem histórico');
-      return [sym, { t, c, off: res.meta?.gmtoffset || 0 }];
+      return [sym, { t, c, off }];
     } catch (err) {
       return [sym, { error: String(err.message || err) }];
     }
