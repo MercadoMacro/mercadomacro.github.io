@@ -1,0 +1,34 @@
+/* =========================================================
+   CORES MAIS CONFORTÁVEIS (25/10/2026, pedido do Severino)
+   Só as cores de fundo, superfícies, linhas e texto; destaque, alta/baixa e o resto ficam como estão.
+   - Escuro: fundo cinza-azulado (não quase preto) e texto levemente acinzentado (não branco puro),
+     para tirar o "brilho" do branco sobre preto que cansa a vista.
+   - Claro: fundo de papel levemente quente, no lugar do branco-azulado frio.
+   Carregado depois dos outros CSS. Para desfazer: tirar o <link> deste arquivo do index.html.
+   ========================================================= */
+html body {
+  --bg: #12161d;
+  --bg-2: #161b23;
+  --surface: #191f28;
+  --surface-2: #1e252f;
+  --surface-3: #252d39;
+  --line: rgba(170,185,205,.10);
+  --line-2: rgba(170,185,205,.17);
+  --text: #e2e6ed;
+  --text-2: #aab3c1;
+  --text-3: #8d97a6;
+  --glass: rgba(25,31,40,.86);
+}
+html body.light {
+  --bg: #f4f3ef;
+  --bg-2: #eceae4;
+  --surface: #fffefb;
+  --surface-2: #f9f8f4;
+  --surface-3: #f0eee8;
+  --line: rgba(45,40,30,.10);
+  --line-2: rgba(45,40,30,.17);
+  --text: #1f242c;
+  --text-2: #4a5361;
+  --text-3: #5d6674;
+  --glass: rgba(255,254,251,.88);
+}
