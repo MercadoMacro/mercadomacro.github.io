@@ -47,7 +47,8 @@
     const W = 480, H = 110, bw = W / ult24.length, z = 4 + (hi / amp) * (H - 8);
     const barras = ult24.map((x, i) => {
       const h = ok(x.s) ? Math.abs(x.s) / amp * (H - 8) : 0, y = x.s >= 0 ? z - h : z;
-      return `<rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" class="${x.s >= 0 ? 'up' : 'dn'}${i === ult24.length - 1 ? ' last' : ''}"><title>${esc(nomeMes(x.m, true))}: saldo US$ ${sgBi(x.s)} bi (exportações ${bi(x.exp)} bi, importações ${bi(x.imp)} bi)</title></rect>`;
+      const tip = `${nomeMes(x.m, true)}\nSaldo: US$ ${sgBi(x.s)} bi\nExportações: US$ ${bi(x.exp)} bi\nImportações: US$ ${bi(x.imp)} bi`;
+      return `<g data-tip="${esc(tip)}"><rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" class="hit"/><rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" class="${x.s >= 0 ? 'up' : 'dn'}${i === ult24.length - 1 ? ' last' : ''}"/></g>`;
     }).join('');
     const rotulos = [0, 12, ult24.length - 1].filter((i, k, a) => ult24[i] && a.indexOf(i) === k).map((i) => `<text x="${i === 0 ? 0 : i === ult24.length - 1 ? W : (i * bw + bw / 2).toFixed(1)}" y="${H + 12}" style="text-anchor:${i === 0 ? 'start' : i === ult24.length - 1 ? 'end' : 'middle'}">${esc(nomeMes(ult24[i].m))}</text>`).join('');
     const tab = ms.slice(-6).reverse().map((x) => `<tr><th>${esc(nomeMes(x.m, true))}</th><td>${bi(x.exp)}</td><td>${bi(x.imp)}</td><td class="${cls(x.s)}">${sgBi(x.s)}</td></tr>`).join('');
@@ -148,6 +149,7 @@
   .cx-svg { display:block; width:100%; height:auto; }
   .cx-svg .z { stroke:var(--line-2, var(--line)); }
   .cx-svg rect.up { fill:var(--pos); opacity:.65; } .cx-svg rect.dn { fill:var(--neg); opacity:.65; } .cx-svg rect.last { opacity:1; }
+  .cx-svg .hit { fill:transparent; } .cx-svg g.on .hit { fill:var(--text); opacity:.07; } .cx-svg g.on rect.up, .cx-svg g.on rect.dn { opacity:1; }
   .cx-svg text { font:10px 'JetBrains Mono', monospace; fill:var(--text-3); text-anchor:middle; }
   .cx-tb th:first-child { text-transform:none; }
   .cx-sub { margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }

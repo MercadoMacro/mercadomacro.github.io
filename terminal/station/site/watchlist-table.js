@@ -208,7 +208,7 @@
     if (!k) { box.hidden = true; return; }
     if (!window.MMComex) {
       box.hidden = true;
-      if (!comexPedido) { comexPedido = true; const sc = document.createElement('script'); sc.src = 'comex.js?v=5'; sc.onload = () => pintaComex(sel); document.head.append(sc); }
+      if (!comexPedido) { comexPedido = true; const sc = document.createElement('script'); sc.src = 'comex.js?v=6'; sc.onload = () => pintaComex(sel); document.head.append(sc); }
       return;
     }
     const r = window.MMComex.resumo(k);

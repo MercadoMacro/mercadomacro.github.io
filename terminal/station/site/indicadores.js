@@ -789,7 +789,7 @@
     if (comexAsked) return;
     comexAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'comex.js?v=5';
+    sc.src = 'comex.js?v=6';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
     document.body.appendChild(sc);
@@ -803,7 +803,7 @@
     if (beaAsked) return;
     beaAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'bea.js?v=5';
+    sc.src = 'bea.js?v=6';
     sc.onload = () => { if (prefs.area === 'us' && window.__beaRender) window.__beaRender(body); };
     sc.onerror = () => { beaAsked = false; };
     document.body.appendChild(sc);
@@ -906,6 +906,28 @@
       const hx = ch.querySelector('.hx'); if (hx) { hx.setAttribute('x1', -10); hx.setAttribute('x2', -10); }
     }
   });
+
+  // dica ao passar o mouse (ou tocar) nos gráficos da balança e da BEA: elementos com data-tip
+  const tipBox = document.createElement('div');
+  tipBox.className = 'ind-ftip'; tipBox.hidden = true;
+  document.body.appendChild(tipBox);
+  let tipAlvo = null;
+  const escondeTip = () => { tipBox.hidden = true; if (tipAlvo) tipAlvo.classList.remove('on'); tipAlvo = null; };
+  function mostraTip(e) {
+    const g = e.target.closest?.('[data-tip]');
+    if (!g || !root.contains(g)) { escondeTip(); return; }
+    if (g !== tipAlvo) { if (tipAlvo) tipAlvo.classList.remove('on'); tipAlvo = g; g.classList.add('on'); tipBox.textContent = g.dataset.tip; }
+    tipBox.hidden = false;
+    const w = tipBox.offsetWidth, h = tipBox.offsetHeight;
+    let x = e.clientX + 14, y = e.clientY - h - 12;
+    if (x + w > window.innerWidth - 8) x = Math.max(8, e.clientX - w - 14);
+    if (y < 8) y = e.clientY + 18;
+    tipBox.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
+  }
+  root.addEventListener('pointermove', mostraTip, { passive: true });
+  root.addEventListener('pointerdown', mostraTip, { passive: true });
+  root.addEventListener('pointerleave', escondeTip);
+  window.addEventListener('scroll', escondeTip, { passive: true, capture: true });
 
   // só busca com a aba aberta e a página visível
   const panel = document.getElementById('indicators-panel');
@@ -1625,6 +1647,7 @@
   .ind-chart .b-up { fill:color-mix(in srgb, var(--pos) 75%, transparent); } .ind-chart .b-dn { fill:color-mix(in srgb, var(--neg) 75%, transparent); }
   .ind-ax { display:flex; justify-content:space-between; gap:8px; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--text-3); margin-top:4px; white-space:nowrap; }
   .ind-ax span:nth-child(2) { overflow:hidden; text-overflow:ellipsis; }
+  .ind-ftip { position:fixed; left:0; top:0; z-index:9999; max-width:260px; padding:6px 9px; border-radius:8px; background:var(--surface-3, var(--surface-2)); border:1px solid var(--line-2); font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.5; color:var(--text); white-space:pre-line; pointer-events:none; box-shadow:var(--shadow-sm, 0 4px 14px rgba(0,0,0,.18)); }
   .ind-tip { position:absolute; top:-6px; transform:translateX(-50%); padding:3px 8px; border-radius:7px; background:var(--surface-3, var(--surface-2)); border:1px solid var(--line-2); font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text); white-space:nowrap; pointer-events:none; box-shadow:var(--shadow-sm, none); }
   .ind-nochart { font-size:11px; color:var(--text-3); padding:20px 0; text-align:center; }
   .ind-foot { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; padding-top:8px; border-top:1px dashed var(--line); }

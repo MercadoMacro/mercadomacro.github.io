@@ -53,9 +53,9 @@
         const y1 = y(Math.max(a, b)), h = Math.abs(y(a) - y(b));
         return `<rect x="${(i * bw + bw * 0.2).toFixed(1)}" y="${y1.toFixed(1)}" width="${(bw * 0.6).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" class="${c}"/>`;
       }).join('');
-      const tip = `${tri(x.q)}: PIB ${pct(x.pib)}; ${PARTES.map(([k, n]) => `${n.toLowerCase()} ${pp(x[k])}`).join(', ')}`;
+      const tip = `${tri(x.q)}\nPIB: ${pct(x.pib)}\n${PARTES.map(([k, n]) => `${n}: ${pp(x[k])}`).join('\n')}`;
       const dot = ok(x.pib) ? `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${y(x.pib).toFixed(1)}" r="3.6" class="pib"/>` : '';
-      return `<g><title>${esc(tip)}</title><rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" fill="transparent"/>${rects}${dot}</g>`;
+      return `<g data-tip="${esc(tip)}"><rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" class="hit"/>${rects}${dot}</g>`;
     }).join('');
     const rot = ult8.map((x, i) => `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H + 13}">${esc(triCurto(x.q))}</text>`).join('');
     const linhas = PARTES.map(([k, n, c]) => `<tr><th><i class="cx-sw ${c}"></i>${esc(n)}</th><td class="${cls(u[k])}">${pp(u[k])}</td><td class="${cls(ant?.[k])}">${pp(ant?.[k])}</td></tr>`).join('');
@@ -98,7 +98,8 @@
       const vs = pts.map((x) => x.poupanca), lo = Math.min(...vs), hi = Math.max(...vs), amp = hi - lo || 1;
       const X = (i) => 4 + i * (W - 8) / (pts.length - 1), Y = (v) => 8 + (hi - v) / amp * (H - 16);
       const path = pts.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x.poupanca).toFixed(1)}`).join('');
-      const marcas = pts.map((x, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.poupanca).toFixed(1)}" r="${i === pts.length - 1 ? 3.6 : 2}" class="pt"><title>${esc(nomeMes(x.m))}: ${n1(x.poupanca)}%</title></circle>`).join('');
+      const passo = (W - 8) / (pts.length - 1);
+      const marcas = pts.map((x, i) => `<g data-tip="${esc(`${nomeMes(x.m)}\nPoupança: ${n1(x.poupanca)}% da renda`)}"><rect x="${Math.max(0, X(i) - passo / 2).toFixed(1)}" y="0" width="${passo.toFixed(1)}" height="${H}" class="hit"/><circle cx="${X(i).toFixed(1)}" cy="${Y(x.poupanca).toFixed(1)}" r="${i === pts.length - 1 ? 3.6 : 2}" class="pt"/></g>`).join('');
       svg = `<p class="cx-leg">Taxa de poupança das famílias (% da renda disponível), de ${esc(nomeMes(pts[0].m))} a ${esc(nomeMes(pts[pts.length - 1].m))}. Mínimo ${n1(lo)}%, máximo ${n1(hi)}%.</p>
         <svg class="be-svg be-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="Taxa de poupança das famílias nos EUA"><path d="${path}"/>${marcas}</svg>`;
     }
@@ -183,6 +184,7 @@
   .be-sub { margin:22px 0 10px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .be-linha path { fill:none; stroke:#3b82f6; stroke-width:2; stroke-linejoin:round; }
   .be-linha .pt { fill:#3b82f6; }
+  .be-svg .hit { fill:transparent; } .be-svg g.on .hit { fill:var(--text); opacity:.07; } .be-linha g.on .pt { r:4.5; }
   /* telas largas: PIB e renda das famílias lado a lado; dentro de cada um, gráfico em cima e tabela embaixo */
   @media (min-width: 1400px) {
     .be-par { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
