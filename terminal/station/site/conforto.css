@@ -1,0 +1,99 @@
+/* =========================================================
+   CONFORTO VISUAL (25/10/2026, pedido do Severino)
+   Objetivo: cansar menos a vista, ajudar quem tem TDAH e não deixar ninguém perdido.
+   Carregado depois de todos os outros CSS; só sobrescreve. Para desfazer: tirar o <link>
+   deste arquivo e o <script src="conforto.js"> do index.html.
+
+   Cores (teoria):
+   - Base neutra fria (azul-ardósia, saturação baixa): acalma e não compete com os números.
+   - Uma única cor de destaque, quente (âmbar da marca), complementar à base: aparece só
+     onde a pessoa está e no que dá para clicar de mais importante.
+   - Fundo escuro sem chegar ao preto e texto sem chegar ao branco puro: contraste de
+     leitura ~13:1, sem o "brilho" que cansa (halation) do branco sobre preto.
+   - Alta e baixa em verde e vermelho menos saturados: continuam óbvios, sem gritar.
+   - Tema claro em papel levemente quente, em vez do branco-azulado frio.
+   ========================================================= */
+
+html body {
+  --bg: #12161d;
+  --bg-2: #161b23;
+  --surface: #191f28;
+  --surface-2: #1e252f;
+  --surface-3: #252d39;
+  --line: rgba(170,185,205,.10);
+  --line-2: rgba(170,185,205,.17);
+  --text: #e2e6ed;
+  --text-2: #aab3c1;
+  --text-3: #8d97a6;
+  --pos: #4cc38a;
+  --neg: #ef6f6c;
+  --info: #7ea8ea;
+  --crypto: #b39cf0;
+  --glass: rgba(25,31,40,.86);
+  --card-hi: rgba(255,255,255,.025);
+  --shadow-sm: 0 1px 0 rgba(255,255,255,.025) inset, 0 6px 18px -14px rgba(0,0,0,.6);
+  --shadow-lg: 0 18px 44px -26px rgba(0,0,0,.7);
+}
+html:not([data-accent]) body {
+  --accent: #e5b25d;
+  --accent-2: #f0c77f;
+  --accent-soft: rgba(229,178,93,.11);
+  --accent-line: rgba(229,178,93,.34);
+}
+html body.light {
+  --bg: #f4f3ef;
+  --bg-2: #eceae4;
+  --surface: #fffefb;
+  --surface-2: #f9f8f4;
+  --surface-3: #f0eee8;
+  --line: rgba(45,40,30,.10);
+  --line-2: rgba(45,40,30,.17);
+  --text: #1f242c;
+  --text-2: #4a5361;
+  --text-3: #5d6674;
+  --pos: #13845a;
+  --neg: #c2413f;
+  --info: #2f63c2;
+  --crypto: #7550c8;
+  --glass: rgba(255,254,251,.88);
+  --card-hi: rgba(255,255,255,.9);
+  --shadow-sm: 0 1px 2px rgba(45,40,30,.05), 0 6px 18px -16px rgba(45,40,30,.22);
+  --shadow-lg: 0 18px 44px -28px rgba(45,40,30,.30);
+}
+html:not([data-accent]) body.light {
+  --accent: #9a650b;
+  --accent-2: #b8790f;
+  --accent-soft: rgba(154,101,11,.09);
+  --accent-line: rgba(154,101,11,.30);
+}
+
+/* fundo liso e calmo: sem brilhos coloridos nem grade (o papel de parede escolhido em Ajustes continua valendo) */
+html body { background: var(--bg); line-height: 1.55; }
+html:not([data-wp]) body::before { display: none; }
+
+/* leitura: nomes em caixa normal (CAIXA ALTA é mais lenta de ler) e espaço entre linhas */
+html body .mn-root .mn-n { text-transform: none; letter-spacing: 0; font-size: 13px; }
+html body p, html body .nc-excerpt, html body .ib-note { line-height: 1.6; }
+
+/* menos coisa se mexendo: sem brilho que segue o mouse e sem cartão "pulando" no hover */
+html body .quote-card::after, html body .nc-card::after, html body .ana-card::after { display: none; }
+html body .quote-card:hover, html body .nc-card:hover, html body .ana-card:hover { transform: none; }
+html body .tab-panel.active { animation-duration: .18s; }
+
+/* foco do teclado sempre visível e claro */
+html body :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* cabeçalho de cada aba: nome, grupo e para que ela serve */
+.cf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 2px 0 16px; padding: 0 2px 12px; border-bottom: 1px solid var(--line); }
+.cf-head .cf-grupo { display: block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
+.cf-head h1 { font-size: 22px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; color: var(--text); margin: 0; }
+.cf-head p { font-size: 13.5px; color: var(--text-2); margin: 4px 0 0; max-width: 70ch; }
+@media (max-width: 900px) {
+  .cf-head { margin: 4px 0 12px; padding-bottom: 10px; }
+  .cf-head h1 { font-size: 19px; }
+  .cf-head p { font-size: 13px; }
+}
+
+/* o título grande dentro da aba repetia o do cabeçalho: some, e ficam os botões e a fonte ao lado */
+html body .wn-title > h2, html body .heatmap-title, html body .calendar-title,
+html body .ind-title > h2, html body .cl-title > h2, html body .opt-title > h2 { display: none; }
