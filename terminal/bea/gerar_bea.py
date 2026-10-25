@@ -8,8 +8,8 @@ API = 'https://apps.bea.gov/api/data'
 CHAVE = os.environ.get('BEA_API_KEY', '').strip()
 
 
-def pedir(tabela, anos, tentativas=5):
-    q = {'UserID': CHAVE, 'method': 'GetData', 'DataSetName': 'NIPA', 'TableName': tabela, 'Frequency': 'Q', 'Year': ','.join(map(str, anos)), 'ResultFormat': 'JSON'}
+def pedir(tabela, anos, tentativas=5, freq='Q'):
+    q = {'UserID': CHAVE, 'method': 'GetData', 'DataSetName': 'NIPA', 'TableName': tabela, 'Frequency': freq, 'Year': ','.join(map(str, anos)), 'ResultFormat': 'JSON'}
     url = API + '?' + urllib.parse.urlencode(q)
     for i in range(tentativas):
         try:
@@ -45,6 +45,41 @@ def linhas(res):
     return out
 
 
+def antigo_familias(saida):
+    try:
+        return json.load(open(f'{saida}/bea.json', encoding='utf-8')).get('familias')
+    except Exception:
+        return None
+
+
+def familias(anos):
+    # tabela 2.6 (mensal): renda pessoal, renda disponível, consumo e taxa de poupança, em US$ bilhões na taxa anual
+    # (a taxa de poupança em %). As linhas são escolhidas pela descrição, que a BEA mantém estável.
+    tab = linhas(pedir('T20600', anos[-2:], freq='M'))
+    for ln in sorted(tab, key=int):
+        print('T20600', ln, tab[ln]['d'], list(tab[ln]['v'].items())[-1])
+    def acha(teste):
+        for ln in sorted(tab, key=int):
+            if teste(tab[ln]['d'].lower().strip()):
+                return tab[ln]['v']
+        return None
+    campos = {
+        'renda': acha(lambda d: d == 'personal income'),
+        'disponivel': acha(lambda d: d.endswith('disposable personal income') and 'chained' not in d and 'per capita' not in d),
+        'consumo': acha(lambda d: d == 'personal consumption expenditures'),
+        'poupanca': acha(lambda d: d.startswith('personal saving as a percentage of disposable personal income')),
+        'disponivel_real': acha(lambda d: 'disposable personal income' in d and 'chained' in d and 'per capita' not in d),
+    }
+    falta = [k for k, v in campos.items() if not v and k != 'disponivel_real']
+    if falta:
+        raise SystemExit(f'Linhas não encontradas na T20600: {falta}')
+    ms = sorted(campos['consumo'])
+    meses = [{'m': f'{m[:4]}-{m[5:7]}', **{k: (v or {}).get(m) for k, v in campos.items()}} for m in ms if 'M' in m]
+    if len(meses) < 13:
+        raise SystemExit(f'Poucos meses ({len(meses)})')
+    return {'ultimo': meses[-1]['m'], 'meses': meses}
+
+
 def main(saida):
     if not CHAVE:
         raise SystemExit('Falta o segredo BEA_API_KEY no GitHub')
@@ -71,13 +106,19 @@ def main(saida):
     if len(qs) < 4:
         raise SystemExit(f'Poucos trimestres ({len(qs)}); arquivo mantido')
     tri = [{'q': q, 'pib': pib.get(q), **{k: campos[k].get(q) for k in campos if k != 'pib'}} for q in qs]
-    out = {'fonte': 'BEA (U.S. Bureau of Economic Analysis), tabelas NIPA 1.1.1 e 1.1.2', 'unidade': 'p.p. anualizados', 'ultimo': qs[-1], 'trimestres': tri}
+    out = {'fonte': 'BEA (U.S. Bureau of Economic Analysis), tabelas NIPA 1.1.1, 1.1.2 e 2.6', 'unidade': 'p.p. anualizados', 'ultimo': qs[-1], 'trimestres': tri}
+    try:
+        out['familias'] = familias(anos)
+    except SystemExit as e:  # renda das famílias é um extra: sem ela, o PIB continua sendo gravado
+        print('Renda das famílias fora:', e)
+        if antigo_familias(saida):
+            out['familias'] = antigo_familias(saida)
     caminho = f'{saida}/bea.json'
     try:
         antigo = json.load(open(caminho, encoding='utf-8'))
     except Exception:
         antigo = None
-    if antigo and antigo.get('trimestres') == tri:
+    if antigo and antigo.get('trimestres') == tri and antigo.get('familias') == out.get('familias'):
         print('Sem dado novo')
         return
     out['gerado'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
