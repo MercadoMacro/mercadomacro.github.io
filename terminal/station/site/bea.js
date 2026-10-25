@@ -53,9 +53,9 @@
         const y1 = y(Math.max(a, b)), h = Math.abs(y(a) - y(b));
         return `<rect x="${(i * bw + bw * 0.2).toFixed(1)}" y="${y1.toFixed(1)}" width="${(bw * 0.6).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" class="${c}"/>`;
       }).join('');
-      const tip = `${tri(x.q)}: PIB ${pct(x.pib)}; ${PARTES.map(([k, n]) => `${n.toLowerCase()} ${pp(x[k])}`).join(', ')}`;
+      const tip = `${tri(x.q)}\nPIB: ${pct(x.pib)}\n${PARTES.map(([k, n]) => `${n}: ${pp(x[k])}`).join('\n')}`;
       const dot = ok(x.pib) ? `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${y(x.pib).toFixed(1)}" r="3.6" class="pib"/>` : '';
-      return `<g><title>${esc(tip)}</title><rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" fill="transparent"/>${rects}${dot}</g>`;
+      return `<g data-tip="${esc(tip)}"><rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" class="hit"/>${rects}${dot}</g>`;
     }).join('');
     const rot = ult8.map((x, i) => `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H + 13}">${esc(triCurto(x.q))}</text>`).join('');
     const linhas = PARTES.map(([k, n, c]) => `<tr><th><i class="cx-sw ${c}"></i>${esc(n)}</th><td class="${cls(u[k])}">${pp(u[k])}</td><td class="${cls(ant?.[k])}">${pp(ant?.[k])}</td></tr>`).join('');
@@ -72,7 +72,7 @@
           <tr><th>PIB real</th><td class="${cls(u.pib)}">${pct(u.pib)}</td><td class="${cls(ant?.pib)}">${pct(ant?.pib)}</td></tr></tbody></table>
       </div>
       <p class="ib-note">Variação do PIB real na taxa anualizada e quanto cada parte somou a ela, em pontos percentuais. A soma das partes dá o PIB, com diferença de arredondamento. Investimento inclui a variação de estoques. A BEA divulga cada trimestre em três estimativas e revisa os números anteriores.</p>
-      ${familias(d.familias)}`;
+`;
   }
 
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -98,12 +98,13 @@
       const vs = pts.map((x) => x.poupanca), lo = Math.min(...vs), hi = Math.max(...vs), amp = hi - lo || 1;
       const X = (i) => 4 + i * (W - 8) / (pts.length - 1), Y = (v) => 8 + (hi - v) / amp * (H - 16);
       const path = pts.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x.poupanca).toFixed(1)}`).join('');
-      const marcas = pts.map((x, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.poupanca).toFixed(1)}" r="${i === pts.length - 1 ? 3.6 : 2}" class="pt"><title>${esc(nomeMes(x.m))}: ${n1(x.poupanca)}%</title></circle>`).join('');
+      const passo = (W - 8) / (pts.length - 1);
+      const marcas = pts.map((x, i) => `<g data-tip="${esc(`${nomeMes(x.m)}\nPoupança: ${n1(x.poupanca)}% da renda`)}"><rect x="${Math.max(0, X(i) - passo / 2).toFixed(1)}" y="0" width="${passo.toFixed(1)}" height="${H}" class="hit"/><circle cx="${X(i).toFixed(1)}" cy="${Y(x.poupanca).toFixed(1)}" r="${i === pts.length - 1 ? 3.6 : 2}" class="pt"/></g>`).join('');
       svg = `<p class="cx-leg">Taxa de poupança das famílias (% da renda disponível), de ${esc(nomeMes(pts[0].m))} a ${esc(nomeMes(pts[pts.length - 1].m))}. Mínimo ${n1(lo)}%, máximo ${n1(hi)}%.</p>
         <svg class="be-svg be-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="Taxa de poupança das famílias nos EUA"><path d="${path}"/>${marcas}</svg>`;
     }
     const tab = ms.slice(-6).reverse().map((x) => { const p = prev(x); return `<tr><th>${esc(nomeMes(x.m))}</th><td class="${cls(vm(x, p, 'renda'))}">${pct(vm(x, p, 'renda'))}</td><td class="${cls(vm(x, p, 'disponivel_real'))}">${pct(vm(x, p, 'disponivel_real'))}</td><td class="${cls(vm(x, p, 'consumo_real'))}">${pct(vm(x, p, 'consumo_real'))}</td><td>${ok(x.poupanca) ? n1(x.poupanca) + '%' : '—'}</td></tr>`; }).join('');
-    return `<h4 class="be-sub">Renda e consumo das famílias em ${esc(nomeMes(u.m))}</h4>
+    return `
       <div class="be-top">${top}</div>
       <div class="cx-duas">
         <div>${svg}</div>
@@ -112,12 +113,19 @@
       <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p>`;
   }
 
+  // dois quadros: PIB por componente e renda das famílias (este some quando o arquivo não traz a parte mensal)
   function draw() {
     if (!host || !host.isConnected) return;
-    const box = host.querySelector('.ib-in'), meta = host.querySelector('.ib-meta');
-    if (cache?.d) { try { box.innerHTML = html(cache.d); } catch (e) { box.innerHTML = '<div class="ib-msg">Não foi possível ler os dados da BEA.</div>'; } }
+    const [bPib, bFam] = host.querySelectorAll('.ib-box'), d = cache?.d, salvo = err && cache ? ' · último dado salvo' : '';
+    const box = bPib.querySelector('.ib-in');
+    if (d) { try { box.innerHTML = html(d); } catch (e) { box.innerHTML = '<div class="ib-msg">Não foi possível ler os dados da BEA.</div>'; } }
     else box.innerHTML = `<div class="ib-msg">${busy ? 'Carregando o PIB dos EUA…' : err ? 'Dados da BEA indisponíveis agora.' : '—'}</div>`;
-    meta.innerHTML = `<a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank" rel="noopener">BEA</a>${cache?.d?.ultimo ? ` · ${esc(tri(cache.d.ultimo))}` : ''}${err && cache ? ' · último dado salvo' : ''}`;
+    bPib.querySelector('.ib-meta').innerHTML = `<a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank" rel="noopener">BEA</a>${d?.ultimo ? ` · ${esc(tri(d.ultimo))}` : ''}${salvo}`;
+    let fam = '';
+    try { fam = d ? familias(d.familias) : ''; } catch (e) { fam = ''; }
+    bFam.hidden = !fam;
+    bFam.querySelector('.ib-in').innerHTML = fam;
+    bFam.querySelector('.ib-meta').innerHTML = `<a href="https://www.bea.gov/data/income-saving/personal-income" target="_blank" rel="noopener">BEA</a>${d?.familias?.ultimo ? ` · ${esc(nomeMes(d.familias.ultimo))}` : ''}${salvo}`;
   }
 
   // chamado pelo indicadores.js toda vez que a área EUA é desenhada
@@ -126,8 +134,11 @@
     if (!sec) {
       sec = document.createElement('section');
       sec.className = 'ind-sec'; sec.id = 'bea-sec';
-      sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-industry"></i></span><h2>PIB dos EUA por componente</h2><span class="sec-count">trimestral</span></div>
-        <div class="ib-box"><div class="ib-h"><h3>O que puxou o crescimento</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>`;
+      sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-industry"></i></span><h2>PIB e renda dos EUA</h2><span class="sec-count">trimestral</span></div>
+        <div class="be-par">
+          <div class="ib-box"><div class="ib-h"><h3>O que puxou o crescimento</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>
+          <div class="ib-box" hidden><div class="ib-h"><h3>Renda e consumo das famílias</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>
+        </div>`;
       container.appendChild(sec);
     }
     host = sec; draw(); load(force);
@@ -169,9 +180,19 @@
   .be-svg .pib { fill:var(--text); stroke:var(--surface, #fff); stroke-width:1.5; }
   #bea-sec .cx-sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:baseline; }
   #bea-sec .cx-sw.pib { border-radius:50%; background:var(--text); }
+  .be-par { display:flex; flex-direction:column; gap:12px; }
   .be-sub { margin:22px 0 10px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .be-linha path { fill:none; stroke:#3b82f6; stroke-width:2; stroke-linejoin:round; }
   .be-linha .pt { fill:#3b82f6; }
+  .be-svg .hit { fill:transparent; } .be-svg g.on .hit { fill:var(--text); opacity:.07; } .be-linha g.on .pt { r:4.5; }
+  /* telas largas: PIB e renda das famílias lado a lado; dentro de cada um, gráfico em cima e tabela embaixo */
+  @media (min-width: 1400px) {
+    .be-par { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
+    .be-par:has(> .ib-box[hidden]) { grid-template-columns:minmax(0,1fr); }
+    #bea-sec .be-par .cx-duas { grid-template-columns:minmax(0,1fr); gap:12px; }
+    .be-par .be-top { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .be-par .be-top b { font-size:17px; }
+  }
   .be-leg { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0; font-size:11.5px; color:var(--text-2); }
   #bea-sec .cx-tb th:first-child { text-transform:none; }
   @media (max-width: 900px) { .be-top { grid-template-columns:repeat(2, minmax(0,1fr)); } #bea-sec .cx-duas { grid-template-columns:minmax(0,1fr); } #bea-sec .ib-h { flex-direction:column; align-items:flex-start; gap:4px; } }`;

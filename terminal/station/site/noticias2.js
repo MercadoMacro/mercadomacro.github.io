@@ -99,7 +99,8 @@
     if (!lead) return;
     const r = lead.querySelector('.nc-readhere');
     if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Ler notícia completa <i class="fas fa-arrow-right"></i>'; }
-
+    const alvo = g.children[1];
+    if (alvo && alvo !== lead && window.matchMedia('(min-width: 1100px)').matches) g.insertBefore(lead, alvo);
   }
   new MutationObserver(manchete).observe($('#news-view'), { childList: true });
   manchete();
@@ -108,7 +109,7 @@
   // Controles compactos, preservando os botões e seus eventos existentes.
   const actions = document.createElement('details');
   actions.className = 'nw-actions';
-  actions.innerHTML = '<summary>Ações</summary><div class="nw-actions-body"></div>';
+  actions.innerHTML = '<summary>Ações <i class="fas fa-chevron-down" aria-hidden="true"></i></summary><div class="nw-actions-body"></div>';
   barra.append(actions);
   if (brief) actions.lastElementChild.append(brief);
   if (avisos) actions.lastElementChild.append(avisos);
@@ -127,12 +128,16 @@
     layout.classList.toggle('nw-sources-closed', !sourcesOpen);
     sourceButton.setAttribute('aria-expanded', String(sourcesOpen));
     const names = [...newsActiveSources].map(k => NEWS_SOURCES[k]?.name || k);
-    sourceButton.textContent = 'Fontes: ' + (names.length ? names.join(', ') : 'todas');
+    sourceButton.textContent = 'Fontes: ' + (!names.length ? 'todas' : names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}`);
+    sourceButton.title = names.length ? names.join(', ') : 'Todas as fontes';
   }
   sourceButton.addEventListener('click', () => { sourcesOpen = !sourcesOpen; sourceState(); });
   const originalSourceStates = updateNewsBubbleStates;
   updateNewsBubbleStates = () => { originalSourceStates(); sourceState(); };
-  subbar.querySelector('select').addEventListener('change', e => { newsOrder = e.target.value; renderNewsView(); });
+  // ordem escolhida fica salva neste navegador
+  const ordem = subbar.querySelector('select');
+  try { const o = localStorage.getItem('news_order_v1'); if (o === 'recent' || o === 'relevant') { newsOrder = o; ordem.value = o; if (o === 'recent') renderNewsView(); } } catch (e) {}
+  ordem.addEventListener('change', e => { newsOrder = e.target.value; try { localStorage.setItem('news_order_v1', newsOrder); } catch (er) {} renderNewsView(); });
   const originalMode = setNewsMode;
   setNewsMode = mode => { originalMode(mode); subbar.querySelector('label').hidden = mode === 'live'; };
   sourceState();
