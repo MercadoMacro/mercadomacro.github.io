@@ -63,7 +63,6 @@
           <svg class="cx-svg" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Saldo da balança comercial nos últimos 24 meses"><line x1="0" x2="${W}" y1="${z}" y2="${z}" class="z"/>${barras}${rotulos}</svg></div>
         <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Exportações</th><th>Importações</th><th>Saldo</th></tr></thead><tbody>${tab}</tbody></table>
       </div>
-      ${extras(d, ult, ms)}
       <p class="ib-note">Valores em bilhões de dólares (FOB). O MDIC divulga o mês fechado na primeira semana do mês seguinte.</p>`;
   }
 
@@ -82,14 +81,15 @@
     return { nome: p.nome, m: ult, fob: u?.fob, kg: u?.kg, vFob: varr(u?.fob, h?.fob), vKg: varr(u?.kg, h?.kg), ytd: soma(ano, 'fob'), vYtd: varr(soma(ano, 'fob'), soma(ano - 1, 'fob')) };
   }
 
-  function extras(d, ult, ms) {
-    let out = '';
+  // quadros à parte: commodities exportadas e destinos das exportações ([título, conteúdo] de cada um)
+  function extras(d) {
+    const ms = d.meses.map((x) => ({ ...x, s: ok(x.exp) && ok(x.imp) ? x.exp - x.imp : null })), ult = ms[ms.length - 1], partes = [];
     if (Array.isArray(d.produtos) && d.produtos.length) {
       const [ano, mes] = ult.m.split('-').map(Number);
       const linhas = d.produtos.map((p) => resumoProduto(p, ult.m)).sort((a, b) => (b.fob || 0) - (a.fob || 0)).map((r) => `<tr><th>${esc(r.nome)}</th><td>${bi(r.fob)}</td><td class="${cls(r.vFob)}">${pct(r.vFob)}</td><td>${vol(r.kg)}</td><td class="${cls(r.vKg)}">${pct(r.vKg)}</td><td>${bi(r.ytd, 1)}</td><td class="${cls(r.vYtd)}">${pct(r.vYtd)}</td></tr>`).join('');
-      out += `<div><h4 class="cx-sub">Commodities exportadas em ${esc(nomeMes(ult.m, true))}</h4>
+      partes.push([`Commodities exportadas em ${esc(nomeMes(ult.m, true))}`, `
         <div class="cx-scroll"><table class="ib-tb cx-tb cx-pr"><thead><tr><th>Produto</th><th>US$ bi</th><th>12 meses</th><th>Volume</th><th>12 meses</th><th>No ano</th><th>vs ${ano - 1}</th></tr></thead><tbody>${linhas}</tbody></table></div>
-        <p class="ib-note">"12 meses" compara com ${esc(nomeMes(`${ano - 1}-${String(mes).padStart(2, '0')}`, true))}. "No ano" soma jan–${esc(MESES[mes - 1])} em US$ bi e compara com o mesmo período de ${ano - 1}. Volume em toneladas líquidas.</p></div>`;
+        <p class="ib-note">"12 meses" compara com ${esc(nomeMes(`${ano - 1}-${String(mes).padStart(2, '0')}`, true))}. "No ano" soma jan–${esc(MESES[mes - 1])} em US$ bi e compara com o mesmo período de ${ano - 1}. Volume em toneladas líquidas.</p>`]);
     }
     if (Array.isArray(d.paises) && d.paises.length) {
       const [ano, mes] = ult.m.split('-').map(Number);
@@ -99,11 +99,11 @@
       const rows = d.paises.map((p) => { const v = somaP(p, ano), va = somaP(p, ano - 1); return { p: p.p, v, f: tot ? v / tot * 100 : null, fa: totAnt ? va / totAnt * 100 : null }; }).sort((a, b) => b.v - a.v).slice(0, 10);
       const maxF = Math.max(...rows.map((r) => r.f || 0)) || 1;
       const linhas = rows.map((r) => `<tr><th>${esc(r.p)}</th><td class="cx-barcel"><span class="cx-bar" style="width:${((r.f || 0) / maxF * 100).toFixed(1)}%"></span></td><td>${fat(r.f)}</td><td class="${cls(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}">${pp(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}</td><td>${bi(r.v, 1)}</td></tr>`).join('');
-      out += `<div><h4 class="cx-sub">Para onde o Brasil exporta (jan–${esc(MESES[mes - 1])}/${ano})</h4>
+      partes.push([`Para onde o Brasil exporta (jan–${esc(MESES[mes - 1])}/${ano})`, `
         <div class="cx-scroll"><table class="ib-tb cx-tb cx-ds"><thead><tr><th>País</th><th></th><th>Fatia</th><th>vs ${ano - 1}</th><th>US$ bi</th></tr></thead><tbody>${linhas}</tbody></table></div>
-        <p class="ib-note">Fatia de cada país nas exportações do Brasil no ano. "vs ${ano - 1}" é a mudança em pontos percentuais contra o mesmo período do ano passado.</p></div>`;
+        <p class="ib-note">Fatia de cada país nas exportações do Brasil no ano. "vs ${ano - 1}" é a mudança em pontos percentuais contra o mesmo período do ano passado.</p>`]);
     }
-    return out ? `<div class="cx-par">${out}</div>` : '';
+    return partes;
   }
 
   function draw() {
@@ -113,6 +113,9 @@
     else box.innerHTML = `<div class="ib-msg">${busy ? 'Carregando a balança comercial…' : err ? 'Dados da balança comercial indisponíveis agora.' : '—'}</div>`;
     const at = cache?.d?.atualizado ? ` · divulgado em ${cache.d.atualizado.split('-').reverse().join('/')}` : '';
     meta.innerHTML = `<a href="https://comexstat.mdic.gov.br" target="_blank" rel="noopener">Comex Stat (MDIC)</a>${at}${err && cache ? ' · último dado salvo' : ''}`;
+    let partes = [];
+    try { partes = cache?.d ? extras(cache.d) : []; } catch (e) { partes = []; }
+    host.querySelector('.cx-par').innerHTML = partes.map(([t, h]) => `<div class="ib-box"><div class="ib-h"><h3>${t}</h3><span class="ib-meta">Comex Stat (MDIC)</span></div><div class="ib-in">${h}</div></div>`).join('');
   }
 
   // dados para outros módulos (watchlist): resumo da commodity pela chave, usando o mesmo cache
@@ -125,7 +128,8 @@
       sec = document.createElement('section');
       sec.className = 'ind-sec'; sec.id = 'comex-sec';
       sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-ship"></i></span><h2>Balança comercial</h2><span class="sec-count">mensal</span></div>
-        <div class="ib-box"><div class="ib-h"><h3>Exportações e importações do Brasil</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>`;
+        <div class="ib-box"><div class="ib-h"><h3>Exportações e importações do Brasil</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>
+        <div class="cx-par"></div>`;
       container.appendChild(sec);
     }
     host = sec; draw(); load(force);
@@ -149,7 +153,9 @@
   .cx-sub { margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .cx-scroll { overflow-x:auto; }
   /* telas largas: commodities e destinos lado a lado */
-  @media (min-width: 1400px) { .cx-par { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:28px; align-items:start; } }
+  .cx-par { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+  .cx-par:empty { display:none; }
+  @media (min-width: 1400px) { .cx-par { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); align-items:start; } }
   .cx-pr, .cx-ds { width:100%; }
   .cx-pr td, .cx-ds td { white-space:nowrap; }
   .cx-barcel { width:38%; }

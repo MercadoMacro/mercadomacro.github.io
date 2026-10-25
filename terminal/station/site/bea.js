@@ -59,7 +59,7 @@
     }).join('');
     const rot = ult8.map((x, i) => `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H + 13}">${esc(triCurto(x.q))}</text>`).join('');
     const linhas = PARTES.map(([k, n, c]) => `<tr><th><i class="cx-sw ${c}"></i>${esc(n)}</th><td class="${cls(u[k])}">${pp(u[k])}</td><td class="${cls(ant?.[k])}">${pp(ant?.[k])}</td></tr>`).join('');
-    return `<div class="be-par"><div class="be-col">
+    return `
       <div class="be-top">
         <div><span>PIB real no ${esc(tri(u.q))}</span><b class="${cls(u.pib)}">${pct(u.pib)}</b><small>taxa anualizada${ant ? ` · ${esc(tri(ant.q))}: ${pct(ant.pib)}` : ''}</small></div>
         ${PARTES.map(([k, n]) => `<div><span>${esc(n)}</span><b class="${cls(u[k])}">${pp(u[k])}</b><small>contribuição</small></div>`).join('')}
@@ -72,7 +72,7 @@
           <tr><th>PIB real</th><td class="${cls(u.pib)}">${pct(u.pib)}</td><td class="${cls(ant?.pib)}">${pct(ant?.pib)}</td></tr></tbody></table>
       </div>
       <p class="ib-note">Variação do PIB real na taxa anualizada e quanto cada parte somou a ela, em pontos percentuais. A soma das partes dá o PIB, com diferença de arredondamento. Investimento inclui a variação de estoques. A BEA divulga cada trimestre em três estimativas e revisa os números anteriores.</p>
-      </div>${familias(d.familias)}</div>`;
+`;
   }
 
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -103,21 +103,28 @@
         <svg class="be-svg be-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="Taxa de poupança das famílias nos EUA"><path d="${path}"/>${marcas}</svg>`;
     }
     const tab = ms.slice(-6).reverse().map((x) => { const p = prev(x); return `<tr><th>${esc(nomeMes(x.m))}</th><td class="${cls(vm(x, p, 'renda'))}">${pct(vm(x, p, 'renda'))}</td><td class="${cls(vm(x, p, 'disponivel_real'))}">${pct(vm(x, p, 'disponivel_real'))}</td><td class="${cls(vm(x, p, 'consumo_real'))}">${pct(vm(x, p, 'consumo_real'))}</td><td>${ok(x.poupanca) ? n1(x.poupanca) + '%' : '—'}</td></tr>`; }).join('');
-    return `<div class="be-col"><h4 class="be-sub">Renda e consumo das famílias em ${esc(nomeMes(u.m))}</h4>
+    return `
       <div class="be-top">${top}</div>
       <div class="cx-duas">
         <div>${svg}</div>
         <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Renda</th><th>Renda disp. real</th><th>Consumo real</th><th>Poupança</th></tr></thead><tbody>${tab}</tbody></table>
       </div>
-      <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p></div>`;
+      <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p>`;
   }
 
+  // dois quadros: PIB por componente e renda das famílias (este some quando o arquivo não traz a parte mensal)
   function draw() {
     if (!host || !host.isConnected) return;
-    const box = host.querySelector('.ib-in'), meta = host.querySelector('.ib-meta');
-    if (cache?.d) { try { box.innerHTML = html(cache.d); } catch (e) { box.innerHTML = '<div class="ib-msg">Não foi possível ler os dados da BEA.</div>'; } }
+    const [bPib, bFam] = host.querySelectorAll('.ib-box'), d = cache?.d, salvo = err && cache ? ' · último dado salvo' : '';
+    const box = bPib.querySelector('.ib-in');
+    if (d) { try { box.innerHTML = html(d); } catch (e) { box.innerHTML = '<div class="ib-msg">Não foi possível ler os dados da BEA.</div>'; } }
     else box.innerHTML = `<div class="ib-msg">${busy ? 'Carregando o PIB dos EUA…' : err ? 'Dados da BEA indisponíveis agora.' : '—'}</div>`;
-    meta.innerHTML = `<a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank" rel="noopener">BEA</a>${cache?.d?.ultimo ? ` · ${esc(tri(cache.d.ultimo))}` : ''}${err && cache ? ' · último dado salvo' : ''}`;
+    bPib.querySelector('.ib-meta').innerHTML = `<a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank" rel="noopener">BEA</a>${d?.ultimo ? ` · ${esc(tri(d.ultimo))}` : ''}${salvo}`;
+    let fam = '';
+    try { fam = d ? familias(d.familias) : ''; } catch (e) { fam = ''; }
+    bFam.hidden = !fam;
+    bFam.querySelector('.ib-in').innerHTML = fam;
+    bFam.querySelector('.ib-meta').innerHTML = `<a href="https://www.bea.gov/data/income-saving/personal-income" target="_blank" rel="noopener">BEA</a>${d?.familias?.ultimo ? ` · ${esc(nomeMes(d.familias.ultimo))}` : ''}${salvo}`;
   }
 
   // chamado pelo indicadores.js toda vez que a área EUA é desenhada
@@ -126,8 +133,11 @@
     if (!sec) {
       sec = document.createElement('section');
       sec.className = 'ind-sec'; sec.id = 'bea-sec';
-      sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-industry"></i></span><h2>PIB dos EUA por componente</h2><span class="sec-count">trimestral</span></div>
-        <div class="ib-box"><div class="ib-h"><h3>O que puxou o crescimento</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>`;
+      sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-industry"></i></span><h2>PIB e renda dos EUA</h2><span class="sec-count">trimestral</span></div>
+        <div class="be-par">
+          <div class="ib-box"><div class="ib-h"><h3>O que puxou o crescimento</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>
+          <div class="ib-box" hidden><div class="ib-h"><h3>Renda e consumo das famílias</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>
+        </div>`;
       container.appendChild(sec);
     }
     host = sec; draw(); load(force);
@@ -169,14 +179,14 @@
   .be-svg .pib { fill:var(--text); stroke:var(--surface, #fff); stroke-width:1.5; }
   #bea-sec .cx-sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:baseline; }
   #bea-sec .cx-sw.pib { border-radius:50%; background:var(--text); }
+  .be-par { display:flex; flex-direction:column; gap:12px; }
   .be-sub { margin:22px 0 10px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .be-linha path { fill:none; stroke:#3b82f6; stroke-width:2; stroke-linejoin:round; }
   .be-linha .pt { fill:#3b82f6; }
   /* telas largas: PIB e renda das famílias lado a lado; dentro de cada um, gráfico em cima e tabela embaixo */
   @media (min-width: 1400px) {
-    .be-par { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:start; }
-    .be-par > .be-col + .be-col { border-left:1px solid var(--line); padding-left:28px; }
-    .be-par .be-sub { margin-top:0; }
+    .be-par { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
+    .be-par:has(> .ib-box[hidden]) { grid-template-columns:minmax(0,1fr); }
     #bea-sec .be-par .cx-duas { grid-template-columns:minmax(0,1fr); gap:12px; }
     .be-par .be-top { grid-template-columns:repeat(3, minmax(0,1fr)); }
     .be-par .be-top b { font-size:17px; }

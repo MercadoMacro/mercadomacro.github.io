@@ -789,7 +789,7 @@
     if (comexAsked) return;
     comexAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'comex.js?v=4';
+    sc.src = 'comex.js?v=5';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
     document.body.appendChild(sc);
@@ -803,7 +803,7 @@
     if (beaAsked) return;
     beaAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'bea.js?v=4';
+    sc.src = 'bea.js?v=5';
     sc.onload = () => { if (prefs.area === 'us' && window.__beaRender) window.__beaRender(body); };
     sc.onerror = () => { beaAsked = false; };
     document.body.appendChild(sc);
