@@ -11,6 +11,9 @@
     "run_worker_first": true
   },
   "workers_dev": true,
+  // registros guardados por 7 dias no painel da Cloudflare (Observability). Plano grátis: até 0,5 GB/dia;
+  // se passar, a Cloudflare para de guardar até 00h UTC. Para guardar menos, baixe head_sampling_rate (0 a 1).
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "routes": [
     { "pattern": "mercadomacro.com.br", "custom_domain": true },
     { "pattern": "www.mercadomacro.com.br", "custom_domain": true }
