@@ -68,16 +68,26 @@ def familias(anos):
         'disponivel': acha(lambda d: d.endswith('disposable personal income') and 'chained' not in d and 'per capita' not in d),
         'consumo': acha(lambda d: d == 'personal consumption expenditures'),
         'poupanca': acha(lambda d: d.startswith('personal saving as a percentage of disposable personal income')),
-        'disponivel_real': acha(lambda d: 'disposable personal income' in d and 'chained' in d and 'per capita' not in d),
+        # linha "Total, Billions of chained (2017) dollars" do bloco da renda disponível real (as de % mais abaixo não servem)
+        'disponivel_real': acha(lambda d: d.startswith('total, billions of chained')),
     }
-    falta = [k for k, v in campos.items() if not v and k != 'disponivel_real']
+    # consumo real: tabela 2.8.6 (mensal, dólares encadeados), linha do total
+    try:
+        real = linhas(pedir('T20806', anos[-2:], freq='M'))
+        for ln in sorted(real, key=int)[:3]:
+            print('T20806', ln, real[ln]['d'], list(real[ln]['v'].items())[-1])
+        campos['consumo_real'] = next((real[ln]['v'] for ln in sorted(real, key=int) if real[ln]['d'].lower().startswith('personal consumption expenditures')), None)
+    except SystemExit as e:
+        print('Consumo real fora:', e)
+        campos['consumo_real'] = None
+    falta = [k for k, v in campos.items() if not v and k not in ('disponivel_real', 'consumo_real')]
     if falta:
         raise SystemExit(f'Linhas não encontradas na T20600: {falta}')
     ms = sorted(campos['consumo'])
     meses = [{'m': f'{m[:4]}-{m[5:7]}', **{k: (v or {}).get(m) for k, v in campos.items()}} for m in ms if 'M' in m]
     if len(meses) < 13:
         raise SystemExit(f'Poucos meses ({len(meses)})')
-    return {'ultimo': meses[-1]['m'], 'meses': meses}
+    return {'unidade': 'US$ milhões na taxa anual (poupança em % da renda disponível)', 'ultimo': meses[-1]['m'], 'meses': meses}
 
 
 def main(saida):
