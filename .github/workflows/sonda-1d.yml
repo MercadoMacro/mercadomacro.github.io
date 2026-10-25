@@ -5,4 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -m 40 "https://shrill-meadow-89c1.danilo-nillo.workers.dev/history?symbols=DX-Y.NYB,BZ=F,%5EBVSP,%5EGSPC&r=1d" | jq -c 'to_entries[] | {k: .key, n: (.value.c|length?), t0: (.value.t[0]? | todate?), t1: (.value.t[-1]? | todate?), e: .value.error}'
+          curl -sS -m 40 -H "Origin: https://mercadomacro.com.br" -H "Referer: https://mercadomacro.com.br/" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/history?symbols=DX-Y.NYB,BZ=F,%5EBVSP,%5EGSPC&r=1d" > h.json; head -c 300 h.json; echo
+          jq -c 'to_entries[] | {k: .key, n: (.value.c|length?), t0: (.value.t[0]? | todate?), t1: (.value.t[-1]? | todate?), e: .value.error?}' h.json || true
