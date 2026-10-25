@@ -99,10 +99,41 @@
     if (!lead) return;
     const r = lead.querySelector('.nc-readhere');
     if (r && !r.dataset.nw2) { r.dataset.nw2 = '1'; r.innerHTML = 'Ler notícia completa <i class="fas fa-arrow-right"></i>'; }
-    const alvo = g.children[1];
-    if (alvo && alvo !== lead && window.matchMedia('(min-width: 1100px)').matches) g.insertBefore(lead, alvo);
+
   }
   new MutationObserver(manchete).observe($('#news-view'), { childList: true });
   manchete();
   lateral();
+
+  // Controles compactos, preservando os botões e seus eventos existentes.
+  const actions = document.createElement('details');
+  actions.className = 'nw-actions';
+  actions.innerHTML = '<summary>Ações</summary><div class="nw-actions-body"></div>';
+  barra.append(actions);
+  if (brief) actions.lastElementChild.append(brief);
+  if (avisos) actions.lastElementChild.append(avisos);
+  actions.addEventListener('keydown', e => { if (e.key === 'Escape') { actions.open = false; actions.firstElementChild.focus(); } });
+  document.addEventListener('click', e => { if (!actions.contains(e.target)) actions.open = false; });
+  const subbar = document.createElement('div');
+  subbar.className = 'nw-subbar';
+  subbar.innerHTML = '<button type="button" class="btn-sm" id="nw-sources-toggle" aria-expanded="true" aria-controls="source-sidebar">Fontes</button><label>Ordenar <select id="nw-order"><option value="relevant">Mais relevantes</option><option value="recent">Mais recentes</option></select></label>';
+  barra.after(subbar);
+  if (info) subbar.append(info);
+  const sourceButton = subbar.querySelector('button');
+  const sidebar = $('#source-sidebar');
+  let sourcesOpen = window.matchMedia('(min-width: 901px)').matches;
+  function sourceState() {
+    sidebar.hidden = !sourcesOpen;
+    layout.classList.toggle('nw-sources-closed', !sourcesOpen);
+    sourceButton.setAttribute('aria-expanded', String(sourcesOpen));
+    const names = [...newsActiveSources].map(k => NEWS_SOURCES[k]?.name || k);
+    sourceButton.textContent = 'Fontes: ' + (names.length ? names.join(', ') : 'todas');
+  }
+  sourceButton.addEventListener('click', () => { sourcesOpen = !sourcesOpen; sourceState(); });
+  const originalSourceStates = updateNewsBubbleStates;
+  updateNewsBubbleStates = () => { originalSourceStates(); sourceState(); };
+  subbar.querySelector('select').addEventListener('change', e => { newsOrder = e.target.value; renderNewsView(); });
+  const originalMode = setNewsMode;
+  setNewsMode = mode => { originalMode(mode); subbar.querySelector('label').hidden = mode === 'live'; };
+  sourceState();
 })();
