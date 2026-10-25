@@ -59,7 +59,7 @@
     }).join('');
     const rot = ult8.map((x, i) => `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H + 13}">${esc(triCurto(x.q))}</text>`).join('');
     const linhas = PARTES.map(([k, n, c]) => `<tr><th><i class="cx-sw ${c}"></i>${esc(n)}</th><td class="${cls(u[k])}">${pp(u[k])}</td><td class="${cls(ant?.[k])}">${pp(ant?.[k])}</td></tr>`).join('');
-    return `
+    return `<div class="be-par"><div class="be-col">
       <div class="be-top">
         <div><span>PIB real no ${esc(tri(u.q))}</span><b class="${cls(u.pib)}">${pct(u.pib)}</b><small>taxa anualizada${ant ? ` · ${esc(tri(ant.q))}: ${pct(ant.pib)}` : ''}</small></div>
         ${PARTES.map(([k, n]) => `<div><span>${esc(n)}</span><b class="${cls(u[k])}">${pp(u[k])}</b><small>contribuição</small></div>`).join('')}
@@ -72,7 +72,7 @@
           <tr><th>PIB real</th><td class="${cls(u.pib)}">${pct(u.pib)}</td><td class="${cls(ant?.pib)}">${pct(ant?.pib)}</td></tr></tbody></table>
       </div>
       <p class="ib-note">Variação do PIB real na taxa anualizada e quanto cada parte somou a ela, em pontos percentuais. A soma das partes dá o PIB, com diferença de arredondamento. Investimento inclui a variação de estoques. A BEA divulga cada trimestre em três estimativas e revisa os números anteriores.</p>
-      ${familias(d.familias)}`;
+      </div>${familias(d.familias)}</div>`;
   }
 
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -103,13 +103,13 @@
         <svg class="be-svg be-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="Taxa de poupança das famílias nos EUA"><path d="${path}"/>${marcas}</svg>`;
     }
     const tab = ms.slice(-6).reverse().map((x) => { const p = prev(x); return `<tr><th>${esc(nomeMes(x.m))}</th><td class="${cls(vm(x, p, 'renda'))}">${pct(vm(x, p, 'renda'))}</td><td class="${cls(vm(x, p, 'disponivel_real'))}">${pct(vm(x, p, 'disponivel_real'))}</td><td class="${cls(vm(x, p, 'consumo_real'))}">${pct(vm(x, p, 'consumo_real'))}</td><td>${ok(x.poupanca) ? n1(x.poupanca) + '%' : '—'}</td></tr>`; }).join('');
-    return `<h4 class="be-sub">Renda e consumo das famílias em ${esc(nomeMes(u.m))}</h4>
+    return `<div class="be-col"><h4 class="be-sub">Renda e consumo das famílias em ${esc(nomeMes(u.m))}</h4>
       <div class="be-top">${top}</div>
       <div class="cx-duas">
         <div>${svg}</div>
         <table class="ib-tb cx-tb"><thead><tr><th>Mês</th><th>Renda</th><th>Renda disp. real</th><th>Consumo real</th><th>Poupança</th></tr></thead><tbody>${tab}</tbody></table>
       </div>
-      <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p>`;
+      <p class="ib-note">Variações de um mês para o outro, salvo indicação. "Real" desconta a inflação (índice de preços do consumo, PCE). A renda disponível é a renda depois dos impostos.</p></div>`;
   }
 
   function draw() {
@@ -172,6 +172,15 @@
   .be-sub { margin:22px 0 10px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .be-linha path { fill:none; stroke:#3b82f6; stroke-width:2; stroke-linejoin:round; }
   .be-linha .pt { fill:#3b82f6; }
+  /* telas largas: PIB e renda das famílias lado a lado; dentro de cada um, gráfico em cima e tabela embaixo */
+  @media (min-width: 1400px) {
+    .be-par { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:start; }
+    .be-par > .be-col + .be-col { border-left:1px solid var(--line); padding-left:28px; }
+    .be-par .be-sub { margin-top:0; }
+    #bea-sec .be-par .cx-duas { grid-template-columns:minmax(0,1fr); gap:12px; }
+    .be-par .be-top { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .be-par .be-top b { font-size:17px; }
+  }
   .be-leg { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0; font-size:11.5px; color:var(--text-2); }
   #bea-sec .cx-tb th:first-child { text-transform:none; }
   @media (max-width: 900px) { .be-top { grid-template-columns:repeat(2, minmax(0,1fr)); } #bea-sec .cx-duas { grid-template-columns:minmax(0,1fr); } #bea-sec .ib-h { flex-direction:column; align-items:flex-start; gap:4px; } }`;

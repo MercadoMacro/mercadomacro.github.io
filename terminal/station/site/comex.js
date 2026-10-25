@@ -87,9 +87,9 @@
     if (Array.isArray(d.produtos) && d.produtos.length) {
       const [ano, mes] = ult.m.split('-').map(Number);
       const linhas = d.produtos.map((p) => resumoProduto(p, ult.m)).sort((a, b) => (b.fob || 0) - (a.fob || 0)).map((r) => `<tr><th>${esc(r.nome)}</th><td>${bi(r.fob)}</td><td class="${cls(r.vFob)}">${pct(r.vFob)}</td><td>${vol(r.kg)}</td><td class="${cls(r.vKg)}">${pct(r.vKg)}</td><td>${bi(r.ytd, 1)}</td><td class="${cls(r.vYtd)}">${pct(r.vYtd)}</td></tr>`).join('');
-      out += `<h4 class="cx-sub">Commodities exportadas em ${esc(nomeMes(ult.m, true))}</h4>
+      out += `<div><h4 class="cx-sub">Commodities exportadas em ${esc(nomeMes(ult.m, true))}</h4>
         <div class="cx-scroll"><table class="ib-tb cx-tb cx-pr"><thead><tr><th>Produto</th><th>US$ bi</th><th>12 meses</th><th>Volume</th><th>12 meses</th><th>No ano</th><th>vs ${ano - 1}</th></tr></thead><tbody>${linhas}</tbody></table></div>
-        <p class="ib-note">"12 meses" compara com ${esc(nomeMes(`${ano - 1}-${String(mes).padStart(2, '0')}`, true))}. "No ano" soma jan–${esc(MESES[mes - 1])} em US$ bi e compara com o mesmo período de ${ano - 1}. Volume em toneladas líquidas.</p>`;
+        <p class="ib-note">"12 meses" compara com ${esc(nomeMes(`${ano - 1}-${String(mes).padStart(2, '0')}`, true))}. "No ano" soma jan–${esc(MESES[mes - 1])} em US$ bi e compara com o mesmo período de ${ano - 1}. Volume em toneladas líquidas.</p></div>`;
     }
     if (Array.isArray(d.paises) && d.paises.length) {
       const [ano, mes] = ult.m.split('-').map(Number);
@@ -99,11 +99,11 @@
       const rows = d.paises.map((p) => { const v = somaP(p, ano), va = somaP(p, ano - 1); return { p: p.p, v, f: tot ? v / tot * 100 : null, fa: totAnt ? va / totAnt * 100 : null }; }).sort((a, b) => b.v - a.v).slice(0, 10);
       const maxF = Math.max(...rows.map((r) => r.f || 0)) || 1;
       const linhas = rows.map((r) => `<tr><th>${esc(r.p)}</th><td class="cx-barcel"><span class="cx-bar" style="width:${((r.f || 0) / maxF * 100).toFixed(1)}%"></span></td><td>${fat(r.f)}</td><td class="${cls(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}">${pp(ok(r.f) && ok(r.fa) ? r1(r.f - r.fa) : null)}</td><td>${bi(r.v, 1)}</td></tr>`).join('');
-      out += `<h4 class="cx-sub">Para onde o Brasil exporta (jan–${esc(MESES[mes - 1])}/${ano})</h4>
+      out += `<div><h4 class="cx-sub">Para onde o Brasil exporta (jan–${esc(MESES[mes - 1])}/${ano})</h4>
         <div class="cx-scroll"><table class="ib-tb cx-tb cx-ds"><thead><tr><th>País</th><th></th><th>Fatia</th><th>vs ${ano - 1}</th><th>US$ bi</th></tr></thead><tbody>${linhas}</tbody></table></div>
-        <p class="ib-note">Fatia de cada país nas exportações do Brasil no ano. "vs ${ano - 1}" é a mudança em pontos percentuais contra o mesmo período do ano passado.</p>`;
+        <p class="ib-note">Fatia de cada país nas exportações do Brasil no ano. "vs ${ano - 1}" é a mudança em pontos percentuais contra o mesmo período do ano passado.</p></div>`;
     }
-    return out;
+    return out ? `<div class="cx-par">${out}</div>` : '';
   }
 
   function draw() {
@@ -148,6 +148,8 @@
   .cx-tb th:first-child { text-transform:none; }
   .cx-sub { margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-2); }
   .cx-scroll { overflow-x:auto; }
+  /* telas largas: commodities e destinos lado a lado */
+  @media (min-width: 1400px) { .cx-par { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:28px; align-items:start; } }
   .cx-pr, .cx-ds { width:100%; }
   .cx-pr td, .cx-ds td { white-space:nowrap; }
   .cx-barcel { width:38%; }
