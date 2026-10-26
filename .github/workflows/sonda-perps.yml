@@ -6,7 +6,7 @@ jobs:
     steps:
       - run: |
           W=https://shrill-meadow-89c1.danilo-nillo.workers.dev
-          for id in DFEDTARL DFEDTARU FEDFUNDS DGS10; do
+          for id in DFEDTARL DFEDTARU DFEDTARL DFEDTARU; do
             echo "== $id"; curl -s -w ' [%{http_code}]' -H 'Origin: https://mercadomacro.com.br' -A 'Mozilla/5.0' "$W/fred/series?id=$id&units=lin&limit=1&mmp=vitrine"; echo
           done
           echo "== fred direto"; curl -s -o /dev/null -w '%{http_code} %{time_total}\n' 'https://api.stlouisfed.org/fred/series/observations?series_id=DFEDTARL&file_type=json&limit=1'
