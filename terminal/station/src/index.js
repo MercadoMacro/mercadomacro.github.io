@@ -3,6 +3,7 @@ export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
+import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
@@ -1066,6 +1067,7 @@ async function apiAdmin(req, env, acao, eu) {
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
+  if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
   if (ass) return ass;
   // registro do servidor de dados: pedidos que chegaram sem o passe de quem está logado (últimos 14 dias)
@@ -1141,7 +1143,7 @@ async function apiAdmin(req, env, acao, eu) {
       await garantirAssinatura(env);
       const antes = await env.DB.prepare('SELECT nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
       const q = [env.DB.prepare('UPDATE usuarios SET status = ?, decidido = ? WHERE id = ? AND admin = 0').bind(novo, agora, id)];
-      // liberação grátis vale 3 dias (se a conta não tiver uma validade ainda valendo)
+      // liberação grátis vale GRATIS_DIAS (1 dia desde 26/10/2026), se a conta não tiver uma validade ainda valendo
       let validade = antes && antes.expira > agora ? antes.expira : null;
       if (novo === 'ativo' && antes && antes.status !== 'ativo' && !validade) {
         validade = new Date(Date.now() + GRATIS_DIAS * 864e5).toISOString();
@@ -2029,7 +2031,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <button type="button" role="tab" data-aba="geral" aria-selected="true">Visão geral</button>
   <button type="button" role="tab" data-aba="pessoas" aria-selected="false">Pessoas <span class="cnt" id="cnt-pessoas"></span></button>
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false">Pagamentos <span class="cnt" id="cnt-pag"></span></button>
-  <button type="button" role="tab" data-aba="comunicado" aria-selected="false">Comunicado</button>
+  <button type="button" role="tab" data-aba="comunicado" aria-selected="false">E-mails</button>
   <button type="button" role="tab" data-aba="passe" aria-selected="false">Acessos sem passe</button>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
 </nav>
@@ -2052,7 +2054,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
-<section data-p="comunicado" hidden><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="comunicado" hidden><h2>E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
 <section data-p="passe" hidden>
   <h2>Pedidos ao servidor de dados sem o passe de login</h2>
   <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
@@ -2074,6 +2076,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <p id="ac-hoje" class="hoje"></p>
     <div class="ops" id="ac-opc"></div>
     <div id="ac-dt" class="lin" hidden><label>Vale até <input type="date" id="ac-data"></label></div>
+    <div id="ac-cd" class="lin" hidden><label>Dias de cortesia <input type="number" id="ac-dias" min="1" max="30" step="1" value="1" inputmode="numeric" style="width:84px"></label></div>
     <fieldset id="ac-ini" class="lin"><legend>Começa</legend>
       <label><input type="radio" name="ac-ini" value="hoje" checked> hoje</label>
       <label><input type="radio" name="ac-ini" value="somar"> depois de <span id="ac-somar-d"></span> (soma ao que já tem)</label>
@@ -2279,7 +2282,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   });
   // janela "Acesso": define o plano/validade de uma pessoa
   var OPC = [
-    ['cortesia', 'Cortesia', '3 dias grátis', 0, { dias: 3 }],
+    ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
     ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
     ['mensal', 'Mensal', '1 mês', 2990, { meses: 1 }],
     ['trimestral', 'Trimestral', '3 meses', 7990, { meses: 3 }],
@@ -2288,6 +2291,11 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
   ];
   var dlg = document.getElementById('dlg-acesso'), AU = null, AT = 'cortesia';
+  // dias da cortesia: você escolhe (1 a 30); o último número usado fica lembrado neste navegador
+  function diasCortesia(){ var n = Math.round(+document.getElementById('ac-dias').value); return n >= 1 && n <= 30 ? n : 1; }
+  function ajustarCortesia(){ var n = diasCortesia(), o = OPC[0]; o[2] = n + (n === 1 ? ' dia grátis' : ' dias grátis'); o[4] = { dias: n }; }
+  try { var cdl = +localStorage.getItem('mm_cortesia_dias'); if (cdl >= 1 && cdl <= 30) document.getElementById('ac-dias').value = cdl; } catch (e) {}
+  ajustarCortesia();
   function somar(base, per){ var d = new Date(base), n = d.getUTCDate(); if (per.dias) d.setTime(d.getTime() + per.dias * 864e5); else { d.setUTCMonth(d.getUTCMonth() + per.meses); if (d.getUTCDate() !== n) d.setUTCDate(0); } return d.toISOString(); }
   function vigente(u){ return u.status === 'ativo' && u.expira && u.expira > agora(); }
   function abrirAcesso(id){
@@ -2314,6 +2322,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     }).join('');
     var o = OPC.filter(function(x){ return x[0] === AT; })[0];
     document.getElementById('ac-dt').hidden = AT !== 'data';
+    document.getElementById('ac-cd').hidden = AT !== 'cortesia';
     document.getElementById('ac-ini').style.display = (vigente(AU) && o[4]) ? '' : 'none';
     document.getElementById('ac-pg').hidden = !o[3];
     document.getElementById('ac-pg-v').textContent = o[3] ? reais(o[3]) : '';
@@ -2323,15 +2332,16 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     if (e.target === dlg || e.target.closest('[data-fechar]')) dlg.close();
   });
   dlg.addEventListener('change', function(e){ if (e.target.name === 'ac-ini') desenharAcesso(); });
+  document.getElementById('ac-dias').addEventListener('input', function(){ ajustarCortesia(); desenharAcesso(); try { localStorage.setItem('mm_cortesia_dias', diasCortesia()); } catch (e) {} });
   document.getElementById('ac-salvar').addEventListener('click', function(){
     var b = this, m = document.getElementById('ac-msg');
-    var corpo = { id: AU.id, tipo: AT, inicio: document.querySelector('input[name=ac-ini]:checked').value, pago: document.getElementById('ac-pago').checked && !document.getElementById('ac-pg').hidden, ate: document.getElementById('ac-data').value };
+    var corpo = { id: AU.id, tipo: AT, inicio: document.querySelector('input[name=ac-ini]:checked').value, dias: diasCortesia(), pago: document.getElementById('ac-pago').checked && !document.getElementById('ac-pg').hidden, ate: document.getElementById('ac-data').value };
     if (AT === 'data' && !corpo.ate) { m.textContent = 'Escolha a data.'; return; }
     if (AT === 'sem' && !confirm('Deixar o acesso de ' + AU.nome + ' sem data para terminar?')) return;
     b.disabled = true; m.textContent = '';
     post('/api/admin/acesso', corpo).then(function(j){
       dlg.close(); msg.className = 'msg ok';
-      msg.textContent = AU.nome + ': ' + (NOMEP[AT] || AT) + ', ' + (j.expira ? 'acesso até ' + dia(j.expira) : 'acesso sem validade') + '.' + (corpo.pago ? ' Pagamento registrado em Recebido no mês.' : '') + (EMAIL[j.email] || '');
+      msg.textContent = AU.nome + ': ' + (NOMEP[AT] || AT) + (AT === 'cortesia' ? ' de ' + corpo.dias + (corpo.dias === 1 ? ' dia' : ' dias') : '') + ', ' + (j.expira ? 'acesso até ' + dia(j.expira) : 'acesso sem validade') + '.' + (corpo.pago ? ' Pagamento registrado em Recebido no mês.' : '') + (EMAIL[j.email] || '');
       carregar(); if (corpo.pago) pagamentos();
     }).catch(function(j){ m.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
   });
@@ -2614,6 +2624,36 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     }).catch(function(){ cm.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   comunicado();
+  // e-mail de boas-vindas (src/boasvindas.js): texto editável, envio sozinho no primeiro pagamento e para quem já pagou
+  function boasVindas(){
+    var raiz = document.getElementById('bv');
+    fetch('/api/admin/boasvindas', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var cx = 'width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:10px 12px;font:inherit;font-size:14px';
+      raiz.innerHTML = '<div class="caixa">'
+        + '<p>Vai uma vez para cada pessoa. No primeiro pagamento aprovado ele sai sozinho, no lugar do e-mail de pagamento confirmado, com o plano e a validade no topo.</p>'
+        + '<label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;cursor:pointer"><input type="checkbox" id="bv-auto"' + (j.auto ? ' checked' : '') + '> Mandar sozinho no primeiro pagamento</label>'
+        + '<label for="bv-assunto" class="d" style="display:block;margin:0 0 4px">Assunto</label><input id="bv-assunto" style="' + cx + '" maxlength="150" value="' + esc(j.assunto) + '">'
+        + '<label for="bv-texto" class="d" style="display:block;margin:12px 0 4px">Texto ({nome} vira o primeiro nome; linha começando com "- " vira item de lista)</label><textarea id="bv-texto" rows="16" style="' + cx + ';line-height:1.5;resize:vertical">' + esc(j.texto) + '</textarea>'
+        + '<div class="linha" style="margin-top:10px"><button type="button" id="bv-salvar" style="' + bt + '">Salvar texto</button>' + (j.padrao ? '' : '<button type="button" id="bv-padrao" style="' + bt + '">Voltar ao texto original</button>') + '<a href="/api/admin/boasvindas?previa=1" target="_blank" rel="noopener" style="' + bt + ';text-decoration:none;display:inline-block">Ver o e-mail</a><button type="button" id="bv-teste" style="' + bt + '">Enviar teste para mim</button>'
+        + (j.faltam ? '<button type="button" id="bv-enviar" style="' + bt + ';background:var(--accent);color:var(--on-accent);border-color:transparent">Enviar para ' + j.faltam + ' que já pagaram</button>' : '') + '</div>'
+        + '<p class="d" style="margin:8px 0 0">Já pagaram: <b>' + j.pagaram + '</b> pessoas. Ainda não receberam: <b>' + j.faltam + '</b>.' + (j.ligado ? '' : ' Ligue o e-mail (Resend) em Ajustes para poder enviar.') + ' Salve o texto antes de ver ou enviar.</p></div><p class="msg" id="bv-msg"></p>';
+      var m = document.getElementById('bv-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function faz(corpo, b, ok){ b.disabled = true; diz(true, 'Aguarde…'); post('/api/admin/boasvindas', corpo).then(ok, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ b.disabled = false; }); }
+      document.getElementById('bv-auto').onchange = function(){ var c = this; post('/api/admin/boasvindas', { acao: 'auto', ligar: c.checked }).then(function(){ diz(true, c.checked ? 'Ligado: as boas-vindas saem sozinhas no primeiro pagamento.' : 'Desligado: no primeiro pagamento vai só o e-mail de pagamento confirmado.'); }, function(){ c.checked = !c.checked; diz(false, 'Não foi possível.'); }); };
+      document.getElementById('bv-salvar').onclick = function(){ faz({ acao: 'salvar', assunto: document.getElementById('bv-assunto').value, texto: document.getElementById('bv-texto').value }, this, function(){ boasVindas(); setTimeout(function(){ var mm = document.getElementById('bv-msg'); mm.className = 'msg ok'; mm.textContent = 'Texto salvo.'; }, 300); }); };
+      var pd = document.getElementById('bv-padrao');
+      if (pd) pd.onclick = function(){ if (confirm('Voltar ao texto original? O seu texto será apagado.')) faz({ acao: 'padrao' }, this, function(){ boasVindas(); }); };
+      document.getElementById('bv-teste').onclick = function(){ faz({ acao: 'teste' }, this, function(r){ diz(true, 'Teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }); };
+      var en = document.getElementById('bv-enviar');
+      if (en) en.onclick = function(){
+        if (!confirm('Enviar as boas-vindas para ' + j.faltam + ' pessoas que já pagaram? Não dá para desfazer.')) return;
+        faz({ acao: 'enviar' }, en, function(r){ boasVindas(); setTimeout(function(){ var mm = document.getElementById('bv-msg'); mm.className = 'msg ' + (r.falhas ? 'erro' : 'ok'); mm.textContent = 'Enviados agora: ' + r.enviados_agora + '.' + (r.falhas ? ' Falharam ' + r.falhas + ' (' + (r.erro || '') + '); toque em Enviar de novo.' : '') + (r.faltam && !r.falhas ? ' Ainda faltam ' + r.faltam + ': toque em Enviar de novo.' : ''); }, 300); });
+      };
+    }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  boasVindas();
   pix();
   pagamentos();
   capital();
@@ -2715,3 +2755,4 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
+ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });

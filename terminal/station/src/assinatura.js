@@ -1,9 +1,10 @@
 /* Assinatura manual por Pix.
-   Cada conta tem uma validade (usuarios.expira, ISO; vazio = sem validade). Liberação grátis pelo administrador vale 3 dias.
+   Cada conta tem uma validade (usuarios.expira, ISO; vazio = sem validade). Liberação grátis pelo administrador vale 1 dia (ele escolhe de 1 a 30 no /admin).
    A pessoa escolhe um plano em /assinar, paga o QR Code do Pix (gerado aqui, com a chave salva em /admin),
    manda o comprovante e o administrador aprova em /admin: a validade soma o período do plano.
    Um robô diário (cron em wrangler.jsonc) avisa por e-mail 3 dias antes de vencer e desativa quem venceu (os dados ficam). */
 import qrcode from './qrcode.js';
+import { boasVindasNoPagamento } from './boasvindas.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
 let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite;
 export function ligarAssinatura(u) {
@@ -16,7 +17,7 @@ export const PLANOS = {
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990 },
   semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 14990 },
 };
-export const GRATIS_DIAS = 3; // liberação grátis feita pelo administrador
+export const GRATIS_DIAS = 1; // liberação grátis feita pelo administrador (era 3 até 26/10/2026; no /admin ele escolhe os dias)
 const AVISO_DIAS = 3; // e-mail de aviso antes de vencer
 const ARQ_MAX = 1900000; // comprovante: o D1 guarda até 2 MB por valor
 const ARQ_DIAS = 30; // o comprovante é apagado 30 dias depois da decisão
@@ -138,7 +139,10 @@ function emailVenceu(env, u) {
     botao: 'Renovar acesso', link: SITE + '/assinar',
   });
 }
-function emailAprovado(env, req, u, plano, validade) {
+async function emailAprovado(env, req, u, plano, validade, teste = false) {
+  // primeiro pagamento: vai o e-mail de boas-vindas (src/boasvindas.js), que já traz o plano e a validade no topo
+  const bv = teste ? null : await boasVindasNoPagamento(env, { id: u.uid ?? u.id, nome: u.nome, email: u.email }, { plano: plano.nome, valor: reais(plano.valor), ate: dataBR(validade) }).catch(() => null);
+  if (bv && bv.ok) return bv;
   return enviarEmail(env, req, {
     para: u.email, nome: u.nome, assunto: 'Pagamento confirmado no Mercado Macro',
     paragrafos: [`Recebemos seu pagamento do plano ${plano.nome} (${reais(plano.valor)}). Seu acesso vale até ${dataBR(validade)}.`],
@@ -160,7 +164,7 @@ export async function emailsDeTeste(env, req, eu) {
   const r = [
     await emailVencendo(env, { ...eu, expira: new Date(Date.now() + 3 * 864e5).toISOString() }, 3).catch((e) => ({ ok: false, erro: String(e) })),
     await emailVenceu(env, { ...eu, expira: agora }).catch((e) => ({ ok: false, erro: String(e) })),
-    await emailAprovado(env, req, eu, PLANOS.mensal, somarPeriodo(agora, PLANOS.mensal)).catch((e) => ({ ok: false, erro: String(e) })),
+    await emailAprovado(env, req, eu, PLANOS.mensal, somarPeriodo(agora, PLANOS.mensal), true).catch((e) => ({ ok: false, erro: String(e) })),
   ];
   return { enviados: r.filter((x) => x.ok).length, erro: (r.find((x) => !x.ok) || {}).erro };
 }
@@ -299,7 +303,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     return json({ ok: true, chave, nome, cidade });
   }
   if (acao === 'acesso' && req.method === 'POST') {
-    // o administrador define o acesso de uma pessoa: cortesia de 3 dias, um dos planos, sem validade ou até uma data
+    // o administrador define o acesso de uma pessoa: cortesia (1 a 30 dias), um dos planos, sem validade ou até uma data
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
     const b = await req.json().catch(() => ({}));
     const u = await env.DB.prepare('SELECT id, nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(Number(b.id)).first();
@@ -307,7 +311,8 @@ export async function apiAdminAssinatura(req, env, acao) {
     const agora = new Date().toISOString();
     const base = b.inicio === 'somar' ? baseValidade(u.expira) : agora;
     let validade;
-    if (b.tipo === 'cortesia') validade = somarPeriodo(base, { dias: GRATIS_DIAS });
+    const dias = Math.min(30, Math.max(1, Math.round(Number(b.dias)) || GRATIS_DIAS)); // cortesia: 1 a 30 dias, escolhidos no /admin
+    if (b.tipo === 'cortesia') validade = somarPeriodo(base, { dias });
     else if (PLANOS[b.tipo]) validade = somarPeriodo(base, PLANOS[b.tipo]);
     else if (b.tipo === 'sem') validade = null;
     else if (b.tipo === 'data' && /^\d{4}-\d{2}-\d{2}$/.test(b.ate || '')) {
@@ -322,7 +327,7 @@ export async function apiAdminAssinatura(req, env, acao) {
       .bind(u.id, b.tipo, PLANOS[b.tipo].valor, agora, agora, validade));
     await env.DB.batch(q);
     limparCacheSessao();
-    const nomeTipo = b.tipo === 'cortesia' ? `Cortesia de ${GRATIS_DIAS} dias` : PLANOS[b.tipo] ? PLANOS[b.tipo].nome : b.tipo === 'sem' ? 'Sem validade' : 'Até uma data';
+    const nomeTipo = b.tipo === 'cortesia' ? `Cortesia de ${dias} ${dias === 1 ? 'dia' : 'dias'}` : PLANOS[b.tipo] ? PLANOS[b.tipo].nome : b.tipo === 'sem' ? 'Sem validade' : 'Até uma data';
     await registrar(env, u.id, `Acesso definido: ${nomeTipo}${validade ? ', até ' + dataBR(validade) : ''}${b.inicio === 'somar' ? ' (somado ao que tinha)' : ''}${pago ? `. Pagamento por fora registrado: ${reais(PLANOS[b.tipo].valor)}` : ''}`);
     let r = null;
     if (pago) r = await emailAprovado(env, req, u, PLANOS[b.tipo], validade).catch(() => ({ ok: false }));
