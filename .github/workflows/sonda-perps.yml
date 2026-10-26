@@ -5,4 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -H 'Origin: https://mercadomacro.com.br' -A 'Mozilla/5.0' 'https://shrill-meadow-89c1.danilo-nillo.workers.dev/di?mmp=vitrine' | base64 -w0; echo
+          W=https://shrill-meadow-89c1.danilo-nillo.workers.dev
+          for id in DFEDTARL DFEDTARU FEDFUNDS DGS10; do
+            echo "== $id"; curl -s -w ' [%{http_code}]' -H 'Origin: https://mercadomacro.com.br' -A 'Mozilla/5.0' "$W/fred/series?id=$id&units=lin&limit=1&mmp=vitrine"; echo
+          done
+          echo "== fred direto"; curl -s -o /dev/null -w '%{http_code} %{time_total}\n' 'https://api.stlouisfed.org/fred/series/observations?series_id=DFEDTARL&file_type=json&limit=1'
+          echo "== fred site"; curl -s -o /dev/null -w '%{http_code}\n' 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARL'
