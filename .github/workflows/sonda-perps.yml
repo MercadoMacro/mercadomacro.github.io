@@ -6,17 +6,4 @@ jobs:
   p:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v5
-        with: { node-version: '22' }
-      - run: |
-          cat > ws.mjs <<'JS'
-          const ws = new WebSocket('wss://api.hyperliquid.xyz/ws');
-          let n = 0;
-          ws.onopen = () => {
-            ws.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'activeAssetCtx', coin: 'xyz:EWZ' } }));
-            ws.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'trades', coin: 'xyz:EWZ' } }));
-          };
-          ws.onmessage = (e) => { if (n++ < 12) console.log(String(e.data).slice(0, 400)); };
-          setTimeout(() => { console.log('msgs', n); process.exit(0); }, 25000);
-          JS
-          node ws.mjs
+      - run: curl -s "https://mercadomacro.com.br/sw.js" | grep -o "mm-site-v[0-9]*\|app.js?v=[0-9]*"
