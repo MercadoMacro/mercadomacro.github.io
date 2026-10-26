@@ -6,5 +6,5 @@ jobs:
     steps:
       - run: |
           curl -s https://mercadomacro.com.br/api/publico/canal; echo
-          for l in cadastro email rodape terminal; do curl -s -o /dev/null -w "$l %{http_code} %{redirect_url}\n" "https://mercadomacro.com.br/telegram?de=$l" | sed -E 's#(t.me/\+)[A-Za-z0-9_-]+#\1(convite)#'; done
-          curl -s https://mercadomacro.com.br/vitrine/vitrine.js?v=19 | grep -c TG_ATIVOS
+          curl -s https://mercadomacro.com.br/vitrine/vitrine.js?v=20 | grep -c pronto-entrar
+          curl -s -A curl https://mercadomacro.com.br/ | grep -c 'vitrine.js?v=20'
