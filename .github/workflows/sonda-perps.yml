@@ -5,7 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
-          curl -s -o /dev/null -w "vitrine %{http_code}\n" -A "$UA" -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' -H 'Accept: text/html' 'https://mercadomacro.com.br/?origem=teste-claude'
-          curl -s 'https://mercadomacro.com.br/vitrine/vitrine.js?v=17' | grep -c mm_origem
-          curl -s -o /dev/null -w "admin origens sem login %{http_code}\n" https://mercadomacro.com.br/api/admin/origens
+          curl -s https://mercadomacro.com.br/api/publico/canal; echo
+          for l in cadastro email rodape terminal; do curl -s -o /dev/null -w "$l %{http_code} %{redirect_url}\n" "https://mercadomacro.com.br/telegram?de=$l" | sed -E 's#(t.me/\+)[A-Za-z0-9_-]+#\1(convite)#'; done
+          curl -s https://mercadomacro.com.br/vitrine/vitrine.js?v=19 | grep -c TG_ATIVOS
