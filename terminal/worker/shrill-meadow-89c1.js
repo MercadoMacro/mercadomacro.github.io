@@ -486,6 +486,39 @@ async function handlePerps(ctx, cors) {
   return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'MISS', ...cors } });
 }
 
+// =========================================================
+// /cripto: Panorama cripto da CoinMarketCap (dominância de BTC e ETH, valor total do mercado e índice Fear & Greed).
+// A chave fica só no segredo CMC_API_KEY do Worker. O plano grátis tem 10 mil créditos por mês:
+// cache de borda de 15 min (2 chamadas a cada 15 min, cerca de 6 mil por mês).
+// Devolve { ts, global: { btc, eth, cap, capVar, vol } | null, fg: { v, txt, t } | null }.
+// =========================================================
+async function handleCripto(env, ctx, cors) {
+  if (!env.CMC_API_KEY) return json({ error: 'CMC_API_KEY não configurada' }, 500, cors);
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/cripto-v1');
+  const hit = await cache.match(cacheKey);
+  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Cache': 'HIT', ...cors } });
+  const cmc = async (p) => {
+    const r = await fetch('https://pro-api.coinmarketcap.com' + p, { headers: { 'X-CMC_PRO_API_KEY': env.CMC_API_KEY, Accept: 'application/json' } });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error((j?.status?.error_message) || 'HTTP ' + r.status);
+    return j?.data;
+  };
+  const num = (x) => (x != null && isFinite(+x) ? +x : null);
+  const [g, f] = await Promise.allSettled([cmc('/v1/global-metrics/quotes/latest'), cmc('/v3/fear-and-greed/latest')]);
+  let global = null, fg = null;
+  if (g.status === 'fulfilled' && g.value) {
+    const q = g.value.quote?.USD || {};
+    global = { btc: num(g.value.btc_dominance), eth: num(g.value.eth_dominance), cap: num(q.total_market_cap), capVar: num(q.total_market_cap_yesterday_percentage_change), vol: num(q.total_volume_24h) };
+  }
+  if (f.status === 'fulfilled' && f.value && num(f.value.value) != null) fg = { v: num(f.value.value), txt: f.value.value_classification || '', t: f.value.update_time || null };
+  const erros = [g, f].filter((x) => x.status === 'rejected').map((x) => String(x.reason?.message || x.reason));
+  const body = JSON.stringify({ ts: Date.now(), global, fg, ...(erros.length ? { erros } : {}) });
+  const ok = global || fg;
+  if (ok) ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${erros.length ? 300 : 900}` } })));
+  return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Cache': 'MISS', ...cors } });
+}
+
 // Empresas dos EUA cujos balanços aparecem no Calendário (as maiores do S&P 500 + ADRs brasileiros e da América Latina)
 const EARN_WATCH = new Set(('AAPL MSFT NVDA GOOGL GOOG AMZN META TSLA AVGO BRK.B JPM V MA LLY UNH XOM JNJ WMT PG HD COST ORCL NFLX ' +
   'ABBV BAC KO PEP CVX MRK AMD ADBE CRM TMO ACN LIN MCD CSCO ABT WFC DIS INTC IBM QCOM TXN INTU AMAT MU NOW ISRG CAT GE ' +
@@ -698,6 +731,13 @@ const rotas = async (request, env, ctx) => {
     // =========================================================
     if (path === '/perps') {
       return handlePerps(ctx, cors);
+    }
+
+    // =========================================================
+    // ENDPOINT: /cripto  (Panorama cripto da CoinMarketCap: dominância, valor total e Fear & Greed)
+    // =========================================================
+    if (path === '/cripto') {
+      return handleCripto(env, ctx, cors);
     }
 
     // =========================================================
