@@ -21,7 +21,7 @@
     tE.setAttribute('aria-selected', !cad); tC.setAttribute('aria-selected', cad);
     $('p-entrar').hidden = cad; $('p-cad').hidden = !cad;
     $('auth-t').textContent = cad ? 'Peça seu acesso' : 'Entre no painel';
-    $('auth-s').textContent = cad ? 'Leva menos de um minuto. A liberação é feita pelo administrador.' : 'Acesso exclusivo para usuários liberados.';
+    $('auth-s').textContent = cad ? 'Leva menos de um minuto. Depois é só escolher seu plano.' : 'Acesso exclusivo para usuários liberados.';
     if (foco) (cad ? fC : fE).querySelector('input').focus({ preventScroll: true });
   }
   tE.onclick = function () { aba(false, true); };
@@ -54,9 +54,19 @@
     var v = new URLSearchParams(location.search).get('volta') || '/';
     location.replace(/^\/(?!\/)/.test(v) ? v : '/');
   });
+  var emailCad = '';
   enviar(fC, 'cadastrar', function (j) {
-    if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-txt').textContent = j.msg; }
+    if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-entrar').firstChild.textContent = 'Já confirmei: entrar e escolher meu plano '; }
+    if (j.msg) $('pronto-txt').textContent = j.msg;
+    emailCad = $('c-email').value;
     $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); conviteCanal(); });
+  // depois do cadastro: entra e cai direto na escolha do plano (/assinar)
+  $('pronto-entrar').onclick = function () {
+    try { history.replaceState(null, '', location.pathname + '?volta=' + encodeURIComponent('/assinar')); } catch (e) { /* segue sem trocar o endereço */ }
+    $('pronto').hidden = true; $('forms').hidden = false; aba(false, false);
+    if (emailCad) $('e-email').value = emailCad;
+    $(emailCad ? 'e-senha' : 'e-email').focus();
+  };
   // convite para o canal do Telegram, com as cotações de agora (as mesmas da vitrine; sem dado, só o convite)
   var TG_ATIVOS = ['^BVSP', 'BRL=X', '^GSPC', 'BTC-USD'];
   function conviteCotacoes() {
@@ -68,12 +78,23 @@
     }).join('');
     m.hidden = false;
   }
+  function reaisC(c) { return 'R$ ' + num(c / 100, 2); }
   function conviteCanal() {
     fetch('/api/publico/canal').then(okJson).then(function (j) {
+      if (j.planos && j.planos.length) {
+        $('pronto-pl').innerHTML = j.planos.map(function (p) {
+          return '<li' + (p.id === 'degustacao' ? ' class="destaque"' : '') + '><span><b>' + esc(p.nome) + '</b><small>' + esc(p.periodo) + ' de acesso' + (p.id === 'degustacao' ? ', para conhecer' : '') + '</small></span>'
+            + '<strong>' + reaisC(p.valor) + (p.meses > 1 ? '<small>' + reaisC(Math.round(p.valor / p.meses)) + ' por mês</small>' : '') + '</strong></li>';
+        }).join('');
+        $('pronto-planos').hidden = false;
+      }
       if (!j.canal) return;
       $('pronto-tg').hidden = false;
       conviteCotacoes();
-    }).catch(function () { /* sem convite */ });
+    }).catch(function () { /* sem convite */ }).then(function () {
+      // sem a lista de planos, o botão para entrar e escolher continua à vista
+      if ($('pronto-planos').hidden) { $('pronto-pl').hidden = true; $('pronto-planos').hidden = false; }
+    });
   }
   $('voltar').onclick = function () { $('pronto').hidden = true; $('forms').hidden = false; aba(false, true); };
 

@@ -482,7 +482,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   }
   function situacao(j){
     if (j.admin) return '<div class="sit">Conta de administrador: sem validade.</div>';
-    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Seu cadastro aguarda liberação. Para entrar agora, escolha um plano abaixo.</div>';
+    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Para começar a usar, escolha um plano abaixo. Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia; o valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</div>';
     if (!j.liberado) return '<div class="sit alerta">Seu acesso terminou' + (j.expira ? ' em <b>' + data(j.expira) + '</b>' : '') + '. Seus dados e listas continuam guardados. Escolha um plano para voltar.</div>';
     return '<div class="sit">Seu acesso vale ' + (j.expira ? 'até <b>' + data(j.expira) + '</b>. Se renovar antes, o novo período começa depois dessa data.' : '<b>sem data para terminar</b>.') + '</div>';
   }

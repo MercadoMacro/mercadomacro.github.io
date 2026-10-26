@@ -37,7 +37,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/vitrine/vitrine.css?v=15">
+<link rel="stylesheet" href="/vitrine/vitrine.css?v=16">
 </head>
 <body>
 <div class="vt-bg" aria-hidden="true"><div class="vt-grid"></div><div class="vt-glow g1"></div><div class="vt-glow g2"></div></div>
@@ -99,16 +99,22 @@
             <label for="c-senha">Senha (mínimo 8 caracteres)</label><input id="c-senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
             <button class="vt-enviar" type="submit">Pedir meu acesso <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
             <p class="vt-msg" role="status" aria-live="polite"></p>
-            <p class="vt-nota"><i class="fas fa-shield-alt" aria-hidden="true"></i> Cada cadastro é analisado e liberado pelo administrador.</p>
+            <p class="vt-nota"><i class="fas fa-shield-alt" aria-hidden="true"></i> Depois do cadastro você escolhe seu plano. Para conhecer, a degustação de 7 dias sai por R$ 4,99.</p>
             <p class="vt-cad-priv">Ao pedir acesso você concorda com a <a href="/privacidade">política de privacidade</a>.</p>
           </form></div>
         </div>
         <div class="vt-pronto" id="pronto" hidden>
           <span class="vt-pronto-ic"><i class="fas fa-check" aria-hidden="true"></i></span>
           <h2 id="pronto-tit">Pedido enviado</h2>
-          <p id="pronto-txt">Seu cadastro está na fila de liberação. Você já pode entrar com seu e-mail e senha e escolher um plano, ou aguardar a liberação do administrador.</p>
+          <p id="pronto-txt">Cadastro feito. Agora é só entrar com seu e-mail e senha e escolher seu plano para começar a usar.</p>
+          <div class="vt-plx" id="pronto-planos" hidden>
+            <p class="vt-plx-t">Escolha seu plano</p>
+            <ul id="pronto-pl"></ul>
+            <p class="vt-plx-s">Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>
+            <button type="button" class="vt-enviar" id="pronto-entrar">Entrar e escolher meu plano <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+          </div>
           <div class="vt-tg" id="pronto-tg" hidden>
-            <p class="vt-tg-t">Enquanto seu acesso é liberado, receba o mercado no Telegram</p>
+            <p class="vt-tg-t">Receba o mercado de graça no Telegram</p>
             <div class="vt-tg-msg" id="pronto-tg-msg" hidden></div>
             <p class="vt-tg-s">No nosso canal gratuito: abertura às 9h15, fechamento às 18h e as notícias que mexem com o mercado, na hora.</p>
             <a class="vt-tg-bt" href="/telegram?de=cadastro" target="_blank" rel="noopener"><i class="fab fa-telegram-plane" aria-hidden="true"></i> Receber no Telegram</a>
@@ -233,6 +239,6 @@
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/calculadora-renda-fixa">Renda fixa</a> · <a href="/calculadora-juros-compostos">Juros compostos</a> · <a href="/calculadora-aposentadoria">Aposentadoria</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/fechamento-do-mercado">Fechamento do mercado</a> · <a href="/telegram?de=rodape" target="_blank" rel="noopener">Canal no Telegram</a> · <a href="/privacidade">Política de privacidade</a></p>
 </footer>
 
-<script src="/vitrine/vitrine.js?v=19"></script>
+<script src="/vitrine/vitrine.js?v=20"></script>
 </body>
 </html>

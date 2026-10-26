@@ -3,7 +3,7 @@ export { CapitalRelay } from './capital.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
-import { planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
+import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
 /* Mercado Macro: porteiro do site.
@@ -878,8 +878,9 @@ async function apiAuth(req, env, acao, ctx) {
     await garantirAssinatura(env);
     // cadastros que não confirmaram o e-mail em 7 dias são apagados
     await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
-    const MSG_FILA = 'Cadastro enviado. Você já pode entrar com seu e-mail e senha e escolher um plano, ou aguardar a liberação do administrador.';
-    const MSG_CONF = 'Enviamos um link para ' + email + '. Abra o e-mail e confirme para seu pedido seguir para a liberação. Não chegou? Veja o spam.';
+    // desde 26/10/2026 não há liberação grátis: depois do cadastro a pessoa entra e escolhe um plano (a degustação custa R$ 4,99)
+    const MSG_FILA = 'Cadastro feito. Agora é só entrar com seu e-mail e senha e escolher seu plano para começar a usar.';
+    const MSG_CONF = 'Enviamos um link para ' + email + '. Confirme o e-mail e depois entre para escolher seu plano. Não chegou? Veja o spam.';
     const existe = await env.DB.prepare('SELECT id, nome, status FROM usuarios WHERE email = ?').bind(email).first();
     if (existe && existe.status === 'confirmar') {
       // pediu de novo sem ter confirmado: manda outro link
@@ -904,7 +905,7 @@ async function apiAuth(req, env, acao, ctx) {
     }
     // de onde veio quem pediu acesso: a vitrine manda o Referer e o ?utm_source da primeira página da visita
     contarOrigem(env, ctx, origemDe(b.ref, b.utm) || 'Páginas do site', 'cadastro');
-    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
+    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
     return json({ ok: true, msg: MSG_FILA });
   }
 
@@ -1373,7 +1374,7 @@ async function emailConfirmar(env, req, id, nome, email) {
   const tok = await criarLink(env, id, 'confirmar', 72);
   return enviarEmail(env, req, {
     para: email, nome, assunto: 'Confirme seu e-mail no Mercado Macro',
-    paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para ele seguir para a liberação, confirme que este e-mail é seu.'],
+    paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para continuar, confirme que este e-mail é seu.', 'Depois de confirmar, é só entrar e escolher seu plano. Para conhecer, a degustação de 7 dias sai por R$ 4,99.'],
     botao: 'Confirmar meu e-mail', link: siteDe(req) + '/confirmar?t=' + tok,
     nota: 'O link vale por 3 dias. Se você não pediu acesso, ignore este e-mail.', canal: true,
   });
@@ -1408,13 +1409,15 @@ ${corpo}
 async function paginaConfirmar(req, env, ctx) {
   const t = new URL(req.url).searchParams.get('t');
   const l = await lerLink(env, t, 'confirmar');
-  if (!l) return paginaLink('Link vencido', '<div class="caixa"><p>Este link não vale mais. Ele pode ter vencido ou já ter sido usado.</p><p>Se você já confirmou, é só aguardar a liberação. Se não, peça acesso de novo com o mesmo e-mail para receber outro link.</p><a class="bt" href="/entrar#cadastrar">Pedir acesso</a></div>');
+  if (!l) return paginaLink('Link vencido', '<div class="caixa"><p>Este link não vale mais. Ele pode ter vencido ou já ter sido usado.</p><p>Se você já confirmou, é só entrar e escolher seu plano. Se não, peça acesso de novo com o mesmo e-mail para receber outro link.</p><a class="bt" href="/entrar?volta=%2Fassinar">Entrar e escolher meu plano</a></div>');
   await env.DB.batch([
     env.DB.prepare('DELETE FROM links_email WHERE token = ?').bind(l.token),
     env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ? AND status = 'confirmar'`).bind(l.id),
   ]);
-  if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
-  return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado e seu pedido está na fila de liberação.</p><p>Quando o administrador liberar, você recebe um e-mail avisando e já pode entrar com seu e-mail e senha.</p></div>');
+  if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
+  return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado.</p><p>Agora é só entrar com seu e-mail e senha e escolher seu plano. Para conhecer, a degustação de 7 dias sai por R$ 4,99.</p>'
+    + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>'
+    + '<a class="bt" href="/entrar?volta=%2Fassinar">Escolher meu plano</a></div>');
 }
 function paginaEsqueci() {
   return paginaLink('Esqueci minha senha', `<form id="f" novalidate>
@@ -1493,10 +1496,11 @@ async function irParaCanal(req, env, ctx, url) {
   if (!ROBO.test(req.headers.get('User-Agent') || '')) contarOrigem(env, ctx, LUGARES_CANAL[lugar], 'canal');
   return new Response(null, { status: 302, headers: { Location: link, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }
-// tela "cadastro enviado": diz se o canal está ligado (o convite só aparece com canal)
+// tela "cadastro enviado": os planos (os mesmos preços de /assinar) e se o canal está ligado (o convite só aparece com canal)
 async function previaCanal(env) {
   const c = await config(env);
-  return json({ canal: !!(c.tg_token && c.tg_canal) }, 200, { 'Cache-Control': 'public, max-age=600' });
+  const planos = Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
+  return json({ canal: !!(c.tg_token && c.tg_canal), planos }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
 async function avisar(env, titulo, texto) {
   const c = await config(env);
@@ -2090,21 +2094,21 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function post(u, corpo){ return fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
   var EMAIL = { enviado: ' A pessoa recebeu um e-mail avisando.', falhou: ' O e-mail de aviso não foi enviado; avise a pessoa por outro meio.', desligado: ' (E-mail desligado: avise a pessoa por outro meio.)' };
   var BT = {
-    pendente: [['liberar','Liberar 3 dias','lib'],['recusar','Recusar',''],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
+    pendente: [['acesso','Liberar com plano',''],['recusar','Recusar',''],['excluir','Excluir','del']],
     ativo: [['acesso','Acesso',''],['senha','Nova senha',''],['bloquear','Bloquear',''],['excluir','Excluir','del']],
     expirado: [['acesso','Renovar','lib'],['excluir','Excluir','del']],
-    recusado: [['liberar','Liberar 3 dias','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
+    recusado: [['acesso','Liberar com plano',''],['excluir','Excluir','del']],
     bloqueado: [['liberar','Liberar de novo','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']]
   };
   var US = [], PG = [], MES = null, filtro = 'todos';
-  var SIT = { pendente: 'Aguardando', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
+  var SIT = { pendente: 'Sem plano', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
   var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
   var agora = function(){ return new Date().toISOString(); };
   var em7 = function(u){ return u.status === 'ativo' && !u.admin && u.expira && u.expira > agora() && u.expira <= new Date(Date.now() + 7 * 864e5).toISOString(); };
   var FILTROS = [
     ['todos', 'Todos', function(){ return true; }],
-    ['pendente', 'Aguardando', function(u){ return u.status === 'pendente'; }],
+    ['pendente', 'Sem plano', function(u){ return u.status === 'pendente'; }],
     ['ativo', 'Liberados', function(u){ return u.status === 'ativo' && !u.admin; }],
     ['vence', 'Vencem em 7 dias', em7],
     ['expirado', 'Vencidos', function(u){ return u.status === 'expirado'; }],
@@ -2112,7 +2116,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     ['fora', 'Recusados e bloqueados', function(u){ return u.status === 'recusado' || u.status === 'bloqueado'; }]
   ];
   // botão principal de cada situação; o resto fica no menu (...)
-  var PRINCIPAL = { pendente: ['liberar', 'recusar'], ativo: ['acesso'], expirado: ['acesso'], confirmar: ['liberar'], recusado: ['liberar'], bloqueado: ['liberar'] };
+  var PRINCIPAL = { pendente: ['acesso'], ativo: ['acesso'], expirado: ['acesso'], confirmar: ['liberar'], recusado: ['acesso'], bloqueado: ['liberar'] };
   function botoes(u, zapPrincipal){
     if (u.id === eu || u.admin) return '<span class="pill admin">administrador</span>';
     var todos = (BT[u.status] || []).slice(), pri = (PRINCIPAL[u.status] || []).slice();
@@ -2159,18 +2163,19 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     var rec = MES ? MES.total : 0, nrec = MES ? MES.n : 0;
     var novos = US.filter(function(u){ return u.criado > new Date(Date.now() - 7 * 864e5).toISOString(); }).length;
     var k = function(ir, rot, val, nota, alerta){ return '<button type="button" class="kpi' + (alerta ? ' alerta' : '') + '" data-ir="' + ir + '"><small>' + rot + '</small><strong>' + val + '</strong><em>' + nota + '</em></button>'; };
-    document.getElementById('kpis').innerHTML = k('pessoas:pendente', 'Aguardando liberação', pend.length, pend.length ? 'toque para ver' : 'nenhum pedido', pend.length)
+    document.getElementById('kpis').innerHTML = k('pessoas:pendente', 'Pediram acesso', pend.length, 'ainda sem plano')
       + k('pagamentos', 'Pagamentos para conferir', env.length, env.length ? 'comprovantes novos' : 'tudo conferido', env.length)
       + k('pessoas:ativo', 'Com acesso liberado', lib.length, lib.filter(function(u){ return !u.expira; }).length + ' sem validade')
       + k('pessoas:vence', 'Vencem em 7 dias', venc.length, venc.length ? 'toque para ver' : 'nenhum')
       + k('pagamentos', 'Recebido no mês', MES ? reais(rec) : '—', nrec + ' aprovado(s)')
       + k('pessoas:todos', 'Cadastros na semana', novos, US.length + ' no total');
-    document.getElementById('acao').innerHTML = (pend.length || env.length) ? '<div class="lista">'
+    // desde 26/10/2026 não há liberação grátis: quem pede acesso escolhe um plano, e aqui fica só o Pix para conferir
+    document.getElementById('acao').innerHTML = env.length ? '<div class="lista">'
       + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
-      + pend.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="e">' + esc(u.email) + '</div><div class="d">Pediu acesso ' + data(u.criado) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>'
-      : '<p class="vazio">Nada pendente. Tudo em dia.</p>';
+      + '</div>'
+      : '<p class="vazio">Nenhum Pix para conferir. Tudo em dia.</p>';
     document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
-    document.getElementById('cnt-pessoas').textContent = pend.length || '';
+    document.getElementById('cnt-pessoas').textContent = '';
     document.getElementById('cnt-pag').textContent = env.length || '';
   }
   var MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
