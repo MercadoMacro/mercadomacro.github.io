@@ -656,7 +656,9 @@
   .ms-col { display:flex; flex-direction:column; gap:12px; min-width:0; }
   .ms-box { border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden; min-width:0; }
   .ms-head { display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--surface-2) 70%, transparent); }
-  .ms-head h3 { margin:0; font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2); }
+  /* títulos dos blocos mais fortes (26/10/2026, pedido do Severino): maiores, na cor do texto e com uma barrinha da cor de destaque, para o olho achar cada bloco rápido */
+  .ms-head h3 { margin:0; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text); }
+  .ms-head h3::before { content:''; flex:0 0 3px; width:3px; height:14px; border-radius:2px; background:var(--accent); }
   .ms-head .sp, .ms-curve-sub .sp { flex:1; }
   .ms-tb table { width:100%; border-collapse:collapse; table-layout:fixed; }
   .ms-tb tr { cursor:pointer; }
