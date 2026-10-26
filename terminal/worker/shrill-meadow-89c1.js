@@ -899,16 +899,34 @@ const rotas = async (request, env, ctx) => {
         return json({ error: 'Parâmetro inválido' }, 400, cors);
       }
       const fredUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=${limit}&units=${units}${frequency ? '&frequency=' + frequency : ''}`;
-      try {
-        const response = await fetch(fredUrl, { cf: { cacheTtl: 3600, cacheEverything: true } });
-        const data = await response.json();
-        if (!response.ok || data.error_message) return json({ error: data.error_message || 'HTTP ' + response.status }, 502, cors);
-        // só data e valor (o resto do JSON do FRED não é usado)
-        const obs = (data.observations || []).filter((o) => o.value !== '.').map((o) => [o.date, +o.value]);
-        return json({ id, obs }, 200, cors, { 'Cache-Control': 'public, max-age=1800' });
-      } catch (err) {
-        return json({ error: 'FRED falhou: ' + err.message }, 502, cors);
+      // Cópia nova vale 30 min; a última boa fica 7 dias e cobre quando o FRED falha
+      // (antes o erro do FRED ficava 1 h no cache da borda e o card do Fed sumia).
+      const chave = `${id}|${units}|${frequency}|${limit}`;
+      const kNova = `https://cache.local/fred-v2/${chave}`, kUlt = `https://cache.local/fred-ult/${chave}`;
+      const responder = (txt, extra) => new Response(txt, { headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=1800', ...extra } });
+      const nova = await caches.default.match(kNova).catch(() => null);
+      if (nova) return responder(await nova.text());
+      let erro = '';
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        try {
+          const response = await fetch(fredUrl, { signal: AbortSignal.timeout(10000), cf: { cacheTtlByStatus: { '200-299': 1800, '400-599': 0 }, cacheEverything: true } });
+          const data = await response.json();
+          if (!response.ok || data.error_message) { erro = data.error_message || 'HTTP ' + response.status; continue; }
+          // só data e valor (o resto do JSON do FRED não é usado)
+          const obs = (data.observations || []).filter((o) => o.value !== '.').map((o) => [o.date, +o.value]);
+          const txt = JSON.stringify({ id, obs });
+          ctx.waitUntil(Promise.all([
+            caches.default.put(kNova, new Response(txt, { headers: { 'Cache-Control': 'public, max-age=1800' } })),
+            caches.default.put(kUlt, new Response(txt, { headers: { 'Cache-Control': 'public, max-age=604800' } }))
+          ]).catch(() => {}));
+          return responder(txt);
+        } catch (err) {
+          erro = err.message;
+        }
       }
+      const ult = await caches.default.match(kUlt).catch(() => null);
+      if (ult) return responder(await ult.text(), { 'Cache-Control': 'public, max-age=300', 'X-Antigo': '1' });
+      return json({ error: 'FRED falhou: ' + erro }, 502, cors);
     }
 
     // =========================================================
