@@ -282,11 +282,11 @@
     const hoje = new Date().getFullYear();
     const L = diVivo.c.filter((c) => /^DI1F\d\d$/.test(c.s) && +c.venc.slice(0, 4) <= hoje + 10);
     if (!L.length) return '';
-    return `<table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
+    return `<div class="ms-dilw"><table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
       const t = diTx(c), v = t != null && c.aj != null ? t - c.aj : null;
       return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DI jan/${c.venc.slice(0, 4)}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
         + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(c.aj, 3)}</td></tr>`;
-    }).join('')}</tbody></table>`;
+    }).join('')}</tbody></table></div>`;
   }
   function curveHTMLdi() {
     loadDI(); loadDIvivo();
@@ -738,13 +738,15 @@
   .ms-tip[hidden] { display:none; }
   .ms-tip b { color:var(--text); font-size:12px; }
   .ms-foot { padding:4px 12px 10px; font-size:10.5px; color:var(--text-3); line-height:1.5; }
-  .ms-dil { width:calc(100% - 12px); margin:6px 6px 0; border-collapse:collapse; font-size:12px; }
-  .ms-dil th { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:600; text-align:right; padding:4px 8px; border-bottom:1px solid var(--line); }
+  .ms-dilw { margin:6px 6px 4px; max-height:114px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+  .ms-dil { width:100%; border-collapse:collapse; font-size:12px; }
+  .ms-dil thead th { position:sticky; top:0; z-index:1; background:var(--surface); }
+  .ms-dil th { white-space:nowrap; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:600; text-align:right; padding:4px 8px; border-bottom:1px solid var(--line); }
   .ms-dil th:first-child { text-align:left; }
   .ms-dil td { padding:4px 8px; border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); text-align:right; font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .ms-dil tr:last-child td { border-bottom:0; }
   .ms-dil td.nm { text-align:left; font-family:inherit; }
-  .ms-dil td.nm b { display:block; color:var(--text); font-weight:600; font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .ms-dil td.nm b { display:inline; margin-right:6px; color:var(--text); font-weight:600; font-family:'JetBrains Mono', monospace; font-size:12px; }
   .ms-dil td.nm small { color:var(--text-3); font-size:10.5px; }
   .ms-dil td.px { color:var(--text); }
   .ms-dil td.ajv { color:var(--text-3); }
