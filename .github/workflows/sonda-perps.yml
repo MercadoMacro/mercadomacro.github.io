@@ -7,14 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          set +e
-          echo "== BITGET"; curl -s "https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES" | jq -c '.data[]? | select(.symbol|test("^(EWZ|QQQ|SPY|EWW)")) | {symbol,lastPr,markPrice,indexPrice,usdtVolume,holdingAmount,ts}'
-          echo "== OKX"; curl -s "https://www.okx.com/api/v5/market/tickers?instType=SWAP" | jq -c '.data[]? | select(.instId|test("^(EWZ|QQQ|SPY)")) | {instId,last,volCcy24h,ts}'
-          echo "== GATE"; curl -s "https://api.gateio.ws/api/v4/futures/usdt/tickers" | jq -c '.[]? | select(.contract|test("^(EWZ|QQQ|SPY)")) | {contract,last,mark_price,index_price,volume_24h_quote}'
-          echo "== MEXC"; curl -s "https://contract.mexc.com/api/v1/contract/ticker" | jq -c '.data[]? | select(.symbol|test("^(EWZ|QQQ|SPY)")) | {symbol,lastPrice,fairPrice,indexPrice,amount24,timestamp}'
-          echo "== BINGX"; curl -s "https://open-api.bingx.com/openApi/swap/v2/quote/ticker" | jq -c '.data[]? | select(.symbol|test("EWZ|QQQ")) | {symbol,lastPrice,quoteVolume}'
-          echo "== HL dexs"; curl -s -X POST https://api.hyperliquid.xyz/info -H 'content-type: application/json' -d '{"type":"perpDexs"}' | jq -c '[.[]? | select(.!=null) | .name]'
-          for d in xyz flx vntl km cash; do echo "== HL $d"; curl -s -X POST https://api.hyperliquid.xyz/info -H 'content-type: application/json' -d "{\"type\":\"metaAndAssetCtxs\",\"dex\":\"$d\"}" | jq -c '. as $r | [range(0; ($r[0].universe|length))] | map({n:$r[0].universe[.].name, px:$r[1][.].markPx, oracle:$r[1][.].oraclePx, vol:$r[1][.].dayNtlVlm}) | map(select(.n|test("EWZ|QQQ|SPY|SP500|XYZ100|NDX";"i")))'; done
-          echo "== YAHOO EWZ"; curl -s -A "Mozilla/5.0" "https://query1.finance.yahoo.com/v8/finance/chart/EWZ?range=1d&interval=1d" | jq -c '.chart.result[0].meta | {regularMarketPrice,regularMarketTime}'
-          echo "== YAHOO QQQ"; curl -s -A "Mozilla/5.0" "https://query1.finance.yahoo.com/v8/finance/chart/QQQ?range=1d&interval=1d" | jq -c '.chart.result[0].meta | {regularMarketPrice,regularMarketTime}'
+          curl -s -H "Origin: https://mercadomacro.com.br" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/perps" | jq -c '.ativos | to_entries[] | {a:.key, of:.value.oficial, v:[.value.venues[] | "\(.n)=\(.v)"]}'
           date -u
