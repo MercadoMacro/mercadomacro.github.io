@@ -7,8 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s "https://mercadomacro.com.br/api/publico/passe-chave"; echo
-          curl -s -o /dev/null -w "passe sem login: %{http_code}\n" "https://mercadomacro.com.br/api/passe"
-          curl -s -D - -o /dev/null -H "Origin: https://mercadomacro.com.br" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/quotes?symbols=BRL%3DX" | grep -i "^HTTP\|x-passe"
-          curl -s -D - -o /dev/null -H "Origin: https://mercadomacro.com.br" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/quotes?symbols=BRL%3DX&mmp=abc.def" | grep -i "x-passe"
-          curl -s "https://mercadomacro.com.br/sw.js" | grep -o "mm-site-v[0-9]*\|passe.js?v=[0-9]*"
+          curl -s "https://mercadomacro.com.br/sw.js" | grep -o "mm-site-v[0-9]*\|app.js?v=[0-9]*"
+          curl -s -o /dev/null -w "admin passe sem login: %{http_code}\n" "https://mercadomacro.com.br/api/admin/passe"
