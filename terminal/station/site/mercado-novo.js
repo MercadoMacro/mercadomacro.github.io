@@ -55,7 +55,7 @@
       mais: [['VALE3.SA', 'Vale', 2, 'R$ '], ['ITUB4.SA', 'Itaú PN', 2, 'R$ '], ['BBAS3.SA', 'Banco do Brasil', 2, 'R$ '], ['@selic', 'Selic', 2], ['@ipca', 'IPCA (12 meses)', 2]] },
     { id: 'us', t: 'Estados Unidos', tz: 'America/New_York', ab: '09:30', fe: '16:00', linhas: [['^GSPC', 'S&P 500', 2], ['^IXIC', 'Nasdaq', 2], ['^DJI', 'Dow Jones', 2], ['^VIX', 'VIX (volatilidade)', 2]],
       mais: [['^NDX', 'Nasdaq 100', 2], ['^RUT', 'Russell 2000', 2]] },
-    { id: 'mo', t: 'Moedas', tz: 'America/New_York', fx: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
+    { id: 'mo', t: 'Moedas', tz: 'America/New_York', fx: true, linhas: [['DX-Y.NYB', 'Dólar Index (DXY)', 2], ['BRL=X', 'Dólar (USD/BRL)', 4, 'R$ '], ['6L=F', 'Dólar futuro CME', 4, 'R$ '], ['EURUSD=X', 'Euro (EUR/USD)', 4, 'US$ '], ['GBPUSD=X', 'Libra (GBP/USD)', 4, 'US$ ']],
       mais: [['JPY=X', 'Iene (USD/JPY)', 2], ['EURBRL=X', 'Euro (EUR/BRL)', 4, 'R$ '], ['GBPBRL=X', 'Libra (GBP/BRL)', 4, 'R$ ']] },
     { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
     { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
@@ -69,6 +69,16 @@
   const ESPECIAL = { '@selic': 'selic', '@ipca': 'ipca', '@fred': 'fred', '@minerio': 'TIO=F' };
   const esp = (s) => { try { const d = marketDataCache[ESPECIAL[s]]; return d && ok(d.value) ? d : null; } catch (e) { return null; } };
   const SYMS = [...new Set(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => l[0])))].filter((s) => !s.startsWith('@'));
+  // Dólar futuro CME (26/10/2026, pedido do Severino): o contrato da CME é o real em dólares (6L=F, US$ por R$ 1).
+  // O cartão mostra o inverso, em reais por dólar, para comparar com o USD/BRL; negocia de domingo à noite a sexta.
+  const INVERTE = new Set(['6L=F']);
+  const DICA = { '6L=F': 'Real futuro na CME (6L, contrato do mês mais próximo), mostrado em reais por dólar (1 ÷ preço). Traz um pouco de juros embutido, então fica levemente acima do dólar à vista. Negocia de domingo às 19h a sexta; variação sobre o ajuste anterior da CME.' };
+  const invQ = (s, q) => {
+    if (!INVERTE.has(s) || !q || !ok(q.v) || q.v <= 0) return q;
+    const prev = ok(q.c) ? q.v / (1 + q.c / 100) : null;
+    return { ...q, v: 1 / q.v, c: prev ? (prev / q.v - 1) * 100 : null };
+  };
+  const invS = (s, c) => (INVERTE.has(s) ? c.map((x) => (x > 0 ? +(1 / x).toPrecision(7) : x)) : c);
   const INFO = Object.fromEntries(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => [l[0], { n: l[1], d: l[2], pre: l[3] || '', juros: !!r.juros }])));
 
   /* ---------------- horário ---------------- */
@@ -164,7 +174,7 @@
     const lote = loteApp(), doApp = lote ? SYMS.filter((s) => lote.includes(s)) : [], fora = SYMS.filter((s) => !doApp.includes(s));
     if (doApp.length) {
       try { await ensureYahooBatch(!!force); } catch (e) { /* sem lote: fica com o último dado */ }
-      doApp.forEach((s) => { const v = yahooMemo[s]; if (v && ok(v.value)) { Q[s] = { v: v.value, c: v.change, ts: v.ts }; n++; } });
+      doApp.forEach((s) => { const v = yahooMemo[s]; if (v && ok(v.value)) { Q[s] = invQ(s, { v: v.value, c: v.change, ts: v.ts }); n++; } });
     }
     const parts = [];
     for (let i = 0; i < fora.length; i += 45) parts.push(fora.slice(i, i + 45));
@@ -175,7 +185,7 @@
         try {
           const v = parseYahooChart(chart);
           if (!ok(v.value)) return;
-          Q[sym] = { v: v.value, c: v.change, ts: v.ts };
+          Q[sym] = invQ(sym, { v: v.value, c: v.change, ts: v.ts });
           n++;
         } catch (e) { /* sem dado: fica "—" */ }
       });
@@ -184,11 +194,11 @@
   }
   async function loadHist(syms, f) {
     // 3 meses: aproveita o histórico do dia que o app.js já guardou (mkt3m), sem pedir de novo ao worker
-    if (f === '3mo') { try { if (mkt3m && mkt3m.day === anaToday()) syms.forEach((s) => { const v = mkt3m.data?.[s], k = `3mo|${s}`; if (v && Array.isArray(v.c) && v.c.length > 1 && !G[k]) G[k] = { t: v.t, c: v.c, ts: Date.now() }; }); } catch (e) { /* sem o cache do app.js */ } }
+    if (f === '3mo') { try { if (mkt3m && mkt3m.day === anaToday()) syms.forEach((s) => { const v = mkt3m.data?.[s], k = `3mo|${s}`; if (v && Array.isArray(v.c) && v.c.length > 1 && !G[k]) G[k] = { t: v.t, c: invS(s, v.c), ts: Date.now() }; }); } catch (e) { /* sem o cache do app.js */ } }
     const falta = syms.filter((s) => { const g = G[`${f}|${s}`]; return !g || Date.now() - g.ts > (f === '1d' ? 120000 : 900000); });
     for (let i = 0; i < falta.length; i += 45) {
       const j = await getJSON(`${PROXY}/history?symbols=${encodeURIComponent(falta.slice(i, i + 45).join(','))}${f === '3mo' ? '' : '&r=' + f}`).catch(() => null);
-      Object.entries(j || {}).forEach(([s, v]) => { if (v && Array.isArray(v.c) && v.c.length > 1) G[`${f}|${s}`] = { t: v.t, c: v.c, ts: Date.now() }; });
+      Object.entries(j || {}).forEach(([s, v]) => { if (v && Array.isArray(v.c) && v.c.length > 1) G[`${f}|${s}`] = { t: v.t, c: invS(s, v.c), ts: Date.now() }; });
     }
   }
   async function refresh(force) {
@@ -314,7 +324,7 @@
   const linha = (r, l) => {
     if (l[0].startsWith('@')) return linhaEsp(r, l);
     const s = l[0], q = atual(s), j = INFO[s].juros, ch = j ? bp(s) : q?.c;
-    const rt = q?.src ? ` rt" title="Tempo real pela ${esc(SRC[q.src] || q.src)}; variação sobre o fechamento anterior do Yahoo` : `" title="Ver ${esc(l[1])} no gráfico`;
+    const rt = q?.src ? ` rt" title="Tempo real pela ${esc(SRC[q.src] || q.src)}; variação sobre o fechamento anterior do Yahoo` : `" title="${esc(DICA[s] || `Ver ${l[1]} no gráfico`)}`;
     return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}${rt}" data-r="${r.id}" data-s="${esc(s)}">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
   };
@@ -506,9 +516,9 @@
     if (!row && !fb) return;
     const r = REGIOES.find((x) => x.id === (row || fb).dataset.r);
     if (row) {
-      if (escolha(r) === row.dataset.s && typeof window.openAssetChart === 'function') {
+      if (escolha(r) === row.dataset.s && !INVERTE.has(row.dataset.s) && typeof window.openAssetChart === 'function') {
         // segundo clique na mesma linha abre o gráfico completo
-        window.openAssetChart(row.dataset.s, INFO[row.dataset.s].n, [...r.linhas, ...r.mais].filter((l) => !l[0].startsWith('@')).map((l) => ({ s: l[0], n: l[1] })));
+        window.openAssetChart(row.dataset.s, INFO[row.dataset.s].n, [...r.linhas, ...r.mais].filter((l) => !l[0].startsWith('@') && !INVERTE.has(l[0])).map((l) => ({ s: l[0], n: l[1] })));
         return;
       }
       pref[r.id] = { ...(pref[r.id] || {}), s: row.dataset.s };
