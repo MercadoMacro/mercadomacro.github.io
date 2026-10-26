@@ -187,11 +187,49 @@ async function naBorda(req, ctx, gerar) {
 
 /* ---------------- contador de visitas (só números por dia, nada pessoal) ---------------- */
 const ROBO = /bot|crawl|spider|slurp|lighthouse|headless|preview|facebookexternalhit|whatsapp|telegram|curl|wget|python|node-fetch|vigia/i;
+const diaBrasilia = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 function contar(env, ctx, req, tipo) {
   if (ROBO.test(req.headers.get('User-Agent') || '')) return;
-  const dia = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10); // dia no horário de Brasília
+  const dia = diaBrasilia();
   ctx.waitUntil(env.DB.prepare('INSERT INTO visitas (dia, tipo, n) VALUES (?, ?, 1) ON CONFLICT(dia, tipo) DO UPDATE SET n = n + 1')
     .bind(dia, tipo).run().catch(() => {}));
+  // de onde veio a visita às páginas públicas (só o site de origem, nada da pessoa)
+  if (tipo !== 'terminal') {
+    const u = new URL(req.url);
+    contarOrigem(env, ctx, origemDe(req.headers.get('Referer'), u.searchParams.get('utm_source') || u.searchParams.get('origem')), 'visita');
+  }
+}
+/* ---------------- de onde vêm os visitantes (26/10/2026) ----------------
+   Guarda por dia só o nome do site que mandou a pessoa (Google, Telegram, WhatsApp...), vindo do cabeçalho
+   Referer ou de ?utm_source= / ?origem= no link. Sem IP, sem endereço completo, sem ligar a ninguém.
+   tipo 'visita' = abriu a vitrine ou uma página pública; 'cadastro' = pediu acesso (a vitrine manda a origem da sessão). */
+const ORIGENS = [
+  [/^mail\.google\.|android\.gm$|outlook\.|(^|\.)mail\./, 'E-mail'], [/(^|\.)google\.|googlequicksearchbox/, 'Google'], [/(^|\.)bing\.com$/, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/(^|\.)yahoo\./, 'Yahoo'],
+  [/(^|\.)t\.me$|telegram/, 'Telegram'], [/whatsapp|(^|\.)wa\.me$/, 'WhatsApp'], [/instagram/, 'Instagram'], [/facebook|(^|\.)fb\.(com|me)$|katana$/, 'Facebook'],
+  [/(^|\.)t\.co$|twitter|(^|\.)x\.com$/, 'X (Twitter)'], [/youtube|youtu\.be/, 'YouTube'], [/linkedin|lnkd\.in/, 'LinkedIn'], [/reddit/, 'Reddit'],
+  [/tiktok|musically/, 'TikTok'], [/discord/, 'Discord'], [/chatgpt|openai/, 'ChatGPT'], [/perplexity/, 'Perplexity'], [/mercadomacro\.github\.io/, 'Site antigo (GitHub)'],
+];
+function origemDe(ref, utm) {
+  const nome = (h) => { for (const [re, n] of ORIGENS) if (re.test(h)) return n; return null; };
+  const u = String(utm || '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 30);
+  if (u) return nome(u) || 'Link: ' + u;
+  let h = '';
+  try { h = new URL(String(ref || '')).hostname.toLowerCase().replace(/^www\./, ''); } catch (e) { /* sem origem */ }
+  if (!h) return 'Direto ou app';
+  if (h === 'mercadomacro.com.br' || h.endsWith('.mercadomacro.com.br') || h.endsWith('.workers.dev') || h === 'localhost') return null; // andou dentro do site
+  return nome(h) || h.slice(0, 60);
+}
+let tabelaOrigens = false;
+function contarOrigem(env, ctx, origem, tipo) {
+  if (!origem) return;
+  const dia = diaBrasilia();
+  ctx.waitUntil((async () => {
+    if (!tabelaOrigens) {
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS origens (dia TEXT NOT NULL, origem TEXT NOT NULL, tipo TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (dia, origem, tipo))').run();
+      tabelaOrigens = true;
+    }
+    await env.DB.prepare('INSERT INTO origens (dia, origem, tipo, n) VALUES (?, ?, ?, 1) ON CONFLICT(dia, origem, tipo) DO UPDATE SET n = n + 1').bind(dia, origem, tipo).run();
+  })().catch(() => {}));
 }
 // bloco do resumo semanal: posição dos especuladores (CFTC) em real, dólar, euro, ouro, petróleo e S&P,
 // com aviso quando algum está no extremo de 3 anos (0 a 10 = perto do mais vendido, 90 a 100 = perto do mais comprado)
@@ -238,6 +276,8 @@ async function resumoSemanal(env) {
   const pend = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`);
   const ativos = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo'`);
   const br = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const org = await env.DB.prepare(`SELECT origem, SUM(CASE WHEN tipo = 'visita' THEN n ELSE 0 END) v, SUM(CASE WHEN tipo = 'cadastro' THEN n ELSE 0 END) c
+    FROM origens WHERE dia BETWEEN ? AND ? GROUP BY origem ORDER BY v DESC, c DESC LIMIT 6`).bind(de, ate).all().then((r) => r.results).catch(() => []);
   const txt = [
     `Semana de ${br(de)} a ${br(ate)}:`,
     '',
@@ -252,6 +292,7 @@ async function resumoSemanal(env) {
     `Pessoas que fizeram login: ${logins}`,
     `Pedidos de acesso novos: ${pedidos}`,
     '',
+    ...(org.length ? ['De onde vieram (visitas / pedidos de acesso):', ...org.map((o) => `- ${o.origem}: ${o.v} / ${o.c}`), ''] : []),
     `Aguardando liberação agora: ${pend}${pend ? ' (https://mercadomacro.com.br/admin)' : ''}`,
     `Usuários liberados no total: ${ativos}`,
     '',
@@ -259,6 +300,7 @@ async function resumoSemanal(env) {
   ].join('\n') + await especuladores();
   const enviado = await avisar(env, 'Resumo semanal do Mercado Macro', txt);
   await env.DB.prepare('DELETE FROM visitas WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run();
+  await env.DB.prepare('DELETE FROM origens WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run().catch(() => {});
   return enviado;
 }
 
@@ -858,6 +900,8 @@ async function apiAuth(req, env, acao, ctx) {
         env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(ins.meta.last_row_id),
       ]);
     }
+    // de onde veio quem pediu acesso: a vitrine manda o Referer e o ?utm_source da primeira página da visita
+    contarOrigem(env, ctx, origemDe(b.ref, b.utm) || 'Páginas do site', 'cadastro');
     ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nPara liberar: https://mercadomacro.com.br/admin`).catch(() => {}));
     return json({ ok: true, msg: MSG_FILA });
   }
@@ -1022,6 +1066,15 @@ async function apiAdmin(req, env, acao, eu) {
   const ass = await apiAdminAssinatura(req, env, acao);
   if (ass) return ass;
   // registro do servidor de dados: pedidos que chegaram sem o passe de quem está logado (últimos 14 dias)
+  if (acao === 'origens' && req.method === 'GET') {
+    const desde = new Date(Date.now() - 3 * 3600000 - 29 * 864e5).toISOString().slice(0, 10);
+    try {
+      const r = await env.DB.prepare('SELECT dia, origem, tipo, n FROM origens WHERE dia >= ?').bind(desde).all();
+      return json({ hoje: diaBrasilia(), linhas: r.results });
+    } catch (e) {
+      return json({ hoje: diaBrasilia(), linhas: [] }); // a tabela nasce na primeira visita contada
+    }
+  }
   if (acao === 'passe' && req.method === 'GET') {
     const desde = new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10);
     try {
@@ -1895,7 +1948,7 @@ dialog#dlg-hist::backdrop{background:rgba(3,6,12,.6)}
 .mm .bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px;min-width:2px}
 .mm td.rc{width:38%}
 .mmw{overflow-x:auto}
-@media (max-width:820px){.fun{grid-template-columns:1fr 1fr}.mm td.rc .bar{display:none}.mm td.rc{width:auto}.mm th,.mm td{padding:8px 6px}.mm th{letter-spacing:0;font-size:10px}}
+@media (max-width:820px){.fun{grid-template-columns:1fr 1fr}.mm td.rc .bar{display:none}.mm td.rc{width:auto}.mm th,.mm td{padding:8px 6px}.mm th{letter-spacing:0;font-size:10px}.mm .x30{display:none}}
 dialog#dlg-acesso{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
 dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
 .dl{padding:20px}
@@ -1947,6 +2000,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <div><h2>Vencem nos próximos 7 dias</h2><div id="venc"><p class="vazio">Carregando…</p></div></div>
   </div>
   <h2>Mês a mês</h2><div id="funil"><p class="vazio">Carregando…</p></div>
+  <h2>De onde vêm os visitantes</h2>
+  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p>
+  <div id="origens"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
   <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
@@ -2098,8 +2154,25 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
         }).join('') + '</tbody></table></div>';
     }).catch(function(){ document.getElementById('funil').innerHTML = '<p class="vazio">Não foi possível carregar os números.</p>'; });
   }
+  function origens(){
+    var raiz = document.getElementById('origens');
+    fetch('/api/admin/origens', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var hoje = j.hoje, d7 = new Date(Date.parse(hoje + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10), T = {};
+      (j.linhas || []).forEach(function(l){
+        var o = T[l.origem] || (T[l.origem] = { o: l.origem, h: 0, s: 0, m: 0, c: 0, c7: 0 });
+        if (l.tipo === 'cadastro') { o.c += l.n; if (l.dia >= d7) o.c7 += l.n; return; }
+        o.m += l.n; if (l.dia >= d7) o.s += l.n; if (l.dia === hoje) o.h += l.n;
+      });
+      var L = Object.keys(T).map(function(k){ return T[k]; }).sort(function(a, b){ return b.s - a.s || b.m - a.m || b.c - a.c; });
+      if (!L.length) { raiz.innerHTML = '<p class="vazio">Ainda nenhuma visita contada.</p>'; return; }
+      var max = Math.max.apply(null, L.map(function(o){ return o.s; }).concat([1])), f = function(v){ return v ? v.toLocaleString('pt-BR') : '<span style="color:var(--text-3)">0</span>'; };
+      raiz.innerHTML = '<div class="mmw"><table class="mm"><thead><tr><th>Origem</th><th>Hoje</th><th>7 dias</th><th class="x30">30 dias</th><th title="Pedidos de acesso nos últimos 7 dias">Pedidos 7d</th><th class="x30" title="Pedidos de acesso nos últimos 30 dias">Pedidos 30d</th></tr></thead><tbody>'
+        + L.map(function(o){ return '<tr><td>' + esc(o.o) + '</td><td>' + f(o.h) + '</td><td class="rc"><span class="bar" style="width:' + Math.round(50 * o.s / max) + '%"></span>' + f(o.s) + '</td><td class="x30">' + f(o.m) + '</td><td>' + f(o.c7) + '</td><td class="x30">' + f(o.c) + '</td></tr>'; }).join('')
+        + '</tbody></table></div>';
+    }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar as origens.</p>'; });
+  }
   function carregar(){
-    funil();
+    funil(); origens();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       eu = j.eu; US = j.usuarios;
       // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)

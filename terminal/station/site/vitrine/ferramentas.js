@@ -3,6 +3,8 @@
    e a fonte direta como reserva. */
 (function () {
   'use strict';
+  // de onde a pessoa chegou (só o site de origem), guardado na primeira página da visita; vai junto no pedido de acesso
+  try { if (!sessionStorage.getItem('mm_origem')) { var qs = new URLSearchParams(location.search); sessionStorage.setItem('mm_origem', JSON.stringify({ ref: document.referrer, utm: qs.get('utm_source') || qs.get('origem') || '' })); } } catch (e) { /* sem armazenamento */ }
   var VT = 'https://mercadomacro-vitrine.cota-cotacao10.workers.dev';
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   var ok = function (x) { return typeof x === 'number' && isFinite(x); };

@@ -3,6 +3,8 @@
    pelos arquivos do robô no GitHub. Sem dado, mostra "—". Fotos do painel: /vitrine/fotos (robô vitrine.yml). */
 (function () {
   'use strict';
+  // de onde a pessoa chegou (só o site de origem), guardado na primeira página da visita; vai junto no pedido de acesso
+  try { if (!sessionStorage.getItem('mm_origem')) { var qs = new URLSearchParams(location.search); sessionStorage.setItem('mm_origem', JSON.stringify({ ref: document.referrer, utm: qs.get('utm_source') || qs.get('origem') || '' })); } } catch (e) { /* sem armazenamento */ }
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   // visitantes sem login usam o worker da segunda conta da Cloudflare (terminal/vitrine-worker);
   // se ele falhar, cai no worker principal
@@ -39,6 +41,7 @@
       ev.preventDefault();
       var msg = form.querySelector('.vt-msg'), bt = form.querySelector('.vt-enviar');
       var dados = {}; new FormData(form).forEach(function (v, k) { dados[k] = v; });
+      if (rota === 'cadastrar') try { var o = JSON.parse(sessionStorage.getItem('mm_origem') || '{}'); dados.ref = o.ref || ''; dados.utm = o.utm || ''; } catch (e) { /* sem origem */ }
       msg.className = 'vt-msg'; msg.textContent = ''; bt.disabled = true;
       fetch('/api/auth/' + rota, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados), credentials: 'same-origin' })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { r: r, j: j }; }); })
