@@ -1,11 +1,11 @@
-name: sonda-perps
-on:
-  push:
-    branches: [sonda-perps]
+name: sonda
+on: { push: { branches: [sonda-perps] } }
 jobs:
-  p:
+  s:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s "https://mercadomacro.com.br/sw.js" | grep -o "mm-site-v[0-9]*\|app.js?v=[0-9]*"
-          curl -s -o /dev/null -w "admin passe sem login: %{http_code}\n" "https://mercadomacro.com.br/api/admin/passe"
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
+          curl -s -o /dev/null -w "vitrine %{http_code}\n" -A "$UA" -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' -H 'Accept: text/html' 'https://mercadomacro.com.br/?origem=teste-claude'
+          curl -s 'https://mercadomacro.com.br/vitrine/vitrine.js?v=17' | grep -c mm_origem
+          curl -s -o /dev/null -w "admin origens sem login %{http_code}\n" https://mercadomacro.com.br/api/admin/origens
