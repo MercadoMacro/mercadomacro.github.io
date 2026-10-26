@@ -25,7 +25,7 @@ function corsFor(origin) {
     'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Max-Age': '86400',
-    'Access-Control-Expose-Headers': 'Retry-After, X-Cache, X-Reserva'
+    'Access-Control-Expose-Headers': 'Retry-After, X-Cache, X-Reserva, X-Passe'
   };
 }
 
@@ -45,6 +45,71 @@ const ALLOWED_HOSTS = [
   'query1.finance.yahoo.com',
   'query2.finance.yahoo.com'
 ];
+
+// =========================================================
+// PASSE (26/10/2026): o site manda em cada pedido um passe assinado pelo servidor do site (station),
+// que só quem está logado recebe (mmp=<corpo>.<assinatura>, ECDSA P-256, vale 10 min).
+// A chave pública vem de mercadomacro.com.br/api/publico/passe-chave.
+// PASSE_MODO: 'registrar' (padrão: só anota quem chega sem passe válido, na tabela passe_registro do D1)
+// ou 'bloquear' (recusa com 401). A vitrine pública marca os pedidos com mmp=vitrine e os robôs do GitHub
+// com o cabeçalho X-MM-Robo; no modo registrar eles só aparecem no registro com esse nome.
+// O registro não guarda IP nem o passe: só dia, rota, motivo e de onde veio (site/navegador ou script).
+// =========================================================
+const CHAVE_PASSE_URL = 'https://mercadomacro.com.br/api/publico/passe-chave';
+let chavePasse = null, chavePasseEm = 0;
+const passeDoPedido = new WeakMap(); // pedido -> motivo, devolvido no cabeçalho X-Passe
+async function pegaChavePasse(env) {
+  if (chavePasse && Date.now() - chavePasseEm < 3600000) return chavePasse;
+  try {
+    const r = await fetch(env.PASSE_CHAVE_URL || CHAVE_PASSE_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const jwk = await r.json();
+    chavePasse = await crypto.subtle.importKey('jwk', { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    chavePasseEm = Date.now();
+  } catch (e) {
+    // sem a chave agora: usa a anterior, se houver
+  }
+  return chavePasse;
+}
+const deB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+// devolve 'ok' ou o motivo da recusa
+async function conferePasse(url, env) {
+  const p = url.searchParams.get('mmp') || '';
+  if (!p) return 'faltou';
+  if (p === 'vitrine') return 'vitrine';
+  const [corpo, ass] = p.split('.');
+  if (!corpo || !ass || p.length > 400) return 'invalido';
+  const chave = await pegaChavePasse(env);
+  if (!chave) return 'sem-chave';
+  try {
+    const okAss = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, chave, deB64u(ass), new TextEncoder().encode(corpo));
+    if (!okAss) return 'invalido';
+    const dados = JSON.parse(new TextDecoder().decode(deB64u(corpo)));
+    return dados.exp * 1000 > Date.now() ? 'ok' : 'vencido';
+  } catch (e) {
+    return 'invalido';
+  }
+}
+let tabelaPasse = false;
+function registraPasse(env, ctx, request, url, motivo) {
+  if (!env.LOG) return;
+  const robo = (request.headers.get('X-MM-Robo') || '').replace(/[^\w-]/g, '').slice(0, 20);
+  const origem = (request.headers.get('Origin') || 'sem-origem').replace(/^https?:\/\//, '').slice(0, 60);
+  // navegador manda Sec-Fetch-Mode; curl, Python e afins não
+  const quem = robo ? 'robo:' + robo : origem + (request.headers.get('Sec-Fetch-Mode') ? ' navegador' : ' script');
+  const rota = url.pathname + (url.searchParams.has('url') ? ' ' + (() => { try { return new URL(url.searchParams.get('url')).hostname; } catch (e) { return '?'; } })() : '');
+  const dia = new Date().toISOString().slice(0, 10);
+  ctx.waitUntil((async () => {
+    try {
+      if (!tabelaPasse) {
+        await env.LOG.prepare('CREATE TABLE IF NOT EXISTS passe_registro (dia TEXT, rota TEXT, motivo TEXT, quem TEXT, n INTEGER, PRIMARY KEY (dia, rota, motivo, quem))').run();
+        tabelaPasse = true;
+      }
+      await env.LOG.prepare('INSERT INTO passe_registro (dia, rota, motivo, quem, n) VALUES (?, ?, ?, ?, 1) ON CONFLICT (dia, rota, motivo, quem) DO UPDATE SET n = n + 1')
+        .bind(dia, rota.slice(0, 80), motivo, quem.slice(0, 80)).run();
+    } catch (e) { /* registro é só informativo */ }
+  })());
+}
 
 function json(obj, status = 200, cors = {}, extra = {}) {
   return new Response(JSON.stringify(obj), {
@@ -679,7 +744,13 @@ async function comReserva(request, resp, ctx) {
 
 export default {
   async fetch(request, env, ctx) {
-    return comReserva(request, await rotas(request, env, ctx), ctx);
+    const resp = await comReserva(request, await rotas(request, env, ctx), ctx);
+    const motivo = passeDoPedido.get(request);
+    if (!motivo) return resp;
+    // diz ao site se o passe foi aceito (ajuda a conferir a troca antes de ligar o bloqueio)
+    const h = new Headers(resp.headers);
+    h.set('X-Passe', motivo);
+    return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
   },
 };
 
@@ -704,6 +775,18 @@ const rotas = async (request, env, ctx) => {
     }
     const limitado = await limitarConsumo(request, env, cors);
     if (limitado) return limitado;
+
+    // ---- Passe de quem está logado (ver conferePasse): por enquanto só registra quem chega sem
+    if (request.method === 'GET') {
+      const motivo = await conferePasse(url, env);
+      passeDoPedido.set(request, motivo);
+      if (motivo !== 'ok') {
+        registraPasse(env, ctx, request, url, motivo);
+        if (env.PASSE_MODO === 'bloquear' && motivo !== 'vitrine' && motivo !== 'sem-chave') {
+          return json({ error: 'Faça login no Mercado Macro para usar estes dados.' }, 401, cors);
+        }
+      }
+    }
 
     // =========================================================
     // ENDPOINT: /quotes  (lote, com cache)

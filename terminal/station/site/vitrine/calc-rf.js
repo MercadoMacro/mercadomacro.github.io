@@ -18,7 +18,7 @@
   function ultimo(j) { var o = Array.isArray(j) ? j[j.length - 1] : null; var v = o ? parseFloat(o.valor) : NaN; if (!isFinite(v)) throw new Error('sem valor'); return { v: v, d: o.data }; }
   function serie(c) {
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/1?formato=json';
-    var fontes = [API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/1'), direto];
+    var fontes = [API + '/bcb?mmp=vitrine&c=' + c + '&q=' + encodeURIComponent('/ultimos/1'), direto];
     // A vitrine não libera a série 1178; o worker principal permite essa consulta.
     if (c !== 1178) fontes.unshift(VT + '/bcb?c=' + c + '&n=1');
     function tentar(i) {

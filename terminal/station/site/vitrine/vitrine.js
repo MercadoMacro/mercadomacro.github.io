@@ -120,7 +120,7 @@
   function carregarCotacoes() {
     var lista = encodeURIComponent(TODOS.map(function (a) { return a[0]; }).join(','));
     return fetch(VT + '/quotes?symbols=' + lista).then(okJson)
-      .catch(function () { return fetch(API + '/quotes?symbols=' + lista).then(okJson); })
+      .catch(function () { return fetch(API + '/quotes?mmp=vitrine&symbols=' + lista).then(okJson); })
       .then(function (d) {
         var novo = {};
         Object.keys(d).forEach(function (k) { var q = parse(d[k]); if (q) novo[k] = q; });
@@ -173,7 +173,7 @@
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/' + n + '?formato=json';
     var ok = function (r) { if (!r.ok) throw new Error(); return r.json(); };
     return fetch(VT + '/bcb?c=' + c + '&n=' + n).then(ok)
-      .catch(function () { return fetch(API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(ok); })
+      .catch(function () { return fetch(API + '/bcb?mmp=vitrine&c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(ok); })
       .catch(function () { return fetch(direto).then(ok); })
       .then(function (d) { if (!Array.isArray(d) || !d.length) throw new Error(); return d; });
   }

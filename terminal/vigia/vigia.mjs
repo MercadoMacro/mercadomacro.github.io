@@ -8,7 +8,7 @@ const API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
 const NEWS = 'https://news.cota-cotacao10.workers.dev/';
 // worker da vitrine na segunda conta da Cloudflare (terminal/vitrine-worker)
 const VITRINE = 'https://mercadomacro-vitrine.cota-cotacao10.workers.dev';
-const HDR = { Origin: SITE, 'User-Agent': 'MercadoMacro-Vigia/1.0', Accept: 'application/json,text/html,*/*' };
+const HDR = { Origin: SITE, 'X-MM-Robo': 'vigia', 'User-Agent': 'MercadoMacro-Vigia/1.0', Accept: 'application/json,text/html,*/*' };
 
 const temLista = (x) => Array.isArray(x) && x.length > 0;
 const hoje = new Date();

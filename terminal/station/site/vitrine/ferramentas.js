@@ -13,13 +13,13 @@
     n = n || 1;
     var direto = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.' + c + '/dados/ultimos/' + n + '?formato=json';
     return fetch(VT + '/bcb?c=' + c + '&n=' + n).then(okJson).then(lista)
-      .catch(function () { return fetch(API + '/bcb?c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(okJson).then(lista); })
+      .catch(function () { return fetch(API + '/bcb?mmp=vitrine&c=' + c + '&q=' + encodeURIComponent('/ultimos/' + n)).then(okJson).then(lista); })
       .catch(function () { return fetch(direto).then(okJson).then(lista); });
   }
   function cotacoes(simbolos) {
     var q = encodeURIComponent(simbolos.join(','));
     return fetch(VT + '/quotes?symbols=' + q).then(okJson)
-      .catch(function () { return fetch(API + '/quotes?symbols=' + q).then(okJson); })
+      .catch(function () { return fetch(API + '/quotes?mmp=vitrine&symbols=' + q).then(okJson); })
       .then(function (j) {
         var out = {};
         simbolos.forEach(function (s) {

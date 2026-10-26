@@ -11,6 +11,12 @@
   // se passar, a Cloudflare para de guardar até 00h UTC. Para guardar menos, baixe head_sampling_rate (0 a 1).
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   // Valores iniciais generosos para redes compartilhadas. Cada contador é por IP/região.
+  // registro de quem chega sem o passe do site (tabela passe_registro): mesmo banco do site
+  "d1_databases": [
+    { "binding": "LOG", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
+  ],
+  // "registrar": só anota quem chega sem passe; "bloquear": recusa (ver conferePasse)
+  "vars": { "PASSE_MODO": "registrar" },
   "ratelimits": [
     { "name": "API_RATE_GENERAL", "namespace_id": "2026101801", "simple": { "limit": 600, "period": 60 } },
     { "name": "API_RATE_HISTORY", "namespace_id": "2026101802", "simple": { "limit": 180, "period": 60 } },

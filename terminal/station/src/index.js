@@ -93,6 +93,7 @@ export default {
       if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
+      if (p === '/api/publico/passe-chave') return json(await chavePublicaPasse(env), 200, { 'Cache-Control': 'public, max-age=3600' });
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
@@ -133,6 +134,7 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      if (p === '/api/passe') return await emitirPasse(env, u);
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
         if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
@@ -281,7 +283,7 @@ const FECH_ACOES = ['PETR4', 'PETR3', 'VALE3', 'ITUB4', 'BBDC4', 'BBAS3', 'B3SA3
 async function jurosTesouro(env) {
   const out = {};
   try {
-    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev/tesouro', { headers: { Origin: ORIGEM_SITE } });
+    const req = new Request(await urlDados(env, '/tesouro'), { headers: { Origin: ORIGEM_SITE } });
     const r = env.API ? await env.API.fetch(req) : await fetch(req);
     if (!r.ok) return out;
     const j = await r.json();
@@ -295,7 +297,7 @@ async function jurosTesouro(env) {
 }
 async function dadosFechamento(env) {
   const api = async (rota) => {
-    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
+    const req = new Request(await urlDados(env, rota), { headers: { Origin: ORIGEM_SITE } });
     const r = env.API ? await env.API.fetch(req) : await fetch(req);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
@@ -468,7 +470,7 @@ const ABRE_CARDS = [
 ];
 async function dadosAbertura(env) {
   const api = async (rota) => {
-    const req = new Request('https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota, { headers: { Origin: ORIGEM_SITE } });
+    const req = new Request(await urlDados(env, rota), { headers: { Origin: ORIGEM_SITE } });
     const r = env.API ? await env.API.fetch(req) : await fetch(req);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
@@ -661,6 +663,54 @@ async function telegramAlbum(env, pngs, legenda, destino) {
 // avisa o relay da Capital que a chave mudou ou foi apagada: ele descarta a sessão antiga na hora
 async function reiniciarCapital(env) {
   try { await env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch('https://capital/reiniciar', { method: 'POST' }); } catch (_) { /* o relay também confere a chave ao reabrir */ }
+}
+
+/* ---------------- passe do servidor de dados (26/10/2026) ----------------
+   Quem está logado recebe um passe assinado (ECDSA P-256) que vale 10 minutos; o site o manda em cada
+   pedido ao servidor de dados (shrill-meadow-89c1), que confere a assinatura com a chave pública
+   (/api/publico/passe-chave). A chave privada é gerada aqui na primeira vez e fica só no D1 (config passe_jwk).
+   Bloquear alguém no /admin corta o passe seguinte. */
+const PASSE_VALE = 600;
+let chavesPasse = null;
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function chavesDoPasse(env) {
+  if (chavesPasse) return chavesPasse;
+  let jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first())?.valor;
+  if (!jwk) {
+    const par = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    // INSERT OR IGNORE: se duas instâncias gerarem ao mesmo tempo, fica a primeira e as duas leem a mesma
+    await env.DB.prepare("INSERT OR IGNORE INTO config (chave, valor) VALUES ('passe_jwk', ?)").bind(JSON.stringify(await crypto.subtle.exportKey('jwk', par.privateKey))).run();
+    jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first()).valor;
+  }
+  const priv = JSON.parse(jwk);
+  const { d, ...pub } = priv;
+  chavesPasse = {
+    privada: await crypto.subtle.importKey('jwk', priv, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']),
+    publica: { kty: pub.kty, crv: pub.crv, x: pub.x, y: pub.y }
+  };
+  return chavesPasse;
+}
+async function chavePublicaPasse(env) {
+  return (await chavesDoPasse(env)).publica;
+}
+async function emitirPasse(env, u) {
+  const { privada } = await chavesDoPasse(env);
+  const exp = Math.floor(Date.now() / 1000) + PASSE_VALE;
+  const corpo = b64u(new TextEncoder().encode(JSON.stringify({ u: u.id, exp })));
+  const ass = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privada, new TextEncoder().encode(corpo));
+  return json({ passe: corpo + '.' + b64u(ass), exp }, 200, { 'Cache-Control': 'no-store' });
+}
+
+// pedidos do próprio servidor do site ao servidor de dados (fechamento, abertura, Tesouro) levam um passe "site"
+let passeSite = null;
+async function urlDados(env, rota) {
+  const base = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev' + rota;
+  try {
+    if (!passeSite || passeSite.exp - Date.now() / 1000 < 120) passeSite = await (await emitirPasse(env, { id: 'site' })).json();
+    return base + (rota.includes('?') ? '&' : '?') + 'mmp=' + encodeURIComponent(passeSite.passe);
+  } catch (e) {
+    return base;
+  }
 }
 
 /* ---------------- sessões ---------------- */

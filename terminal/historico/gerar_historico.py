@@ -29,6 +29,7 @@ def baixa(url, origem=False, tempo=120, cabecalhos=False):
     h = {'User-Agent': UA, 'Accept': '*/*'}
     if origem:
         h['Origin'] = ORIGEM
+        h['X-MM-Robo'] = 'historico'
     with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=tempo) as r:
         return (r.read(), r.headers) if cabecalhos else r.read()
 
