@@ -5,11 +5,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
-          curl -s -A "$UA" -w "\nHTTP %{http_code}\n" 'https://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/DI1' | head -c 2500; echo
-          echo ---
-          curl -s -A "$UA" -w "\nHTTP %{http_code}\n" 'https://cotacao.b3.com.br/mds/api/v1/InstrumentQuotation/DI1F27' | head -c 1500; echo
-          echo ---
-          curl -s -A "$UA" -w "\nHTTP %{http_code}\n" -H 'Content-Type: application/json' 'https://scanner.tradingview.com/brazil/scan' -d '{"symbols":{"tickers":["BMFBOVESPA:DI1F2027","BMFBOVESPA:DI1F2028","BMFBOVESPA:DI1F2029"]},"columns":["close","change","change_abs","update_mode","description"]}' | head -c 1500; echo
-          echo ---
-          curl -s -A "$UA" -o /dev/null -w "investing %{http_code}\n" 'https://br.investing.com/rates-bonds/brazil-interest-rate-futures'
+          curl -s -H 'Origin: https://mercadomacro.com.br' -A 'Mozilla/5.0' 'https://shrill-meadow-89c1.danilo-nillo.workers.dev/di?mmp=vitrine' | head -c 1200; echo
