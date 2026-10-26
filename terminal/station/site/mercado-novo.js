@@ -151,6 +151,7 @@
   const faixa = (r) => (['1d', '5d', '3mo'].includes(pref[r.id]?.f) ? pref[r.id].f : '1d');
 
   let Q = {}, H3 = {}, lastTs = 0, busy = false, errMsg = '';
+  let PERP = null; // rota /perps do worker: QQQ, SPY e EWZ em perpétuos de corretoras cripto
   const G = {}; // gráficos: `${faixa}|${sym}` -> { t, c, ts }
   const abertos = new Set();
 
@@ -195,7 +196,7 @@
     root.querySelector('.mn-refresh')?.classList.add('busy');
     carimbo();
     try {
-      const [n] = await Promise.all([loadQuotes(force), loadHist(SYMS, '3mo')]);
+      const [n] = await Promise.all([loadQuotes(force), loadHist(SYMS, '3mo'), getJSON(`${PROXY}/perps`).then((j) => { if (j?.ativos) PERP = j; }).catch(() => {})]);
       errMsg = n ? '' : 'Sem conexão com o servidor de cotações agora.';
       if (n) lastTs = Date.now();
       // gráfico de cada cartão na faixa escolhida (um lote por faixa)
@@ -334,6 +335,39 @@
       <div class="mn-rows">${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
     </article>`;
   }
+  /* ---------------- fora do horário (26/10/2026, pedido do Severino) ----------------
+     QQQ, SPY e EWZ em contratos perpétuos de corretoras cripto, que negociam 24/7 (fim de semana e madrugada).
+     Mostra a mediana das corretoras, a variação sobre o último preço oficial do ETF (Yahoo) e a faixa entre elas.
+     Não é preço oficial; com corretoras muito diferentes entre si, a linha avisa. */
+  const PERP_ATIVOS = [['QQQ', 'Nasdaq 100 (QQQ)'], ['SPY', 'S&P 500 (SPY)'], ['EWZ', 'Brasil (EWZ)']];
+  const mediana = (a) => { const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+  function cartaoPerp() {
+    const us = situacao(REGIOES.find((r) => r.id === 'us'));
+    const linhas = PERP_ATIVOS.map(([a, n]) => {
+      const d = PERP?.ativos?.[a], vs = (d?.venues || []).filter((x) => ok(x.v));
+      const v = vs.length ? mediana(vs.map((x) => x.v)) : null;
+      const of = d?.oficial && ok(d.oficial.v) ? d.oficial : null;
+      const ch = ok(v) && of ? (v / of.v - 1) * 100 : null;
+      const lo = vs.length ? Math.min(...vs.map((x) => x.v)) : null, hi = vs.length ? Math.max(...vs.map((x) => x.v)) : null;
+      const dif = vs.length > 1 ? (hi / lo - 1) * 100 : null, diverge = ok(dif) && dif > 2;
+      const ofTxt = of ? `Último oficial: US$ ${nf(of.v)}${of.t ? ` (${new Date(of.t * 1000).toLocaleString('pt-BR', { ...BR, weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace('.', '')})` : ''}` : 'Último oficial: —';
+      const dica = [ofTxt, ...vs.map((x) => `${x.n}: US$ ${nf(x.v)}`)].join('\n');
+      const sub = vs.length ? `${vs.length} ${vs.length === 1 ? 'corretora' : 'corretoras'}${vs.length > 1 ? ` · ${nf(lo)}–${nf(hi)}` : ''}${diverge ? ` · diferem ${nf(dif, 1)}%` : ''}` : 'sem cotação agora';
+      return `<div class="mn-row mn-row-esp mn-perp" title="${esc(dica)}">
+        <span class="mn-n">${esc(n)}<small class="${diverge ? 'aviso' : ''}">${esc(sub)}</small></span><span class="mn-v">${ok(v) ? `US$ ${nf(v)}` : '—'}</span><span class="mn-c ${cls(ch)}">${pct(ch)}</span></div>`;
+    }).join('');
+    const nomes = [...new Set(PERP_ATIVOS.flatMap(([a]) => (PERP?.ativos?.[a]?.venues || []).map((x) => x.n)))];
+    return `<article class="mn-card mn-card-perp">
+      <header class="mn-head">
+        <span class="mn-flag"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#4b5875"/><circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M10 6.8V10l2.2 1.5" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></span>
+        <h3>Fora do horário</h3>
+        <span class="mn-st"${us.nome ? ` title="${esc(us.nome)}"` : ''}><i></i>${us.aberto ? 'NYSE aberta' : `NYSE ${esc(us.txt)}`}</span>
+      </header>
+      <p class="mn-perp-nota">Derivativos (contratos perpétuos) negociados 24 horas em corretoras cripto. Não é preço oficial. Variação sobre o último preço oficial do ETF.</p>
+      <div class="mn-rows">${linhas}</div>
+      <p class="mn-perp-fonte">Fonte: ${nomes.length ? esc(nomes.join(', ')) : '—'} (mediana); oficial: Yahoo</p>
+    </article>`;
+  }
   function render() {
     const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
@@ -341,7 +375,7 @@
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
         <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
       </div>
-      <div class="mn-grid">${ordem().map(cartao).join('')}</div>
+      <div class="mn-grid">${ordem().map(cartao).join('')}${cartaoPerp()}</div>
     </div>`;
     carimbo(hora);
   }
@@ -454,6 +488,12 @@
   .mn-root .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-root .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn-root .mn .up { color:var(--pos-ink, var(--pos)); } .mn-root .mn .dn { color:var(--neg); } .mn-root .mn .na, .mn-root .mn .eq { color:var(--text-3); }
+  .mn-root .mn-perp-nota { margin:0; font-size:12px; color:var(--text-3); line-height:1.4; }
+  .mn-root .mn-perp .mn-n { display:flex; flex-direction:column; gap:1px; }
+  .mn-root .mn-perp .mn-n { white-space:normal; }
+  .mn-root .mn-perp small { text-transform:none; letter-spacing:0; font-size:11px; color:var(--text-3); line-height:1.35; }
+  .mn-root .mn-perp small.aviso { color:#c98a12; }
+  .mn-root .mn-perp-fonte { margin:0; padding:6px 4px 4px; border-top:1px solid var(--line); font-size:11px; color:var(--text-3); }
   .mn-root.mn-qb .mn-bar { display:none; }
   @media (min-width: 641px) {.mn-root .mn-bar { display:none; } }
   .qb-mn { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
