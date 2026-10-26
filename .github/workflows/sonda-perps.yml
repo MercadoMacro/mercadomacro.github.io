@@ -7,5 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -H "Origin: https://mercadomacro.com.br" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/perps" | jq -c '.ativos | to_entries[] | {a:.key, of:.value.oficial, v:[.value.venues[] | "\(.n)=\(.v)"]}'
-          date -u
+          curl -s "https://mercadomacro.com.br/mercado-novo.js?v=20" | grep -c "cartaoPerp"
+          curl -s "https://mercadomacro.com.br/sw.js" | grep -o "mm-site-v[0-9]*"
+          curl -s -H "Origin: https://mercadomacro.com.br" "https://shrill-meadow-89c1.danilo-nillo.workers.dev/perps" | jq -c '.ativos | to_entries[] | {a:.key, of:.value.oficial.v, v:[.value.venues[] | "\(.n)=\(.v)"]}'
