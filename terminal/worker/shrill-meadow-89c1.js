@@ -434,6 +434,58 @@ async function handleHistory(url, ctx, cors) {
   return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${Math.min(900, faixaTtl)}`, 'X-Cache': 'MISS', ...cors } });
 }
 
+// =========================================================
+// /perps: QQQ, SPY e EWZ em contratos perpétuos de corretoras cripto (negociam 24/7, inclusive no fim de semana).
+// Caixa "Fora do horário" da aba Mercado. APIs públicas, sem chave. Não é preço oficial:
+// devolve o preço de cada corretora e o último preço oficial do ETF (Yahoo); a mediana e a faixa são feitas no site.
+// Devolve { ts, ativos: { QQQ: { oficial: { v, t } | null, venues: [{ n, v, t }] }, ... } }. Cache de borda de 60 s.
+// =========================================================
+const PERPS = {
+  QQQ: { bitget: 'QQQUSDT', okx: 'QQQ-USDT-SWAP', gate: 'QQQ_USDT', mexc: 'QQQSTOCK_USDT' },
+  SPY: { bitget: 'SPYUSDT', okx: 'SPY-USDT-SWAP', gate: 'SPY_USDT', mexc: 'SPY_USDT' },
+  EWZ: { bitget: 'EWZUSDT', okx: 'EWZ-USDT-SWAP', gate: 'EWZ_USDT', mexc: 'EWZ_USDT', hl: 'xyz:EWZ' }
+};
+async function handlePerps(ctx, cors) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/perps-v1');
+  const hit = await cache.match(cacheKey);
+  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'HIT', ...cors } });
+  const pega = async (u, init = {}) => {
+    const r = await fetch(u, { ...init, headers: { 'User-Agent': UA, Accept: 'application/json', ...(init.headers || {}) } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  };
+  const num = (x) => (x != null && x !== '' && isFinite(+x) && +x > 0 ? +x : null);
+  const venue = async (n, f) => { try { const r = await f(); return r && r.v ? { n, ...r } : null; } catch (e) { return null; } };
+  // Hyperliquid: um pedido traz todos os ativos do mercado "xyz" (só o EWZ é um ETF; os índices de lá não entram)
+  const hl = pega('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"type":"metaAndAssetCtxs","dex":"xyz"}' }).catch(() => null);
+  const ativos = {};
+  await Promise.all(Object.entries(PERPS).map(async ([a, m]) => {
+    const vs = await Promise.all([
+      venue('Bitget', async () => { const d = (await pega(`https://api.bitget.com/api/v2/mix/market/ticker?symbol=${m.bitget}&productType=USDT-FUTURES`)).data?.[0]; return { v: num(d?.lastPr), t: +d?.ts || null }; }),
+      venue('OKX', async () => { const d = (await pega(`https://www.okx.com/api/v5/market/ticker?instId=${m.okx}`)).data?.[0]; return { v: num(d?.last), t: +d?.ts || null }; }),
+      venue('Gate', async () => { const d = (await pega(`https://api.gateio.ws/api/v4/futures/usdt/tickers?contract=${m.gate}`))?.[0]; return { v: num(d?.last), t: null }; }),
+      venue('MEXC', async () => { let d = (await pega(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${m.mexc}`)).data; if (Array.isArray(d)) d = d[0]; return { v: num(d?.lastPrice), t: +d?.timestamp || null }; }),
+      m.hl ? venue('Hyperliquid', async () => {
+        const r = await hl; const i = r?.[0]?.universe?.findIndex((u) => u.name === m.hl);
+        return i >= 0 ? { v: num(r[1]?.[i]?.markPx), t: null } : null;
+      }) : null
+    ]);
+    // preço parado há mais de 15 min não entra
+    const venues = vs.filter((x) => x && (!x.t || Date.now() - x.t < 900000));
+    let oficial = null;
+    try {
+      const meta = (await pega(`https://query1.finance.yahoo.com/v8/finance/chart/${a}?interval=1d&range=1d`)).chart?.result?.[0]?.meta;
+      if (num(meta?.regularMarketPrice)) oficial = { v: +meta.regularMarketPrice, t: meta.regularMarketTime || null };
+    } catch (e) { /* sem o oficial: o site mostra "—" na variação */ }
+    ativos[a] = { oficial, venues };
+  }));
+  const ok = Object.values(ativos).some((x) => x.venues.length);
+  const body = JSON.stringify({ ts: Date.now(), ativos });
+  if (ok) ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
+  return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'MISS', ...cors } });
+}
+
 // Empresas dos EUA cujos balanços aparecem no Calendário (as maiores do S&P 500 + ADRs brasileiros e da América Latina)
 const EARN_WATCH = new Set(('AAPL MSFT NVDA GOOGL GOOG AMZN META TSLA AVGO BRK.B JPM V MA LLY UNH XOM JNJ WMT PG HD COST ORCL NFLX ' +
   'ABBV BAC KO PEP CVX MRK AMD ADBE CRM TMO ACN LIN MCD CSCO ABT WFC DIS INTC IBM QCOM TXN INTU AMAT MU NOW ISRG CAT GE ' +
@@ -639,6 +691,13 @@ const rotas = async (request, env, ctx) => {
     // =========================================================
     if (path === '/history') {
       return handleHistory(url, ctx, cors);
+    }
+
+    // =========================================================
+    // ENDPOINT: /perps  (QQQ, SPY e EWZ em perpétuos de corretoras cripto: caixa "Fora do horário")
+    // =========================================================
+    if (path === '/perps') {
+      return handlePerps(ctx, cors);
     }
 
     // =========================================================
