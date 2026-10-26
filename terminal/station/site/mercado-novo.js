@@ -343,22 +343,38 @@
      Não é preço oficial; com corretoras muito diferentes entre si, a linha avisa. */
   const PERP_ATIVOS = [['QQQ', 'Nasdaq 100 (QQQ)'], ['SPY', 'S&P 500 (SPY)'], ['EWZ', 'Brasil (EWZ)']];
   const mediana = (a) => { const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+  // EWZ ao vivo pela Hyperliquid (WebSocket público, sem chave; pedido do Severino em 26/10/2026).
+  // O preço é o meio do livro (midPx); vale por 30 s. As outras corretoras seguem na mediana de comparação.
+  const HL = { ws: null, v: null, oracle: null, em: 0, tenta: 0, timer: null, ping: null, ultTela: 0 };
+  const hlVivo = () => (HL.v != null && Date.now() - HL.em < 30000 ? HL : null);
+  function perpDados(a) {
+    const d = PERP?.ativos?.[a], todas = (d?.venues || []).filter((x) => ok(x.v));
+    const live = a === 'EWZ' ? hlVivo() : null;
+    // ao vivo: o preço é o da Hyperliquid e a comparação é com a mediana das outras corretoras
+    const vs = live ? todas.filter((x) => x.n !== 'Hyperliquid') : todas;
+    const med = vs.length ? mediana(vs.map((x) => x.v)) : null;
+    const v = live ? live.v : med;
+    const of = d?.oficial && ok(d.oficial.v) ? d.oficial : null;
+    const ch = ok(v) && of ? (v / of.v - 1) * 100 : null;
+    const lo = vs.length ? Math.min(...vs.map((x) => x.v)) : null, hi = vs.length ? Math.max(...vs.map((x) => x.v)) : null;
+    const dif = live ? (ok(med) ? Math.abs(live.v / med - 1) * 100 : null) : vs.length > 1 ? (hi / lo - 1) * 100 : null;
+    const diverge = ok(dif) && dif > 2;
+    const ofTxt = of ? `Último oficial: US$ ${nf(of.v)}${of.t ? ` (${new Date(of.t * 1000).toLocaleString('pt-BR', { ...BR, weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace('.', '')})` : ''}` : 'Último oficial: —';
+    const dica = [live ? `Tempo real pela Hyperliquid (meio do livro); oráculo: US$ ${nf(live.oracle, 3)}` : '', ofTxt, ...vs.map((x) => `${x.n}: US$ ${nf(x.v)}`)].filter(Boolean).join('\n');
+    const sub = live
+      ? `ao vivo · Hyperliquid${ok(med) ? ` · outras ${vs.length}: ${nf(med)}` : ''}${diverge ? ` · diferem ${nf(dif, 1)}%` : ''}`
+      : vs.length ? `${vs.length} ${vs.length === 1 ? 'corretora' : 'corretoras'}${vs.length > 1 ? ` · ${nf(lo)}–${nf(hi)}` : ''}${diverge ? ` · diferem ${nf(dif, 1)}%` : ''}` : 'sem cotação agora';
+    return { v, ch, sub, diverge, dica, live: !!live };
+  }
+  const valorPerp = (v) => (ok(v) ? `US$ ${nf(v, hlVivo() ? 3 : 2)}` : '—');
   function cartaoPerp() {
     const us = situacao(REGIOES.find((r) => r.id === 'us'));
     const linhas = PERP_ATIVOS.map(([a, n]) => {
-      const d = PERP?.ativos?.[a], vs = (d?.venues || []).filter((x) => ok(x.v));
-      const v = vs.length ? mediana(vs.map((x) => x.v)) : null;
-      const of = d?.oficial && ok(d.oficial.v) ? d.oficial : null;
-      const ch = ok(v) && of ? (v / of.v - 1) * 100 : null;
-      const lo = vs.length ? Math.min(...vs.map((x) => x.v)) : null, hi = vs.length ? Math.max(...vs.map((x) => x.v)) : null;
-      const dif = vs.length > 1 ? (hi / lo - 1) * 100 : null, diverge = ok(dif) && dif > 2;
-      const ofTxt = of ? `Último oficial: US$ ${nf(of.v)}${of.t ? ` (${new Date(of.t * 1000).toLocaleString('pt-BR', { ...BR, weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace('.', '')})` : ''}` : 'Último oficial: —';
-      const dica = [ofTxt, ...vs.map((x) => `${x.n}: US$ ${nf(x.v)}`)].join('\n');
-      const sub = vs.length ? `${vs.length} ${vs.length === 1 ? 'corretora' : 'corretoras'}${vs.length > 1 ? ` · ${nf(lo)}–${nf(hi)}` : ''}${diverge ? ` · diferem ${nf(dif, 1)}%` : ''}` : 'sem cotação agora';
-      return `<div class="mn-row mn-row-esp mn-perp" title="${esc(dica)}">
-        <span class="mn-n">${esc(n)}<small class="${diverge ? 'aviso' : ''}">${esc(sub)}</small></span><span class="mn-v">${ok(v) ? `US$ ${nf(v)}` : '—'}</span><span class="mn-c ${cls(ch)}">${pct(ch)}</span></div>`;
+      const x = perpDados(a);
+      return `<div class="mn-row mn-row-esp mn-perp${x.live ? ' rt' : ''}" data-perp="${a}" title="${esc(x.dica)}">
+        <span class="mn-n"><span class="mn-pn">${esc(n)}</span><small class="${x.diverge ? 'aviso' : ''}">${esc(x.sub)}</small></span><span class="mn-v">${a === 'EWZ' ? valorPerp(x.v) : ok(x.v) ? `US$ ${nf(x.v)}` : '—'}</span><span class="mn-c ${cls(x.ch)}">${pct(x.ch)}</span></div>`;
     }).join('');
-    const nomes = [...new Set(PERP_ATIVOS.flatMap(([a]) => (PERP?.ativos?.[a]?.venues || []).map((x) => x.n)))];
+    const nomes = [...new Set(PERP_ATIVOS.flatMap(([a]) => (PERP?.ativos?.[a]?.venues || []).map((x) => x.n)))].filter((n) => !(hlVivo() && n === 'Hyperliquid'));
     return `<article class="mn-card mn-card-perp">
       <header class="mn-head">
         <span class="mn-flag"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#4b5875"/><circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M10 6.8V10l2.2 1.5" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></span>
@@ -367,7 +383,7 @@
       </header>
       <p class="mn-perp-nota">Derivativos (contratos perpétuos) negociados 24 horas em corretoras cripto. Não é preço oficial. Variação sobre o último preço oficial do ETF.</p>
       <div class="mn-rows">${linhas}</div>
-      <p class="mn-perp-fonte">Fonte: ${nomes.length ? esc(nomes.join(', ')) : '—'} (mediana); oficial: Yahoo</p>
+      <p class="mn-perp-fonte">Fonte: ${hlVivo() ? 'EWZ ao vivo pela Hyperliquid; ' : ''}${nomes.length ? esc(nomes.join(', ')) : '—'} (mediana); oficial: Yahoo</p>
     </article>`;
   }
   /* ---------------- panorama cripto (26/10/2026, pedido do Severino) ----------------
@@ -400,6 +416,53 @@
       <p class="mn-perp-fonte">Fonte: CoinMarketCap (atualiza a cada 15 min)</p>
     </article>`;
   }
+  // linha do EWZ atualizada no lugar (no máximo 2 vezes por segundo), sem redesenhar a aba
+  function telaEwz(dir) {
+    if (Date.now() - HL.ultTela < 500 && !dir) return;
+    HL.ultTela = Date.now();
+    const row = root.querySelector('.mn-perp[data-perp="EWZ"]');
+    if (!row) return;
+    const x = perpDados('EWZ');
+    row.title = x.dica;
+    row.classList.toggle('rt', x.live);
+    row.querySelector('.mn-v').textContent = valorPerp(x.v);
+    const c = row.querySelector('.mn-c'); c.textContent = pct(x.ch); c.className = `mn-c ${cls(x.ch)}`;
+    const sm = row.querySelector('small'); sm.textContent = x.sub; sm.className = x.diverge ? 'aviso' : '';
+    if (dir) { row.classList.remove('fl-up', 'fl-dn'); void row.offsetWidth; row.classList.add(dir > 0 ? 'fl-up' : 'fl-dn'); }
+  }
+  function hlLiga() {
+    if (HL.ws || document.hidden || !panel.classList.contains('active')) return;
+    let ws;
+    try { ws = new WebSocket('wss://api.hyperliquid.xyz/ws'); } catch (e) { return; }
+    HL.ws = ws;
+    ws.onopen = () => {
+      HL.tenta = 0;
+      ws.send(JSON.stringify({ method: 'subscribe', subscription: { type: 'activeAssetCtx', coin: 'xyz:EWZ' } }));
+      HL.ping = setInterval(() => { try { ws.send('{"method":"ping"}'); } catch (e) { /* fechou */ } }, 45000);
+    };
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch (er) { return; }
+      const c = m?.channel === 'activeAssetCtx' && m.data?.coin === 'xyz:EWZ' ? m.data.ctx : null;
+      if (!c) return;
+      const v = +(c.midPx ?? c.markPx);
+      if (!(v > 0)) return;
+      const antes = HL.v;
+      HL.v = v; HL.oracle = +c.oraclePx || null; HL.em = Date.now();
+      telaEwz(antes != null && v !== antes ? Math.sign(v - antes) : 0);
+    };
+    ws.onclose = () => {
+      clearInterval(HL.ping); HL.ws = null;
+      if (document.hidden || !panel.classList.contains('active')) return;
+      // reconecta com espera crescente (até 1 min)
+      clearTimeout(HL.timer);
+      HL.timer = setTimeout(hlLiga, Math.min(60000, 2000 * 2 ** HL.tenta++));
+    };
+    ws.onerror = () => { try { ws.close(); } catch (e) { /* já fechado */ } };
+  }
+  function hlDesliga() { clearTimeout(HL.timer); if (HL.ws) { const w = HL.ws; HL.ws = null; w.onclose = null; clearInterval(HL.ping); try { w.close(); } catch (e) { /* já fechado */ } } }
+  const hlConfere = () => (!document.hidden && panel.classList.contains('active') ? hlLiga() : hlDesliga());
+  document.addEventListener('visibilitychange', hlConfere);
+
   function render() {
     const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
@@ -530,6 +593,8 @@
   .mn-root .mn-perp-nota { margin:0; font-size:12px; color:var(--text-3); line-height:1.4; }
   .mn-root .mn-perp .mn-n { display:flex; flex-direction:column; gap:1px; }
   .mn-root .mn-perp .mn-n { white-space:normal; }
+  .mn-root .mn-perp.rt .mn-n::after { display:none; }
+  .mn-root .mn-perp.rt .mn-pn::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--pos); margin-left:6px; vertical-align:middle; }
   .mn-root .mn-perp small { text-transform:none; letter-spacing:0; font-size:11px; color:var(--text-3); line-height:1.35; }
   .mn-root .mn-perp small.aviso { color:#c98a12; }
   .mn-root .mn-perp-fonte { margin:0; padding:6px 4px 4px; border-top:1px solid var(--line); font-size:11px; color:var(--text-3); }
@@ -550,6 +615,7 @@
 
   render();
   refresh();
+  hlConfere();
   // Selic, IPCA, Treasury 20 anos e minério chegam pela aba Mercado de sempre, que roda por baixo
   [5000, 15000].forEach((ms) => setTimeout(() => { if (!busy) render(); }, ms));
   let timer = setInterval(() => { if (!document.hidden && panel.classList.contains('active')) refresh(); }, 120000);
@@ -558,6 +624,6 @@
   // a linha da frase nasce depois (espera as frases): coloca a hora nela assim que aparecer
   const topo = document.querySelector('.topbar');
   if (topo) new MutationObserver(() => { if (!topo.querySelector('.qb-mn')) carimbo(); }).observe(topo, { childList: true });
-  new MutationObserver(() => { carimbo(); if (panel.classList.contains('active') && Date.now() - lastTs > 60000) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => { carimbo(); hlConfere(); if (panel.classList.contains('active') && Date.now() - lastTs > 60000) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
   void timer;
 })();
