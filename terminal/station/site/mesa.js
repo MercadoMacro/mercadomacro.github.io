@@ -139,7 +139,7 @@
   }
 
   /* ---------------- curva de juros (Tesouro Direto) ---------------- */
-  let curve = null, curveErr = '', curveKind = 'pre', curveCmp = null;
+  let curve = null, curveErr = '', curveKind = 'di', curveCmp = null;
   const parseVenc = (s) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim()); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
   function curvePoints(tit, kind) {
     const now = Date.now();
@@ -268,9 +268,9 @@
       <div class="ms-foot">${curve ? `Taxas de compra do Tesouro Direto${curve.old ? `, salvas em ${new Date(curve.ts).toLocaleDateString('pt-BR')} (fonte fora do ar agora)` : `, ${new Date(curve.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}.` : ''}${histCurva ? ' Curvas anteriores: Tesouro Transparente.' : days.length ? '' : ' A comparação aparece a partir do segundo dia de uso, com as curvas que o painel guarda.'}</div>`;
   }
   const segHTML = () => `<div class="ms-seg" role="group" aria-label="Tipo de curva">
+          <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
           <button type="button" data-curve="pre" class="${curveKind === 'pre' ? 'on' : ''}" title="Tesouro Prefixado">Pré</button>
           <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
-          <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
         </div>`;
   // curva de comparação do DI: 'ajuste' = ajuste do pregão anterior (ao vivo); as outras vêm da curva da noite (curva.json)
   const diCmpPoints = () => (diCmp === 'ajuste' ? (diVivoOk() ? diVivoPoints('aj') : []) : diCmp && diCurvas?.[diCmp] ? diPoints(diCurvas[diCmp]) : []);
