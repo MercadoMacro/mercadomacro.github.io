@@ -926,6 +926,18 @@ const rotas = async (request, env, ctx) => {
       }
       const ult = await caches.default.match(kUlt).catch(() => null);
       if (ult) return responder(await ult.text(), { 'Cache-Control': 'public, max-age=300', 'X-Antigo': '1' });
+      // último recurso: o CSV público do gráfico do FRED (sem chave), só para a série crua
+      if (units === 'lin' && !frequency) {
+        try {
+          const r = await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`, { signal: AbortSignal.timeout(10000), cf: { cacheTtlByStatus: { '200-299': 1800, '400-599': 0 }, cacheEverything: true } });
+          if (r.ok) {
+            const obs = (await r.text()).trim().split('\n').slice(1).map((l) => l.split(','))
+              .filter(([d, v]) => /^\d{4}-\d\d-\d\d$/.test(d) && v !== '.' && v !== '' && isFinite(+v))
+              .map(([d, v]) => [d, +v]).reverse().slice(0, limit);
+            if (obs.length) return responder(JSON.stringify({ id, obs }), { 'Cache-Control': 'public, max-age=600', 'X-Antigo': 'csv' });
+          }
+        } catch (err) { /* segue para o erro */ }
+      }
       return json({ error: 'FRED falhou: ' + erro }, 502, cors);
     }
 
