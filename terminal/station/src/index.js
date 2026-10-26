@@ -97,6 +97,8 @@ export default {
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
+      if (p === '/telegram') return await irParaCanal(req, env, ctx, url);
+      if (p === '/api/publico/canal') return await previaCanal(env);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
       if (p === '/esqueci') return paginaEsqueci();
       if (p === '/sair-da-lista') return await paginaSairDaLista(req, env, paginaLink);
@@ -1310,17 +1312,21 @@ async function dominioResend(chave) {
 const siteDe = (req) => (new URL(req.url).origin.includes('mercadomacro.com.br') ? 'https://mercadomacro.com.br' : new URL(req.url).origin);
 const escH = (x) => String(x).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 // monta e manda um e-mail simples: saudação, parágrafos, um botão e uma nota
-async function enviarEmail(env, req, { para, nome, assunto, paragrafos, botao, link, nota }) {
+async function enviarEmail(env, req, { para, nome, assunto, paragrafos, botao, link, nota, canal }) {
   const c = await config(env);
   if (!c.mail_key) return { ok: false, desligado: true };
   const site = siteDe(req);
   const primeiro = String(nome || '').trim().split(/\s+/)[0] || 'olá';
-  const texto = `Olá, ${primeiro}.\n\n${paragrafos.join('\n\n')}\n\n${botao}: ${link}\n\n${nota ? nota + '\n\n' : ''}Mercado Macro`;
+  // convite para o canal do Telegram (passa por /telegram para contar o clique)
+  const tg = canal && c.tg_canal ? site + '/telegram?de=email' : null;
+  const TG = 'Abertura às 9h15, fechamento às 18h e as notícias que mexem com o mercado, de graça no nosso canal do Telegram';
+  const texto = `Olá, ${primeiro}.\n\n${paragrafos.join('\n\n')}\n\n${botao}: ${link}\n\n${nota ? nota + '\n\n' : ''}${tg ? TG + ': ' + tg + '\n\n' : ''}Mercado Macro`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1f2937;max-width:520px">
 <p>Olá, ${escH(primeiro)}.</p>
 ${paragrafos.map((x) => `<p>${escH(x)}</p>`).join('\n')}
 <p style="margin:22px 0"><a href="${escH(link)}" style="background:#f5b83d;color:#111;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:8px;display:inline-block">${escH(botao)}</a></p>
 ${nota ? `<p style="color:#6b7280;font-size:13px">${escH(nota)}</p>` : ''}
+${tg ? `<p style="font-size:14px;border-top:1px solid #e5e7eb;padding-top:14px">${escH(TG)}: <a href="${escH(tg)}" style="color:#1d4ed8;font-weight:700">entrar no canal</a></p>` : ''}
 <p style="color:#6b7280;font-size:13px">Mercado Macro · <a href="${site}" style="color:#6b7280">mercadomacro.com.br</a></p></div>`;
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -1335,7 +1341,7 @@ function emailLiberado(env, req, nome, email, teste = false, validade = null) {
   return enviarEmail(env, req, {
     para: email, nome, assunto: (teste ? '[Teste] ' : '') + 'Seu acesso ao Mercado Macro foi liberado',
     paragrafos: ['Seu acesso ao Mercado Macro foi liberado. Já dá para entrar com o e-mail e a senha que você cadastrou.' + ate],
-    botao: 'Entrar no Mercado Macro', link: siteDe(req) + '/entrar',
+    botao: 'Entrar no Mercado Macro', link: siteDe(req) + '/entrar', canal: true,
     nota: 'Se esquecer a senha, use "Esqueci minha senha" na tela de entrar.',
   });
 }
@@ -1369,7 +1375,7 @@ async function emailConfirmar(env, req, id, nome, email) {
     para: email, nome, assunto: 'Confirme seu e-mail no Mercado Macro',
     paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para ele seguir para a liberação, confirme que este e-mail é seu.'],
     botao: 'Confirmar meu e-mail', link: siteDe(req) + '/confirmar?t=' + tok,
-    nota: 'O link vale por 3 dias. Se você não pediu acesso, ignore este e-mail.',
+    nota: 'O link vale por 3 dias. Se você não pediu acesso, ignore este e-mail.', canal: true,
   });
 }
 // página simples (mesmo visual de Minha conta) para os links do e-mail
@@ -1460,6 +1466,45 @@ async function salvarConfig(env, o) {
 async function telegram(token, metodo, corpo) {
   const r = await fetch(`https://api.telegram.org/bot${token}/${metodo}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
   return r.json().catch(() => ({ ok: false }));
+}
+/* ---------------- divulgação do canal público do Telegram (26/10/2026) ----------------
+   Todo link do site para o canal passa por /telegram?de=<lugar>: conta o clique (tabela origens, tipo 'canal')
+   e manda para um link de convite só daquele lugar, criado pelo robô do canal (createChatInviteLink).
+   No Telegram (canal > Links de convite) aparece quantas pessoas entraram por cada link.
+   Sem permissão para criar convites, vai para o endereço público do canal. Sem canal ligado, volta para o site. */
+const LUGARES_CANAL = { cadastro: 'Tela de cadastro', email: 'E-mails do site', rodape: 'Rodapé das páginas públicas', terminal: 'Rodapé do terminal' };
+let conviteFalhou = 0;
+async function conviteDoCanal(env, lugar) {
+  const c = await config(env);
+  if (!(c.tg_token && c.tg_canal)) return null;
+  const publico = c.tg_canal_nome ? 'https://t.me/' + c.tg_canal_nome.replace(/^@/, '') : null;
+  const k = 'tg_conv_' + lugar, [canal, link] = String(c[k] || '').split('|');
+  if (canal === c.tg_canal && link) return link;
+  if (Date.now() - conviteFalhou < 3600000) return publico;
+  const r = await telegram(c.tg_token, 'createChatInviteLink', { chat_id: c.tg_canal, name: ('Site: ' + LUGARES_CANAL[lugar]).slice(0, 32) }).catch(() => ({}));
+  if (!(r.ok && r.result && r.result.invite_link)) { conviteFalhou = Date.now(); return publico; }
+  await salvarConfig(env, { [k]: c.tg_canal + '|' + r.result.invite_link });
+  return r.result.invite_link;
+}
+async function irParaCanal(req, env, ctx, url) {
+  const lugar = LUGARES_CANAL[url.searchParams.get('de')] ? url.searchParams.get('de') : 'rodape';
+  const link = await conviteDoCanal(env, lugar).catch(() => null);
+  if (!link) return redirect('/');
+  if (!ROBO.test(req.headers.get('User-Agent') || '')) contarOrigem(env, ctx, LUGARES_CANAL[lugar], 'canal');
+  return new Response(null, { status: 302, headers: { Location: link, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+}
+// prévia da tela "cadastro enviado": o último fechamento gravado (Ibovespa, dólar, S&P 500, bitcoin), sem inventar nada
+async function previaCanal(env) {
+  const c = await config(env);
+  let fech = null;
+  try {
+    const r = await env.DB.prepare('SELECT dia, dados FROM fechamentos ORDER BY dia DESC LIMIT 1').first();
+    if (r) {
+      const d = JSON.parse(r.dados), k = d.cards || {};
+      fech = { dia: r.dia, itens: ['ibov', 'dolar', 'sp', 'btc'].filter((x) => k[x] && k[x].v != null).map((x) => ({ nome: k[x].nome, v: k[x].v, ch: k[x].ch ?? null })) };
+    }
+  } catch (e) { /* sem fechamento gravado */ }
+  return json({ canal: !!(c.tg_token && c.tg_canal), fech }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
 async function avisar(env, titulo, texto) {
   const c = await config(env);
@@ -1809,6 +1854,7 @@ Allow: /
 Disallow: /api/
 Disallow: /admin
 Disallow: /conta
+Disallow: /telegram
 
 Sitemap: https://mercadomacro.com.br/sitemap.xml
 `;
@@ -2157,18 +2203,25 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function origens(){
     var raiz = document.getElementById('origens');
     fetch('/api/admin/origens', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      var hoje = j.hoje, d7 = new Date(Date.parse(hoje + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10), T = {};
+      var hoje = j.hoje, d7 = new Date(Date.parse(hoje + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10), T = {}, TG = {};
       (j.linhas || []).forEach(function(l){
+        if (l.tipo === 'canal') { var t = TG[l.origem] || (TG[l.origem] = { s: 0, m: 0 }); t.m += l.n; if (l.dia >= d7) t.s += l.n; return; }
         var o = T[l.origem] || (T[l.origem] = { o: l.origem, h: 0, s: 0, m: 0, c: 0, c7: 0 });
         if (l.tipo === 'cadastro') { o.c += l.n; if (l.dia >= d7) o.c7 += l.n; return; }
         o.m += l.n; if (l.dia >= d7) o.s += l.n; if (l.dia === hoje) o.h += l.n;
       });
       var L = Object.keys(T).map(function(k){ return T[k]; }).sort(function(a, b){ return b.s - a.s || b.m - a.m || b.c - a.c; });
-      if (!L.length) { raiz.innerHTML = '<p class="vazio">Ainda nenhuma visita contada.</p>'; return; }
       var max = Math.max.apply(null, L.map(function(o){ return o.s; }).concat([1])), f = function(v){ return v ? v.toLocaleString('pt-BR') : '<span style="color:var(--text-3)">0</span>'; };
-      raiz.innerHTML = '<div class="mmw"><table class="mm"><thead><tr><th>Origem</th><th>Hoje</th><th>7 dias</th><th class="x30">30 dias</th><th title="Pedidos de acesso nos últimos 7 dias">Pedidos 7d</th><th class="x30" title="Pedidos de acesso nos últimos 30 dias">Pedidos 30d</th></tr></thead><tbody>'
+      raiz.innerHTML = (!L.length ? '<p class="vazio">Ainda nenhuma visita contada.</p>' : '<div class="mmw"><table class="mm"><thead><tr><th>Origem</th><th>Hoje</th><th>7 dias</th><th class="x30">30 dias</th><th title="Pedidos de acesso nos últimos 7 dias">Pedidos 7d</th><th class="x30" title="Pedidos de acesso nos últimos 30 dias">Pedidos 30d</th></tr></thead><tbody>'
         + L.map(function(o){ return '<tr><td>' + esc(o.o) + '</td><td>' + f(o.h) + '</td><td class="rc"><span class="bar" style="width:' + Math.round(50 * o.s / max) + '%"></span>' + f(o.s) + '</td><td class="x30">' + f(o.m) + '</td><td>' + f(o.c7) + '</td><td class="x30">' + f(o.c) + '</td></tr>'; }).join('')
-        + '</tbody></table></div>';
+        + '</tbody></table></div>') + canal();
+      function canal(){
+        var k = Object.keys(TG);
+        return '<h2 style="margin-top:22px">Cliques no convite do canal do Telegram</h2>' + (k.length ? '<div class="mmw"><table class="mm"><thead><tr><th>Onde clicou</th><th>7 dias</th><th>30 dias</th></tr></thead><tbody>'
+          + k.sort(function(a, b){ return TG[b].m - TG[a].m; }).map(function(n){ return '<tr><td>' + esc(n) + '</td><td>' + f(TG[n].s) + '</td><td>' + f(TG[n].m) + '</td></tr>'; }).join('') + '</tbody></table></div>'
+          : '<p class="vazio" style="text-align:left">Nenhum clique ainda.</p>')
+          + '<p class="vazio" style="text-align:left;margin-top:8px;font-size:13px">Quantos entraram de fato aparece no próprio Telegram: no canal, Links de convite, um link para cada lugar (nome começa com "Site:").</p>';
+      }
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar as origens.</p>'; });
   }
   function carregar(){

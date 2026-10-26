@@ -164,7 +164,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 ${corpo}
 <div class="box"><strong>Acompanhe o mercado ao vivo.</strong> No Mercado Macro você vê cotações em tempo real, mapa de calor, agenda econômica, fluxo do estrangeiro e notícias num só lugar. <a href="/entrar">Pedir acesso</a></div>
 <footer>${rodape || 'Dados de fontes públicas (Yahoo Finance, Banco Central, Tesouro Direto, B3), registrados após o fechamento. Podem ter atraso ou diferenças em relação à fonte oficial.'} Conteúdo informativo, não é recomendação de investimento.
-<br><a href="${BASE}">Todos os fechamentos</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/balanca-comercial">Balança comercial</a> · <a href="/calculadora-renda-fixa">Calculadora de renda fixa</a> · <a href="/privacidade">Privacidade</a></footer>
+<br><a href="${BASE}">Todos os fechamentos</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/balanca-comercial">Balança comercial</a> · <a href="/calculadora-renda-fixa">Calculadora de renda fixa</a> · <a href="/telegram?de=rodape" target="_blank" rel="noopener">Canal no Telegram</a> · <a href="/privacidade">Privacidade</a></footer>
 </main></body></html>`;
 }
 

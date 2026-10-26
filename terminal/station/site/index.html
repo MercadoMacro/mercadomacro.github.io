@@ -419,6 +419,9 @@
     <div class="refresh-bar">
       <div class="info" id="news-info"><span class="dot"></span>Carregando notícias...</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn-sm" id="news-tg" href="/telegram?de=terminal" target="_blank" rel="noopener" style="text-decoration:none" title="Canal no Telegram: abertura às 9h15, fechamento às 18h e as notícias que mexem com o mercado" aria-label="Canal do Mercado Macro no Telegram">
+          <i class="fab fa-telegram-plane" aria-hidden="true"></i>
+        </a>
         <button class="btn-sm" id="briefing-btn">
           <i class="fas fa-clipboard-list"></i>
           Gerar Briefing
@@ -682,6 +685,7 @@
     <span>This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.</span>
     <span>Ao usar os dados do FRED neste site, você concorda com os <a href="https://fred.stlouisfed.org/docs/api/terms_of_use.html" target="_blank" rel="noopener">termos de uso do FRED</a>.</span>
   </div>
+  <div class="sf-row"><span class="sf-k">Telegram</span><span class="sf-src"><a href="/telegram?de=terminal" target="_blank" rel="noopener">Canal do Mercado Macro</a>: abertura às 9h15, fechamento às 18h e as notícias que mexem com o mercado</span></div>
   <div class="sf-row sf-note">Conteúdo informativo. Não é recomendação de investimento. Dados de terceiros podem ter atraso ou erro; confira na fonte antes de operar.</div>
 </footer>
 
@@ -787,7 +791,7 @@
 <script src="asset-history.js?v=4"></script>
 <script src="extras.js?v=23"></script>
 <script src="cabecalho.js?v=2"></script>
-<script src="noticias2.js?v=5"></script>
+<script src="noticias2.js?v=6"></script>
 <script src="topo-acoes.js?v=1"></script>
 <script src="navegacao-mobile.js?v=2"></script>
 <script>requestAnimationFrame(() => document.documentElement.classList.remove('mm-boot'));</script>

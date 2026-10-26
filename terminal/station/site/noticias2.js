@@ -13,6 +13,8 @@
   const layout = painel.querySelector('.news-layout');
   if (layout) layout.before(barra);
   if (info) barra.insertBefore(info, avisos);
+  const tg = $('#news-tg'); // convite para o canal do Telegram (passa por /telegram para contar o clique)
+  if (tg) barra.insertBefore(tg, avisos);
   if (brief) { brief.insertAdjacentHTML('beforeend', '<span class="nw2-n" id="nw2-picks" hidden></span>'); barra.append(brief); }
   if (atual) {
     [...atual.childNodes].forEach((n) => { if (n.nodeType === 3) n.remove(); });
