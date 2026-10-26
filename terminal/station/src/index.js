@@ -1021,6 +1021,16 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
   if (ass) return ass;
+  // registro do servidor de dados: pedidos que chegaram sem o passe de quem está logado (últimos 14 dias)
+  if (acao === 'passe' && req.method === 'GET') {
+    const desde = new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10);
+    try {
+      const r = await env.DB.prepare('SELECT dia, rota, motivo, quem, n FROM passe_registro WHERE dia >= ? ORDER BY dia DESC, n DESC LIMIT 500').bind(desde).all();
+      return json({ linhas: r.results });
+    } catch (e) {
+      return json({ linhas: [] }); // a tabela nasce no primeiro pedido sem passe
+    }
+  }
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
     const r = await env.DB.prepare(
@@ -1925,6 +1935,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <button type="button" role="tab" data-aba="pessoas" aria-selected="false">Pessoas <span class="cnt" id="cnt-pessoas"></span></button>
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false">Pagamentos <span class="cnt" id="cnt-pag"></span></button>
   <button type="button" role="tab" data-aba="comunicado" aria-selected="false">Comunicado</button>
+  <button type="button" role="tab" data-aba="passe" aria-selected="false">Acessos sem passe</button>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
 </nav>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
@@ -1944,6 +1955,12 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
 <section data-p="comunicado" hidden><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="passe" hidden>
+  <h2>Pedidos ao servidor de dados sem o passe de login</h2>
+  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
+  <div class="kpis" id="passe-res" style="margin-bottom:14px"></div>
+  <div id="passe-tab"><p class="vazio">Carregando…</p></div>
+</section>
 <section data-p="ajustes" hidden>
   <div class="cfg">
     <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
@@ -2096,7 +2113,21 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     document.querySelectorAll('[data-p]').forEach(function(x){ x.hidden = x.dataset.p !== n; });
     document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); });
     if (f) { filtro = f; pessoas(); }
+    if (n === 'passe') passe();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
+  }
+  function passe(){
+    var tab = document.getElementById('passe-tab'), res = document.getElementById('passe-res');
+    fetch('/api/admin/passe', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
+      var L = j.linhas || [], hoje = new Date(), sete = new Date(hoje.getTime() - 6 * 864e5).toISOString().slice(0, 10), soma = {};
+      L.forEach(function(l){ if (l.dia >= sete) soma[l.motivo] = (soma[l.motivo] || 0) + l.n; });
+      var nomes = { faltou: 'Sem passe', invalido: 'Passe falso', vencido: 'Passe vencido', vitrine: 'Páginas públicas', 'sem-chave': 'Sem conferir' };
+      res.innerHTML = Object.keys(nomes).filter(function(k){ return soma[k]; }).map(function(k){ return '<div class="kpi" style="cursor:default"><small>' + nomes[k] + '</small><strong>' + soma[k].toLocaleString('pt-BR') + '</strong><em>últimos 7 dias</em></div>'; }).join('');
+      if (!L.length) { tab.innerHTML = '<p class="vazio">Nenhum pedido sem passe nos últimos 14 dias.</p>'; return; }
+      tab.innerHTML = '<table class="t"><thead><tr><th>Dia</th><th>Rota</th><th>Motivo</th><th>De onde</th><th style="text-align:right">Vezes</th></tr></thead><tbody>' + L.map(function(l){
+        return '<tr><td class="c" data-r="Dia">' + esc(l.dia.split('-').reverse().join('/')) + '</td><td data-r="Rota">' + esc(l.rota) + '</td><td class="c" data-r="Motivo">' + esc(l.motivo) + '</td><td class="c" data-r="De onde">' + esc(l.quem) + '</td><td class="c" data-r="Vezes" style="text-align:right">' + l.n.toLocaleString('pt-BR') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar o registro.</p>'; });
   }
   document.querySelector('.abas').addEventListener('click', function(e){ var b = e.target.closest('button[data-aba]'); if (b) aba(b.dataset.aba); });
   document.getElementById('chips').addEventListener('click', function(e){ var b = e.target.closest('button[data-f]'); if (b) { filtro = b.dataset.f; pessoas(); } });
