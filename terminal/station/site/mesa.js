@@ -169,14 +169,36 @@
   // curva DI x pré da B3 (robô curva.yml, terminal/curva/curva.json): último pregão, anterior, 1 semana e 1 mês
   const DI_URL = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/curva/curva.json';
   const DI_CMP = [['ontem', 'pregão anterior'], ['semana', '1 semana'], ['mes', '1 mês']];
-  let diCurvas = null, diTentou = 0, diCmp = 'semana';
+  let diCurvas = null, diTentou = 0, diCmp = 'ajuste';
   async function loadDI() {
     if (diCurvas || Date.now() - diTentou < 60000) return;
     diTentou = Date.now();
     try { const j = await getJSON(DI_URL); if (j && j.curvas && j.curvas.hoje) diCurvas = j.curvas; } catch (e) { /* fica sem */ }
     if (diCurvas && root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
   }
+  // DI futuro ao vivo (26/10/2026): todos os vencimentos do DI1 pelo servidor de dados (/di), que lê o site de cotações
+  // da B3 (atraso de cerca de 15 minutos). Taxa de hoje = último negócio; sem negócio hoje, fica o ajuste do pregão anterior.
+  let diVivo = null, diVivoTs = 0;
+  async function loadDIvivo(forcar) {
+    if (!forcar && Date.now() - diVivoTs < 60000) return;
+    diVivoTs = Date.now();
+    try { const j = await getJSON(`${PROXY}/di`); if (j && Array.isArray(j.c) && j.c.length) diVivo = j; } catch (e) { /* fica com o anterior ou com a curva da noite */ }
+    if (root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+  }
   const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  // pontos da curva ao vivo: contratos com pelo menos 10 mil em aberto, até 10 anos; campo = 't' (hoje) ou 'aj' (ajuste anterior)
+  // Último negócio só conta com volume mínimo; um negócio isolado distorce a curva.
+  const diTx = (c) => (c.t != null && c.neg >= 100 ? c.t : null);
+  function diVivoPoints(campo) {
+    if (!diVivo) return [];
+    const hoje = Date.now();
+    return diVivo.c.filter((c) => c.oi >= 10000).map((c) => {
+      const venc = new Date(c.venc + 'T12:00:00'), y = (venc - hoje) / (365.25 * 86400000);
+      const taxa = campo === 'aj' ? c.aj : (diTx(c) != null ? diTx(c) : c.aj);
+      return { nome: `${c.s} · DI ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y, s: c.s, hoje: diTx(c) != null };
+    }).filter((p) => p.y > 0.02 && p.y <= 10.5 && p.taxa != null && isFinite(p.taxa));
+  }
+  const diVivoOk = () => diVivoPoints('t').length >= 4;
   function diPoints(c) {
     if (!c || !c.v) return [];
     const d0 = new Date(c.d + 'T12:00:00');
@@ -250,34 +272,55 @@
           <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
           <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
         </div>`;
+  // curva de comparação do DI: 'ajuste' = ajuste do pregão anterior (ao vivo); as outras vêm da curva da noite (curva.json)
+  const diCmpPoints = () => (diCmp === 'ajuste' ? (diVivoOk() ? diVivoPoints('aj') : []) : diCmp && diCurvas?.[diCmp] ? diPoints(diCurvas[diCmp]) : []);
+  const diHojePoints = () => (diVivoOk() ? diVivoPoints('t') : diPoints(diCurvas?.hoje));
+  const diCmpData = () => (diCmp === 'ajuste' ? 'o ajuste' : diCurvas?.[diCmp] ? diCurvas[diCmp].d.split('-').reverse().slice(0, 2).join('/') : '');
+  // lista dos vencimentos de janeiro (os mais negociados), como nas telas de DI: taxa e variação desde o ajuste anterior
+  function diListaHTML() {
+    if (!diVivoOk()) return '';
+    const hoje = new Date().getFullYear();
+    const L = diVivo.c.filter((c) => /^DI1F\d\d$/.test(c.s) && +c.venc.slice(0, 4) <= hoje + 10);
+    if (!L.length) return '';
+    return `<table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
+      const t = diTx(c), v = t != null && c.aj != null ? t - c.aj : null;
+      return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DI jan/${c.venc.slice(0, 4)}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
+        + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(c.aj, 3)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  }
   function curveHTMLdi() {
-    loadDI();
-    const C = diCurvas || {};
-    const pts = diPoints(C.hoje), cmp = diCmp && C[diCmp] ? diPoints(C[diCmp]) : [];
+    loadDI(); loadDIvivo();
+    const C = diCurvas || {}, vivo = diVivoOk();
+    const pts = diHojePoints(), cmp = diCmpPoints();
     const s2 = interp(pts, 2), s5 = interp(pts, 5), c2 = interp(cmp, 2), c5 = interp(cmp, 5);
     const slope = s2 != null && s5 != null ? Math.round((s5 - s2) * 100) : null;
     const dSlope = slope != null && c2 != null && c5 != null ? slope - Math.round((c5 - c2) * 100) : null;
     const dd = (k) => (C[k] ? C[k].d.split('-').reverse().slice(0, 2).join('/') : '');
-    const opts = DI_CMP.filter(([k]) => C[k]);
+    const opts = [...(vivo ? [['ajuste', 'ajuste do pregão anterior']] : []), ...DI_CMP.filter(([k]) => C[k] && !(vivo && k === 'ontem'))];
+    if (diCmp && !(diCmp === 'ajuste' && !diVivo) && !opts.some(([k]) => k === diCmp)) diCmp = opts.length ? opts[0][0] : '';
+    const hora = vivo && diVivo.b3 ? diVivo.b3.slice(11, 16) : '';
+    const negociou = vivo && diVivo.c.some((c) => diTx(c) != null);
     return `
       <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>${segHTML()}</div>
       <div class="ms-curve-sub">
-        <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde ${dd(diCmp)}` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
+        <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde ${diCmpData()}` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
         <span class="sp"></span>
-        <label>Comparar com <select class="ms-cmp" ${opts.length ? '' : 'disabled'}>${opts.length ? `<option value="">Sem comparação</option>${opts.map(([k, l]) => `<option value="${k}" ${k === diCmp ? 'selected' : ''}>${dd(k)} (${l})</option>`).join('')}` : '<option>—</option>'}</select></label>
+        <label>Comparar com <select class="ms-cmp" ${opts.length ? '' : 'disabled'}>${opts.length ? `<option value="">Sem comparação</option>${opts.map(([k, l]) => `<option value="${k}" ${k === diCmp ? 'selected' : ''}>${k === 'ajuste' ? l : `${dd(k)} (${l})`}</option>`).join('')}` : '<option>—</option>'}</select></label>
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${diTentou && !diCurvas ? 'Curva DI indisponível agora.' : 'Carregando curva…'}</div>`}</div>
-      <div class="ms-foot">${C.hoje ? `Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.` : ''}</div>`;
+      ${diListaHTML()}
+      <div class="ms-foot">${vivo ? `DI futuro da B3, ${negociou ? `taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}, com atraso de cerca de 15 minutos` : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}. Contratos com poucos negócios hoje entram pelo ajuste anterior. Fonte: B3, site de cotações.` : C.hoje ? `Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.` : ''}</div>`;
   }
   function drawCurve() {
     const box = root.querySelector('.ms-curve');
     const di = curveKind === 'di';
     if (!box || (!di && !curve)) return;
-    const pts = di ? diPoints(diCurvas?.hoje) : curvePoints(curve.t, curveKind);
+    const pts = di ? diHojePoints() : curvePoints(curve.t, curveKind);
     if (pts.length < 2) return;
     const snaps = di ? null : allSnaps();
     const cmpKey = di ? diCmp : curveCmp;
-    const cmp = di ? (diCmp && diCurvas?.[diCmp] ? diPoints(diCurvas[diCmp]) : []) : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
+    const cmp = di ? diCmpPoints() : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
+    const pontos = !di || diVivoOk(); // a curva da noite tem ~225 vértices: sem bolinhas
     const W = Math.max(260, box.clientWidth), H = 220, L = 44, R = 12, T = 12, B = 24;
     const all = [...pts, ...cmp];
     let y0 = Math.min(...all.map((p) => p.taxa)), y1 = Math.max(...all.map((p) => p.taxa));
@@ -293,7 +336,7 @@
       ${years.filter((_, i) => i % step === 0).map((yr) => { const p = pts.find((q) => q.venc.getFullYear() === yr); return `<text x="${PX(p.y).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="ax">${yr}</text>`; }).join('')}
       ${cmp.length >= 2 ? `<path d="${path(cmp)}" class="cmp"/>` : ''}
       <path d="${path(pts)}" class="ln"/>
-      ${di ? '' : pts.map((p, i) => `<circle cx="${PX(p.y).toFixed(1)}" cy="${Y(p.taxa).toFixed(1)}" r="3" class="pt" data-i="${i}"/>`).join('')}
+      ${!pontos ? '' : pts.map((p, i) => `<circle cx="${PX(p.y).toFixed(1)}" cy="${Y(p.taxa).toFixed(1)}" r="3" class="pt" data-i="${i}"/>`).join('')}
       <line class="hv" x1="0" x2="0" y1="${T}" y2="${H - B}" style="display:none"/>
     </svg><div class="ms-tip" hidden></div>`;
     const svg = box.querySelector('svg'), tip = box.querySelector('.ms-tip'), hv = box.querySelector('.hv');
@@ -307,8 +350,8 @@
       const old = cmp.length ? interp(cmp, best.y) : null;
       const bp = old != null ? Math.round((best.taxa - old) * 100) : null;
       tip.hidden = false;
-      const desde = di ? diCurvas[diCmp].d : cmpKey;
-      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, 2)}% ao ano${curveKind === 'ipca' ? ' + IPCA' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde.split('-').reverse().slice(0, Date.now() - Date.parse(desde) > 300 * 86400000 ? 3 : 2).join('/')}</span>` : ''}`;
+      const desde = di ? diCmpData() : cmpKey.split('-').reverse().slice(0, Date.now() - Date.parse(cmpKey) > 300 * 86400000 ? 3 : 2).join('/');
+      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, di && diVivoOk() ? 3 : 2)}% ao ano${curveKind === 'ipca' ? ' + IPCA' : ''}${di && diVivoOk() && !best.hoje ? ' (ajuste anterior)' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde}</span>` : ''}`;
       const left = (cx / W) * r.width;
       tip.style.left = `${Math.min(Math.max(left, 70), r.width - 70)}px`;
     };
@@ -593,6 +636,7 @@
   new MutationObserver(() => { syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
+  setInterval(() => { if (active() && curveKind === 'di') loadDIvivo(); }, 60 * 1000);
   const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); };
   setInterval(() => { if (active()) redrawNews(); }, 60 * 1000);
   window.addEventListener('mm-news-erro', redrawNews);
@@ -694,6 +738,16 @@
   .ms-tip[hidden] { display:none; }
   .ms-tip b { color:var(--text); font-size:12px; }
   .ms-foot { padding:4px 12px 10px; font-size:10.5px; color:var(--text-3); line-height:1.5; }
+  .ms-dil { width:calc(100% - 12px); margin:6px 6px 0; border-collapse:collapse; font-size:12px; }
+  .ms-dil th { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:600; text-align:right; padding:4px 8px; border-bottom:1px solid var(--line); }
+  .ms-dil th:first-child { text-align:left; }
+  .ms-dil td { padding:4px 8px; border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); text-align:right; font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ms-dil tr:last-child td { border-bottom:0; }
+  .ms-dil td.nm { text-align:left; font-family:inherit; }
+  .ms-dil td.nm b { display:block; color:var(--text); font-weight:600; font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .ms-dil td.nm small { color:var(--text-3); font-size:10.5px; }
+  .ms-dil td.px { color:var(--text); }
+  .ms-dil td.ajv { color:var(--text-3); }
   .ms-empty { padding:24px 12px; text-align:center; color:var(--text-3); font-size:12px; }
 
   .ms-news { list-style:none; margin:0; padding:0; max-height:520px; overflow-y:auto; }
