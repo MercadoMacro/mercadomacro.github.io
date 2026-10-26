@@ -592,16 +592,18 @@ async function handleDI(ctx, cors) {
   const hit = await cache.match(cacheKey);
   if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'HIT', ...cors } });
   const num = (x) => (x != null && isFinite(+x) ? +x : null);
-  let j;
-  try {
-    const r = await fetch('https://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/DI1', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/json', Referer: 'https://www.b3.com.br/' },
-    });
-    if (!r.ok) return json({ error: 'B3 HTTP ' + r.status }, 502, cors);
-    j = await r.json();
-  } catch (e) {
-    return json({ error: 'B3 falhou: ' + e.message }, 502, cors);
+  let j = null; const erros = [];
+  // pela rede da Cloudflare o https da B3 às vezes volta 526 (certificado); tenta também por http
+  for (const base of ['https://cotacao.b3.com.br', 'http://cotacao.b3.com.br']) {
+    try {
+      const r = await fetch(base + '/mds/api/v1/DerivativeQuotation/DI1', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/json', Referer: 'https://www.b3.com.br/' },
+      });
+      if (!r.ok) { erros.push(base.slice(0, 5) + ' HTTP ' + r.status); continue; }
+      j = await r.json(); break;
+    } catch (e) { erros.push(base.slice(0, 5) + ' ' + e.message); }
   }
+  if (!j) return json({ error: 'B3: ' + erros.join('; ') }, 502, cors);
   const c = (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && /^DI1[FGHJKMNQUVXZ]\d\d$/.test(x.symb || '')).map((x) => ({
     s: x.symb, venc: x.asset?.AsstSummry?.mtrtyCode || null,
     t: num(x.SctyQtn?.curPrc), aj: num(x.SctyQtn?.prvsDayAdjstmntPric),
