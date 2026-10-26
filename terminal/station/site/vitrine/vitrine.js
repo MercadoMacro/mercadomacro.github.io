@@ -57,20 +57,22 @@
   enviar(fC, 'cadastrar', function (j) {
     if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-txt').textContent = j.msg; }
     $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); conviteCanal(); });
-  // convite para o canal do Telegram, com o último fechamento gravado como amostra (sem dado, só o convite)
+  // convite para o canal do Telegram, com as cotações de agora (as mesmas da vitrine; sem dado, só o convite)
+  var TG_ATIVOS = ['^BVSP', 'BRL=X', '^GSPC', 'BTC-USD'];
+  function conviteCotacoes() {
+    var m = $('pronto-tg-msg'), tem = TG_ATIVOS.filter(function (s) { return Q[s]; });
+    if (!m || $('pronto-tg').hidden || !tem.length) { if (m) m.hidden = true; return; }
+    m.innerHTML = '<b>Agora no mercado</b>' + tem.map(function (s) {
+      var q = Q[s];
+      return '<div><span>' + esc(INFO[s][1]) + '</span><span>' + fmtV(s, q) + ' <span class="' + tom(q.ch) + '">' + pct(q.ch) + '</span></span></div>';
+    }).join('');
+    m.hidden = false;
+  }
   function conviteCanal() {
     fetch('/api/publico/canal').then(okJson).then(function (j) {
       if (!j.canal) return;
-      var f = j.fech, m = $('pronto-tg-msg');
-      if (f && f.itens && f.itens.length) {
-        var casasDe = function (n) { return /lar|Euro/.test(n) ? 4 : 2; };
-        m.innerHTML = '<b>Fechamento de ' + esc(f.dia.slice(8, 10) + '/' + f.dia.slice(5, 7)) + ' no canal</b>' + f.itens.map(function (x) {
-          var ch = typeof x.ch === 'number' && isFinite(x.ch) ? x.ch : null;
-          return '<div><span>' + esc(x.nome) + '</span><span>' + num(x.v, casasDe(x.nome)) + ' <span class="' + (ch == null ? '' : tom(ch)) + '">' + (ch == null ? '—' : pct(ch)) + '</span></span></div>';
-        }).join('');
-        m.hidden = false;
-      }
       $('pronto-tg').hidden = false;
+      conviteCotacoes();
     }).catch(function () { /* sem convite */ });
   }
   $('voltar').onclick = function () { $('pronto').hidden = true; $('forms').hidden = false; aba(false, true); };
@@ -149,7 +151,7 @@
         Q = novo; ultima = Date.now();
         // o dia voltou a ter movimento: volta para o gráfico do dia
         Object.keys(S5).forEach(function (s) { if (Q[s] && !parado(Q[s].c)) { delete S5[s]; delete S5pedido[s]; } });
-        desenhar(mudou); completarParados();
+        desenhar(mudou); completarParados(); conviteCotacoes();
       })
       .catch(function () { if (!ultima) desenhar([]); });
   }

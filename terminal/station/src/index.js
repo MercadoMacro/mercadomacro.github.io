@@ -1493,18 +1493,10 @@ async function irParaCanal(req, env, ctx, url) {
   if (!ROBO.test(req.headers.get('User-Agent') || '')) contarOrigem(env, ctx, LUGARES_CANAL[lugar], 'canal');
   return new Response(null, { status: 302, headers: { Location: link, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }
-// prévia da tela "cadastro enviado": o último fechamento gravado (Ibovespa, dólar, S&P 500, bitcoin), sem inventar nada
+// tela "cadastro enviado": diz se o canal está ligado (o convite só aparece com canal)
 async function previaCanal(env) {
   const c = await config(env);
-  let fech = null;
-  try {
-    const r = await env.DB.prepare('SELECT dia, dados FROM fechamentos ORDER BY dia DESC LIMIT 1').first();
-    if (r) {
-      const d = JSON.parse(r.dados), k = d.cards || {};
-      fech = { dia: r.dia, itens: ['ibov', 'dolar', 'sp', 'btc'].filter((x) => k[x] && k[x].v != null).map((x) => ({ nome: k[x].nome, v: k[x].v, ch: k[x].ch ?? null })) };
-    }
-  } catch (e) { /* sem fechamento gravado */ }
-  return json({ canal: !!(c.tg_token && c.tg_canal), fech }, 200, { 'Cache-Control': 'public, max-age=600' });
+  return json({ canal: !!(c.tg_token && c.tg_canal) }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
 async function avisar(env, titulo, texto) {
   const c = await config(env);
