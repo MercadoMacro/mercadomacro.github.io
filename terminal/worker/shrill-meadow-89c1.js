@@ -584,6 +584,35 @@ async function handleCripto(env, ctx, cors) {
   return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Cache': 'MISS', ...cors } });
 }
 
+// DI futuro da B3 (todos os vencimentos do DI1), pelo site público de cotações da B3 (atraso de cerca de 15 minutos).
+// t = última taxa negociada hoje (null se ainda não negociou), aj = ajuste do pregão anterior, oi = contratos em aberto.
+async function handleDI(ctx, cors) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/di-v1');
+  const hit = await cache.match(cacheKey);
+  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'HIT', ...cors } });
+  const num = (x) => (x != null && isFinite(+x) ? +x : null);
+  let j;
+  try {
+    const r = await fetch('https://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/DI1', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/json', Referer: 'https://www.b3.com.br/' },
+    });
+    if (!r.ok) return json({ error: 'B3 HTTP ' + r.status }, 502, cors);
+    j = await r.json();
+  } catch (e) {
+    return json({ error: 'B3 falhou: ' + e.message }, 502, cors);
+  }
+  const c = (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && /^DI1[FGHJKMNQUVXZ]\d\d$/.test(x.symb || '')).map((x) => ({
+    s: x.symb, venc: x.asset?.AsstSummry?.mtrtyCode || null,
+    t: num(x.SctyQtn?.curPrc), aj: num(x.SctyQtn?.prvsDayAdjstmntPric),
+    oi: num(x.asset?.AsstSummry?.opnCtrcts) || 0, neg: num(x.asset?.AsstSummry?.traddCtrctsQty) || 0,
+  })).filter((x) => x.venc && (x.t != null || x.aj != null)).sort((a, b) => (a.venc < b.venc ? -1 : 1));
+  if (!c.length) return json({ error: 'B3 sem contratos' }, 502, cors);
+  const body = JSON.stringify({ ts: Date.now(), b3: j?.Msg?.dtTm || null, c });
+  ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
+  return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'MISS', ...cors } });
+}
+
 // Empresas dos EUA cujos balanços aparecem no Calendário (as maiores do S&P 500 + ADRs brasileiros e da América Latina)
 const EARN_WATCH = new Set(('AAPL MSFT NVDA GOOGL GOOG AMZN META TSLA AVGO BRK.B JPM V MA LLY UNH XOM JNJ WMT PG HD COST ORCL NFLX ' +
   'ABBV BAC KO PEP CVX MRK AMD ADBE CRM TMO ACN LIN MCD CSCO ABT WFC DIS INTC IBM QCOM TXN INTU AMAT MU NOW ISRG CAT GE ' +
@@ -821,6 +850,11 @@ const rotas = async (request, env, ctx) => {
     // =========================================================
     if (path === '/cripto') {
       return handleCripto(env, ctx, cors);
+    }
+
+    // ENDPOINT: /di  (DI futuro da B3 para a curva da aba Mesa)
+    if (path === '/di') {
+      return handleDI(ctx, cors);
     }
 
     // =========================================================
