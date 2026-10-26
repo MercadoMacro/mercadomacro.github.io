@@ -4796,7 +4796,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=20';
+  sc.src = 'mercado-novo.js?v=21';
   document.body.appendChild(sc);
 })();
 /* =========================================================

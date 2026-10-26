@@ -152,6 +152,7 @@
 
   let Q = {}, H3 = {}, lastTs = 0, busy = false, errMsg = '';
   let PERP = null; // rota /perps do worker: QQQ, SPY e EWZ em perpétuos de corretoras cripto
+  let CMC = null, cmcEm = 0; // rota /cripto do worker: dominância, valor total e Fear & Greed (CoinMarketCap, muda a cada 15 min)
   const G = {}; // gráficos: `${faixa}|${sym}` -> { t, c, ts }
   const abertos = new Set();
 
@@ -196,7 +197,8 @@
     root.querySelector('.mn-refresh')?.classList.add('busy');
     carimbo();
     try {
-      const [n] = await Promise.all([loadQuotes(force), loadHist(SYMS, '3mo'), getJSON(`${PROXY}/perps`).then((j) => { if (j?.ativos) PERP = j; }).catch(() => {})]);
+      const [n] = await Promise.all([loadQuotes(force), loadHist(SYMS, '3mo'), getJSON(`${PROXY}/perps`).then((j) => { if (j?.ativos) PERP = j; }).catch(() => {}),
+        Date.now() - cmcEm > 600000 ? getJSON(`${PROXY}/cripto`).then((j) => { if (j && (j.global || j.fg)) { CMC = j; cmcEm = Date.now(); } }).catch(() => {}) : null]);
       errMsg = n ? '' : 'Sem conexão com o servidor de cotações agora.';
       if (n) lastTs = Date.now();
       // gráfico de cada cartão na faixa escolhida (um lote por faixa)
@@ -368,6 +370,36 @@
       <p class="mn-perp-fonte">Fonte: ${nomes.length ? esc(nomes.join(', ')) : '—'} (mediana); oficial: Yahoo</p>
     </article>`;
   }
+  /* ---------------- panorama cripto (26/10/2026, pedido do Severino) ----------------
+     CoinMarketCap pelo worker (a chave fica no segredo do Worker): índice Fear & Greed de 0 a 100,
+     dominância do Bitcoin e do Ethereum, valor total do mercado cripto e volume de 24 h. */
+  const FG_TXT = { 'extreme fear': 'Medo extremo', fear: 'Medo', neutral: 'Neutro', greed: 'Ganância', 'extreme greed': 'Ganância extrema' };
+  const usdGrande = (v) => (!ok(v) ? '—' : v >= 1e12 ? `US$ ${nf(v / 1e12)} tri` : v >= 1e9 ? `US$ ${nf(v / 1e9, 1)} bi` : `US$ ${nf(v / 1e6, 0)} mi`);
+  function cartaoCmc() {
+    const g = CMC?.global, fg = CMC?.fg;
+    const fv = fg && ok(fg.v) ? Math.max(0, Math.min(100, fg.v)) : null;
+    const fgTxt = fg ? FG_TXT[String(fg.txt).toLowerCase()] || fg.txt || '' : '';
+    const linhaC = (n, v, c, dica) => `<div class="mn-row mn-row-esp"${dica ? ` title="${esc(dica)}"` : ''}><span class="mn-n">${esc(n)}</span><span class="mn-v">${v}</span><span class="mn-c ${c == null ? 'na' : cls(c)}">${c == null ? '' : pct(c)}</span></div>`;
+    const quandoFg = fg?.t ? new Date(fg.t).toLocaleString('pt-BR', { ...BR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    return `<article class="mn-card mn-card-cmc">
+      <header class="mn-head">
+        <span class="mn-flag">${ICON.cr}</span>
+        <h3>Panorama cripto</h3>
+      </header>
+      <div class="mn-fg" title="Índice Fear & Greed da CoinMarketCap: 0 é medo extremo, 100 é ganância extrema${quandoFg ? `. Atualizado em ${esc(quandoFg)}` : ''}">
+        <div class="mn-fg-top"><span>Medo e ganância</span><b>${ok(fv) ? Math.round(fv) : '—'}${fgTxt ? ` <em>${esc(fgTxt)}</em>` : ''}</b></div>
+        <div class="mn-fg-barra">${ok(fv) ? `<i style="left:${fv}%"></i>` : ''}</div>
+        <div class="mn-fg-esc"><span>Medo extremo</span><span>Neutro</span><span>Ganância extrema</span></div>
+      </div>
+      <div class="mn-rows">
+        ${linhaC('Dominância BTC', ok(g?.btc) ? `${nf(g.btc)}%` : '—', null, 'Parte do valor total do mercado cripto que está em Bitcoin')}
+        ${linhaC('Dominância ETH', ok(g?.eth) ? `${nf(g.eth)}%` : '—', null, 'Parte do valor total do mercado cripto que está em Ethereum')}
+        ${linhaC('Mercado total', usdGrande(g?.cap), ok(g?.capVar) ? g.capVar : null, 'Soma do valor de mercado de todas as criptomoedas; variação em 24 horas')}
+        ${linhaC('Volume 24h', usdGrande(g?.vol), null, '')}
+      </div>
+      <p class="mn-perp-fonte">Fonte: CoinMarketCap (atualiza a cada 15 min)</p>
+    </article>`;
+  }
   function render() {
     const hora = lastTs ? new Date(lastTs).toLocaleTimeString('pt-BR', { ...BR, hour: '2-digit', minute: '2-digit' }) : '—';
     root.innerHTML = `<div class="mn">
@@ -375,7 +407,7 @@
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
         <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
       </div>
-      <div class="mn-grid">${ordem().map(cartao).join('')}${cartaoPerp()}</div>
+      <div class="mn-grid">${ordem().map(cartao).join('')}${cartaoCmc()}${cartaoPerp()}</div>
     </div>`;
     carimbo(hora);
   }
@@ -488,6 +520,13 @@
   .mn-root .mn-v { font-variant-numeric:tabular-nums; color:var(--text); text-align:right; }
   .mn-root .mn-c { font-variant-numeric:tabular-nums; text-align:right; }
   .mn-root .mn .up { color:var(--pos-ink, var(--pos)); } .mn-root .mn .dn { color:var(--neg); } .mn-root .mn .na, .mn-root .mn .eq { color:var(--text-3); }
+  .mn-root .mn-fg { display:flex; flex-direction:column; gap:6px; padding:2px 0 6px; }
+  .mn-root .mn-fg-top { display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--text-2); }
+  .mn-root .mn-fg-top b { font-size:20px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+  .mn-root .mn-fg-top em { font-style:normal; font-size:12.5px; font-weight:500; color:var(--text-2); margin-left:4px; }
+  .mn-root .mn-fg-barra { position:relative; height:8px; border-radius:4px; background:linear-gradient(90deg, var(--neg), #c98a12 50%, var(--pos)); opacity:.85; }
+  .mn-root .mn-fg-barra i { position:absolute; top:-4px; width:4px; height:16px; margin-left:-2px; border-radius:2px; background:var(--text); box-shadow:0 0 0 2px var(--surface); }
+  .mn-root .mn-fg-esc { display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-3); }
   .mn-root .mn-perp-nota { margin:0; font-size:12px; color:var(--text-3); line-height:1.4; }
   .mn-root .mn-perp .mn-n { display:flex; flex-direction:column; gap:1px; }
   .mn-root .mn-perp .mn-n { white-space:normal; }
