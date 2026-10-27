@@ -45,7 +45,6 @@ const ROTAS = [
   ['IBGE SIDRA (/sidra)', API + '/sidra?q=ipca12', (j) => (temLista(j) && j.length > 1 ? '' : 'tabela vazia')],
   ['Balanços EUA (/finnhub/earnings)', API + `/finnhub/earnings?from=${daqui(0)}&to=${daqui(7)}`, (j) => (j.fonte ? '' : 'resposta sem fonte')],
   ['Fundamentos EUA (/finnhub/fund)', API + '/finnhub/fund?s=AAPL', (j) => (j.fonte ? '' : 'resposta sem fonte')],
-  ['Notícias (/rss/finance)', API + '/rss/finance', null, (t) => (t.length > 200 ? '' : 'resposta vazia')],
   ['Notícias (worker de notícias)', NEWS, null, (t) => (t.length > 50 ? '' : 'resposta vazia')],
   ['Fluxo de investidores B3 (GitHub)', 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json',
     (j) => (!temLista(j.dias) ? 'sem pregões' : (Date.now() - Date.parse(j.dias[j.dias.length - 1].data)) / 86400000 > 8 ? 'último pregão com mais de 8 dias' : '')],

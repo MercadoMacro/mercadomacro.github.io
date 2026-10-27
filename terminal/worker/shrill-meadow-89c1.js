@@ -1190,37 +1190,6 @@ const rotas = async (request, env, ctx) => {
     }
 
     // =========================================================
-    // ENDPOINT: /rss/finance (FX Spider / Dukascopy)
-    // =========================================================
-    if (path === '/rss/finance') {
-      const rssUrl = 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance';
-
-      try {
-        const response = await fetch(rssUrl, {
-          headers: {
-            'User-Agent': UA,
-            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-          },
-          cf: { cacheTtl: 300, cacheEverything: true }
-        });
-        const xml = await response.text();
-        return new Response(xml, {
-          status: response.ok ? 200 : 502,
-          headers: {
-            'Content-Type': 'application/xml; charset=utf-8',
-            'Cache-Control': 'public, max-age=300',
-            ...cors
-          }
-        });
-      } catch (err) {
-        return new Response(`<?xml version="1.0"?><error>${err.message}</error>`, {
-          status: 502,
-          headers: { 'Content-Type': 'application/xml', ...cors }
-        });
-      }
-    }
-
-    // =========================================================
     // PROXY GENÉRICO (?url=...) — só hosts da lista ALLOWED_HOSTS, só GET
     // =========================================================
     const targetUrl = url.searchParams.get('url');
