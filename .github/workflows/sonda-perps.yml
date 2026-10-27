@@ -5,6 +5,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "== worker"; curl -s -w ' [%{http_code}]' -H 'Origin: https://mercadomacro.com.br' -A 'Mozilla/5.0' 'https://shrill-meadow-89c1.danilo-nillo.workers.dev/rss/finance?mmp=vitrine' | head -c 400; echo
-          echo "== direto"; curl -s -L -A 'Mozilla/5.0' -w ' [%{http_code}]' 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/' | head -c 400; echo
-          echo "== sem barra"; curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -A 'Mozilla/5.0' 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance'
+          B=https://cotacao.b3.com.br/mds/api/v1
+          for a in DOL WDO IND WIN DAP DDI FRC BGI CCM ICF SJC ETH BIT ISP; do
+            printf "== %s " $a
+            curl -s -A 'Mozilla/5.0' -e 'https://www.b3.com.br/' "$B/DerivativeQuotation/$a" | python3 -c "
+          import sys,json
+          try:
+            j=json.load(sys.stdin); s=j.get('Scty') or []
+            f=[x for x in s if (x.get('mkt') or {}).get('cd')=='FUT']
+            print(len(s),'fut',len(f), [ (x['symb'], (x.get('SctyQtn') or {}).get('curPrc'), (x.get('SctyQtn') or {}).get('prvsDayAdjstmntPric'), (x.get('asset') or {}).get('AsstSummry',{}).get('opnCtrcts')) for x in f[:2]], j.get('Msg',{}).get('dtTm'))
+          except Exception as e: print('ERR',e)"
+          done
+          for p in "InstrumentQuotation/PETR4" "InstrumentQuotation/IBOV" "DailyFluctuationHistory/PETR4" "InstrumentQuotation/DOLZ26" "InstrumentQuotation/BOVA11"; do
+            printf "== %s " "$p"; curl -s -A 'Mozilla/5.0' -e 'https://www.b3.com.br/' -w ' [%{http_code}]' "$B/$p" | head -c 350; echo
+          done
