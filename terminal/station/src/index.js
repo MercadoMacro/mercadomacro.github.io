@@ -1936,6 +1936,7 @@ button.del,.u button.del{color:var(--neg)}
 table.t{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .t th:first-child{border-top-left-radius:11px}.t th:last-child{border-top-right-radius:11px}
 .t th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.t th .ord{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit}.t th .ord:hover,.t th .ord.on{color:var(--text)}.t th .ord i{font-style:normal;font-size:9px;opacity:.45}.t th .ord.on i{opacity:1;color:var(--accent,var(--text))}.t th .ord:focus-visible{outline:2px solid var(--accent,#888);outline-offset:2px;border-radius:3px}
 .t td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
 .t tr:last-child td{border-bottom:0}
 .t td.p b{display:block;font-size:14px}.t td.p span{color:var(--text-2);word-break:break-all}
@@ -2144,14 +2145,31 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     if (u.plano) return NOMEP[u.plano] || u.plano;
     return u.status === 'ativo' && !u.expira ? 'Sem validade' : '—';
   }
+  // ordem escolhida clicando no título da coluna (1 = crescente, -1 = decrescente); vazio fica sempre embaixo
+  var ORD = { c: '', d: 1 };
+  var COLS = [['nome', 'Pessoa', 1], ['sit', 'Situação', 1], ['plano', 'Plano', 1], ['val', 'Validade', -1], ['acesso', 'Último acesso', -1], ['criado', 'Cadastro', -1]];
+  function valorOrd(u, c){
+    if (c === 'nome') return semAc(u.nome || '');
+    if (c === 'sit') return u.admin ? 'administrador' : semAc(SIT[u.status] || u.status || '');
+    if (c === 'plano') { var p = plano(u); return p === '—' ? null : semAc(p); }
+    if (c === 'val') return u.admin || (u.status !== 'ativo' && u.status !== 'expirado') ? null : (u.expira || (u.status === 'ativo' ? '9999' : null));
+    if (c === 'acesso') return u.ultimo_acesso || null;
+    if (c === 'criado') return u.criado || null;
+    return null;
+  }
   function pessoas(){
     var q = semAc(document.getElementById('busca').value.trim());
     var f = (FILTROS.filter(function(x){ return x[0] === filtro; })[0] || FILTROS[0])[2];
     var ordem = { pendente: 0, confirmar: 1, expirado: 2, ativo: 3, recusado: 4, bloqueado: 5 };
     var lista = US.filter(f).filter(function(u){ return !q || semAc(u.nome + ' ' + u.email).indexOf(q) >= 0; })
       .sort(function(a, b){ return (ordem[a.status] - ordem[b.status]) || (a.criado < b.criado ? 1 : -1); });
+    if (ORD.c) lista.sort(function(a, b){
+      var x = valorOrd(a, ORD.c), y = valorOrd(b, ORD.c);
+      if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
+      return x < y ? -ORD.d : x > y ? ORD.d : 0;
+    });
     document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
-    raiz.innerHTML = lista.length ? '<table class="t"><thead><tr><th>Pessoa</th><th>Situação</th><th>Plano</th><th>Validade</th><th>Último acesso</th><th>Cadastro</th><th></th></tr></thead><tbody>'
+    raiz.innerHTML = lista.length ? '<table class="t"><thead><tr>' + COLS.map(function(c){ var on = ORD.c === c[0]; return '<th' + (on ? ' aria-sort="' + (ORD.d > 0 ? 'ascending' : 'descending') + '"' : '') + '><button type="button" class="ord' + (on ? ' on' : '') + '" data-o="' + c[0] + '">' + c[1] + '<i>' + (on ? (ORD.d > 0 ? '&#9650;' : '&#9660;') : '&#8597;') + '</i></button></th>'; }).join('') + '<th></th></tr></thead><tbody>'
       + lista.map(function(u){
         return '<tr><td class="p"><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
@@ -2257,6 +2275,12 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   }
   document.querySelector('.abas').addEventListener('click', function(e){ var b = e.target.closest('button[data-aba]'); if (b) aba(b.dataset.aba); });
   document.getElementById('chips').addEventListener('click', function(e){ var b = e.target.closest('button[data-f]'); if (b) { filtro = b.dataset.f; pessoas(); } });
+  raiz.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-o]'); if (!b) return;
+    var c = b.dataset.o, def = COLS.filter(function(x){ return x[0] === c; })[0][2];
+    if (ORD.c !== c) ORD = { c: c, d: def }; else if (ORD.d === def) ORD.d = -def; else ORD = { c: '', d: 1 };
+    pessoas();
+  });
   document.getElementById('busca').addEventListener('input', pessoas);
   document.querySelector('main').addEventListener('click', function(e){
     var b = e.target.closest('[data-ir]'); if (!b) return;
