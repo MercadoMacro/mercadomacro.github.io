@@ -7,7 +7,7 @@ vm.runInContext(readFileSync(new URL('../site/mesa-layout.js',import.meta.url),'
 const layout=ctx.MMDeskLayout;
 test('remove IDs desconhecidos e duplicados e inclui novos blocos no fim',()=>{
   const p=layout.normalize({order:['news','news','inexistente'],hidden:['co','co','fake']});
-  assert.equal(p.order[0],'news');assert.equal(p.order.length,11);assert.equal(new Set(p.order).size,11);assert.deepEqual(Array.from(p.hidden),['co']);
+  assert.equal(p.order[0],'news');assert.equal(p.order.length,12);assert.equal(new Set(p.order).size,12);assert.deepEqual(Array.from(p.hidden),['co']);
 });
 test('ocultar e mostrar preserva a ordem e não altera a preferência original',()=>{
   const p=layout.normalize(null),hidden=layout.toggle(p,'crypto');
@@ -24,5 +24,5 @@ test('preferências sobrevivem ao salvamento e opções inválidas voltam ao pad
   const p=layout.toggle(layout.before(null,'curve','crypto'),'news');
   const restored=layout.normalize(JSON.parse(JSON.stringify(p)));
   assert.equal(restored.order[0],'curve');assert.equal(restored.hidden.includes('news'),true);
-  assert.equal(layout.normalize({order:'x',hidden:null}).order.length,11);
+  assert.equal(layout.normalize({order:'x',hidden:null}).order.length,12);
 });

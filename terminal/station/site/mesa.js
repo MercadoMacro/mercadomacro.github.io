@@ -105,7 +105,13 @@
     });
     return ok;
   }
+  // Futuros da B3 (28/10/2026): um contrato por ativo pelo servidor de dados (/futb3), site de cotações da B3, atraso ~15 min
+  let futB3 = null;
+  async function loadFutB3() {
+    try { const j = await getJSON(`${PROXY}/futb3`); if (j && Array.isArray(j.f) && j.f.length) futB3 = j; } catch (e) { /* fica com o anterior */ }
+  }
   async function loadExtras() {
+    const fb = loadFutB3();
     const [cds, fu, fl, se, mi] = await Promise.allSettled([
       getJSON(`${PROXY}/cds`),
       getJSON(`${PROXY}/fred/series?id=DFEDTARU&units=lin&limit=1`),
@@ -121,6 +127,7 @@
     if (up && lo) X.fed = { lo: +lo[1], up: +up[1], d: up[0], live: true };
     const s = se.status === 'fulfilled' && Array.isArray(se.value) ? se.value[se.value.length - 1] : null;
     if (s) X.selic = { v: parseFloat(s.valor), d: s.data, live: true };
+    await fb;
   }
   async function refresh(force) {
     if (busy) return;
@@ -185,6 +192,49 @@
     try { const j = await getJSON(`${PROXY}/di`); if (j && Array.isArray(j.c) && j.c.length) diVivo = j; } catch (e) { /* fica com o anterior ou com a curva da noite */ }
     if (root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
   }
+  // juro real da B3 (28/10/2026): DAP, cupom de IPCA, pelo servidor de dados (/dap), mesma leitura do DI
+  let dapVivo = null, dapTs = 0, dapCmp = 'ajuste', dapTentou = false;
+  async function loadDAP(forcar) {
+    if (!forcar && Date.now() - dapTs < 60000) return;
+    dapTs = Date.now();
+    try { const j = await getJSON(`${PROXY}/dap`); if (j && Array.isArray(j.c) && j.c.length) dapVivo = j; } catch (e) { /* fica com o anterior */ }
+    dapTentou = true;
+    if (root && curveKind === 'dap') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+  }
+  const dapTx = (c) => (c.t != null && c.neg >= 50 ? c.t : null);
+  function dapPoints(campo) {
+    if (!dapVivo) return [];
+    const hoje = Date.now();
+    return dapVivo.c.filter((c) => c.oi >= 10000).map((c) => {
+      const venc = new Date(c.venc + 'T12:00:00'), y = (venc - hoje) / (365.25 * 86400000);
+      const taxa = campo === 'aj' ? c.aj : (dapTx(c) != null ? dapTx(c) : c.aj);
+      return { nome: `${c.s} · DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y, s: c.s, hoje: dapTx(c) != null };
+    }).filter((p) => p.y >= 1 && p.y <= 30 && p.taxa != null && isFinite(p.taxa));
+  }
+  function curveHTMLdap() {
+    loadDAP();
+    const pts = dapPoints('t'), cmp = dapCmp ? dapPoints('aj') : [];
+    const s2 = interp(pts, 2), s5 = interp(pts, 5), c2 = interp(cmp, 2), c5 = interp(cmp, 5);
+    const slope = s2 != null && s5 != null ? Math.round((s5 - s2) * 100) : null;
+    const dSlope = slope != null && c2 != null && c5 != null ? slope - Math.round((c5 - c2) * 100) : null;
+    const hora = dapVivo && dapVivo.b3 ? dapVivo.b3.slice(11, 16) : '';
+    const negociou = pts.some((p) => p.hoje);
+    const L = dapVivo ? dapVivo.c.filter((c) => c.oi >= 10000) : [];
+    return `
+      <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>${segHTML()}</div>
+      <div class="ms-curve-sub">
+        <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde o ajuste` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
+        <span class="sp"></span>
+        <label>Comparar com <select class="ms-cmp" ${pts.length ? '' : 'disabled'}><option value="">Sem comparação</option><option value="ajuste" ${dapCmp ? 'selected' : ''}>ajuste do pregão anterior</option></select></label>
+      </div>
+      <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${dapTentou && !dapVivo ? 'Curva de juro real indisponível agora.' : 'Carregando curva…'}</div>`}</div>
+      ${L.length ? `<div class="ms-dilw"><table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
+        const t = dapTx(c), v = t != null && c.aj != null ? t - c.aj : null, venc = new Date(c.venc + 'T12:00:00');
+        return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
+          + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(c.aj, 3)}</td></tr>`;
+      }).join('')}</tbody></table></div>` : ''}
+      <div class="ms-foot">${dapVivo ? `Juro real: DAP (cupom de IPCA) da B3, taxa ao ano acima da inflação. ${negociou ? `Taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}, com atraso de cerca de 15 minutos` : 'Sem negócios ainda hoje: taxas do ajuste do pregão anterior'}. Contratos com poucos negócios hoje entram pelo ajuste anterior; o gráfico começa em 1 ano, porque os vencimentos curtos variam com a inflação do mês. Fonte: B3, site de cotações.` : ''}</div>`;
+  }
   const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   // pontos da curva ao vivo: contratos com pelo menos 10 mil em aberto, até 10 anos; campo = 't' (hoje) ou 'aj' (ajuste anterior)
   // Último negócio só conta com volume mínimo; um negócio isolado distorce a curva.
@@ -234,6 +284,7 @@
   };
   function curveHTML() {
     if (curveKind === 'di') return curveHTMLdi();
+    if (curveKind === 'dap') return curveHTMLdap();
     const snaps = allSnaps();
     const todos = Object.keys(snaps).filter((k) => k !== isoDay()).sort().reverse();
     const days = todos.slice(0, 10);
@@ -269,6 +320,7 @@
   }
   const segHTML = () => `<div class="ms-seg" role="group" aria-label="Tipo de curva">
           <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
+          <button type="button" data-curve="dap" class="${curveKind === 'dap' ? 'on' : ''}" title="Juro real da B3 (DAP, cupom de IPCA)">Real</button>
           <button type="button" data-curve="pre" class="${curveKind === 'pre' ? 'on' : ''}" title="Tesouro Prefixado">Pré</button>
           <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
         </div>`;
@@ -313,14 +365,15 @@
   }
   function drawCurve() {
     const box = root.querySelector('.ms-curve');
-    const di = curveKind === 'di';
-    if (!box || (!di && !curve)) return;
-    const pts = di ? diHojePoints() : curvePoints(curve.t, curveKind);
+    const di = curveKind === 'di', dap = curveKind === 'dap';
+    if (!box || (!di && !dap && !curve)) return;
+    const pts = dap ? dapPoints('t') : di ? diHojePoints() : curvePoints(curve.t, curveKind);
     if (pts.length < 2) return;
-    const snaps = di ? null : allSnaps();
+    const snaps = di || dap ? null : allSnaps();
     const cmpKey = di ? diCmp : curveCmp;
-    const cmp = di ? diCmpPoints() : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
-    const pontos = !di || diVivoOk(); // a curva da noite tem ~225 vértices: sem bolinhas
+    const cmp = dap ? (dapCmp ? dapPoints('aj') : []) : di ? diCmpPoints() : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
+    const pontos = !di || diVivoOk();
+    const vivo = dap || (di && diVivoOk()); // a curva da noite tem ~225 vértices: sem bolinhas
     const W = Math.max(260, box.clientWidth), H = 220, L = 44, R = 12, T = 12, B = 24;
     const all = [...pts, ...cmp];
     let y0 = Math.min(...all.map((p) => p.taxa)), y1 = Math.max(...all.map((p) => p.taxa));
@@ -331,7 +384,7 @@
     const ticks = 5, yt = [...Array(ticks)].map((_, i) => y0 + (y1 - y0) * i / (ticks - 1));
     const years = [...new Set(pts.map((p) => p.venc.getFullYear()))];
     const step = Math.ceil(years.length / Math.max(2, Math.floor((W - L) / 56)));
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Curva de juros ${curveKind === 'pre' ? 'prefixada' : 'IPCA+'}">
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Curva de juros ${{ pre: 'prefixada', ipca: 'IPCA+', di: 'DI', dap: 'juro real' }[curveKind] || ''}">
       ${yt.map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="g"/><text x="${L - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end" class="ax">${nf(v, 2)}</text>`).join('')}
       ${years.filter((_, i) => i % step === 0).map((yr) => { const p = pts.find((q) => q.venc.getFullYear() === yr); return `<text x="${PX(p.y).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="ax">${yr}</text>`; }).join('')}
       ${cmp.length >= 2 ? `<path d="${path(cmp)}" class="cmp"/>` : ''}
@@ -350,8 +403,8 @@
       const old = cmp.length ? interp(cmp, best.y) : null;
       const bp = old != null ? Math.round((best.taxa - old) * 100) : null;
       tip.hidden = false;
-      const desde = di ? diCmpData() : cmpKey.split('-').reverse().slice(0, Date.now() - Date.parse(cmpKey) > 300 * 86400000 ? 3 : 2).join('/');
-      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, di && diVivoOk() ? 3 : 2)}% ao ano${curveKind === 'ipca' ? ' + IPCA' : ''}${di && diVivoOk() && !best.hoje ? ' (ajuste anterior)' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde}</span>` : ''}`;
+      const desde = dap ? 'o ajuste' : di ? diCmpData() : cmpKey.split('-').reverse().slice(0, Date.now() - Date.parse(cmpKey) > 300 * 86400000 ? 3 : 2).join('/');
+      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, vivo ? 3 : 2)}% ao ano${curveKind === 'ipca' || dap ? ' + IPCA' : ''}${vivo && !best.hoje ? ' (ajuste anterior)' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde}</span>` : ''}`;
       const left = (cx / W) * r.width;
       tip.style.left = `${Math.min(Math.max(left, 70), r.width - 70)}px`;
     };
@@ -389,6 +442,22 @@
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
       <td class="tm">${has ? (stale ? '<i title="Valor salvo; a fonte não respondeu agora">salvo</i>' : hhmm(q.ts)) : ''}</td>
     </tr>`;
+  }
+  function futB3HTML() {
+    const L = futB3 ? futB3.f : [];
+    const hora = futB3 && futB3.b3 ? futB3.b3.slice(11, 16) : '';
+    return `<section class="ms-box ms-tb ms-fb3" data-tb="b3">
+      <div class="ms-head"><h3>Futuros B3</h3><span class="sp"></span><span class="ms-hsub" title="Site de cotações da B3, atraso de cerca de 15 minutos">${hora ? `B3 às ${hora}` : ''}</span></div>
+      ${L.length ? `<table><tbody>${L.map((x) => {
+        const v = x.t != null ? x.t : x.aj, c = x.t != null && x.aj ? (x.t / x.aj - 1) * 100 : null;
+        return `<tr title="${esc(x.nome)} · contrato ${esc(x.s)}${x.t == null ? ' · sem negócio hoje, valor do ajuste anterior' : ''} · fonte: B3, atraso de cerca de 15 min" class="${x.t == null ? 'old' : ''}">
+          <td class="nm">${esc(x.nome)}<small>${esc(x.s)}</small></td>
+          <td class="px">${v != null ? nf(v, x.d) : '—'}</td>
+          <td class="ch ${cls(c)}">${c != null ? pct(c) : x.t == null ? '<i class="aj-ant">ajuste</i>' : '—'}</td>
+          <td class="tm"></td>
+        </tr>`;
+      }).join('')}</tbody></table>` : `<div class="ms-empty">${futB3 === null ? 'Carregando futuros da B3…' : 'Futuros da B3 indisponíveis agora.'}</div>`}
+    </section>`;
   }
   const tableHTML = (t) => `<section class="ms-box ms-tb" data-tb="${t.id}">
       <div class="ms-head"><h3>${esc(t.t)}</h3></div>
@@ -516,7 +585,7 @@
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
-        <div class="ms-col">${col(2)}</div>
+        <div class="ms-col">${col(2)}${futB3HTML()}</div>
         <div class="ms-col">${col(3)}</div>
         <div class="ms-col ms-c4">
           <section class="ms-box ms-curvebox">${curveHTML()}</section>
@@ -599,7 +668,7 @@
   });
   root.addEventListener('change', (e) => {
     if (e.target.classList.contains('ms-cmp')) {
-      if (curveKind === 'di') diCmp = e.target.value || ''; else curveCmp = e.target.value || '';
+      if (curveKind === 'di') diCmp = e.target.value || ''; else if (curveKind === 'dap') dapCmp = e.target.value || ''; else curveCmp = e.target.value || '';
       const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); }
     }
   });
@@ -636,7 +705,7 @@
   new MutationObserver(() => { syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
-  setInterval(() => { if (active() && curveKind === 'di') loadDIvivo(); }, 60 * 1000);
+  setInterval(() => { if (active() && curveKind === 'di') loadDIvivo(); if (active() && curveKind === 'dap') loadDAP(); }, 60 * 1000);
   const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); };
   setInterval(() => { if (active()) redrawNews(); }, 60 * 1000);
   window.addEventListener('mm-news-erro', redrawNews);
@@ -717,6 +786,9 @@
   .ms-tb td.tm i { font-style:normal; color:var(--accent-ink); }
   .ms-tb tr.old td.px { color:var(--text-3); }
   .ms-tb tr:not([data-sym]) { cursor:default; }
+  .ms-fb3 td.nm small { margin-left:6px; font:10px 'JetBrains Mono', monospace; color:var(--text-3); }
+  .ms-fb3 td.ch i.aj-ant { font-style:normal; font-size:10.5px; color:var(--text-3); }
+  .ms-hsub { font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); }
   .cc { display:inline-block; min-width:22px; margin-right:7px; padding:0 3px; border-radius:4px; background:var(--surface-3); color:var(--text-3); font:600 9px 'JetBrains Mono', monospace; text-align:center; vertical-align:1px; }
 
   .ms-seg { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
