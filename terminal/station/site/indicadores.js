@@ -416,10 +416,39 @@
           subs: [], series: r.s, unitS: ''
         };
       }
-    }
+    },
+    // balança comercial dos EUA (Census/BEA via FRED, US$ milhões por mês, com ajuste sazonal)
+    {
+      id: 'us-tradebal', area: 'us', grp: 'Balança comercial', nome: 'Saldo comercial', src: 'FRED · BOPGSTB', dk: 'm', periods: P_FRED_M, pi: 1,
+      info: 'Exportações menos importações de bens e serviços dos EUA no mês (Census e BEA), com ajuste sazonal. Negativo quer dizer déficit.',
+      load: async () => ({ s: (await fred('BOPGSTB', { limit: 420 })).map(([t, v]) => [t, v / 1000]) }),
+      view: (r) => {
+        const cur = last(r.s), prev = last(r.s, 2);
+        const ano = cur ? r.s.filter(([t]) => new Date(t).getUTCFullYear() === new Date(cur[0]).getUTCFullYear()) : [];
+        return {
+          value: cur ? (cur[1] >= 0 ? '+' : '−') + nf(Math.abs(cur[1]), 1) : '—', unit: 'US$ bi', date: cur && fmtDate(cur[0], 'm'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign(cur[1] - prev[1], 1)} bi vs. mês anterior` } : null,
+          subs: ano.length ? [['No ano', ((t) => (t >= 0 ? '+' : '−') + 'US$ ' + nf(Math.abs(t), 1) + ' bi')(ano.reduce((a, p) => a + p[1], 0))]] : [], series: r.s, unitS: ' bi', zero: true, bars: true
+        };
+      }
+    },
+    ...[['BOPTEXP', 'Exportações', 'Vendas de bens e serviços dos EUA para o exterior no mês (Census e BEA), com ajuste sazonal.'],
+      ['BOPTIMP', 'Importações', 'Compras de bens e serviços do exterior pelos EUA no mês (Census e BEA), com ajuste sazonal.']].map(([id, nome, info]) => ({
+      id: 'us-' + id.toLowerCase(), area: 'us', grp: 'Balança comercial', nome, src: `FRED · ${id}`, info, dk: 'm', periods: P_FRED_M, pi: 1,
+      load: async () => ({ s: (await fred(id, { limit: 420 })).map(([t, v]) => [t, v / 1000]) }),
+      view: (r) => {
+        const cur = last(r.s), a12 = r.s.length > 12 ? r.s[r.s.length - 13] : null;
+        const yoy = cur && a12 && a12[1] ? (cur[1] / a12[1] - 1) * 100 : null;
+        return {
+          value: cur ? nf(cur[1], 1) : '—', unit: 'US$ bi', date: cur && fmtDate(cur[0], 'm'),
+          delta: yoy != null ? { v: yoy, txt: `${sign(yoy, 1)}% vs. mesmo mês do ano anterior` } : null,
+          subs: [], series: r.s, unitS: ' bi'
+        };
+      }
+    }))
   ];
 
-  const GROUP_ICON = { 'Juros': 'fa-percentage', 'Inflação': 'fa-fire', 'Câmbio': 'fa-exchange-alt', 'Atividade': 'fa-industry', 'Risco': 'fa-shield-alt', 'Tesouro Direto': 'fa-landmark' };
+  const GROUP_ICON = { 'Juros': 'fa-percentage', 'Inflação': 'fa-fire', 'Câmbio': 'fa-exchange-alt', 'Atividade': 'fa-industry', 'Risco': 'fa-shield-alt', 'Tesouro Direto': 'fa-landmark', 'Balança comercial': 'fa-ship' };
 
   /* ---------------- estado e cache ---------------- */
   let prefs = { area: 'br', per: {}, var: {} };
@@ -697,6 +726,7 @@
     const s = state[d.id];
     const main = el.querySelector('.ind-main');
     el.classList.toggle('is-loading', s.st === 'loading');
+    if (d.id === 'us-tradebal' && s.raw && window.__indJumpBadges) requestAnimationFrame(window.__indJumpBadges);
     if (s.st === 'loading') {
       main.innerHTML = '<div class="ind-skel w60"></div><div class="ind-skel w40"></div><div class="ind-skel h60"></div>';
       return;
@@ -787,13 +817,21 @@
     el._fmt = { unit: v.unitS || '', dk: d.dk };
   }
 
-  const ATALHOS = [['principais', 'Principais', 'fa-gauge-high'], ['comex', 'Balança comercial', 'fa-ship'], ['ibge', 'IBGE em detalhe', 'fa-building-columns'], ['tesouro', 'Tesouro Direto', 'fa-coins']];
+  const ATALHOS_AREA = {
+    br: [['principais', 'Principais', 'fa-gauge-high'], ['comex', 'Balança comercial', 'fa-ship'], ['ibge', 'IBGE em detalhe', 'fa-building-columns'], ['tesouro', 'Tesouro Direto', 'fa-coins']],
+    us: [['principais', 'Principais', 'fa-gauge-high'], ['balanca', 'Balança comercial', 'fa-ship'], ['pib', 'PIB e renda', 'fa-chart-column'], ['juros', 'Juros e Fed', 'fa-landmark']]
+  };
+  let ATALHOS = ATALHOS_AREA.br;
   const jump = root.querySelector('#ind-jump');
   // etiquetas com dado real: saldo da balança do último mês e quantidade de títulos à venda
   function etiqueta(k) {
     if (k === 'comex') {
       const b = window.MMComex && window.MMComex.saldo ? window.MMComex.saldo() : null;
       return b ? `<em class="ij-b ${b.s >= 0 ? 'up' : 'dn'}" title="Saldo da balança comercial de ${esc(b.mes)}">${b.s >= 0 ? '+' : '−'}US$ ${esc(b.txt)} bi</em>` : '';
+    }
+    if (k === 'balanca') {
+      const cur = last(state['us-tradebal']?.raw?.s || []);
+      return cur ? `<em class="ij-b ${cur[1] >= 0 ? 'up' : 'dn'}" title="Saldo comercial dos EUA de ${esc(fmtDate(cur[0], 'm'))}">${cur[1] >= 0 ? '+' : '−'}US$ ${nf(Math.abs(cur[1]), 1)} bi</em>` : '';
     }
     if (k === 'tesouro') {
       const n = (state['br-tesouro']?.raw?.t || []).length;
@@ -815,9 +853,10 @@
     jump.classList.add('sem-anim');
     requestAnimationFrame(() => { pilula(); requestAnimationFrame(() => jump.classList.remove('sem-anim')); });
   }
-  window.__indJumpBadges = () => { if (prefs.area === 'br' && !jump.hidden) ATALHOS.forEach(([k]) => { const b = jump.querySelector(`[data-secao="${k}"]`); if (!b) return; b.querySelector('.ij-b')?.remove(); b.insertAdjacentHTML('beforeend', etiqueta(k)); }); pilula(); };
+  window.__indJumpBadges = () => { if (!jump.hidden) ATALHOS.forEach(([k]) => { const b = jump.querySelector(`[data-secao="${k}"]`); if (!b) return; b.querySelector('.ij-b')?.remove(); b.insertAdjacentHTML('beforeend', etiqueta(k)); }); pilula(); };
   window.addEventListener('resize', () => pilula());
 
+  const SEC_GRUPO = { 'Tesouro Direto': 'tesouro', 'Balança comercial': 'balanca', 'Juros': 'juros' };
   function renderArea() {
     const area = prefs.area;
     root.querySelectorAll('.ind-area button').forEach((b) => b.classList.toggle('on', b.dataset.a === area));
@@ -826,14 +865,16 @@
     const defs = DEFS.filter((d) => d.area === area);
     const grupos = [...new Set(defs.map((d) => d.grp))];
     // Brasil: barrinha de atalhos logo abaixo do título; cada botão mostra só uma parte da página (28/10/2026)
+    // EUA ganhou a sua própria barra (28/10/2026)
+    ATALHOS = ATALHOS_AREA[area] || ATALHOS_AREA.br;
     let secao = 'principais';
-    if (area === 'br') { try { secao = localStorage.getItem('ind_secao_br') || 'principais'; } catch (e) { /* sem armazenamento */ } }
+    try { secao = localStorage.getItem('ind_secao_' + area) || 'principais'; } catch (e) { /* sem armazenamento */ }
     if (!ATALHOS.some(([k]) => k === secao)) secao = 'principais';
-    if (area === 'br') { body.dataset.secao = secao; root.dataset.secao = secao; } else { delete body.dataset.secao; delete root.dataset.secao; }
-    desenhaAtalhos(area === 'br' ? secao : null);
+    body.dataset.secao = secao; root.dataset.secao = secao; body.dataset.area = area;
+    desenhaAtalhos(secao);
     body.innerHTML = grupos.map((g) => {
       const ds = defs.filter((d) => d.grp === g);
-      return `<section class="ind-sec" data-s="${g === 'Tesouro Direto' ? 'tesouro' : 'principais'}"><div class="market-section-head"><span class="sec-icon"><i class="fas ${GROUP_ICON[g] || 'fa-chart-line'}"></i></span><h2>${esc(g)}</h2><span class="sec-count">${ds.length} ${ds.length > 1 ? 'indicadores' : 'indicador'}</span></div>
+      return `<section class="ind-sec" data-s="${(area === 'us' || g !== 'Juros') && SEC_GRUPO[g] || 'principais'}"><div class="market-section-head"><span class="sec-icon"><i class="fas ${GROUP_ICON[g] || 'fa-chart-line'}"></i></span><h2>${esc(g)}</h2><span class="sec-count">${ds.length} ${ds.length > 1 ? 'indicadores' : 'indicador'}</span></div>
         <div class="ind-grid">${ds.map(cardHTML).join('')}</div></section>`;
     }).join('');
     defs.forEach(fillCard);
@@ -939,7 +980,7 @@
     if (atalho) {
       const k = atalho.dataset.secao;
       body.dataset.secao = k; root.dataset.secao = k;
-      try { localStorage.setItem('ind_secao_br', k); } catch (e2) { /* sem armazenamento */ }
+      try { localStorage.setItem('ind_secao_' + prefs.area, k); } catch (e2) { /* sem armazenamento */ }
       jump.querySelectorAll('[data-secao]').forEach((b) => { const on = b.dataset.secao === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
       pilula();
       return;
@@ -1723,7 +1764,10 @@
   #ind-body[data-secao="principais"] .ind-sec:not([data-s="principais"]),
   #ind-body[data-secao="tesouro"] .ind-sec:not([data-s="tesouro"]),
   #ind-body[data-secao="comex"] .ind-sec:not(#comex-sec),
-  #ind-body[data-secao="ibge"] .ind-sec:not(#ibge-sec) { display:none; }
+  #ind-body[data-secao="ibge"] .ind-sec:not(#ibge-sec),
+  #ind-body[data-secao="balanca"] .ind-sec:not([data-s="balanca"]),
+  #ind-body[data-secao="juros"] .ind-sec:not([data-s="juros"]),
+  #ind-body[data-secao="pib"] .ind-sec:not(#bea-sec) { display:none; }
   .ind-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:14px; }
   .ind-card { display:flex; flex-direction:column; gap:6px; min-height:250px; overflow:hidden; }
   .ind-card.ind-wide { grid-column:1 / -1; min-height:0; }
