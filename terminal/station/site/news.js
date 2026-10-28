@@ -9,7 +9,6 @@ const FEEDS = [
   { name: 'FXStreet', url: 'https://www.fxstreet.com/rss/news', source: 'FXStreet', weight: 7 },
   { name: 'FX Markets', url: 'https://www.fx-markets.com/feeds/rss', source: 'FX Markets', weight: 7 },
   { name: 'ING Think', url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', source: 'ING Think', weight: 7 },
-  { name: 'Dukascopy', url: 'https://www.dukascopy.com/fxspider/pt/rss/news_sector/finance/', source: 'Dukascopy', weight: 6 },
   { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC', weight: 7 },
   { name: 'MarketWatch', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'MarketWatch', weight: 7 },
   { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', source: 'Yahoo Finance', weight: 6 },
