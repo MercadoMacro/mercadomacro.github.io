@@ -572,55 +572,48 @@
 
 <div class="tab-panel" id="analysis-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-analysis-panel" aria-hidden="true">
   <div class="generic-wrap ana-wrap">
-    <div class="refresh-bar">
-      <div class="info" id="ana-info"><span class="dot off"></span>Histórico de 1 ano: <span id="ana-hist-status">não carregado</span></div>
-    </div>
     <section class="dq-root" id="ana-destaques" data-destaques aria-label="Destaques"></section>
-    <button class="ana-toggle" id="ana-toggle" aria-expanded="false" aria-controls="ana-body">
-      <span class="ana-toggle-ico"><i class="fas fa-chart-line"></i></span>
-      <span class="ana-toggle-txt">
-        <strong>Análise avançada</strong>
-        <small>Humor do mercado, destaques, desempenho, tendência e comparador de ativos</small>
-      </span>
-      <span class="ana-toggle-chev" aria-hidden="true">▾</span>
-    </button>
 
     <div class="ana-body hidden" id="ana-body">
-      <div class="ana-row2">
-        <section class="ana-card">
-          <h3 class="ana-h">Humor do mercado hoje</h3>
-          <div id="ana-mood"></div>
+      <header class="aa-head">
+        <div><h2>Análise avançada</h2><p>Cenário, desempenho e posicionamento em uma única visão.</p></div>
+        <div class="info aa-status" id="ana-info"><span class="dot off"></span>Histórico de 1 ano: <span id="ana-hist-status">não carregado</span></div>
+      </header>
+      <div class="aa-kpis">
+        <section class="ana-card aa-kpi" id="ana-mood" aria-label="Humor do mercado"></section>
+        <section class="ana-card aa-kpi" id="ana-breadth" aria-label="Amplitude"></section>
+        <section class="ana-card aa-kpi" id="aa-estr" aria-label="Estrangeiro na B3"></section>
+        <section class="ana-card aa-kpi aa-clica" id="aa-decisao" aria-label="Próxima decisão de juros"></section>
+      </div>
+      <div class="aa-row">
+        <section class="ana-card aa-perf">
+          <div class="aa-card-head">
+            <h3>Desempenho dos ativos</h3>
+            <div class="aa-tools">
+              <label class="aa-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="ana-busca" placeholder="Buscar ativo..." aria-label="Buscar ativo" autocomplete="off"></label>
+              <button type="button" class="aa-mais" id="ana-mais" aria-pressed="false">Mais métricas <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <div class="aa-pills" id="ana-filter" role="group" aria-label="Filtrar por grupo"></div>
+          <div class="ana-table-wrap"><table class="ana-table aa-tab" id="ana-table"></table></div>
+          <div class="aa-perf-foot">
+            <span id="ana-sel-n"></span>
+            <button type="button" class="aa-cmp-btn" id="ana-cmp-go"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Comparar</button>
+            <span class="aa-note">Tendência: preço contra as médias de 50 e 200 pregões</span>
+          </div>
         </section>
-        <section class="ana-card">
-          <h3 class="ana-h">Ativos em alta hoje</h3>
-          <div id="ana-breadth"></div>
+        <section class="ana-card aa-cmp" id="ana-cmp-card">
+          <div class="aa-card-head"><h3>Comparador de ativos</h3></div>
+          <div class="aa-cmp-top"><div class="aa-chips" id="ana-cmp-sel"></div><div class="aa-seg" id="ana-periods" role="group" aria-label="Período"></div></div>
+          <p class="aa-sub">Retorno acumulado · base 100</p>
+          <div class="ana-chart" id="ana-chart"></div>
+          <div id="ana-cmp-cards"></div>
         </section>
       </div>
-
-      <section class="ana-card">
-        <h3 class="ana-h">Destaques do dia <span class="ana-hint">clique para comparar</span></h3>
-        <div class="ana-movers" id="ana-movers"></div>
-      </section>
-
-      <section class="ana-card">
-        <div class="ana-card-head">
-          <h3 class="ana-h">Desempenho dos ativos</h3>
-          <div class="ecal-chips" id="ana-filter"></div>
-        </div>
-        <div class="ana-table-wrap"><table class="ana-table" id="ana-table"></table></div>
-        <p class="ana-foot">Volatilidade: desvio padrão dos retornos dos últimos 30 pregões, anualizado. Tendência: preço contra as médias de 50 e 200 pregões. Clique numa linha para comparar.</p>
-      </section>
-
-      <section class="ana-card">
-        <div class="ana-card-head">
-          <h3 class="ana-h">Comparador de ativos <span class="ana-hint">base 100</span></h3>
-          <div class="ecal-chips" id="ana-periods"></div>
-        </div>
-        <div class="ana-cmp-sel" id="ana-cmp-sel"></div>
-        <div class="ana-chart" id="ana-chart"></div>
-        <div class="ana-cmp-cards" id="ana-cmp-cards"></div>
-      </section>
-
+      <div class="aa-row">
+        <section class="ana-card aa-fluxo" id="aa-fluxo" aria-label="Fluxo estrangeiro na B3"></section>
+        <section class="ana-card aa-pos" id="aa-pos" aria-label="Posicionamento dos investidores"></section>
+      </div>
       <p class="ana-foot" id="ana-usage"></p>
     </div>
 
@@ -785,8 +778,9 @@
 <script src="crypto-live.js?v=2"></script>
 <script src="forex-live.js?v=7"></script>
 <script src="feriados.js?v=2"></script>
-<script src="app.js?v=112"></script>
-<script src="ana-secoes.js?v=5"></script>
+<script src="app.js?v=113"></script>
+<script src="ana-secoes.js?v=6"></script>
+<script src="analise-avancada.js?v=1"></script>
 <script src="mesa-layout.js?v=2"></script>
 <script src="ajustes.js?v=23"></script>
 <script src="watchlists-core.js?v=1"></script>

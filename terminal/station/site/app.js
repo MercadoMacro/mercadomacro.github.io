@@ -3664,59 +3664,93 @@ function anaRenderMood(rows) {
   });
   const valid = comps.filter(c => c.v != null);
   const el = $('#ana-mood');
-  if (!valid.length) { el.innerHTML = '<div class="ana-loading">Sem cotações do dia ainda.</div>'; return; }
+  const top = '<div class="aa-k-top"><span class="aa-k-lbl">Humor do mercado</span><span class="aa-k-nota">Nota</span></div>';
+  if (!valid.length) { el.innerHTML = `${top}<div class="aa-k-row"><b class="aa-k-big">—</b></div><div class="ana-loading">Sem cotações do dia ainda.</div>`; return; }
   const score = Math.round(valid.reduce((a, c) => a + c.v, 0) / valid.length * 100);
   const label = score > 25 ? 'Apetite a risco' : score < -25 ? 'Aversão a risco' : 'Neutro';
-  const color = score > 25 ? 'var(--pos-ink)' : score < -25 ? 'var(--neg)' : 'var(--text-2)';
-  el.innerHTML = `
-    <div class="ana-mood-top"><span class="ana-mood-label" style="color:${color}">${label}</span><span class="ana-mood-score">nota ${score > 0 ? '+' : ''}${score}</span></div>
-    <div class="ana-mood-bar" role="img" aria-label="Nota ${score} de -100 a +100"><span class="ana-mood-mark" style="left:${(score + 100) / 2}%"></span></div>
-    <div class="ana-mood-scale"><span>Aversão a risco</span><span>Neutro</span><span>Apetite a risco</span></div>
-    <div class="ana-mood-comps">${comps.map(c => `<span>${c.label} <b class="ana-mono ${anaCls(c.d)}">${anaPct(c.d)}</b></span>`).join('')}</div>`;
+  // a nota sai das variações do dia: a composição fica na dica do cartão
+  el.title = 'Calculada com: ' + comps.map(c => `${c.label} ${anaPct(c.d)}`).join(' · ');
+  el.innerHTML = `${top}
+    <div class="aa-k-row"><b class="aa-k-big">${label}</b><b class="aa-k-score ${anaCls(score)}">${score > 0 ? '+' : score < 0 ? '−' : ''}${Math.abs(score)}</b></div>
+    <div class="aa-mood-bar" style="--aa-mood:${score > 25 ? 'var(--pos)' : score < -25 ? 'var(--neg)' : '#8a94a6'}" role="img" aria-label="Nota ${score} de -100 a +100"><span style="left:${(score + 100) / 2}%"></span></div>
+    <div class="aa-mood-scale"><span>−100</span><span>0</span><span>+100</span></div>`;
 }
 
-/* ---- 2. Ativos em alta ---- */
+/* ---- 2. Amplitude: ativos em alta ---- */
 function anaRenderBreadth(rows) {
   const valid = rows.filter(r => r.d1 != null);
   const up = valid.filter(r => r.d1 > 0).length, dn = valid.filter(r => r.d1 < 0).length;
   const el = $('#ana-breadth');
-  if (!valid.length) { el.innerHTML = '<div class="ana-loading">Sem cotações do dia ainda.</div>'; return; }
-  const groups = Object.keys(ANA_GROUP_NAMES).map(g => {
+  const top = '<div class="aa-k-top"><span class="aa-k-lbl">Amplitude</span></div>';
+  if (!valid.length) { el.innerHTML = `${top}<div class="aa-k-row"><b class="aa-k-big">—</b></div><div class="ana-loading">Sem cotações do dia ainda.</div>`; return; }
+  const pu = Math.round(up / valid.length * 100), pd = Math.round(dn / valid.length * 100);
+  el.title = 'Variação média do dia por grupo: ' + Object.keys(ANA_GROUP_NAMES).map(g => {
     const gs = valid.filter(r => r.group === g);
-    const avg = gs.length ? gs.reduce((a, r) => a + r.d1, 0) / gs.length : null;
-    return `<span>${ANA_GROUP_NAMES[g]} <b class="ana-mono ${anaCls(avg)}">${anaPct(avg)}</b></span>`;
-  }).join('');
-  el.innerHTML = `
-    <div class="ana-br-top">${up} de ${valid.length} <small>ativos subindo</small></div>
-    <div class="ana-br-bar" role="img" aria-label="${up} em alta, ${dn} em queda"><i style="width:${up / valid.length * 100}%;background:var(--pos)"></i><i style="width:${dn / valid.length * 100}%;background:var(--neg)"></i></div>
-    <div class="ana-br-groups">${groups}</div>
-    <p class="ana-foot">Variação média do dia por grupo.</p>`;
+    return `${ANA_GROUP_NAMES[g]} ${anaPct(gs.length ? gs.reduce((a, r) => a + r.d1, 0) / gs.length : null)}`;
+  }).join(' · ');
+  el.innerHTML = `${top}
+    <div class="aa-k-row"><b class="aa-k-big">${up} de ${valid.length}</b></div>
+    <div class="aa-k-sub">ativos em alta</div>
+    <div class="aa-br-bar" role="img" aria-label="${up} em alta, ${dn} em baixa"><i style="width:${up / valid.length * 100}%;background:var(--pos)"></i><i style="width:${dn / valid.length * 100}%;background:var(--neg)"></i></div>
+    <div class="aa-mood-scale"><span>${up} em alta (${pu}%)</span><span>${dn} em baixa (${pd}%)</span></div>`;
 }
 
-/* ---- 3. Destaques ---- */
-function anaRenderMovers(rows) {
-  const pool = rows.filter(r => r.d1 != null && r.group !== 'juros' && !['^VIX', '^VXN'].includes(r.sym));
-  const sorted = pool.slice().sort((a, b) => b.d1 - a.d1);
-  const item = r => `<button class="ana-mv" data-sym="${escapeHTML(r.sym)}"><b>${escapeHTML(r.name)}<small>${ANA_GROUP_NAMES[r.group]}</small></b><span class="ana-mono ${anaCls(r.d1)}">${anaPct(r.d1)}</span></button>`;
-  const ups = sorted.filter(r => r.d1 > 0).slice(0, 4), dns = sorted.filter(r => r.d1 < 0).reverse().slice(0, 4);
-  $('#ana-movers').innerHTML = `
-    <div><h4>▲ Maiores altas</h4>${ups.map(item).join('') || '<div class="ana-loading">Nenhum ativo em alta.</div>'}</div>
-    <div><h4>▼ Maiores quedas</h4>${dns.map(item).join('') || '<div class="ana-loading">Nenhum ativo em queda.</div>'}</div>`;
-  $$('#ana-movers .ana-mv').forEach(b => b.addEventListener('click', () => anaAddToCompare(b.dataset.sym)));
+/* ---- 3. Tabela de desempenho ---- */
+// bandeiras e ícones dos ativos (desenhados em SVG, sem emoji)
+const ANA_FLAG = {
+  br: '<rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.2 10 15 17.8 2.8 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/>',
+  us: '<rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/>',
+  eu: '<rect width="30" height="20" fill="#039"/><circle cx="15" cy="10" r="5.5" fill="none" stroke="#fc0" stroke-width="1.6" stroke-dasharray="1.2 1.68"/>',
+  de: '<rect width="30" height="6.67" fill="#000"/><rect y="6.67" width="30" height="6.67" fill="#d00"/><rect y="13.33" width="30" height="6.67" fill="#ffce00"/>',
+  uk: '<rect width="30" height="20" fill="#012169"/><path d="M0 0 30 20M30 0 0 20" stroke="#fff" stroke-width="4"/><path d="M0 0 30 20M30 0 0 20" stroke="#c8102e" stroke-width="1.6"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="6"/><path d="M15 0v20M0 10h30" stroke="#c8102e" stroke-width="3.4"/>',
+  jp: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5.6" fill="#bc002d"/>',
+  hk: '<rect width="30" height="20" fill="#de2910"/><circle cx="15" cy="10" r="4.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.4 1.2"/>',
+  cn: '<rect width="30" height="20" fill="#de2910"/><path d="M7 3.2l1.2 3.6h3.8l-3 2.2 1.1 3.6L7 10.4l-3.1 2.2L5 9 2 6.8h3.8z" fill="#ffde00"/>'
+};
+const ANA_FLAG_DE = {
+  '^GSPC': 'us', '^IXIC': 'us', '^NDX': 'us', '^DJI': 'us', '^RUT': 'us', '^VIX': 'us', '^GDAXI': 'de', '^STOXX50E': 'eu', '^FTSE': 'uk',
+  '^N225': 'jp', '^HSI': 'hk', '000001.SS': 'cn', 'DX-Y.NYB': 'us', 'EURUSD=X': 'eu', 'GBPUSD=X': 'uk', 'JPY=X': 'jp', 'EURBRL=X': 'eu', 'BRL=X': 'us', 'GBPBRL=X': 'uk'
+};
+const ANA_CRIPTO = { 'BTC-USD': ['#f7931a', 'B'], 'ETH-USD': ['#627eea', 'E'], 'SOL-USD': ['#7b4fe0', 'S'], 'ADA-USD': ['#0033ad', 'A'], 'XRP-USD': ['#3a4048', 'X'], 'DOGE-USD': ['#c2a633', 'D'] };
+const ANA_COMMOD = { 'CL=F': ['fa-droplet', '#8a94a6'], 'BZ=F': ['fa-droplet', '#8a94a6'], 'GC=F': ['fa-coins', '#e2b33c'], 'SI=F': ['fa-coins', '#b8c0cc'], 'KC=F': ['fa-mug-hot', '#a9774f'], 'ZS=F': ['fa-seedling', '#7cb342'] };
+function anaIcon(r) {
+  const f = ANA_FLAG_DE[r.sym] || (r.group === 'brasil' ? 'br' : r.group === 'juros' ? 'us' : null);
+  if (f) return `<svg class="aa-flag" viewBox="0 0 30 20" aria-hidden="true">${ANA_FLAG[f]}</svg>`;
+  const c = ANA_CRIPTO[r.sym];
+  if (c) return `<span class="aa-ico" style="background:${c[0]};color:#fff" aria-hidden="true">${c[1]}</span>`;
+  const m = ANA_COMMOD[r.sym] || ['fa-cube', 'var(--text-3)'];
+  return `<span class="aa-ico" aria-hidden="true"><i class="fa-solid ${m[0]}" style="color:${m[1]}"></i></span>`;
 }
+const ANA_TICK = { '^BVSP': 'IBOV', '^GSPC': 'SPX', 'DX-Y.NYB': 'DXY', 'BRL=X': 'USDBRL', 'JPY=X': 'USDJPY', '000001.SS': 'SSEC', '^GDAXI': 'DAX', '^STOXX50E': 'SX5E', '^FTSE': 'UKX' };
+const anaTick = (s) => ANA_TICK[s] || s.replace(/^\^/, '').replace(/\.SA$/, '').replace(/=X$/, '').replace(/-USD$/, 'USD').replace(/=F$/, '');
 
-/* ---- 4. Tabela ---- */
+// colunas: as "extras" só aparecem com "Mais métricas"
 const ANA_COLS = [
-  ['name', 'Ativo', 'l'], ['price', 'Preço'], ['d1', 'Dia', '', 3], ['m1', '1 mês', '', 8], ['m3', '3 meses', '', 15],
-  ['ytd', 'No ano', '', 25], ['m12', '12 meses', '', 35], ['hi', 'Da máxima'], ['vol', 'Volatilidade'], ['trend', 'Tendência'], ['spark', '3 meses', 'nosort']
+  ['name', 'Ativo', 'l'], ['price', 'Preço'], ['d1', 'Dia'], ['m1', 'Mês'],
+  ['m3', '3 meses', 'x'], ['ytd', 'No ano', 'x'], ['m12', '12 meses', 'x'], ['hi', 'Da máxima', 'x'], ['vol', 'Volatilidade', 'x'],
+  ['trend', 'Tendência', 'l']
 ];
+let anaBusca = '';
+const anaSem = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const anaCmpList = () => anaPrefs.cmp.filter(s => s && ANA_BY_SYM[s]).slice(0, 3);
 function anaRenderTable(rows) {
-  ecalChips($('#ana-filter'), [['all', 'Todos'], ...Object.entries(ANA_GROUP_NAMES)], anaPrefs.filter, v => {
-    anaPrefs.filter = v; anaSavePrefs(); anaRender();
-  });
+  const pills = $('#ana-filter');
+  pills.innerHTML = [['all', 'Todos'], ...Object.entries(ANA_GROUP_NAMES)].map(([v, l]) =>
+    `<button type="button" class="${v === anaPrefs.filter ? 'on' : ''}" data-v="${v}" aria-pressed="${v === anaPrefs.filter}">${l}</button>`).join('');
+  pills.onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) { anaPrefs.filter = b.dataset.v; anaSavePrefs(); anaRender(); } };
+  const mais = !!anaPrefs.mais;
+  const mb = $('#ana-mais');
+  mb.setAttribute('aria-pressed', mais);
+  mb.onclick = () => { anaPrefs.mais = !anaPrefs.mais; anaSavePrefs(); anaRender(); };
+  const busca = $('#ana-busca');
+  if (!busca.dataset.ok) {
+    busca.dataset.ok = '1';
+    busca.addEventListener('input', () => { anaBusca = busca.value; anaRenderTable(ANA_ASSETS.map(anaRow)); });
+  }
   const { key, dir } = anaPrefs.sort;
   const tval = { up: 1, flat: 0, dn: -1 };
-  const list = rows.filter(r => anaPrefs.filter === 'all' || r.group === anaPrefs.filter).sort((a, b) => {
+  const q = anaSem(anaBusca.trim());
+  const list = rows.filter(r => (anaPrefs.filter === 'all' || r.group === anaPrefs.filter) && (!q || anaSem(r.name + ' ' + anaTick(r.sym) + ' ' + r.sym).includes(q))).sort((a, b) => {
     let va = a[key], vb = b[key];
     if (key === 'trend') { va = tval[va]; vb = tval[vb]; }
     if (key === 'name') return dir * a.name.localeCompare(b.name, 'pt-BR');
@@ -3725,50 +3759,59 @@ function anaRenderTable(rows) {
     if (vb == null) return -1;
     return dir * (va - vb);
   });
-  const head = ANA_COLS.map(([k, label, cls]) =>
-    `<th class="${cls || ''}" data-k="${k}">${label}${k === key ? `<span class="arw">${dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
+  const cols = ANA_COLS.filter(c => mais || c[2] !== 'x');
+  const sel = anaCmpList();
+  const head = `<th class="c"><input type="checkbox" id="ana-sel-all" aria-label="Limpar seleção"${sel.length ? ' checked' : ''}></th>` + cols.map(([k, label, cls]) =>
+    `<th class="${cls === 'l' ? 'l' : ''}" data-k="${k}">${label}${k === key ? `<span class="arw">${dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
+  const pct = (r, k) => `<td class="${anaCls(r[k])}">${anaPct(r[k])}</td>`;
   const body = list.map(r => {
-    const heat = (k, sc) => `<td class="ana-heat ${anaCls(r[k])}" style="${anaHeat(r[k], sc)}">${anaPct(r[k])}</td>`;
+    const on = sel.includes(r.sym);
     const hi = r.hi == null ? '—' : r.hi > -0.05 ? 'na máxima' : anaPct(r.hi, 1);
-    const tr = r.trend === 'up' ? '<span class="ana-trend up">▲ Alta</span>' : r.trend === 'dn' ? '<span class="ana-trend dn">▼ Baixa</span>' : r.trend === 'flat' ? '<span class="ana-trend">■ Lateral</span>' : '—';
-    return `<tr data-sym="${escapeHTML(r.sym)}">
-      <td class="l"><span class="ana-asset"><b>${escapeHTML(r.name)}</b><small>${ANA_GROUP_NAMES[r.group]}</small></span></td>
-      <td>${anaPrice(r, r.price)}</td>
-      ${heat('d1', 3)}${heat('m1', 8)}${heat('m3', 15)}${heat('ytd', 25)}${heat('m12', 35)}
-      <td class="${r.hi != null && r.hi > -0.05 ? 'ana-up' : ''}">${hi}</td>
-      <td>${r.vol == null ? '—' : fmtNumber(r.vol, { min: 1, max: 1 }) + '%'}</td>
-      <td>${tr}</td>
-      <td>${anaSparkSVG(r.spark)}</td>
-    </tr>`;
+    const tcor = r.trend === 'up' ? 'var(--pos)' : r.trend === 'dn' ? 'var(--neg)' : 'var(--text-3)';
+    const tr = r.trend === 'up' ? '<span class="aa-t up">Alta</span>' : r.trend === 'dn' ? '<span class="aa-t dn">Baixa</span>' : r.trend === 'flat' ? '<span class="aa-t">Lateral</span>' : '<span class="aa-t">—</span>';
+    const cel = {
+      name: `<td class="l"><span class="aa-ativo">${anaIcon(r)}<span><b>${escapeHTML(r.name)}</b><small>${escapeHTML(anaTick(r.sym))}</small></span></span></td>`,
+      price: `<td>${anaPrice(r, r.price)}</td>`,
+      d1: pct(r, 'd1'), m1: pct(r, 'm1'), m3: pct(r, 'm3'), ytd: pct(r, 'ytd'), m12: pct(r, 'm12'),
+      hi: `<td class="${r.hi != null && r.hi > -0.05 ? 'ana-up' : ''}">${hi}</td>`,
+      vol: `<td>${r.vol == null ? '—' : fmtNumber(r.vol, { min: 1, max: 1 }) + '%'}</td>`,
+      trend: `<td class="l"><span class="aa-trend">${r.spark && r.spark.length > 1 ? anaSparkSVG(r.spark.slice(-22), 64, 22, tcor) : '<span class="ana-spark"></span>'}${tr}</span></td>`
+    };
+    return `<tr data-sym="${escapeHTML(r.sym)}" class="${on ? 'on' : ''}"><td class="c"><input type="checkbox"${on ? ' checked' : ''} aria-label="Comparar ${escapeHTML(r.name)}"></td>${cols.map(c => cel[c[0]]).join('')}</tr>`;
   }).join('');
   const t = $('#ana-table');
-  t.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || '<tr><td class="l" colspan="11">Nenhum ativo.</td></tr>'}</tbody>`;
+  t.classList.toggle('mais', mais);
+  t.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || `<tr><td class="l" colspan="${cols.length + 1}">Nenhum ativo encontrado.</td></tr>`}</tbody>`;
   t.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
     const k = th.dataset.k;
-    if (k === 'spark') return;
     anaPrefs.sort = { key: k, dir: anaPrefs.sort.key === k ? -anaPrefs.sort.dir : (k === 'name' ? 1 : -1) };
     anaSavePrefs(); anaRender();
   }));
-  t.querySelectorAll('tbody tr[data-sym]').forEach(tr => tr.addEventListener('click', () => anaAddToCompare(tr.dataset.sym)));
+  $('#ana-sel-all').addEventListener('click', (e) => { e.preventDefault(); anaPrefs.cmp = []; anaSavePrefs(); anaRenderTable(ANA_ASSETS.map(anaRow)); anaRenderCompare(); });
+  t.querySelectorAll('tbody tr[data-sym]').forEach(tr => tr.addEventListener('click', (e) => { e.preventDefault(); anaToggleCompare(tr.dataset.sym); }));
+  const n = sel.length;
+  $('#ana-sel-n').textContent = n ? `${n} ${n === 1 ? 'ativo selecionado' : 'ativos selecionados'}` : 'Marque até 3 ativos';
+  const go = $('#ana-cmp-go');
+  go.disabled = !n;
+  go.onclick = () => { const c = $('#ana-cmp-card'); c?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); c?.classList.remove('aa-pisca'); void c?.offsetWidth; c?.classList.add('aa-pisca'); };
 }
 
-/* ---- 5. Comparador ---- */
+/* ---- 4. Comparador ---- */
 const ANA_PERIODS = [['1M', '1M', 30], ['3M', '3M', 91], ['6M', '6M', 182], ['1A', '1A', 365]];
+const ANA_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
-function anaAddToCompare(sym) {
+// marca ou desmarca um ativo no comparador (até 3)
+function anaToggleCompare(sym) {
   if (!ANA_BY_SYM[sym]) return;
-  const cmp = anaPrefs.cmp.slice(0, 3);
-  if (!cmp.includes(sym)) {
-    const free = cmp.findIndex(s => !s);
-    if (free >= 0) cmp[free] = sym;
-    else if (cmp.length < 3) cmp.push(sym);
-    else { cmp.shift(); cmp.push(sym); }
-  }
+  const cmp = anaCmpList();
+  const i = cmp.indexOf(sym);
+  if (i >= 0) cmp.splice(i, 1);
+  else if (cmp.length >= 3) { toast('O comparador aceita até 3 ativos', 'info'); return; }
+  else cmp.push(sym);
   anaPrefs.cmp = cmp;
   anaSavePrefs();
+  anaRenderTable(ANA_ASSETS.map(anaRow));
   anaRenderCompare();
-  $('#ana-chart')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  toast(`${ANA_BY_SYM[sym].name} no comparador`, 'info');
 }
 
 // Alinha as séries por data (dia da bolsa), repetindo o último fechamento nos dias sem pregão
@@ -3794,54 +3837,35 @@ function anaAlign(syms, days) {
   return { series, maps, rows };
 }
 
-function anaCorr(ma, mb, fromDay) {
-  const days = [...ma.keys()].filter(d => d >= fromDay && mb.has(d)).sort();
-  const ra = [], rb = [];
-  for (let i = 1; i < days.length; i++) {
-    const a0 = ma.get(days[i - 1]), a1 = ma.get(days[i]), b0 = mb.get(days[i - 1]), b1 = mb.get(days[i]);
-    if (a0 > 0 && a1 > 0 && b0 > 0 && b1 > 0) { ra.push(Math.log(a1 / a0)); rb.push(Math.log(b1 / b0)); }
-  }
-  if (ra.length < 10) return null;
-  const ma_ = ra.reduce((a, b) => a + b, 0) / ra.length, mb_ = rb.reduce((a, b) => a + b, 0) / rb.length;
-  let cov = 0, va = 0, vb = 0;
-  for (let i = 0; i < ra.length; i++) { cov += (ra[i] - ma_) * (rb[i] - mb_); va += (ra[i] - ma_) ** 2; vb += (rb[i] - mb_) ** 2; }
-  return va && vb ? cov / Math.sqrt(va * vb) : null;
-}
-function anaCorrLabel(r) {
-  if (r == null) return '—';
-  const a = Math.abs(r);
-  const f = a >= 0.7 ? 'forte' : a >= 0.4 ? 'moderada' : 'fraca';
-  return `${fmtNumber(r, { min: 2, max: 2 })} (${f}${r < 0 ? ', inversa' : ''})`;
-}
-
 function anaRenderCompare() {
-  // seletores
-  const opts = (sel) => '<option value="">—</option>' + Object.entries(ANA_GROUP_NAMES).map(([g, gn]) =>
-    `<optgroup label="${gn}">${ANA_ASSETS.filter(a => a.group === g).map(a => `<option value="${escapeHTML(a.sym)}"${a.sym === sel ? ' selected' : ''}>${escapeHTML(a.name)}</option>`).join('')}</optgroup>`).join('');
-  while (anaPrefs.cmp.length < 3) anaPrefs.cmp.push('');
-  $('#ana-cmp-sel').innerHTML = [0, 1, 2].map(i =>
-    `<label><i style="background:${ANA_COLORS[i]}"></i><select data-i="${i}" aria-label="Ativo ${i + 1}">${opts(anaPrefs.cmp[i])}</select></label>`).join('');
-  $$('#ana-cmp-sel select').forEach(s => s.addEventListener('change', () => {
-    anaPrefs.cmp[+s.dataset.i] = s.value; anaSavePrefs(); anaRenderCompare();
-  }));
-  ecalChips($('#ana-periods'), ANA_PERIODS.map(p => [p[0], p[1]]), anaPrefs.period, v => { anaPrefs.period = v; anaSavePrefs(); anaRenderCompare(); });
+  const cmp = anaCmpList();
+  const colorOf = Object.fromEntries(cmp.map((s, i) => [s, ANA_COLORS[i]]));
+  // chips com o x para tirar, e um seletor para incluir sem passar pela tabela
+  const livres = ANA_ASSETS.filter(a => !cmp.includes(a.sym));
+  const opts = '<option value="">+ Adicionar</option>' + Object.entries(ANA_GROUP_NAMES).map(([g, gn]) =>
+    `<optgroup label="${gn}">${livres.filter(a => a.group === g).map(a => `<option value="${escapeHTML(a.sym)}">${escapeHTML(a.name)}</option>`).join('')}</optgroup>`).join('');
+  const chips = $('#ana-cmp-sel');
+  chips.innerHTML = cmp.map(s => `<span class="aa-chip"><i style="background:${colorOf[s]}"></i>${escapeHTML(ANA_BY_SYM[s].name)}<button type="button" data-s="${escapeHTML(s)}" aria-label="Tirar ${escapeHTML(ANA_BY_SYM[s].name)}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></span>`).join('')
+    + (cmp.length < 3 ? `<select class="aa-add" aria-label="Adicionar ativo ao comparador">${opts}</select>` : '');
+  chips.onclick = (e) => { const b = e.target.closest('button[data-s]'); if (b) anaToggleCompare(b.dataset.s); };
+  const add = chips.querySelector('select');
+  if (add) add.onchange = () => { if (add.value) anaToggleCompare(add.value); };
+  const seg = $('#ana-periods');
+  seg.innerHTML = ANA_PERIODS.map(p => `<button type="button" class="${p[0] === anaPrefs.period ? 'on' : ''}" data-v="${p[0]}" aria-pressed="${p[0] === anaPrefs.period}">${p[1]}</button>`).join('');
+  seg.onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) { anaPrefs.period = b.dataset.v; anaSavePrefs(); anaRenderCompare(); } };
 
-  const picked = anaPrefs.cmp.map((s, i) => ({ sym: s, color: ANA_COLORS[i] })).filter(x => x.sym && ANA_BY_SYM[x.sym]);
   const chart = $('#ana-chart'), cards = $('#ana-cmp-cards');
-  if (!picked.length) { chart.innerHTML = '<div class="ana-loading">Escolha até 3 ativos acima.</div>'; cards.innerHTML = ''; return; }
+  if (!cmp.length) { chart.innerHTML = '<div class="ana-loading">Marque até 3 ativos na tabela ao lado.</div>'; cards.innerHTML = ''; return; }
   const days = (ANA_PERIODS.find(p => p[0] === anaPrefs.period) || ANA_PERIODS[1])[2];
-  const al = anaAlign(picked.map(p => p.sym), days);
+  const al = anaAlign(cmp, days);
   if (!al) { chart.innerHTML = '<div class="ana-loading">Histórico indisponível para esses ativos.</div>'; cards.innerHTML = ''; return; }
-  const colorOf = Object.fromEntries(picked.map(p => [p.sym, p.color]));
   const lines = al.series.map((x, i) => {
     const base = al.rows[0].v[i];
     return { sym: x.sym, color: colorOf[x.sym], name: ANA_BY_SYM[x.sym].name, pts: al.rows.map(r => r.v[i] / base * 100) };
   });
 
-  // SVG
-  const W = Math.max(300, Math.round(chart.clientWidth || 700));
-  const narrow = W < 520;
-  const H = narrow ? 240 : 300, padL = 38, padR = narrow ? 64 : 165, padT = 12, padB = 26;
+  const W = Math.max(280, Math.round(chart.clientWidth || 500));
+  const H = W < 420 ? 220 : 260, padL = 34, padR = 58, padT = 10, padB = 24;
   const all = lines.flatMap(l => l.pts).concat(100);
   let min = Math.min(...all), max = Math.max(...all);
   const pad = (max - min) * 0.08 || 1; min -= pad; max += pad;
@@ -3852,23 +3876,28 @@ function anaRenderCompare() {
   const step = Math.pow(10, Math.floor(Math.log10((max - min) / 4)));
   const st = [1, 2, 2.5, 5, 10].map(m => m * step).find(s => (max - min) / s <= 5) || step * 10;
   for (let v = Math.ceil(min / st) * st; v <= max; v += st) ticks.push(v);
-  const fmtD = d => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
-  const xt = [0, Math.floor((n - 1) / 2), n - 1];
-  // rótulos no fim da linha, afastados para não encavalar
+  // eixo de baixo: nome do mês no primeiro pregão de cada mês; em 1 mês, datas
+  let xt = [];
+  if (days <= 31) xt = [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1].map(i => [i, `${al.rows[i].d.slice(8, 10)}/${al.rows[i].d.slice(5, 7)}`]);
+  else {
+    al.rows.forEach((r, i) => { if (i > 0 && r.d.slice(5, 7) !== al.rows[i - 1].d.slice(5, 7)) xt.push([i, ANA_MES[+r.d.slice(5, 7) - 1]]); });
+    if (xt.length > 7) xt = xt.filter((_, j) => j % 2 === 0);
+  }
+  // etiquetas no fim da linha, afastadas para não encavalar
   const ends = lines.map(l => ({ l, y: Y(l.pts[n - 1]) })).sort((a, b) => a.y - b.y);
-  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
-  const svg = `
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Comparação em base 100">
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 20) ends[i].y = ends[i - 1].y + 20;
+  chart.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Retorno acumulado em base 100">
       ${ticks.map(v => `<line class="grid" x1="${padL}" x2="${W - padR}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="axis" x="${padL - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${fmtNumber(v, { min: 0, max: st < 1 ? 1 : 0 })}</text>`).join('')}
+      ${xt.map(([i]) => `<line class="grid v" x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${padT}" y2="${H - padB}"/>`).join('')}
       <line class="base" x1="${padL}" x2="${W - padR}" y1="${Y(100).toFixed(1)}" y2="${Y(100).toFixed(1)}"/>
-      ${xt.map(i => `<text class="axis" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}">${fmtD(al.rows[i].d)}</text>`).join('')}
+      ${xt.map(([i, t]) => `<text class="axis" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${t}</text>`).join('')}
       ${lines.map(l => `<polyline points="${l.pts.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${l.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
-      ${ends.map(({ l, y }) => `<circle cx="${X(n - 1).toFixed(1)}" cy="${Y(l.pts[n - 1]).toFixed(1)}" r="3" fill="${l.color}"/><text class="endlbl" x="${(X(n - 1) + 8).toFixed(1)}" y="${(y + 4).toFixed(1)}" fill="${l.color}">${narrow ? '' : escapeHTML(l.name.length > 12 ? l.name.slice(0, 11) + '…' : l.name) + ' '}${anaPct(l.pts[n - 1] - 100, 1)}</text>`).join('')}
+      ${ends.map(({ l, y }) => `<circle cx="${X(n - 1).toFixed(1)}" cy="${Y(l.pts[n - 1]).toFixed(1)}" r="3.5" fill="${l.color}"/><rect x="${(X(n - 1) + 8).toFixed(1)}" y="${(y - 9).toFixed(1)}" width="46" height="18" rx="5" fill="${l.color}"/><text class="endtag" x="${(X(n - 1) + 31).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${fmtNumber(l.pts[n - 1], { min: 1, max: 1 })}</text>`).join('')}
       <line class="cursor" id="ana-cursor" x1="0" x2="0" y1="${padT}" y2="${H - padB}" visibility="hidden"/>
       <rect x="${padL}" y="${padT}" width="${W - padL - padR}" height="${H - padT - padB}" fill="transparent" id="ana-hit"/>
     </svg>
     <div class="ana-tip" id="ana-tip" hidden></div>`;
-  chart.innerHTML = svg;
   const hit = $('#ana-hit'), cur = $('#ana-cursor'), tip = $('#ana-tip');
   const move = (ev) => {
     const box = chart.querySelector('svg').getBoundingClientRect();
@@ -3888,31 +3917,11 @@ function anaRenderCompare() {
   hit.addEventListener('pointerdown', move);
   hit.addEventListener('pointerleave', leave);
 
-  // cards
-  const fromDay = al.rows[0].d;
-  cards.innerHTML = lines.map((l, i) => {
-    const vals = al.rows.map(r => r.v[i]);
-    const a = ANA_BY_SYM[l.sym];
-    let peak = vals[0], dd = 0;
-    vals.forEach(v => { peak = Math.max(peak, v); dd = Math.min(dd, v / peak - 1); });
-    const realVals = [...al.maps[i].entries()].filter(([d]) => d >= fromDay).sort((x, y) => x[0] < y[0] ? -1 : 1).map(e => e[1]);
-    const sd = anaStdev(anaLogRets(realVals));
-    const vol = sd == null ? null : sd * anaAnnual(l.sym) * 100;
-    const corr = lines.map((o, j) => j === i ? '' : `<div>com ${escapeHTML(o.name)}: <b>${anaCorrLabel(anaCorr(al.maps[i], al.maps[j], fromDay))}</b></div>`).join('');
-    return `<div class="ana-cc" style="--c:${l.color}">
-      <h4>${escapeHTML(l.name)}</h4>
-      <dl>
-        <dt>Retorno no período</dt><dd class="${anaCls(l.pts[n - 1] - 100)}">${anaPct(l.pts[n - 1] - 100)}</dd>
-        <dt>Mínima</dt><dd>${anaPrice(a, Math.min(...vals))}</dd>
-        <dt>Máxima</dt><dd>${anaPrice(a, Math.max(...vals))}</dd>
-        <dt>Maior queda</dt><dd class="${dd < 0 ? 'ana-dn' : ''}">${anaPct(dd * 100)}</dd>
-        <dt>Volatilidade anual</dt><dd>${vol == null ? '—' : fmtNumber(vol, { min: 1, max: 1 }) + '%'}</dd>
-      </dl>
-      ${lines.length > 1 ? `<div class="corr">Correlação dos retornos diários${corr}</div>` : ''}
-    </div>`;
-  }).join('');
-  const missing = picked.filter(p => !al.series.some(x => x.sym === p.sym));
-  if (missing.length) cards.insertAdjacentHTML('beforeend', `<p class="ana-foot">Sem histórico: ${missing.map(p => escapeHTML(ANA_BY_SYM[p.sym].name)).join(', ')}.</p>`);
+  // tabela de retorno acumulado no período
+  cards.innerHTML = `<table class="aa-ret"><thead><tr><th>Ativo</th><th>Retorno acumulado</th></tr></thead><tbody>${lines.map(l =>
+    `<tr><td><i style="background:${l.color}"></i>${escapeHTML(l.name)} <small>(${escapeHTML(anaTick(l.sym))})</small></td><td class="${anaCls(l.pts[n - 1] - 100)}">${anaPct(l.pts[n - 1] - 100, 1)}</td></tr>`).join('')}</tbody></table>`;
+  const missing = cmp.filter(s => !al.series.some(x => x.sym === s));
+  if (missing.length) cards.insertAdjacentHTML('beforeend', `<p class="ana-foot">Sem histórico: ${missing.map(s => escapeHTML(ANA_BY_SYM[s].name)).join(', ')}.</p>`);
 }
 
 /* ---- Mini gráfico de 3 meses dentro dos cards de cotação ----
@@ -3990,17 +3999,17 @@ function anaRender() {
   const rows = ANA_ASSETS.map(anaRow);
   anaRenderMood(rows);
   anaRenderBreadth(rows);
-  anaRenderMovers(rows);
   anaRenderTable(rows);
   anaRenderCompare();
   anaRenderUsage();
 }
 
+// abre quando a aba "Análise avançada" das Análises fica visível (barra de seções em ana-secoes.js)
 async function anaOpenSection() {
+  if (anaOpen) return;
   anaOpen = true;
   $('#ana-body').classList.remove('hidden');
-  $('#ana-toggle').setAttribute('aria-expanded', 'true');
-  ['#ana-mood', '#ana-breadth', '#ana-movers'].forEach(s => { if (!$(s).innerHTML) $(s).innerHTML = '<div class="ana-loading">Carregando…</div>'; });
+  ['#ana-mood', '#ana-breadth'].forEach(s => { if (!$(s).innerHTML) $(s).innerHTML = '<div class="ana-loading">Carregando…</div>'; });
   try { await ensureYahooBatch(); } catch (e) { /* segue com o histórico */ }
   anaRender();
   try { await anaEnsureHist(); } catch (e) { /* segue */ }
@@ -4009,12 +4018,8 @@ async function anaOpenSection() {
   anaRender();
   anaDecorateCards();
 }
-function anaCloseSection() {
-  anaOpen = false;
-  $('#ana-body').classList.add('hidden');
-  $('#ana-toggle').setAttribute('aria-expanded', 'false');
-}
-$('#ana-toggle')?.addEventListener('click', () => (anaOpen ? anaCloseSection() : anaOpenSection()));
+const anaVisivel = () => $('#analysis-panel')?.classList.contains('active') && $('#analysis-panel .ana-wrap')?.dataset.secao === 'mercado';
+window.__anaAbrir = () => { if (anaVisivel()) anaOpenSection(); };
 
 // Histórico do dia já salvo: mostra o status e os mini gráficos sem nenhuma requisição
 (() => {
@@ -4061,7 +4066,7 @@ updateMarketPanel = async function (silent = false) {
 };
 window.__onTabSwitch = (tabId) => {
   if (tabId === 'market-panel' && liveMode && !document.hidden && Date.now() - marketPanelTs >= currentRefreshMs()) updateMarketPanel(true);
-  if (tabId === 'analysis-panel' && anaOpen) setTimeout(anaRender, 50);
+  if (tabId === 'analysis-panel') setTimeout(() => { if (anaOpen) anaRender(); else window.__anaAbrir(); }, 50);
 };
 
 /* =========================================================
@@ -4434,7 +4439,7 @@ window.__onTabSwitch = (tabId) => {
     ['fa-newspaper', 'Gerar briefing de notícias', 'briefing noticias', () => { switchTab('news-panel'); setTimeout(() => $('#briefing-btn')?.click(), 250); }],
     ['fa-calendar-week', 'Agenda da semana', 'calendario eventos', () => $('#ecal-week-btn')?.click()],
     ['fa-file-export', 'Exportar agenda (.ics)', 'google outlook calendario', () => { switchTab('calendar-panel'); setTimeout(() => $('#ecal-ics-btn')?.click(), 250); }],
-    ['fa-chart-line', 'Análise avançada', 'humor comparador desempenho', () => { switchTab('analysis-panel'); setTimeout(() => { if (!anaOpen) $('#ana-toggle')?.click(); }, 250); }]
+    ['fa-chart-line', 'Análise avançada', 'humor comparador desempenho', () => { switchTab('analysis-panel'); setTimeout(() => window.__anaSecao?.('mercado'), 250); }]
   ].map(([ic, label, kw, run]) => ({ sec: 'Ações', icon: `<i class="fas ${ic}"></i>`, label, kw, run }));
 
   const assetsList = () => MARKET_SECTIONS.flatMap(sec => sec.items.map(it => {

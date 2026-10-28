@@ -10,7 +10,7 @@
     ['copom', 'Copom', 'flag-br'],
     ['cot', 'Especuladores', 'fa-scale-balanced'],
     ['f13', 'Grandes fundos', 'fa-briefcase'],
-    ['mercado', 'Mercado', 'fa-chart-line']
+    ['mercado', 'Análise avançada', 'fa-chart-line']
   ];
   const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'fed', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13' };
   // Fed e Copom usam as bandeirinhas no lugar do ícone
@@ -51,6 +51,7 @@
     pilula();
     // gráficos desenhados com a largura real: avisa que a área mudou
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    if (k === 'mercado') window.__anaAbrir?.();   // a Análise avançada só busca dados quando aparece
   }
   nav.addEventListener('click', (e) => { const b = e.target.closest('[data-secao]'); if (b) mostra(b.dataset.secao); });
   window.addEventListener('resize', pilula);
@@ -98,7 +99,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) fechaCheia(); });
 
   // os cartões de destaque levam à seção certa
-  window.__anaSecao = (id) => { const k = ALVO[id]; if (k) mostra(k); return !!k; };
+  window.__anaSecao = (id) => { const k = ALVO[id] || (SECOES.some(([s]) => s === id) ? id : null); if (k) mostra(k); return !!k; };
   nav.classList.add('sem-anim');
   mostra(secao, false);
   requestAnimationFrame(() => requestAnimationFrame(() => nav.classList.remove('sem-anim')));
@@ -117,9 +118,8 @@
   body:not(.light) .aj-pill { background:var(--accent); }
   body:not(.light) .ana-jump button.on { color:#17120a; }
   .ana-jump.sem-anim .aj-pill { transition:none; }
-  .ana-wrap[data-secao]:not([data-secao="mercado"]) > .refresh-bar,
-  .ana-wrap[data-secao]:not([data-secao="mercado"]) > #ana-toggle,
   .ana-wrap[data-secao]:not([data-secao="mercado"]) > #ana-body,
+  .ana-wrap[data-secao="mercado"] > #ana-destaques,
   .ana-wrap[data-secao="mercado"] > .ana-extra,
   .ana-wrap[data-secao="fluxo"] .ana-extra > .market-section:not(#ana-sec-fluxo),
   .ana-wrap[data-secao="fed"] .ana-extra > .market-section:not(#ana-sec-fed),
@@ -130,6 +130,8 @@
   .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f) { display:none !important; }
   /* seções no formato do Resumo semanal: cartão centralizado, título grande e margens fixas (28/10/2026) */
   #analysis-panel .ana-wrap { width:100%; max-width:1180px; margin-left:auto; margin-right:auto; }
+  /* a Análise avançada é um painel com colunas lado a lado: usa mais largura */
+  #analysis-panel .ana-wrap[data-secao="mercado"] { max-width:1520px; }
   .ana-extra > .market-section { padding:20px 24px 22px; border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
   .ana-extra > .market-section > .market-section-head { border-bottom:0; padding-bottom:0; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
   .ana-extra > .market-section > .market-section-head .sec-icon { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:13px; }
