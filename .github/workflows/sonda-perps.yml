@@ -7,8 +7,4 @@ jobs:
     steps:
       - shell: bash {0}
         run: |
-          W=https://shrill-meadow-89c1.danilo-nillo.workers.dev
-          curl -s -m 30 -H 'Origin: https://mercadomacro.com.br' "$W/b3?s=IBOV,IFIX,PETR4,VALE3,ITUB4,BBAS3&mmp=vitrine" | head -c 400; echo
-          curl -s -m 30 -H 'Origin: https://mercadomacro.com.br' "$W/b3?s=IBOV&mmp=vitrine" | head -c 200; echo
-          curl -s -m 30 https://mercadomacro.com.br/ | grep -o 'app.js?v=[0-9]*'
-          curl -s -m 30 https://mercadomacro.com.br/app.js?v=99 | grep -c 'b3Cotacoes'
+          for id in BOPGSTB BOPTEXP BOPTIMP; do echo "== $id"; curl -s -m 30 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=$id&cosd=2000-01-01" | tr '\n' ' '; echo; done
