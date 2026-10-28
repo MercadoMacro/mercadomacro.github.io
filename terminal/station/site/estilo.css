@@ -3127,3 +3127,5 @@ html body .mj-n { font-size:9.5px; }
   #fed-root .fw-bl, #copom-root .fw-bl { grid-area:l; } #fed-root .fw-bt, #copom-root .fw-bt { grid-area:t; }
   #fed-root .fw-bv, #copom-root .fw-bv { grid-area:v; } #fed-root .fw-bc, #copom-root .fw-bc { grid-area:c; }
 }
+.pj-sub { align-items:center; }
+.pj-flag { width:21px; height:14px; flex:none; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
