@@ -214,7 +214,7 @@
   });
 
   const nomeMov = (s) => (s === 0 ? 'Manter' : s > 0 ? `Alta de ${s * 25} bp` : `Corte de ${-s * 25} bp`);
-  const tomMov = (s) => (s === 0 ? 'fw-man' : s > 0 ? 'fw-alta' : 'fw-corte');
+  const tomMov = (s) => (s === 0 ? 'fw-man' : s > 0 ? 'fw-alta' : 'fw-corte');   // manter âmbar, corte verde, alta vermelho
 
   function draw() {
     if (!root) return;
@@ -245,62 +245,85 @@
     const mudanca = (R.fim - effr) * 100;
     const faltam = diasAte(R.data);
 
-    const chips = agora.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}">${curta(x.data)}${x.sep ? '<i title="Reunião com projeções econômicas">*</i>' : ''}</button>`).join('');
+    const ate = (x) => { const d = diasAte(x.data); return d === 0 ? 'Hoje' : d === 1 ? 'amanhã' : `${d} dias`; };
+    const SEP = '<i class="fa-solid fa-chart-simple fw-sep" title="Inclui projeções econômicas (FOMC)" aria-label="com projeções econômicas"></i>';
+    const chips = agora.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}" aria-pressed="${i === sel}"><b>${curta(x.data)}${x.sep ? SEP : ''}</b><small>${ate(x)}</small></button>`).join('');
+    // variação do preço com seta: subir o preço = taxa implícita menor
+    const variaH = (a, b) => (ok(a) && ok(b) ? `<em class="${a - b > 0.0005 ? 'fw-up' : a - b < -0.0005 ? 'fw-dn' : ''}">${a - b > 0.0005 ? '▲' : a - b < -0.0005 ? '▼' : ''} ${varia(a, b)}</em>` : '<em>—</em>');
+    const corEst = (st) => ({ 0: 'var(--accent)', '-1': '#22c55e', '-2': '#16a34a', '-3': '#15803d', 1: '#f97316', 2: '#ef4444', 3: '#b91c1c' }[st] || '#94a3b8');
 
-    const barras = estados.map((s) => {
-      const p = R.dist[s], po = ontem[sel]?.dist?.[s] ?? (ontem[sel] ? 0 : null), ps = semana[sel]?.dist?.[s] ?? (semana[sel] ? 0 : null);
-      return `<div class="fw-bar${s === maisProv ? ' top' : ''}">
-        <div class="fw-bl"><b>${faixa(s)}</b><span class="${tomMov(s)}">${s === 0 ? 'Manter (faixa atual)' : nomeMov(s)}</span></div>
-        <div class="fw-bt"><i style="width:${Math.max(0.5, p).toFixed(1)}%"></i></div>
+    // barra empilhada: a divisão das chances numa linha só (aparece quando há mais de uma faixa possível)
+    const vis = estados.filter((st) => R.dist[st] >= 0.5);
+    const pilha = vis.length > 1 ? `<div class="fw-pilha" role="img" aria-label="${vis.map((st) => `${faixa(st)}: ${pct(R.dist[st])}`).join(', ')}">${vis.map((st) =>
+      `<i style="flex:${R.dist[st].toFixed(2)};background:${corEst(st)}" title="${faixa(st)} · ${nomeMov(st)}: ${pct(R.dist[st])}">${R.dist[st] >= 30 ? `<span>${faixa(st)} · ${pct(R.dist[st])}</span>` : R.dist[st] >= 12 ? `<span>${pct(R.dist[st])}</span>` : ''}</i>`).join('')}</div>` : '';
+
+    const barras = estados.filter((st) => R.dist[st] >= 0.05 || st === 0).map((st) => {
+      const p = R.dist[st] || 0, po = ontem[sel]?.dist?.[st] ?? (ontem[sel] ? 0 : null), ps = semana[sel]?.dist?.[st] ?? (semana[sel] ? 0 : null);
+      return `<div class="fw-bar${st === maisProv ? ' top' : ''}">
+        <div class="fw-bl"><b>${faixa(st)}</b><span class="${tomMov(st)}">${st === 0 ? 'Manter (faixa atual)' : nomeMov(st)}</span></div>
+        <div class="fw-bt"><i style="width:${Math.max(0.5, p).toFixed(1)}%;background:${corEst(st)}">${p >= 25 ? `<span>${pct(p)}</span>` : ''}</i></div>
         <div class="fw-bv">${pct(p)}</div>
         <div class="fw-bc">ontem ${pct(po)} <span>·</span> 1 semana ${pct(ps)}</div>
       </div>`;
     }).join('');
 
-    // tabela: todas as reuniões x faixas
+    // tabela: todas as reuniões x faixas, como mapa de calor (quanto maior a chance, mais forte a cor)
     const cols = [...new Set(agora.flatMap((x) => Object.keys(x.dist).filter((k) => x.dist[k] >= 0.5).map(Number)))].sort((a, b) => a - b);
-    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((s) => `<th>${faixa(s)}</th>`).join('')}<th>Contrato</th><th>Taxa esperada</th></tr></thead><tbody>${agora.map((x, i) => {
+    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((st) => `<th>${faixa(st)}</th>`).join('')}<th class="fw-ct">Contrato</th><th>Preço</th><th>Taxa esperada</th></tr></thead><tbody>${agora.map((x, i) => {
       const mx = Math.max(...Object.values(x.dist));
-      return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}${x.sep ? ' *' : ''}</td>${cols.map((s) => {
-        const p = x.dist[s];
-        if (!ok(p) || p < 0.05) return '<td class="z">—</td>';
-        return `<td class="${p === mx ? 'mx' : ''}" style="--a:${Math.min(1, p / 100).toFixed(3)}">${num(p, 1)}%</td>`;
-      }).join('')}<td class="fw-ct" title="Contrato de Fed Funds usado na conta">${esc(tick(x.usado))} <b>${num(px.agora[x.usado], 3)}</b></td><td class="fw-tx">${num(x.fim)}%</td></tr>`;
+      return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}${x.sep ? SEP : ''}</td>${cols.map((st) => {
+        const pp = x.dist[st];
+        if (!ok(pp) || pp < 0.05) return '<td class="z">–</td>';
+        return `<td class="${pp === mx ? 'mx' : ''}" style="--a:${Math.min(1, pp / 100).toFixed(3)}">${num(pp, 1)}%</td>`;
+      }).join('')}<td class="fw-ct" title="Contrato de Fed Funds usado na conta">${esc(tick(x.usado))}</td><td class="fw-pr">${num(px.agora[x.usado], 3)}</td><td class="fw-tx">${num(x.fim)}%</td></tr>`;
     }).join('')}</tbody></table>`;
 
     const hora = px.hora ? new Date(px.hora * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+    const kpi = (ic, t, b, sm, cls = '') => `<div class="fw-kpi"><span class="fw-ki"><i class="fa-solid ${ic}" aria-hidden="true"></i></span><div><span>${t}</span><b class="${cls}">${b}</b><small>${sm}</small></div></div>`;
     root.innerHTML = `<div class="fw-card">
       <div class="fw-top">
+        <button class="fw-nav" data-act="esq" aria-label="Reuniões anteriores"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="fw-chips" role="tablist" aria-label="Reuniões do Fed">${chips}</div>
-        <span class="fw-sp"></span>
-        <button class="fw-ib" data-act="reload" title="Atualizar"${busy ? ' disabled' : ''}><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}"></i></button>
+        <button class="fw-nav" data-act="dir" aria-label="Próximas reuniões"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="fw-upd"><span>Preços de</span><b>${esc(hora)}</b></div>
+        <button class="fw-ib" data-act="reload" title="Atualizar" aria-label="Atualizar"${busy ? ' disabled' : ''}><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}"></i></button>
       </div>
       <div class="fw-kpis">
-        <div><span>Reunião</span><b>${dmy(R.data)}</b><small>${faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`}${R.sep ? ' · com projeções' : ''}</small></div>
-        <div><span>Faixa atual</span><b>${faixa(0)}</b><small>Fed Funds efetiva ${num(effr)}%${base.effr?.data ? ` (${dm(base.effr.data)})` : ''}</small></div>
-        <div><span>Mais provável</span><b class="${tomMov(maisProv)}">${nomeMov(maisProv)}</b><small>${pct(R.dist[maisProv])} de chance</small></div>
-        <div><span>Taxa esperada depois</span><b>${num(R.fim)}%</b><small>${mudanca >= 0 ? '+' : '−'}${num(Math.abs(mudanca), 1)} bp sobre a efetiva</small></div>
+        ${kpi('fa-calendar-days', 'Reunião do Fed', dmy(R.data), (faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`) + (R.sep ? ' · com projeções' : ''))}
+        ${kpi('fa-bullseye', 'Faixa atual', faixa(0), `Fed Funds efetiva ${num(effr)}%${base.effr?.data ? ` (${dm(base.effr.data)})` : ''}`)}
+        ${kpi('fa-chart-simple', 'Cenário mais provável', nomeMov(maisProv), `${pct(R.dist[maisProv])} de chance`, tomMov(maisProv))}
+        ${kpi('fa-percent', 'Taxa esperada depois', `${num(R.fim)}%`, `${Math.abs(mudanca) < 0.05 ? '' : mudanca > 0 ? '+' : '−'}${num(Math.abs(mudanca), 1)} bp sobre a efetiva`)}
       </div>
-      <div class="fw-sec">Chance de cada faixa da taxa depois da reunião de ${dmy(R.data)}</div>
-      <div class="fw-ctr">
-        <span class="fw-ctr-t">Contrato usado</span>
-        <b>${esc(tick(R.usado))}</b><span>${nomeMes(R.usado)}</span>
-        <span class="fw-ctr-p">${num(px.agora[R.usado], 3)}</span>
-        <span>taxa implícita ${num(100 - px.agora[R.usado], 3)}%</span>
-        <span>ontem ${num(px.ontem[R.usado], 3)} (${varia(px.agora[R.usado], px.ontem[R.usado])})</span>
-        <span>1 semana ${num(px.semana[R.usado], 3)} (${varia(px.agora[R.usado], px.semana[R.usado])})</span>
+      <div class="fw-blk">
+        <div class="fw-sec fw-sec-b">Chance de cada faixa da taxa depois da reunião de ${dmy(R.data)}
+          <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> ${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
+        <div class="fw-ctr">
+          <span class="fw-chip"><i class="fa-solid fa-file-contract"></i>Contrato <b>${esc(tick(R.usado))}</b> ${nomeMes(R.usado)}</span>
+          <span class="fw-chip"><i class="fa-solid fa-tag"></i>Preço <b>${num(px.agora[R.usado], 3)}</b></span>
+          <span class="fw-chip"><i class="fa-solid fa-percent"></i>Taxa implícita <b>${num(100 - px.agora[R.usado], 3)}%</b></span>
+          <span class="fw-chip">Ontem <b>${num(px.ontem[R.usado], 3)}</b>${variaH(px.agora[R.usado], px.ontem[R.usado])}</span>
+          <span class="fw-chip">1 semana <b>${num(px.semana[R.usado], 3)}</b>${variaH(px.agora[R.usado], px.semana[R.usado])}</span>
+        </div>
+        ${pilha}
+        <div class="fw-bars">${barras}</div>
+        ${prefs.graf ? `<div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div><div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>` : ''}
       </div>
-      <div class="fw-bars">${barras}</div>
-      <div class="fw-sec fw-sec-b">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small>
-        <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}">${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
-      ${prefs.graf ? '<div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>' : ''}
-      <div class="fw-sec">Todas as reuniões <small>(chance da faixa da taxa depois de cada reunião)</small></div>
-      <div class="fw-tabw">${tabela}</div>
-      <div class="fw-foot">Preço dos contratos: ${esc(hora)}${vivo ? '' : ' (do último registro do robô)'}. * reunião com projeções econômicas.
-        Conta feita aqui com o preço dos futuros de Fed Funds de 30 dias (CBOT), no mesmo método da ferramenta FedWatch da CME; os números podem diferir um pouco dos dela.
-        O contrato usado é o do mês seguinte à reunião quando esse mês não tem reunião; senão, o do próprio mês. O gráfico refaz a conta com o fechamento de cada pregão.
-        Fontes: CME/CBOT via Yahoo, Federal Reserve (calendário) e FRED (faixa e taxa efetiva).${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
+      <div class="fw-blk">
+        <div class="fw-sec fw-sec-b">Todas as reuniões <small>(chance da faixa da taxa depois de cada reunião)</small>
+          <span class="fw-esc" aria-hidden="true">Cor mais forte = chance maior <b>0%</b><i></i><b>100%</b></span></div>
+        <div class="fw-tabw">${tabela}</div>
+      </div>
+      <div class="fw-foot">
+        <div><b><i class="fa-solid fa-gear"></i> Metodologia</b><p>Chances calculadas com o preço dos futuros de Fed Funds de 30 dias (CBOT), no mesmo método da ferramenta FedWatch da CME; os números podem diferir um pouco dos dela. O contrato usado é o do mês seguinte à reunião quando esse mês não tem reunião; senão, o do próprio mês. O gráfico refaz a conta com o fechamento de cada pregão. <i class="fa-solid fa-chart-simple fw-sep"></i> = reunião com projeções econômicas.</p></div>
+        <div><b><i class="fa-solid fa-database"></i> Fontes</b><p>CME/CBOT via Yahoo, Federal Reserve (calendário do FOMC) e FRED (faixa e taxa efetiva). Preços de ${esc(hora)}${vivo ? '' : ' (do último registro do robô)'}.${erro ? ` <b>${esc(erro)}</b>` : ''}</p></div>
+      </div>
     </div>`;
+    // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
+    const fc = root.querySelector('.fw-chips');
+    const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); };
+    fc.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    fc.addEventListener('scroll', bordas, { passive: true });
+    bordas();
     if (prefs.graf) {
       hist = historico(R.data, todas, R);
       larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
@@ -314,65 +337,99 @@
       if (b) { prefs.sel = +b.dataset.r; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="graf"]')) { prefs.graf = !prefs.graf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="reload"]') && !busy) load(true);
+      const nv = e.target.closest('[data-act="esq"],[data-act="dir"]');
+      if (nv) { const fc = el.querySelector('.fw-chips'); fc.scrollBy({ left: (nv.dataset.act === 'dir' ? 1 : -1) * fc.clientWidth * 0.7, behavior: 'smooth' }); }
     });
   }
 
   const css = document.createElement('style');
   css.textContent = `
-  #fed-root { min-width:0; max-width:100%; }
-  #fed-root .fw-card { min-width:0; max-width:100%; }
+  #fed-root { min-width:0; max-width:100%; font-variant-numeric:tabular-nums; }
+  #fed-root .fw-card { min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
   #fed-root .fw-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
-  #fed-root .fw-card { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); overflow:hidden; }
-  #fed-root .fw-top { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); }
-  #fed-root .fw-chips { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; min-width:0; }
-  #fed-root .fw-chips button { flex:none; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:6px 12px; border-radius:99px; cursor:pointer; white-space:nowrap; }
-  #fed-root .fw-chips button i { font-style:normal; color:var(--accent-ink); margin-left:2px; }
-  #fed-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent-ink); font-weight:600; }
-  #fed-root .fw-sp { flex:1; }
-  #fed-root .fw-ib { height:32px; min-width:32px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:9px; cursor:pointer; flex:none; }
-  #fed-root .fw-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-bottom:1px solid var(--line); }
-  #fed-root .fw-kpis > div { padding:12px 14px; display:flex; flex-direction:column; gap:3px; min-width:0; }
-  #fed-root .fw-kpis > div + div { border-left:1px solid var(--line); }
-  #fed-root .fw-kpis span { font-size:11.5px; color:var(--text-3); }
-  #fed-root .fw-kpis b { font:600 18px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #fed-root .fw-kpis small { font-size:11px; color:var(--text-3); }
-  #fed-root .fw-man { color:var(--info) !important; }
+  #fed-root .fw-top { display:flex; align-items:center; gap:8px; min-width:0; }
+  #fed-root .fw-nav { flex:none; width:32px; height:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; font-size:12px; }
+  #fed-root .fw-nav:hover { color:var(--text); border-color:var(--line-2); }
+  #fed-root .fw-chips { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; min-width:0; flex:1; scroll-behavior:smooth; }
+  #fed-root .fw-chips::-webkit-scrollbar { display:none; }
+  #fed-root .fw-chips.dir { -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent); }
+  #fed-root .fw-chips.esq { -webkit-mask-image:linear-gradient(90deg,transparent,#000 40px); mask-image:linear-gradient(90deg,transparent,#000 40px); }
+  #fed-root .fw-chips.esq.dir { -webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent); mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent); }
+  #fed-root .fw-chips button { flex:none; display:flex; flex-direction:column; align-items:center; gap:1px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; padding:6px 14px; border-radius:10px; cursor:pointer; white-space:nowrap; min-width:92px; }
+  #fed-root .fw-chips button b { font-size:12.5px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:6px; }
+  #fed-root .fw-chips button small { font-size:11px; color:var(--text-3); }
+  #fed-root .fw-chips button:hover { border-color:var(--line-2); }
+  #fed-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent); }
+  #fed-root .fw-chips button.on b, #fed-root .fw-chips button.on small { color:var(--accent-ink); }
+  #fed-root .fw-sep { color:var(--accent-ink); font-size:10.5px; }
+  #fed-root .fw-upd { flex:none; display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; margin-left:6px; }
+  #fed-root .fw-upd span { font-size:10.5px; color:var(--text-3); }
+  #fed-root .fw-upd b { font-size:13px; color:var(--text); font-weight:600; }
+  #fed-root .fw-ib { height:40px; min-width:40px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; flex:none; }
+  #fed-root .fw-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
+  #fed-root .fw-kpi { display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); box-shadow:0 1px 3px rgba(0,0,0,.08); min-width:0; }
+  #fed-root .fw-kpi > div { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  #fed-root .fw-ki { flex:none; width:44px; height:44px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:17px; }
+  #fed-root .fw-kpi span { font-size:12.5px; color:var(--text-2); font-weight:500; }
+  #fed-root .fw-kpi b { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-.01em; line-height:1.25; }
+  #fed-root .fw-kpi small { font-size:12px; color:var(--text-3); }
+  #fed-root .fw-man { color:var(--accent-ink) !important; }
   #fed-root .fw-alta { color:var(--neg) !important; }
   #fed-root .fw-corte { color:var(--pos-ink) !important; }
-  #fed-root .fw-sec { padding:14px 14px 6px; font-size:12.5px; font-weight:600; color:var(--text); }
-  #fed-root .fw-sec small { font-weight:400; color:var(--text-3); }
-  #fed-root .fw-bars { padding:4px 14px 10px; display:flex; flex-direction:column; gap:8px; }
-  #fed-root .fw-bar { display:grid; grid-template-columns:190px minmax(0,1fr) 64px 190px; align-items:center; gap:12px; }
+  #fed-root .fw-blk { border:1px solid var(--line); border-radius:14px; background:var(--surface-2); padding:4px 0 10px; min-width:0; }
+  #fed-root .fw-sec { padding:14px 16px 8px; font-size:15px; font-weight:700; color:var(--text); }
+  #fed-root .fw-sec small { font-weight:400; color:var(--text-3); font-size:12.5px; }
+  #fed-root .fw-sec-b { display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; }
+  #fed-root .fw-tg { margin-left:auto; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--accent-line, var(--line-2)); background:transparent; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:7px 14px; border-radius:9px; cursor:pointer; }
+  #fed-root .fw-tg i { color:var(--accent-ink); }
+  #fed-root .fw-tg:hover { background:var(--accent-soft); }
+  #fed-root .fw-ctr { display:flex; flex-wrap:wrap; gap:8px; padding:0 16px 12px; }
+  #fed-root .fw-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:9px; background:var(--surface); padding:6px 11px; font-size:12px; color:var(--text-3); white-space:nowrap; }
+  #fed-root .fw-chip > i { color:var(--text-3); font-size:11px; }
+  #fed-root .fw-chip b { font-size:13px; color:var(--text); font-weight:700; }
+  #fed-root .fw-chip em { font-style:normal; font-weight:600; color:var(--text-3); }
+  #fed-root .fw-chip em.fw-up { color:var(--pos-ink); } #fed-root .fw-chip em.fw-dn { color:var(--neg); }
+  #fed-root .fw-pilha { display:flex; gap:2px; height:26px; margin:0 16px 12px; border-radius:7px; overflow:hidden; }
+  #fed-root .fw-pilha i, #fed-root .fw-bt i { font-style:normal; }
+  #fed-root .fw-pilha i { display:flex; align-items:center; justify-content:center; min-width:3px; overflow:hidden; }
+  #fed-root .fw-pilha span { font-size:11.5px; font-weight:700; color:#111; white-space:nowrap; padding:0 6px; }
+  #fed-root .fw-bars { padding:2px 16px 6px; display:flex; flex-direction:column; gap:10px; }
+  #fed-root .fw-bar { display:grid; grid-template-columns:180px minmax(0,1fr) 64px 190px; align-items:center; gap:12px; }
   #fed-root .fw-bl { display:flex; flex-direction:column; gap:1px; min-width:0; }
-  #fed-root .fw-bl b { font:600 13px 'JetBrains Mono', monospace; color:var(--text); }
-  #fed-root .fw-bl span { font-size:11px; }
-  #fed-root .fw-bt { height:14px; border-radius:4px; background:var(--surface-2); overflow:hidden; }
-  #fed-root .fw-bt i { display:block; height:100%; background:color-mix(in srgb, var(--info) 70%, transparent); border-radius:4px; }
-  #fed-root .fw-bar.top .fw-bt i { background:var(--accent); }
-  #fed-root .fw-bv { font:600 14px 'JetBrains Mono', monospace; text-align:right; color:var(--text); }
-  #fed-root .fw-bc { font-size:11px; color:var(--text-3); white-space:nowrap; }
+  #fed-root .fw-bl b { font-size:15px; font-weight:700; color:var(--text); }
+  #fed-root .fw-bl span { font-size:12.5px; }
+  #fed-root .fw-bt { height:20px; border-radius:6px; background:var(--surface); overflow:hidden; }
+  #fed-root .fw-bt i { display:flex; align-items:center; justify-content:center; height:100%; border-radius:6px; opacity:.85; }
+  #fed-root .fw-bar.top .fw-bt i { opacity:1; }
+  #fed-root .fw-bt i span { font-size:12px; font-weight:700; color:#111; }
+  #fed-root .fw-bv { font-size:15px; font-weight:700; text-align:right; color:var(--text); }
+  #fed-root .fw-bc { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
   #fed-root .fw-bc span { opacity:.6; }
-  #fed-root .fw-tabw { overflow-x:auto; padding:0 14px 6px; }
-  #fed-root .fw-tab { width:100%; border-collapse:collapse; font-size:12px; }
-  #fed-root .fw-tab th { text-align:right; font-weight:600; color:var(--text-3); padding:7px 8px; border-bottom:1px solid var(--line); white-space:nowrap; font-family:'JetBrains Mono', monospace; font-size:11px; }
-  #fed-root .fw-tab th:first-child, #fed-root .fw-tab td:first-child { text-align:left; font-family:inherit; }
-  #fed-root .fw-tab td { text-align:right; padding:7px 8px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono', monospace; color:var(--text-2); white-space:nowrap;
-    background:color-mix(in srgb, var(--info) calc(var(--a, 0) * 34%), transparent); }
-  #fed-root .fw-tab td.z { color:var(--text-3); opacity:.5; }
-  #fed-root .fw-tab td.mx { color:var(--text); font-weight:700; box-shadow:inset 0 -2px 0 var(--accent); }
-  #fed-root .fw-tab td.fw-tx { color:var(--text); background:none; }
+  #fed-root .fw-esc { margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:11.5px; font-weight:400; color:var(--text-3); }
+  #fed-root .fw-esc b { font-weight:500; color:var(--text-3); }
+  #fed-root .fw-esc i { width:110px; height:10px; border-radius:3px; background:linear-gradient(90deg, color-mix(in srgb, var(--info) 6%, transparent), var(--info)); }
+  #fed-root .fw-tabw { overflow-x:auto; margin:0 16px; border:1px solid var(--line); border-radius:10px; }
+  #fed-root .fw-tab { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  #fed-root .fw-tab th { text-align:right; font-weight:600; color:var(--text-2); padding:9px 10px; border-bottom:1px solid var(--line); white-space:nowrap; font-size:12px; background:var(--surface); }
+  #fed-root .fw-tab td { text-align:right; padding:8px 10px; border-bottom:1px solid var(--line); color:var(--text-2); white-space:nowrap;
+    background:color-mix(in srgb, var(--info) calc(var(--a, 0) * 78%), transparent); }
+  #fed-root .fw-tab tr:last-child td { border-bottom:0; }
+  #fed-root .fw-tab th:first-child, #fed-root .fw-tab td:first-child { text-align:left; position:sticky; left:0; z-index:1; background:var(--surface); border-right:1px solid var(--line); }
+  #fed-root .fw-tab td:first-child .fw-sep { margin-left:6px; }
+  #fed-root .fw-tab td.z { color:var(--text-3); opacity:.25; background:none; }
+  #fed-root .fw-tab td.mx { color:var(--text); font-weight:700; }
+  #fed-root .fw-tab td[style] { color:var(--text); }
+  #fed-root .fw-tab th.fw-ct, #fed-root .fw-tab td.fw-ct { text-align:left; padding-left:18px; }
+  #fed-root .fw-tab td.fw-ct, #fed-root .fw-tab td.fw-pr { background:none; color:var(--text-2); }
+  #fed-root .fw-tab td.fw-tx { color:var(--text); font-weight:700; background:none; }
   #fed-root .fw-tab tr { cursor:pointer; }
-  #fed-root .fw-tab tr:hover td:first-child, #fed-root .fw-tab tr.sel td:first-child { color:var(--accent-ink); font-weight:600; }
-  #fed-root .fw-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; border-top:1px solid var(--line); margin-top:8px; }
-  #fed-root .fw-ctr { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:2px 14px 8px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); font-size:11.5px; color:var(--text-3); }
-  #fed-root .fw-ctr b { font:700 13px 'JetBrains Mono', monospace; color:var(--text); margin-right:-8px; }
-  #fed-root .fw-ctr-t { text-transform:uppercase; letter-spacing:.06em; font-size:10px; font-weight:700; }
-  #fed-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent-ink); }
-  #fed-root .fw-tab td.fw-ct { background:none; color:var(--text-3); font-size:11px; }
-  #fed-root .fw-tab td.fw-ct b { color:var(--text-2); font-weight:600; }
-  #fed-root .fw-sec-b { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  #fed-root .fw-tg { margin-left:auto; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; font-weight:500; padding:5px 12px; border-radius:8px; cursor:pointer; }
-  #fed-root .fw-tg:hover { color:var(--text); border-color:var(--line-2); }
+  #fed-root .fw-tab tr:hover td:first-child { color:var(--text); }
+  #fed-root .fw-tab tr.sel td:first-child { color:var(--accent-ink); font-weight:700; box-shadow:inset 3px 0 0 var(--accent); }
+  #fed-root .fw-foot { display:grid; grid-template-columns:1fr 1fr; gap:14px 28px; padding:14px 18px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); }
+  #fed-root .fw-foot b { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text); }
+  #fed-root .fw-foot b i { color:var(--accent-ink); }
+  #fed-root .fw-foot p { margin:6px 0 0; font-size:12px; line-height:1.55; color:var(--text-3); }
+  #fed-root .fw-foot p b { display:inline; color:var(--neg); }
   #fed-root .fw-hleg { display:flex; flex-wrap:wrap; gap:4px 14px; padding:0 14px 4px; font-size:11.5px; color:var(--text-2); }
   #fed-root .fw-hleg span { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; }
   #fed-root .fw-hleg i, #fed-root .fw-tip i { width:10px; height:3px; border-radius:2px; display:inline-block; }
@@ -386,13 +443,25 @@
   #fed-root .fw-tip b { display:block; color:var(--text); margin-bottom:4px; }
   #fed-root .fw-tip div { display:flex; align-items:center; gap:7px; line-height:1.7; font-family:'JetBrains Mono', monospace; }
   #fed-root .fw-tip span { margin-left:auto; padding-left:10px; color:var(--text); font-weight:600; }
-  @media (max-width: 900px) {
+  @container (max-width: 900px) {
     #fed-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
-    #fed-root .fw-kpis > div:nth-child(3) { border-left:0; }
-    #fed-root .fw-kpis > div:nth-child(n+3) { border-top:1px solid var(--line); }
     #fed-root .fw-bar { grid-template-columns:minmax(0,1fr) 60px; grid-template-areas:"l v" "t t" "c c"; gap:4px 10px; }
     #fed-root .fw-bl { grid-area:l; } #fed-root .fw-bv { grid-area:v; } #fed-root .fw-bt { grid-area:t; } #fed-root .fw-bc { grid-area:c; }
-    #fed-root .fw-kpis b { font-size:15px; }
+    #fed-root .fw-upd, #fed-root .fw-nav { display:none; }
+    #fed-root .fw-foot { grid-template-columns:1fr; }
+    #fed-root .fw-esc { margin-left:0; }
+  }
+  @container (max-width: 560px) {
+    #fed-root .fw-kpis { gap:8px; }
+    #fed-root .fw-kpi { padding:12px; }
+    #fed-root .fw-ki { display:none; }
+    #fed-root .fw-kpi span { font-size:11.5px; }
+    #fed-root .fw-kpi b { font-size:18px; }
+    #fed-root .fw-kpi small { font-size:11px; }
+    #fed-root .fw-ctr { gap:6px; }
+    #fed-root .fw-chip { padding:5px 9px; font-size:11.5px; }
+    #fed-root .fw-chip > i { display:none; }
+    #fed-root .fw-tg { margin-left:0; }
   }`;
   document.head.appendChild(css);
 
