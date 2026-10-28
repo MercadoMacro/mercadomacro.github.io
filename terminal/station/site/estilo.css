@@ -3106,14 +3106,6 @@ html body .mj-n { font-size:9.5px; }
 /* Fed e Copom: cada um na sua aba da barra de seções (28/10/2026); a bandeira fica no botão da barra */
 .pj-col { min-width:0; }
 .pj-sub { display:none; }
-/* coluna estreita: os 4 números do Copom viram 2 x 2 (o Fed cuida do seu em fed.js) */
+/* coluna estreita: Fed e Copom cuidam do seu layout (fed.js / copom.js) */
 .pj-col { container-type:inline-size; }
-@container (max-width: 760px) {
-  #copom-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)) !important; }
-  #copom-root .fw-kpis > div:nth-child(3) { border-left:0 !important; }
-  #copom-root .fw-kpis > div:nth-child(n+3) { border-top:1px solid var(--line); }
-  #copom-root .fw-bar { grid-template-columns:140px minmax(0,1fr) 56px !important; grid-template-areas:"l t v" ". c c" !important; gap:2px 12px !important; }
-  #copom-root .fw-bl { grid-area:l; } #copom-root .fw-bt { grid-area:t; }
-  #copom-root .fw-bv { grid-area:v; } #copom-root .fw-bc { grid-area:c; }
-}
 .pj-flag { width:21px; height:14px; flex:none; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
