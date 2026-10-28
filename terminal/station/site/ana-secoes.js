@@ -39,6 +39,7 @@
   }
   function mostra(k, salva = true) {
     secao = k;
+    fechaCheia();
     wrap.dataset.secao = k;
     if (TIT[k]) {
       const t = document.getElementById('pj-tit'), f = document.getElementById('pj-fonte');
@@ -55,6 +56,47 @@
   window.addEventListener('resize', pilula);
   // a pílula só tem medida quando a aba está visível
   new MutationObserver(() => requestAnimationFrame(pilula)).observe(document.getElementById('analysis-panel'), { attributes: true, attributeFilter: ['class', 'aria-hidden', 'style'] });
+  // botão de expandir em cada seção: abre a seção ocupando a tela inteira; Esc ou o mesmo botão fecha
+  let cheia = null, marca = null;
+  const fechaCheia = () => {
+    if (!cheia) return;
+    cheia.classList.remove('ana-cheia');
+    delete cheia.dataset.ver;
+    if (marca && marca.parentNode) marca.parentNode.replaceChild(cheia, marca);   // volta para o lugar
+    marca = null;
+    const b = cheia.querySelector('.ana-exp');
+    if (b) { b.innerHTML = '<i class="fa-solid fa-expand" aria-hidden="true"></i>'; b.title = 'Expandir em tela cheia'; b.setAttribute('aria-label', b.title); }
+    document.documentElement.classList.remove('ana-cheia-on');
+    cheia = null;
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  };
+  const abreCheia = (sec) => {
+    fechaCheia();
+    cheia = sec;
+    // vai para o <body> enquanto expandida: dentro da aba, um elemento pai com transform prenderia o position:fixed
+    marca = document.createComment('secao-expandida');
+    sec.parentNode.insertBefore(marca, sec);
+    document.body.appendChild(sec);
+    sec.dataset.ver = secao;
+    sec.classList.add('ana-cheia');
+    const b = sec.querySelector('.ana-exp');
+    if (b) { b.innerHTML = '<i class="fa-solid fa-compress" aria-hidden="true"></i>'; b.title = 'Sair da tela cheia (Esc)'; b.setAttribute('aria-label', b.title); b.focus(); }
+    document.documentElement.classList.add('ana-cheia-on');
+    sec.scrollTop = 0;
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  };
+  wrap.querySelectorAll('.ana-extra > .market-section > .market-section-head').forEach((h) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ana-exp';
+    b.title = 'Expandir em tela cheia';
+    b.setAttribute('aria-label', b.title);
+    b.innerHTML = '<i class="fa-solid fa-expand" aria-hidden="true"></i>';
+    b.addEventListener('click', () => { const sec = h.parentElement; if (cheia === sec) fechaCheia(); else abreCheia(sec); });
+    h.appendChild(b);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) fechaCheia(); });
+
   // os cartões de destaque levam à seção certa
   window.__anaSecao = (id) => { const k = ALVO[id]; if (k) mostra(k); return !!k; };
   nav.classList.add('sem-anim');
@@ -94,6 +136,16 @@
   .ana-extra > .market-section > .market-section-head h2 { font-size:20px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--text); line-height:1.3; }
   .ana-extra > .market-section > .market-section-head::after { background:none; }
   .ana-extra > .market-section > .market-section-head .sec-count { font:11px 'JetBrains Mono', monospace; color:var(--text-3); border:1px solid var(--line); border-radius:99px; padding:2px 8px; }
+  .ana-exp { order:5; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); color:var(--text-2); font-size:13px; cursor:pointer; transition:color .15s, border-color .15s, background .15s; }
+  .ana-exp:hover { color:var(--accent-ink); border-color:var(--accent-line, var(--line-2)); }
+  .market-section.ana-cheia { position:fixed; inset:0; z-index:9000; margin:0; border-radius:0; border:0; overflow:auto; overscroll-behavior:contain; --ana-px:max(24px, calc((100vw - 1500px) / 2)); padding:0 var(--ana-px) 40px; background:radial-gradient(80% 60% at 0% 0%, var(--accent-soft), transparent 50%), var(--bg); color:var(--text); }
+  .market-section.ana-cheia > .market-section-head { position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 calc(-1 * var(--ana-px)) 18px; padding:16px var(--ana-px); background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); }
+  .market-section.ana-cheia > .market-section-head::after { background:none; }
+  .market-section.ana-cheia > .market-section-head .sec-icon { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:13px; }
+  .market-section.ana-cheia > .market-section-head h2 { font-size:20px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--text); }
+  .market-section.ana-cheia > .market-section-head .sec-count { margin-left:auto; font:11px 'JetBrains Mono', monospace; color:var(--text-3); border:1px solid var(--line); border-radius:99px; padding:2px 8px; }
+  .market-section.ana-cheia[data-ver="fed"] #pj-col-br, .market-section.ana-cheia[data-ver="copom"] #pj-col-eua { display:none; }
+  html.ana-cheia-on, html.ana-cheia-on body { overflow:hidden; }
   @media (max-width: 640px) {
     .ana-extra > .market-section { padding:16px 14px 18px; border-radius:14px; }
     .ana-extra > .market-section > .market-section-head h2 { font-size:17px; }
