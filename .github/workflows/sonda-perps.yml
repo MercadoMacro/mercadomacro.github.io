@@ -1,5 +1,5 @@
 name: sonda
-on: { push: { branches: [sonda-perps], paths: ['.github/workflows/sonda-perps.yml'] } }
+on: { push: { branches: [sonda-eua], paths: ['.github/workflows/sonda-perps.yml'] } }
 permissions: { contents: write }
 jobs:
   s:
@@ -12,4 +12,4 @@ jobs:
           mkdir -p sonda-dados
           for id in BOPGSTB BOPTEXP BOPTIMP; do curl -s -m 30 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=$id&cosd=1990-01-01" > sonda-dados/$id.csv; done
           git config user.name sonda; git config user.email sonda@users.noreply.github.com
-          git add sonda-dados && git commit -qm "dados sonda" && git push -q origin HEAD:sonda-perps
+          git add sonda-dados && git commit -qm "dados sonda" && git push -q origin HEAD:sonda-eua
