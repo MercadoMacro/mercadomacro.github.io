@@ -291,15 +291,22 @@ export async function apiAdminAssinatura(req, env, acao) {
   await garantirAssinatura(env);
   if (acao === 'pix') {
     const c = await config(env);
-    if (req.method === 'GET') return json({ chave: c.pix_chave || null, nome: c.pix_nome || null, cidade: c.pix_cidade || null });
+    if (req.method === 'GET') return json({ chave: c.pix_chave || null, nome: c.pix_nome || null, cidade: c.pix_cidade || null, alterada: c.pix_alterada || null });
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
-    if (b.acao === 'desligar') { await salvarConfig(env, { pix_chave: null, pix_nome: null, pix_cidade: null }); return json({ ok: true }); }
+    // a chave decide para onde vai o dinheiro: toda troca fica com data e avisa no Telegram
+    const aviso = (txt) => avisar(env, 'Chave Pix alterada', txt + '\n\nSe não foi você, troque a senha do administrador agora.').catch(() => false);
+    if (b.acao === 'desligar') {
+      await salvarConfig(env, { pix_chave: null, pix_nome: null, pix_cidade: null, pix_alterada: new Date().toISOString() });
+      await aviso('O Pix das assinaturas foi desligado no /admin.');
+      return json({ ok: true });
+    }
     const chave = normalizarChave(b.chave);
     if (!chave) return json({ erro: 'Essa chave Pix não parece válida. Use o e-mail, o celular com DDD, o CPF/CNPJ (só números) ou a chave aleatória.' }, 400);
     const nome = semAcento(b.nome).slice(0, 25), cidade = semAcento(b.cidade).slice(0, 15);
     if (nome.length < 3 || cidade.length < 3) return json({ erro: 'Preencha o nome de quem recebe e a cidade, como aparecem no seu banco.' }, 400);
-    await salvarConfig(env, { pix_chave: chave, pix_nome: nome, pix_cidade: cidade });
+    await salvarConfig(env, { pix_chave: chave, pix_nome: nome, pix_cidade: cidade, pix_alterada: new Date().toISOString() });
+    if (chave !== c.pix_chave) await aviso(`Nova chave: ${chave} (${nome}, ${cidade}).` + (c.pix_chave ? `\nAntes: ${c.pix_chave}.` : ''));
     return json({ ok: true, chave, nome, cidade });
   }
   if (acao === 'acesso' && req.method === 'POST') {
