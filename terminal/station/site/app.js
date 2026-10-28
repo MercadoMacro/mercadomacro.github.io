@@ -4907,14 +4907,13 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
-   PROBABILIDADES DE JUROS (aba Análises): Fed (fed.js) e Copom (copom.js) lado a lado,
-   com uma divisória que se arrasta para ajustar a largura (pedido do Severino, 28/10/2026).
-   Cada arquivo só é baixado quando a seção chega perto da tela. A divisão fica salva.
+   PROBABILIDADES DE JUROS (aba Análises): Fed (fed.js) e Copom (copom.js) ficam na mesma seção;
+   a barra de seções (ana-secoes.js) mostra um ou outro, cada um com a sua aba (28/10/2026).
+   Cada arquivo só é baixado quando a seção chega perto da tela.
    ========================================================= */
 (() => {
   const sec = document.getElementById('ana-sec-fed');
-  const split = document.getElementById('pj-split'), div = document.getElementById('pj-div');
-  if (!sec || !split || !div) return;
+  if (!sec) return;
   const LADOS = {
     eua: { root: 'fed-root', js: 'fed.js?v=4', fn: '__fedRender' },
     br: { root: 'copom-root', js: 'copom.js?v=3', fn: '__copomRender' },
@@ -4931,46 +4930,6 @@ function newsReadMins(n) {
     sc.onerror = () => { pedidos[k] = false; el.innerHTML = `<div class="ind-boot">Não foi possível carregar o arquivo <b>${L.js.split('?')[0]}</b>.</div>`; };
     document.body.appendChild(sc);
   };
-  // divisória: porcentagem da largura que fica com o Fed (35 a 65)
-  const CHAVE = 'juros_prob_div';
-  let pct = 50;
-  try { const v = +localStorage.getItem(CHAVE); if (v >= 35 && v <= 65) pct = v; } catch (e) { /* padrão */ }
-  const aplica = (v, salva) => {
-    pct = Math.round(Math.min(65, Math.max(35, v)));
-    split.style.setProperty('--pj-a', pct);
-    div.setAttribute('aria-valuenow', pct);
-    if (salva) { try { localStorage.setItem(CHAVE, pct); } catch (e) { /* cheio */ } }
-  };
-  // os gráficos dos dois lados são desenhados com a largura real: avisa quando ela muda
-  let rt = 0;
-  const redesenha = () => { clearTimeout(rt); rt = setTimeout(() => window.dispatchEvent(new Event('resize')), 120); };
-  aplica(pct, false);
-  div.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    div.setPointerCapture(e.pointerId);
-    split.classList.add('arrastando');
-    const r = split.getBoundingClientRect();
-    const move = (ev) => aplica((ev.clientX - r.left) / r.width * 100, false);
-    const fim = () => {
-      div.removeEventListener('pointermove', move);
-      div.removeEventListener('pointerup', fim);
-      div.removeEventListener('pointercancel', fim);
-      split.classList.remove('arrastando');
-      aplica(pct, true);
-      redesenha();
-    };
-    div.addEventListener('pointermove', move);
-    div.addEventListener('pointerup', fim);
-    div.addEventListener('pointercancel', fim);
-  });
-  div.addEventListener('dblclick', () => { aplica(50, true); redesenha(); });
-  div.addEventListener('keydown', (e) => {
-    const passo = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
-    if (!passo) return;
-    e.preventDefault();
-    aplica(pct + passo, true);
-    redesenha();
-  });
   const abre = () => { carrega('eua'); carrega('br'); };
   if ('IntersectionObserver' in window) {
     new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); abre(); } }, { rootMargin: '600px 0px' }).observe(sec);
