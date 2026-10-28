@@ -7,9 +7,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: sonda-perps }
-      - run: |
+      - shell: bash {0}
+        run: |
           cd sonda
-          printf '{"name":"t","main":"w.js","compatibility_date":"2025-06-01"}' > wrangler.jsonc
           (npx -y wrangler@4 dev --port 8787 > wr.log 2>&1 &)
           for i in $(seq 1 60); do curl -s -m 3 -o /dev/null localhost:8787/ && break; sleep 2; done
           time curl -s -m 40 -H 'Origin: https://mercadomacro.com.br' "localhost:8787/b3?s=IBOV,IFIX,PETR4,VALE3,ITUB4,BBAS3&mmp=vitrine" | head -c 3000; echo
