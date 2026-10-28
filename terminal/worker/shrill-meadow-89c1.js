@@ -38,7 +38,7 @@ const SYMBOL_RE = /^[A-Za-z0-9^.=\-]{1,20}$/;
 
 // Séries do FRED liberadas em /fred/series (aba Indicadores)
 const FRED_SERIES = new Set(['CPIAUCSL', 'CPILFESL', 'PCEPI', 'PCEPILFE', 'FEDFUNDS', 'DFEDTARU', 'DFEDTARL', 'DGS2', 'DGS10', 'DGS30',
-  'T5YIE', 'T10Y2Y', 'GDPC1', 'GDP', 'UNRATE', 'PAYEMS', 'INDPRO', 'UMCSENT']);
+  'T5YIE', 'T10Y2Y', 'GDPC1', 'GDP', 'UNRATE', 'PAYEMS', 'INDPRO', 'UMCSENT', 'BOPGSTB', 'BOPTEXP', 'BOPTIMP']);
 
 // Hosts liberados no proxy genérico (?url=...)
 const ALLOWED_HOSTS = [
@@ -340,7 +340,7 @@ function indSpecs(g) {
     F('DFEDTARU', 'lin', '', 2500, { steps: true }), F('DFEDTARL', 'lin', '', 2500, { steps: true }), F('FEDFUNDS', 'lin', '', 420),
     F('DGS2', 'lin', '', 1100), F('DGS10', 'lin', '', 1100), F('DGS30', 'lin', '', 1100),
     F('GDPC1', 'lin', '', 220), F('GDP', 'lin', '', 8), F('UNRATE', 'lin', '', 420), F('PAYEMS', 'chg', '', 420),
-    F('INDPRO', 'pc1', '', 420), F('UMCSENT', 'lin', '', 420)
+    F('INDPRO', 'pc1', '', 420), F('UMCSENT', 'lin', '', 420), F('BOPGSTB', 'lin', '', 420), F('BOPTEXP', 'lin', '', 420), F('BOPTIMP', 'lin', '', 420)
   ];
   if (g === 'mo') return [
     B(4189, 23 * 366), B(432, 3650, { steps: true }), B(433, 23 * 366), F('FEDFUNDS', 'lin', '', 264), F('DFEDTARU', 'lin', '', 10), F('DFEDTARL', 'lin', '', 10),
