@@ -720,32 +720,47 @@
         (grupos[g] = grupos[g] || []).push(t);
       });
       const ordem = ['Selic', 'Prefixado', 'IPCA+', 'Renda+', 'Educa+', 'Outros'].filter((g) => grupos[g]);
-      // um card por título, agrupado por tipo, com filtro no topo e a taxa em destaque (modelo do Severino, 28/10/2026)
-      const TIPO = { Selic: 'sel', Prefixado: 'pre', 'IPCA+': 'ipc', 'Renda+': 'ren', 'Educa+': 'edu', Outros: 'out' };
+      // tabela agrupada por tipo, com busca e filtro (modelo do Severino, 28/10/2026)
       const ROT = { Selic: 'Selic', Prefixado: 'Prefixado', 'IPCA+': 'IPCA+', 'Renda+': 'Renda+', 'Educa+': 'Educa+', Outros: 'Outros' };
       const taxa = (t) => /selic/i.test(t.nome) ? `Selic + ${nf(t.taxa, 4)}%` : /ipca|renda|educa/i.test(t.nome) ? `IPCA + ${nf(t.taxa)}%` : `${nf(t.taxa)}%`;
-      const titulo = (t) => String(t.nome).replace(/\s+com\s+juros\s+semestrais/i, '').replace(/\s+aposentadoria\s+extra/i, '').replace(/\s+/g, ' ').trim();
-      const campo = (ic, rot, val) => `<div class="tdc-f"><i class="fa-solid ${ic}" aria-hidden="true"></i><span>${rot}<b>${val}</b></span></div>`;
-      const card = (t) => `<li class="tdc" title="${esc(t.nome)}">
-          <div class="tdc-h"><div><h5>${esc(titulo(t))}</h5>${/semestr/i.test(t.nome) ? '<small title="Paga juros a cada seis meses">Juros semestrais</small>' : ''}</div><i class="fa-solid fa-chart-simple" aria-hidden="true"></i></div>
-          <div class="tdc-tx">${esc(taxa(t))}</div><div class="tdc-txl">Taxa a.a.</div>
-          <div class="tdc-fs">${campo('fa-coins', 'Preço', t.pu != null ? 'R$ ' + nf(t.pu) : '—')}${campo('fa-calendar', 'Vencimento', esc(t.vencimento || '—'))}</div></li>`;
+      const semAcento = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       let filtro = 'Todos';
       try { filtro = localStorage.getItem('ind_tesouro_filtro') || 'Todos'; } catch (e) { /* sem armazenamento */ }
       if (filtro !== 'Todos' && !grupos[filtro]) filtro = 'Todos';
-      main.innerHTML = `<div class="tdc-bar" role="tablist" aria-label="Filtrar por tipo">${['Todos', ...ordem].map((g) => `<button type="button" role="tab" data-tdf="${esc(g)}" aria-selected="${g === filtro}" class="${g === filtro ? 'on' : ''}">${esc(g === 'Todos' ? 'Todos' : ROT[g])}</button>`).join('')}</div>
-        <div class="tdl" data-f="${esc(filtro)}">${ordem.map((g) => `<section class="tdl-g tdl-${TIPO[g]}${g === filtro ? ' on' : ''}" data-g="${esc(g)}"><header><h4>${esc(ROT[g])}</h4></header><ul>${grupos[g].map(card).join('')}</ul></section>`).join('')}</div>
+      main.innerHTML = `<div class="tdt-top">
+          <label class="tdt-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" placeholder="Buscar título" aria-label="Buscar título"></label>
+          <div class="tdt-fil" role="tablist" aria-label="Filtrar por tipo">${['Todos', ...ordem].map((g) => `<button type="button" role="tab" data-tdf="${esc(g)}" aria-selected="${g === filtro}" class="${g === filtro ? 'on' : ''}">${esc(g === 'Todos' ? 'Todos' : ROT[g])}</button>`).join('')}</div>
+        </div>
+        <div class="tdt-wrap"><table class="tdt" data-f="${esc(filtro)}"><thead><tr><th>Título</th><th>Taxa</th><th>Preço</th><th>Vencimento</th></tr></thead>
+        ${ordem.map((g) => `<tbody class="tdt-g" data-g="${esc(g)}"><tr class="g"><th colspan="4">${esc(ROT[g])}</th></tr>${grupos[g].map((t) =>
+          `<tr data-n="${esc(semAcento(t.nome))}"><td class="nm">${esc(t.nome)}</td><td class="tx"><span class="ml">Taxa</span>${esc(taxa(t))}</td><td class="pu"><span class="ml">Preço</span>${t.pu != null ? 'R$ ' + nf(t.pu) : '—'}</td><td class="vc"><span class="ml">Vencimento</span>${esc(t.vencimento || '—')}</td></tr>`).join('')}</tbody>`).join('')}
+        <tbody class="tdt-vazio" hidden><tr><td colspan="4">Nenhum título encontrado.</td></tr></tbody></table></div>
         <div class="ind-foot"><span class="ind-src">${esc(d.src)}${s.st === 'err' ? ' · mostrando o último dado salvo' : ''}</span></div>`;
+      const tab = main.querySelector('.tdt'), busca = main.querySelector('.tdt-busca input');
+      const aplica = () => {
+        const q = semAcento(busca.value.trim()), f = tab.dataset.f;
+        let total = 0, pri = null;
+        tab.querySelectorAll('.tdt-g').forEach((g) => {
+          let n = 0;
+          g.querySelectorAll('tr[data-n]').forEach((r) => { const ok = !q || r.dataset.n.includes(q); r.hidden = !ok; if (ok) n++; });
+          g.hidden = !n || (f !== 'Todos' && g.dataset.g !== f);
+          if (!g.hidden) { total += n; pri = pri || g; }
+          g.classList.remove('pri');
+        });
+        if (pri) pri.classList.add('pri');
+        tab.querySelector('.tdt-vazio').hidden = total > 0;
+      };
+      busca.oninput = aplica;
       main.onclick = (ev) => {
         const bt = ev.target.closest('[data-tdf]');
         if (!bt) return;
         const f = bt.dataset.tdf;
         try { localStorage.setItem('ind_tesouro_filtro', f); } catch (e) { /* sem armazenamento */ }
         main.querySelectorAll('[data-tdf]').forEach((x) => { const on = x.dataset.tdf === f; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
-        const box = main.querySelector('.tdl');
-        box.dataset.f = f;
-        box.querySelectorAll('.tdl-g').forEach((x) => x.classList.toggle('on', x.dataset.g === f));
+        tab.dataset.f = f;
+        aplica();
       };
+      aplica();
       return;
     }
 
@@ -1757,37 +1772,39 @@
   @keyframes indIn { from { opacity:0; } to { opacity:1; } }
   .ind-skel { height:12px; border-radius:6px; background:var(--surface-2); animation: skelPulse 1.2s ease-in-out infinite; }
   .ind-skel.w60 { width:60%; height:26px; } .ind-skel.w40 { width:40%; } .ind-skel.h60 { height:80px; margin-top:auto; }
-  .tdc-bar { display:flex; gap:2px; width:max-content; max-width:100%; overflow-x:auto; scrollbar-width:none; margin:-38px auto 16px; padding:4px; border:1px solid var(--line); border-radius:999px; background:var(--surface-2); }
-  .tdc-bar button { border:0; background:none; color:var(--text-2); font:inherit; font-size:13.5px; padding:6px 16px; border-radius:999px; cursor:pointer; white-space:nowrap; }
-  .tdc-bar button:hover { color:var(--text); }
-  .tdc-bar button.on { background:color-mix(in srgb, var(--accent) 16%, var(--surface)); color:var(--text); font-weight:600; box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 30%, var(--line)); }
-  .tdl { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; align-items:start; }
-  .tdl[data-f]:not([data-f="Todos"]) { grid-template-columns:1fr; }
-  .tdl[data-f]:not([data-f="Todos"]) .tdl-g:not(.on) { display:none; }
-  .tdl[data-f]:not([data-f="Todos"]) .tdl-g.on ul { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
-  .tdl-g { border-radius:12px; background:color-mix(in srgb, var(--accent) 4%, var(--surface-2)); border:1px solid var(--line); overflow:hidden; }
-  .tdl-g header { padding:11px 16px; background:color-mix(in srgb, var(--accent) 13%, var(--surface-2)); }
-  .tdl-g h4 { margin:0; font-size:15px; font-weight:700; letter-spacing:.02em; text-transform:uppercase; color:var(--accent-ink); }
-  .tdl-g ul { list-style:none; margin:0; padding:8px; display:flex; flex-direction:column; gap:8px; }
-  .tdc { padding:13px 14px 12px; border-radius:10px; background:var(--surface); border:1px solid var(--line); box-shadow:0 1px 3px rgba(0,0,0,.07); transition:box-shadow .15s, border-color .15s; }
-  .tdc:hover { border-color:color-mix(in srgb, var(--accent) 35%, var(--line)); box-shadow:0 4px 12px rgba(0,0,0,.1); }
-  .tdc-h { display:flex; align-items:flex-start; gap:8px; }
-  .tdc-h > div { min-width:0; flex:1; }
-  .tdc-h > i { font-size:13px; color:var(--text-3); opacity:.7; margin-top:3px; }
-  .tdc h5 { margin:0; font-size:15px; font-weight:600; color:var(--text); line-height:1.3; }
-  .tdc-h small { display:block; font-size:12px; color:var(--text-2); margin-top:1px; }
-  .tdc-tx { margin-top:8px; font-size:25px; font-weight:700; color:var(--text); letter-spacing:-.01em; font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
-  .tdc-txl { font-size:11.5px; color:var(--text-3); margin-top:1px; }
-  .tdc-fs { display:grid; grid-template-columns:1fr 1fr; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
-  .tdc-f { display:flex; align-items:center; gap:7px; min-width:0; }
-  .tdc-f + .tdc-f { border-left:1px solid var(--line); padding-left:10px; }
-  .tdc-f > i { font-size:15px; color:var(--accent-ink); opacity:.85; width:18px; text-align:center; }
-  .tdc-f span { display:flex; flex-direction:column; font-size:11.5px; color:var(--text-3); line-height:1.25; }
-  .tdc-f b { font-size:13px; font-weight:500; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tdt-top { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 0 14px; }
+  .tdt-busca { display:flex; align-items:center; gap:9px; flex:0 1 340px; min-width:200px; padding:0 12px; height:40px; border:1px solid var(--line-2, var(--line)); border-radius:10px; background:var(--surface); color:var(--text-3); }
+  .tdt-busca:focus-within { border-color:var(--accent-line, var(--accent)); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+  .tdt-busca input { all:unset; flex:1; min-width:0; height:100%; color:var(--text); font:inherit; font-size:14px; }
+  .tdt-busca input, .tdt-busca input:focus { border:0 !important; background:none !important; box-shadow:none !important; border-radius:0 !important; }
+  .tdt-busca input::placeholder { color:var(--text-3); }
+  .tdt-busca input::-webkit-search-cancel-button { cursor:pointer; }
+  .tdt-fil { display:flex; gap:8px; flex-wrap:wrap; }
+  .tdt-fil button { border:1px solid var(--line-2, var(--line)); background:var(--surface); color:var(--text); font:inherit; font-size:13.5px; padding:8px 18px; border-radius:999px; cursor:pointer; transition:background .15s, border-color .15s, box-shadow .15s; }
+  .tdt-fil button:not(.on):hover { background:var(--surface-2); box-shadow:0 2px 6px rgba(0,0,0,.08); }
+  .tdt-fil button.on { background:#14233b; border-color:#14233b; color:#fff; font-weight:600; }
+  body:not(.light) .tdt-fil button.on { background:var(--accent); border-color:var(--accent); color:#17120a; }
+  .tdt-wrap { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface); }
+  .tdt { width:100%; border-collapse:collapse; font-size:14px; }
+  .tdt thead th { text-align:left; font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--text-3); padding:12px 16px; border-bottom:1px solid var(--line); }
+  .tdt thead th:first-child { width:48%; }
+  .tdt tr.g th { text-align:left; padding:9px 16px; font-size:12.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb, var(--accent) 10%, var(--surface-2)); box-shadow:inset 3px 0 0 var(--accent); }
+  .tdt-g:not(.pri) tr.g th { border-top:12px solid var(--surface); }
+  .tdt td { padding:10px 16px; border-bottom:1px solid var(--line); color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tdt td.nm { white-space:normal; }
+  .tdt td.tx { font-weight:700; }
+  .tdt tr[data-n]:hover td { background:color-mix(in srgb, var(--accent) 5%, transparent); }
+  .tdt .ml { display:none; }
+  .tdt-vazio td { text-align:center; color:var(--text-3); padding:22px; }
   @media (max-width: 640px) {
-    .tdc-bar { margin:0 0 12px; }
-    .tdl { grid-template-columns:1fr; gap:12px; }
-    .tdc-tx { font-size:23px; }
+    .tdt-busca { flex:1 1 100%; }
+    .tdt-fil button { padding:7px 14px; font-size:13px; }
+    .tdt thead { display:none; }
+    .tdt tr[data-n] { display:grid; grid-template-columns:1.3fr 1fr 1fr; column-gap:8px; padding:9px 12px; border-bottom:1px solid var(--line); }
+    .tdt tr[data-n] td { padding:0; border:0; font-size:12.5px; }
+    .tdt tr[data-n] td.nm { grid-column:1 / -1; font-size:14px; font-weight:500; margin-bottom:5px; }
+    .tdt .ml { display:block; font-size:10.5px; font-weight:400; color:var(--text-3); }
+    .tdt tr.g th { padding:8px 12px; }
   }
   .ind-tbl-wrap { overflow-x:auto; margin:4px -4px 0; }
   .ind-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
