@@ -71,7 +71,8 @@
   const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
 
   /* ---------------- dados ---------------- */
-  const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
+  const CACHE_KEY = 'mesa_cache_v1';
+  try { localStorage.removeItem('mesa_curva_v1'); } catch (e) { /* curvas do Tesouro guardadas antes de 28/10/2026 */ }
   let cryptoStream = null;
   const cryptoEnabled = !!window.MMCryptoLive?.hostAllowed(location.hostname);
   let forexStream = null;
@@ -137,7 +138,7 @@
     Object.values(Q).forEach((q) => { q.live = false; });
     Object.values(X).forEach((q) => { if (q) q.live = false; });
     try {
-      const [n] = await Promise.all([loadQuotes(), loadExtras(), force || !curve || Date.now() - curve.ts > 30 * 60 * 1000 ? loadCurve() : null]);
+      const [n] = await Promise.all([loadQuotes(), loadExtras()]);
       errMsg = n ? '' : `Sem conexão com o servidor de cotações agora.${Object.keys(Q).length ? ' Mostrando os últimos valores salvos.' : ''}`;
       if (n) { lastTs = Date.now(); saveCache(); }
     } catch (e) { errMsg = 'Falha ao atualizar. Mostrando os últimos valores salvos.'; }
@@ -145,34 +146,9 @@
     render();
   }
 
-  /* ---------------- curva de juros (Tesouro Direto) ---------------- */
-  let curve = null, curveErr = '', curveKind = 'di', curveCmp = null;
-  const parseVenc = (s) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim()); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
-  function curvePoints(tit, kind) {
-    const now = Date.now();
-    return (tit || []).filter((t) => {
-      const n = String(t[0] || t.nome || '');
-      if (/renda\+|educa\+|selic/i.test(n)) return false;
-      return kind === 'pre' ? /prefixado/i.test(n) : /ipca\+/i.test(n);
-    }).map((t) => {
-      const nome = t.nome ?? t[0], taxa = t.taxa ?? t[1], venc = parseVenc(t.vencimento ?? t[2]);
-      return venc ? { nome, taxa, venc, y: (venc - now) / (365.25 * 86400000) } : null;
-    }).filter((p) => p && p.y > 0 && isFinite(p.taxa)).sort((a, b) => a.y - b.y);
-  }
-  function loadSnaps() { try { return JSON.parse(localStorage.getItem(CURVE_KEY) || '{}') || {}; } catch (e) { return {}; } }
-  // curvas diárias de até 400 dias, gravadas pelo robô do GitHub (historico/curva.json, fonte Tesouro Transparente)
-  const HIST_CURVA = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/historico/curva.json', 'historico/curva.json'];
-  let histCurva = null, histCurvaTentou = false;
-  async function loadHistCurva() {
-    if (histCurvaTentou) return;
-    histCurvaTentou = true;
-    for (const u of HIST_CURVA) {
-      try { const j = await getJSON(u); if (j && j.dias && Object.keys(j.dias).length) { histCurva = j.dias; break; } } catch (e) { /* tenta a próxima */ }
-    }
-    if (histCurva && root) { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
-  }
-  // dias guardados no navegador + histórico do GitHub (o oficial vale quando os dois têm o mesmo dia)
-  const allSnaps = () => ({ ...loadSnaps(), ...(histCurva || {}) });
+  /* ---------------- curva de juros (B3: DI e juro real) ---------------- */
+  // 28/10/2026: Pré e IPCA+ (Tesouro Direto) saíram a pedido do Severino; DI e Real cobrem as duas curvas
+  let curveKind = 'di';
   // curva DI x pré da B3 (robô curva.yml, terminal/curva/curva.json): último pregão, anterior, 1 semana e 1 mês
   const DI_URL = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/curva/curva.json';
   const DI_CMP = [['ontem', 'pregão anterior'], ['semana', '1 semana'], ['mes', '1 mês']];
@@ -257,26 +233,6 @@
       return { nome: `DI ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y };
     }).filter((p) => p.y > 0.05 && p.y <= 10.5 && isFinite(p.taxa));
   }
-  async function loadCurve() {
-    loadHistCurva();
-    try {
-      const j = await getJSON(`${PROXY}/tesouro`);
-      if (!Array.isArray(j.titulos) || !j.titulos.length) throw new Error('vazio');
-      curve = { t: j.titulos, ts: j.ts || Date.now() };
-      curveErr = '';
-      // guarda a curva do dia para comparar depois (até 60 dias)
-      const snaps = loadSnaps();
-      snaps[isoDay()] = j.titulos.filter((t) => /prefixado|ipca\+/i.test(t.nome) && !/renda\+|educa\+/i.test(t.nome)).map((t) => [t.nome, t.taxa, t.vencimento]);
-      Object.keys(snaps).sort().slice(0, -60).forEach((k) => delete snaps[k]);
-      try { localStorage.setItem(CURVE_KEY, JSON.stringify(snaps)); } catch (e) { /* cheio */ }
-    } catch (e) {
-      curveErr = 'Tesouro Direto indisponível agora.';
-      const snaps = allSnaps(), k = Object.keys(snaps).sort().pop();
-      if (!curve && k) { curve = { t: snaps[k].map(([nome, taxa, vencimento]) => ({ nome, taxa, vencimento })), ts: new Date(k + 'T12:00:00').getTime(), old: true }; }
-    }
-  }
-  // o histórico oficial traz também títulos que não estão mais à venda: compara só os mesmos títulos da curva de hoje
-  const mesmos = (cmp, pts) => { const f = cmp.filter((c) => pts.some((q) => +q.venc === +c.venc && /semestr/i.test(q.nome) === /semestr/i.test(c.nome))); return f.length >= 2 ? f : cmp; };
   const interp = (pts, y) => {
     if (pts.length < 2 || y < pts[0].y || y > pts[pts.length - 1].y) return null;
     for (let i = 1; i < pts.length; i++) if (pts[i].y >= y) { const a = pts[i - 1], b = pts[i]; return a.taxa + (b.taxa - a.taxa) * (y - a.y) / ((b.y - a.y) || 1); }
@@ -284,45 +240,11 @@
   };
   function curveHTML() {
     if (curveKind === 'di') return curveHTMLdi();
-    if (curveKind === 'dap') return curveHTMLdap();
-    const snaps = allSnaps();
-    const todos = Object.keys(snaps).filter((k) => k !== isoDay()).sort().reverse();
-    const days = todos.slice(0, 10);
-    // datas mais antigas: o dia guardado mais perto de 1, 3, 6 e 12 meses atrás
-    const marcos = {};
-    [[30, '1 mês'], [91, '3 meses'], [182, '6 meses'], [365, '1 ano']].forEach(([n, l]) => {
-      const alvo = new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
-      const k = todos.find((d) => d <= alvo);
-      if (k && !days.includes(k) && !marcos[k] && (Date.parse(alvo) - Date.parse(k)) < 10 * 86400000) { days.push(k); marcos[k] = l; }
-    });
-    if (curveCmp && !days.includes(curveCmp)) curveCmp = null;
-    if (curveCmp === null && days.length) {
-      // padrão: o dia guardado mais perto de 1 semana atrás
-      const alvo = Date.now() - 7 * 86400000;
-      curveCmp = days.reduce((m, k) => (Math.abs(new Date(k + 'T12:00:00') - alvo) < Math.abs(new Date(m + 'T12:00:00') - alvo) ? k : m), days[0]);
-    }
-    const pts = curve ? curvePoints(curve.t, curveKind) : [];
-    const cmp = curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : [];
-    const s2 = interp(pts, 2), s5 = interp(pts, 5);
-    const slope = s2 != null && s5 != null ? Math.round((s5 - s2) * 100) : null;
-    const c2 = interp(cmp, 2), c5 = interp(cmp, 5);
-    const dSlope = slope != null && c2 != null && c5 != null ? slope - Math.round((c5 - c2) * 100) : null;
-    const fmtDay = (k) => (marcos[k] ? `${k.split('-').reverse().join('/').replace(/\/(\d{2})(\d{2})$/, '/$2')} (${marcos[k]})` : k.split('-').reverse().slice(0, 2).join('/'));
-    return `
-      <div class="ms-head"><h3>Curva de juros</h3><span class="sp"></span>${segHTML()}</div>
-      <div class="ms-curve-sub">
-        <span>${slope != null ? `Inclinação 2a–5a: <b>${slope > 0 ? '+' : ''}${slope} bps</b>${dSlope != null ? ` · <span class="${cls(dSlope)}">${dSlope > 0 ? '+' : ''}${dSlope} bps</span> desde ${fmtDay(curveCmp)}` : ''}` : (pts.length ? 'Inclinação 2a–5a: —' : '')}</span>
-        <span class="sp"></span>
-        <label>Comparar com <select class="ms-cmp" ${days.length ? '' : 'disabled'}>${days.length ? `<option value="">Sem comparação</option>${days.map((k) => `<option value="${k}" ${k === curveCmp ? 'selected' : ''}>${fmtDay(k)}</option>`).join('')}` : '<option>sem histórico ainda</option>'}</select></label>
-      </div>
-      <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${curve ? 'Sem títulos desse tipo no arquivo do Tesouro.' : (curveErr || 'Carregando curva…')}</div>`}</div>
-      <div class="ms-foot">${curve ? `Taxas de compra do Tesouro Direto${curve.old ? `, salvas em ${new Date(curve.ts).toLocaleDateString('pt-BR')} (fonte fora do ar agora)` : `, ${new Date(curve.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}.` : ''}${histCurva ? ' Curvas anteriores: Tesouro Transparente.' : days.length ? '' : ' A comparação aparece a partir do segundo dia de uso, com as curvas que o painel guarda.'}</div>`;
+    return curveHTMLdap();
   }
   const segHTML = () => `<div class="ms-seg" role="group" aria-label="Tipo de curva">
           <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
           <button type="button" data-curve="dap" class="${curveKind === 'dap' ? 'on' : ''}" title="Juro real da B3 (DAP, cupom de IPCA)">Real</button>
-          <button type="button" data-curve="pre" class="${curveKind === 'pre' ? 'on' : ''}" title="Tesouro Prefixado">Pré</button>
-          <button type="button" data-curve="ipca" class="${curveKind === 'ipca' ? 'on' : ''}" title="Tesouro IPCA+ (juro real)">IPCA+</button>
         </div>`;
   // curva de comparação do DI: 'ajuste' = ajuste do pregão anterior (ao vivo); as outras vêm da curva da noite (curva.json)
   const diCmpPoints = () => (diCmp === 'ajuste' ? (diVivoOk() ? diVivoPoints('aj') : []) : diCmp && diCurvas?.[diCmp] ? diPoints(diCurvas[diCmp]) : []);
@@ -365,13 +287,11 @@
   }
   function drawCurve() {
     const box = root.querySelector('.ms-curve');
-    const di = curveKind === 'di', dap = curveKind === 'dap';
-    if (!box || (!di && !dap && !curve)) return;
-    const pts = dap ? dapPoints('t') : di ? diHojePoints() : curvePoints(curve.t, curveKind);
+    const di = curveKind === 'di', dap = !di;
+    if (!box) return;
+    const pts = dap ? dapPoints('t') : diHojePoints();
     if (pts.length < 2) return;
-    const snaps = di || dap ? null : allSnaps();
-    const cmpKey = di ? diCmp : curveCmp;
-    const cmp = dap ? (dapCmp ? dapPoints('aj') : []) : di ? diCmpPoints() : (curveCmp && snaps[curveCmp] ? mesmos(curvePoints(snaps[curveCmp], curveKind), pts) : []);
+    const cmp = dap ? (dapCmp ? dapPoints('aj') : []) : diCmpPoints();
     const pontos = !di || diVivoOk();
     const vivo = dap || (di && diVivoOk()); // a curva da noite tem ~225 vértices: sem bolinhas
     const W = Math.max(260, box.clientWidth), H = 220, L = 44, R = 12, T = 12, B = 24;
@@ -384,7 +304,7 @@
     const ticks = 5, yt = [...Array(ticks)].map((_, i) => y0 + (y1 - y0) * i / (ticks - 1));
     const years = [...new Set(pts.map((p) => p.venc.getFullYear()))];
     const step = Math.ceil(years.length / Math.max(2, Math.floor((W - L) / 56)));
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Curva de juros ${{ pre: 'prefixada', ipca: 'IPCA+', di: 'DI', dap: 'juro real' }[curveKind] || ''}">
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Curva de juros ${di ? 'DI' : 'juro real'}">
       ${yt.map((v) => `<line x1="${L}" x2="${W - R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="g"/><text x="${L - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end" class="ax">${nf(v, 2)}</text>`).join('')}
       ${years.filter((_, i) => i % step === 0).map((yr) => { const p = pts.find((q) => q.venc.getFullYear() === yr); return `<text x="${PX(p.y).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="ax">${yr}</text>`; }).join('')}
       ${cmp.length >= 2 ? `<path d="${path(cmp)}" class="cmp"/>` : ''}
@@ -403,8 +323,8 @@
       const old = cmp.length ? interp(cmp, best.y) : null;
       const bp = old != null ? Math.round((best.taxa - old) * 100) : null;
       tip.hidden = false;
-      const desde = dap ? 'o ajuste' : di ? diCmpData() : cmpKey.split('-').reverse().slice(0, Date.now() - Date.parse(cmpKey) > 300 * 86400000 ? 3 : 2).join('/');
-      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, vivo ? 3 : 2)}% ao ano${curveKind === 'ipca' || dap ? ' + IPCA' : ''}${vivo && !best.hoje ? ' (ajuste anterior)' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde}</span>` : ''}`;
+      const desde = dap ? 'o ajuste' : diCmpData();
+      tip.innerHTML = `<b>${esc(best.nome)}</b><span>${nf(best.taxa, vivo ? 3 : 2)}% ao ano${dap ? ' + IPCA' : ''}${vivo && !best.hoje ? ' (ajuste anterior)' : ''}</span>${bp != null ? `<span class="${cls(bp)}">${bp > 0 ? '+' : ''}${bp} bps desde ${desde}</span>` : ''}`;
       const left = (cx / W) * r.width;
       tip.style.left = `${Math.min(Math.max(left, 70), r.width - 70)}px`;
     };
@@ -668,7 +588,7 @@
   });
   root.addEventListener('change', (e) => {
     if (e.target.classList.contains('ms-cmp')) {
-      if (curveKind === 'di') diCmp = e.target.value || ''; else if (curveKind === 'dap') dapCmp = e.target.value || ''; else curveCmp = e.target.value || '';
+      if (curveKind === 'di') diCmp = e.target.value || ''; else dapCmp = e.target.value || '';
       const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); }
     }
   });
