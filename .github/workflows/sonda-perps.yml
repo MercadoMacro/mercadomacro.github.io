@@ -3,16 +3,12 @@ on: { push: { branches: [sonda-perps] } }
 jobs:
   s:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
-        with: { ref: sonda-perps }
       - shell: bash {0}
         run: |
-          cd sonda
-          (npx -y wrangler@4 dev --port 8787 > wr.log 2>&1 &)
-          for i in $(seq 1 60); do curl -s -m 3 -o /dev/null localhost:8787/ && break; sleep 2; done
-          time curl -s -m 40 -H 'Origin: https://mercadomacro.com.br' "localhost:8787/b3?s=IBOV,IFIX,PETR4,VALE3,ITUB4,BBAS3&mmp=vitrine" | head -c 3000; echo
-          curl -s -m 40 -H 'Origin: https://mercadomacro.com.br' "localhost:8787/b3?s=XPTO3&mmp=vitrine"; echo
-          curl -s -m 40 -H 'Origin: https://mercadomacro.com.br' "localhost:8787/b3?s=IBOV,IFIX,PETR4,VALE3,ITUB4,BBAS3&mmp=vitrine" -D - -o /dev/null | grep -i x-cache
-          tail -40 wr.log
+          W=https://shrill-meadow-89c1.danilo-nillo.workers.dev
+          curl -s -m 30 -H 'Origin: https://mercadomacro.com.br' "$W/b3?s=IBOV,IFIX,PETR4,VALE3,ITUB4,BBAS3&mmp=vitrine" | head -c 400; echo
+          curl -s -m 30 -H 'Origin: https://mercadomacro.com.br' "$W/b3?s=IBOV&mmp=vitrine" | head -c 200; echo
+          curl -s -m 30 https://mercadomacro.com.br/ | grep -o 'app.js?v=[0-9]*'
+          curl -s -m 30 https://mercadomacro.com.br/app.js?v=99 | grep -c 'b3Cotacoes'
