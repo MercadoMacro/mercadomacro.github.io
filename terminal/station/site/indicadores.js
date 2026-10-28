@@ -740,6 +740,15 @@
       main.innerHTML = `<div class="tdc-bar" role="tablist" aria-label="Filtrar por tipo">${['Todos', ...ordem].map((g) => `<button type="button" role="tab" data-tdf="${esc(g)}" aria-selected="${g === filtro}" class="${g === filtro ? 'on' : ''}">${esc(g === 'Todos' ? 'Todos' : ROT[g])}</button>`).join('')}</div>
         <div class="tdl" data-f="${esc(filtro)}">${ordem.map((g) => `<section class="tdl-g tdl-${TIPO[g][1]}${g === filtro ? ' on' : ''}" data-g="${esc(g)}"><header><h4>${esc(ROT[g])}</h4><span>${grupos[g].length}</span></header><ul>${grupos[g].map((t) => card(t, g)).join('')}</ul></section>`).join('')}</div>
         <div class="ind-foot"><span class="ind-src">${esc(d.src)}${s.st === 'err' ? ' · mostrando o último dado salvo' : ''}</span></div>`;
+      // em "Todos", cada grupo mostra 3 cards e rola o resto
+      const limita = () => main.querySelectorAll('.tdl-g ul').forEach((ul) => {
+        const li = ul.children;
+        if (li.length <= 3) return;
+        ul.classList.add('rola');
+        const h = li[2].offsetTop + li[2].offsetHeight - ul.offsetTop + 30; // deixa aparecer a ponta do 4º card, sinal de que rola
+        if (h > 40) ul.style.maxHeight = h + 'px';
+      });
+      requestAnimationFrame(limita);
       main.onclick = (ev) => {
         const bt = ev.target.closest('[data-tdf]');
         if (!bt) return;
@@ -749,6 +758,7 @@
         const box = main.querySelector('.tdl');
         box.dataset.f = f;
         box.querySelectorAll('.tdl-g').forEach((x) => x.classList.toggle('on', x.dataset.g === f));
+        requestAnimationFrame(limita);
       };
       return;
     }
@@ -1701,6 +1711,8 @@
   .tdl-g h4 { margin:0; font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 55%, var(--text)); }
   .tdl-g header span { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-3); }
   .tdl-g ul { list-style:none; margin:0; padding:10px; display:flex; flex-direction:column; gap:8px; }
+  .tdl-g ul.rola { max-height:390px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:color-mix(in srgb, var(--c) 40%, transparent) transparent; }
+  .tdl[data-f]:not([data-f="Todos"]) .tdl-g ul.rola { max-height:none !important; overflow:visible; }
   .tdc { padding:10px 12px 11px; border-radius:10px; background:var(--surface); border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.06); transition:border-color .15s, box-shadow .15s; }
   .tdc:hover { border-color:color-mix(in srgb, var(--c) 45%, var(--line)); box-shadow:0 3px 10px rgba(0,0,0,.1); }
   .tdc-top { display:flex; align-items:center; gap:6px; min-height:18px; }
