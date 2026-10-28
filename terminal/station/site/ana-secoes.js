@@ -6,22 +6,28 @@
   if (!wrap || !dq) return;
   const SECOES = [
     ['fluxo', 'Fluxo na B3', 'fa-right-left'],
-    ['juros', 'Fed e Copom', 'fa-landmark'],
+    ['fed', 'Fed', 'flag-us'],
+    ['copom', 'Copom', 'flag-br'],
     ['cot', 'Especuladores', 'fa-scale-balanced'],
     ['f13', 'Grandes fundos', 'fa-briefcase'],
     ['mercado', 'Mercado', 'fa-chart-line']
   ];
-  const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'juros', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13' };
+  const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'fed', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13' };
+  // Fed e Copom usam as bandeirinhas no lugar do ícone
+  const BANDEIRA = { 'flag-us': '<svg class="pj-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/></svg>', 'flag-br': '<svg class="pj-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.2 10 15 17.8 2.8 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c3-.8 6.2-.5 8.9.9" stroke="#fff" stroke-width=".8" fill="none"/></svg>' };
+  const icone = (ic) => BANDEIRA[ic] || `<i class="fa-solid ${ic}" aria-hidden="true"></i>`;
+  const TIT = { fed: ['Probabilidades do Fed', 'futuros de Fed Funds'], copom: ['Probabilidades do Copom', 'opções de Copom da B3'] };
   const CHAVE = 'ana_secao';
   // sem escolha salva, abre na primeira seção (Mercado ficou por último a pedido do Severino)
   let secao = SECOES[0][0];
   try { secao = localStorage.getItem(CHAVE) || secao; } catch (e) { /* sem armazenamento */ }
+  if (secao === 'juros') secao = 'fed';   // a aba antiga "Fed e Copom" virou duas
   if (!SECOES.some(([k]) => k === secao)) secao = SECOES[0][0];
 
   const nav = document.createElement('nav');
   nav.className = 'ana-jump';
   nav.setAttribute('aria-label', 'Seções das Análises');
-  nav.innerHTML = `<span class="aj-pill" aria-hidden="true"></span>${SECOES.map(([k, t, ic]) => `<button type="button" data-secao="${k}"><i class="fa-solid ${ic}" aria-hidden="true"></i><span>${t}</span></button>`).join('')}`;
+  nav.innerHTML = `<span class="aj-pill" aria-hidden="true"></span>${SECOES.map(([k, t, ic]) => `<button type="button" data-secao="${k}">${icone(ic)}<span>${t}</span></button>`).join('')}`;
   dq.after(nav);
 
   function pilula() {
@@ -34,6 +40,11 @@
   function mostra(k, salva = true) {
     secao = k;
     wrap.dataset.secao = k;
+    if (TIT[k]) {
+      const t = document.getElementById('pj-tit'), f = document.getElementById('pj-fonte');
+      if (t) t.textContent = TIT[k][0];
+      if (f) f.textContent = TIT[k][1];
+    }
     nav.querySelectorAll('[data-secao]').forEach((b) => { const on = b.dataset.secao === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
     if (salva) { try { localStorage.setItem(CHAVE, k); } catch (e) { /* sem armazenamento */ } }
     pilula();
@@ -59,6 +70,7 @@
   .ana-jump button:not(.on):hover { background:var(--surface-2); color:var(--text); box-shadow:0 2px 6px rgba(0,0,0,.1); transform:translateY(-1px); }
   .ana-jump button.on { color:#fff; font-weight:600; }
   .ana-jump button.on i { color:inherit; }
+  .ana-jump .pj-flag { width:18px; height:12px; }
   .aj-pill { position:absolute; z-index:0; top:0; left:0; width:0; height:0; border-radius:10px; background:color-mix(in srgb, var(--accent) 72%, #000); box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent); transition:transform .3s var(--ease,ease), width .3s var(--ease,ease), height .3s var(--ease,ease); }
   body:not(.light) .aj-pill { background:var(--accent); }
   body:not(.light) .ana-jump button.on { color:#17120a; }
@@ -68,13 +80,15 @@
   .ana-wrap[data-secao]:not([data-secao="mercado"]) > #ana-body,
   .ana-wrap[data-secao="mercado"] > .ana-extra,
   .ana-wrap[data-secao="fluxo"] .ana-extra > .market-section:not(#ana-sec-fluxo),
-  .ana-wrap[data-secao="juros"] .ana-extra > .market-section:not(#ana-sec-fed),
+  .ana-wrap[data-secao="fed"] .ana-extra > .market-section:not(#ana-sec-fed),
+  .ana-wrap[data-secao="copom"] .ana-extra > .market-section:not(#ana-sec-fed),
+  .ana-wrap[data-secao="fed"] #pj-col-br,
+  .ana-wrap[data-secao="copom"] #pj-col-eua,
   .ana-wrap[data-secao="cot"] .ana-extra > .market-section:not(#ana-sec-cot),
   .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f) { display:none !important; }
   @media (max-width: 640px) {
     .ana-jump { display:grid; grid-template-columns:1fr 1fr; width:100%; overflow:visible; }
     .ana-jump button { justify-content:center; padding:9px 8px; font-size:13px; white-space:normal; text-align:center; }
-    .ana-jump button:last-child { grid-column:1 / -1; }
     .ana-jump button:not(.on):hover { transform:none; }
   }
   @media (prefers-reduced-motion: reduce) { .aj-pill, .ana-jump button { transition:none; } }
