@@ -14,6 +14,7 @@ import { paginaBalanca } from './balanca-publica.js';
 
 const COOKIE = 'mm_s';
 const SESSAO_DIAS = 90;
+const SESSAO_DIAS_ADMIN = 30; // conta de administrador: sessão mais curta (auditoria de 28/10/2026)
 const ITER = 30000;
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
 const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
@@ -942,6 +943,21 @@ async function apiAuth(req, env, acao, ctx) {
     return json({ ok: true });
   }
 
+  if (acao === 'aparelhos') {
+    // aparelhos com a conta aberta: { ler: 1 } conta; { sair: 1 } encerra todos menos este
+    const eu = (await usuarioDaSessao(req, env)) || (await contaDaSessao(req, env));
+    if (!eu) return json({ erro: 'Faça login para continuar.' }, 401);
+    const meu = await sha256hex(lerCookie(req));
+    if (b.sair) {
+      const r = await env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token != ?').bind(eu.id, meu).run();
+      cacheSessao.clear();
+      if (r.meta.changes) await registrar(env, eu.id, `Saiu dos outros aparelhos (${r.meta.changes})`);
+      return json({ ok: true, encerradas: r.meta.changes, outros: 0 });
+    }
+    const n = await env.DB.prepare('SELECT COUNT(*) n FROM sessoes WHERE usuario_id = ? AND token != ? AND expira > ?').bind(eu.id, meu, Date.now()).first();
+    return json({ ok: true, outros: n.n });
+  }
+
   if (acao === 'excluir') {
     // a própria pessoa apaga a conta (precisa estar logada e confirmar a senha); vale também com o acesso vencido
     const eu = (await usuarioDaSessao(req, env)) || (await contaDaSessao(req, env));
@@ -1006,7 +1022,7 @@ async function apiAuth(req, env, acao, ctx) {
       const t = await env.DB.prepare('SELECT n, janela FROM tentativas WHERE chave = ?').bind(k).first();
       if (t && agoraS - t.janela <= 900 && t.n >= max) return json({ erro: 'Muitas senhas erradas seguidas. Espere 15 minutos.' }, 429);
     }
-    const u = await env.DB.prepare('SELECT id, senha, status FROM usuarios WHERE email = ?').bind(email).first();
+    const u = await env.DB.prepare('SELECT id, senha, status, admin FROM usuarios WHERE email = ?').bind(email).first();
     if (!u || !(await conferirSenha(senha, u.senha))) {
       await dentroDoLimite(env, chave, 10, 900);
       await dentroDoLimite(env, chaveU, 20, 900);
@@ -1017,13 +1033,13 @@ async function apiAuth(req, env, acao, ctx) {
     // aguardando liberação ou com a validade vencida também entra, mas só vê a página de assinatura
     if (!['ativo', 'pendente', 'expirado'].includes(u.status)) return json({ erro: 'Seu acesso não está liberado.' }, 403);
     const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
-    const agora = Date.now();
+    const agora = Date.now(), dias = u.admin ? SESSAO_DIAS_ADMIN : SESSAO_DIAS;
     await env.DB.batch([
       env.DB.prepare('DELETE FROM sessoes WHERE expira < ?').bind(agora),
-      env.DB.prepare('INSERT INTO sessoes (token, usuario_id, expira) VALUES (?, ?, ?)').bind(await sha256hex(tok), u.id, agora + SESSAO_DIAS * 864e5),
+      env.DB.prepare('INSERT INTO sessoes (token, usuario_id, expira) VALUES (?, ?, ?)').bind(await sha256hex(tok), u.id, agora + dias * 864e5),
       env.DB.prepare('UPDATE usuarios SET ultimo_acesso = ? WHERE id = ?').bind(new Date().toISOString(), u.id),
     ]);
-    return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao(tok, SESSAO_DIAS * 86400) });
+    return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao(tok, dias * 86400) });
   }
   return json({ erro: 'Não encontrado.' }, 404);
 }
@@ -1113,20 +1129,6 @@ async function apiAdmin(req, env, acao, eu) {
       await registrar(env, id, 'Senha provisória criada pelo administrador');
       return json({ ok: true, senha });
     }
-    if (b.acao === 'validade') {
-      // validade da conta: +3 dias, +1 mês ou sem validade (a partir de hoje ou do fim da validade atual)
-      await garantirAssinatura(env);
-      const v = await env.DB.prepare(`SELECT status, expira FROM usuarios WHERE id = ? AND admin = 0`).bind(id).first();
-      if (!v || !['ativo', 'expirado'].includes(v.status)) return json({ erro: 'Usuário inválido.' }, 400);
-      const base = new Date(v.expira && v.expira > new Date().toISOString() ? v.expira : Date.now());
-      if (b.mais === 'dias3') base.setTime(base.getTime() + 3 * 864e5);
-      else if (b.mais === 'mes1') base.setUTCMonth(base.getUTCMonth() + 1);
-      else if (b.mais !== 'sem') return json({ erro: 'Ação inválida.' }, 400);
-      const expira = b.mais === 'sem' ? null : base.toISOString();
-      await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ? WHERE id = ? AND admin = 0`).bind(expira, id).run();
-      cacheSessao.clear();
-      return json({ ok: true, expira });
-    }
     const novo = { liberar: 'ativo', recusar: 'recusado', bloquear: 'bloqueado' }[b.acao];
     const agora = new Date().toISOString();
     if (b.acao === 'excluir') {
@@ -1139,6 +1141,8 @@ async function apiAdmin(req, env, acao, eu) {
       ]);
       await garantirLinks(env);
       await env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(id).run();
+      // registros de envio (só o número da conta): as tabelas podem ainda não existir
+      for (const t of ['comunicados_envios', 'boasvindas_envios']) await env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(id).run().catch(() => {});
     } else if (novo) {
       await garantirAssinatura(env);
       const antes = await env.DB.prepare('SELECT nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
@@ -1164,7 +1168,15 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'avisos') {
     const c = await config(env);
-    if (req.method === 'GET') return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat), canal: c.tg_canal_nome || null, canalNoticias: c.tg_canal_noticias !== 'nao' });
+    if (req.method === 'GET') {
+      // robô salvo e ainda sem conversa: um código de 6 números que você manda ao robô para provar que a conversa é sua
+      let codigo = null;
+      if (c.tg_token && !c.tg_chat) {
+        codigo = c.tg_codigo || String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+        if (!c.tg_codigo) await salvarConfig(env, { tg_codigo: codigo });
+      }
+      return json({ bot: c.tg_bot || null, conectado: !!(c.tg_token && c.tg_chat), codigo, canal: c.tg_canal_nome || null, canalNoticias: c.tg_canal_noticias !== 'nao' });
+    }
     if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
     const b = await req.json().catch(() => ({}));
     if (b.acao === 'token') {
@@ -1173,20 +1185,21 @@ async function apiAdmin(req, env, acao, eu) {
       const me = await telegram(token, 'getMe', {});
       if (!me.ok) return json({ erro: 'O Telegram não aceitou esse token. Confira se copiou certo.' }, 400);
       // bot novo: a conversa e o canal do bot antigo deixam de valer (o canal precisa ser ligado de novo com o bot novo)
-      await salvarConfig(env, { tg_token: token, tg_bot: me.result.username, tg_chat: null, tg_canal: null, tg_canal_nome: null });
+      await salvarConfig(env, { tg_token: token, tg_bot: me.result.username, tg_chat: null, tg_canal: null, tg_canal_nome: null, tg_codigo: null });
       return json({ ok: true, bot: me.result.username });
     }
     if (b.acao === 'conectar') {
       if (!c.tg_token) return json({ erro: 'Cole o token do robô primeiro.' }, 400);
       const up = await telegram(c.tg_token, 'getUpdates', { allowed_updates: ['message'] });
-      const msgs = (up.result || []).map((u) => u.message).filter((m) => m && m.chat && m.chat.type === 'private');
-      if (!msgs.length) return json({ erro: 'Ainda não achei sua mensagem. No Telegram, abra @' + c.tg_bot + ', toque em Iniciar (ou mande qualquer mensagem) e tente de novo.' }, 400);
+      // só vale a conversa que mandou o código desta página (outra pessoa que fale com o robô não é ligada)
+      const msgs = (up.result || []).map((u) => u.message).filter((m) => m && m.chat && m.chat.type === 'private' && c.tg_codigo && String(m.text || '').includes(c.tg_codigo));
+      if (!msgs.length) return json({ erro: 'Ainda não achei o código. No Telegram, abra @' + c.tg_bot + ', toque em Iniciar, mande o código ' + (c.tg_codigo || '') + ' e tente de novo.' }, 400);
       const chat = String(msgs[msgs.length - 1].chat.id);
-      await salvarConfig(env, { tg_chat: chat });
+      await salvarConfig(env, { tg_chat: chat, tg_codigo: null });
       await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: 'Pronto. Os avisos de cadastro novo do Mercado Macro vão chegar aqui.' });
       return json({ ok: true });
     }
-    if (b.acao === 'desligar') { await salvarConfig(env, { tg_token: null, tg_bot: null, tg_chat: null, tg_canal: null, tg_canal_nome: null }); return json({ ok: true }); }
+    if (b.acao === 'desligar') { await salvarConfig(env, { tg_token: null, tg_bot: null, tg_chat: null, tg_canal: null, tg_canal_nome: null, tg_codigo: null }); return json({ ok: true }); }
     // canal público: o robô precisa ser administrador do canal; aceita @usuario ou o link t.me
     if (b.acao === 'canal') {
       if (!c.tg_token) return json({ erro: 'Conecte o Telegram primeiro.' }, 400);
@@ -1876,6 +1889,8 @@ async function sitemap(env) {
 
 /* ---------------- páginas ---------------- */
 const BASE_CSS = `
+html[data-tema=dark]{--bg:#070b14;--surface:#0e1524;--surface-2:#121a2b;--line:#1c2740;--line-2:#24304d;--text:#e6ecf5;--text-2:#a8b3c7;--text-3:#8591a8;--accent:#f0b90b;--accent-text:#f0b90b;--on-accent:#111;--pos:#16c784;--neg:#ff6b73;color-scheme:dark}
+html[data-tema=light]{--bg:#f5f7fb;--surface:#fff;--surface-2:#f7f9fc;--line:#dfe5ee;--line-2:#cfd7e3;--text:#0b1220;--text-2:#4a5568;--text-3:#5f6a7d;--accent:#b8860b;--accent-text:#7a5a00;--on-accent:#111;--pos:#0b7a4f;--neg:#c0262f;color-scheme:light}
 :root{--bg:#070b14;--surface:#0e1524;--surface-2:#121a2b;--line:#1c2740;--line-2:#24304d;--text:#e6ecf5;--text-2:#a8b3c7;--text-3:#8591a8;--accent:#f0b90b;--accent-text:#f0b90b;--on-accent:#111;--pos:#16c784;--neg:#ff6b73;color-scheme:dark}
 @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--surface:#fff;--surface-2:#f7f9fc;--line:#dfe5ee;--line-2:#cfd7e3;--text:#0b1220;--text-2:#4a5568;--text-3:#5f6a7d;--accent:#b8860b;--accent-text:#7a5a00;--on-accent:#111;--pos:#0b7a4f;--neg:#c0262f;color-scheme:light}}
 *{box-sizing:border-box}
@@ -1888,6 +1903,7 @@ button,input{font:inherit}
 const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Administração | Mercado Macro</title>
+<script>try{var t=localStorage.getItem('trader_theme');if(t==='dark'||t==='light')document.documentElement.dataset.tema=t;}catch(e){}</script>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1900,6 +1916,7 @@ main{max-width:1180px;margin:0 auto;padding:0 20px 56px}
 a.vol{color:var(--accent-text);font-size:13px;white-space:nowrap}
 .abas{position:sticky;top:0;z-index:5;display:flex;gap:2px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 18px;padding:0 20px;scrollbar-width:none}
 .abas::-webkit-scrollbar{display:none}
+@media (max-width:760px){.abas{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}}
 .abas button{background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:12px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
 .abas button[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent)}
 .abas button:hover{color:var(--text)}
@@ -2067,7 +2084,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
       <h2>E-mail (Resend)</h2><div id="email"><p class="vazio">Carregando…</p></div></div>
     <div><h2>Avisos no Telegram</h2><div id="avisos"><p class="vazio">Carregando…</p></div>
-      <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div></div>
+      <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div>
+      <h2>Sua conta de administrador</h2><div id="aparelhos"><p class="vazio">Carregando…</p></div></div>
   </div>
 </section>
 <dialog id="dlg-hist" aria-labelledby="hs-t"><div class="dl" id="hs"></div></dialog>
@@ -2255,7 +2273,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
     document.querySelectorAll('[data-p]').forEach(function(x){ x.hidden = x.dataset.p !== n; });
-    document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); });
+    document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); if (x.dataset.aba === n && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
@@ -2474,7 +2492,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       } else if (j.bot) {
         h = '<div class="caixa"><p>Robô <b>@' + esc(j.bot) + '</b> encontrado. Falta um passo:</p><ol>'
           + '<li>No Telegram, abra <a href="https://t.me/' + encodeURIComponent(j.bot) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">@' + esc(j.bot) + '</a> e toque em <b>Iniciar</b>.</li>'
-          + '<li>Volte aqui e toque em Conectar.</li></ol>'
+          + '<li>Mande para o robô este código: <b style="font-size:16px;letter-spacing:.12em">' + esc(j.codigo || '') + '</b></li>'
+          + '<li>Volte aqui e toque em Conectar. Só a conversa que mandou o código recebe os avisos.</li></ol>'
           + '<div class="linha"><button type="button" id="av-con" style="' + bt + '">Conectar</button><button type="button" id="av-off" style="' + bt + '">Usar outro robô</button></div></div>';
       } else {
         h = '<div class="caixa"><p>Receba uma mensagem no Telegram sempre que alguém pedir acesso. Para ligar:</p><ol>'
@@ -2607,7 +2626,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p><p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
@@ -2677,8 +2696,26 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       };
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  // aparelhos com a conta do administrador aberta (a sessão do admin vale 30 dias)
+  function aparelhos(){
+    var ap = document.getElementById('aparelhos');
+    var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+    post('/api/auth/aparelhos', { ler: 1 }).then(function(j){
+      ap.innerHTML = '<div class="caixa"><p>' + (j.outros ? 'Além deste, sua conta está aberta em <b>' + j.outros + (j.outros === 1 ? ' outro aparelho' : ' outros aparelhos') + '</b>.' : 'Sua conta está aberta só neste aparelho.') + ' Cada entrada do administrador vale 30 dias.</p>'
+        + (j.outros ? '<div class="linha"><button type="button" id="ap-sair" style="' + bt + '">Sair dos outros aparelhos</button></div>' : '')
+        + '<p class="d" style="margin:8px 0 0">Para trocar a senha, use <a href="/conta" style="color:var(--accent-text)">Minha conta</a>.</p></div><p class="msg" id="ap-msg"></p>';
+      var b = document.getElementById('ap-sair');
+      if (b) b.onclick = function(){
+        if (!confirm('Sair da conta em todos os outros aparelhos? Este continua conectado.')) return;
+        b.disabled = true;
+        post('/api/auth/aparelhos', { sair: 1 }).then(function(r){ aparelhos(); setTimeout(function(){ var m = document.getElementById('ap-msg'); m.className = 'msg ok'; m.textContent = r.encerradas + (r.encerradas === 1 ? ' aparelho desconectado.' : ' aparelhos desconectados.'); }, 300); },
+          function(e){ b.disabled = false; var m = document.getElementById('ap-msg'); m.className = 'msg erro'; m.textContent = (e && e.erro) || 'Não foi possível.'; });
+      };
+    }).catch(function(){ ap.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
   boasVindas();
   pix();
+  aparelhos();
   pagamentos();
   capital();
   email();
@@ -2690,6 +2727,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
 const PAGINA_CONTA = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Minha conta | Mercado Macro</title>
+<script>try{var t=localStorage.getItem('trader_theme');if(t==='dark'||t==='light')document.documentElement.dataset.tema=t;}catch(e){}</script>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
