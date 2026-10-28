@@ -718,11 +718,21 @@
         (grupos[g] = grupos[g] || []).push(t);
       });
       const ordem = ['Selic', 'Prefixado', 'IPCA+', 'Renda+', 'Educa+', 'Outros'].filter((g) => grupos[g]);
+      // um bloco por tipo, lado a lado: ano em destaque, taxa à direita, preço e vencimento embaixo (layout compacto, 28/10/2026)
+      const DESC = { Selic: 'pós-fixado', Prefixado: 'taxa fixa', 'IPCA+': 'inflação + juro real', 'Renda+': 'ano em que começa a renda', 'Educa+': 'ano em que começa a renda', Outros: '' };
       const taxa = (t) => /selic/i.test(t.nome) ? `Selic + ${nf(t.taxa, 4)}%` : /ipca|renda|educa/i.test(t.nome) ? `IPCA + ${nf(t.taxa)}%` : `${nf(t.taxa)}%`;
-      main.innerHTML = `<div class="ind-tbl-wrap"><table class="ind-tbl"><thead><tr><th>Título</th><th>Taxa</th><th>Preço</th><th>Vencimento</th></tr></thead><tbody>${
-        ordem.map((g) => `<tr class="g"><td colspan="4">${g}</td></tr>` + grupos[g].map((t) =>
-          `<tr><td>${esc(t.nome)}</td><td class="n">${taxa(t)}</td><td class="n">${t.pu != null ? 'R$ ' + nf(t.pu) : '—'}</td><td class="n">${esc(t.vencimento || '—')}</td></tr>`).join('')).join('')
-      }</tbody></table></div><div class="ind-foot"><span class="ind-src">${esc(d.src)}${s.st === 'err' ? ' · mostrando o último dado salvo' : ''}</span></div>`;
+      const taxaCurta = (t) => /selic/i.test(t.nome) ? `+${nf(t.taxa, 4)}%` : /ipca|renda|educa/i.test(t.nome) ? `+${nf(t.taxa)}%` : `${nf(t.taxa)}%`;
+      const ano = (t) => (String(t.nome).match(/(\d{4})\s*$/) || [])[1] || t.nome;
+      const linha = (t) => {
+        const sem = /semestr/i.test(t.nome);
+        return `<li title="${esc(t.nome)} · ${esc(taxa(t))}">
+          <div class="tdl-a"><b>${esc(ano(t))}</b>${sem ? '<span class="tdl-tag" title="Paga juros a cada seis meses">semestral</span>' : ''}<span class="tdl-tx">${taxaCurta(t)}</span></div>
+          <div class="tdl-b"><span>${t.pu != null ? 'R$ ' + nf(t.pu) : '—'}</span><span>venc. ${esc(t.vencimento || '—')}</span></div></li>`;
+      };
+      main.innerHTML = `<div class="tdl">${ordem.map((g) => {
+        const pre = g === 'Selic' ? 'Selic' : g === 'Prefixado' ? '' : 'IPCA';
+        return `<section class="tdl-g"><header><h4>${esc(g)}</h4><span>${esc(DESC[g] || '')}</span>${pre ? `<em>${pre} +</em>` : ''}</header><ul>${grupos[g].map(linha).join('')}</ul></section>`;
+      }).join('')}</div><div class="ind-foot"><span class="ind-src">${esc(d.src)}${s.st === 'err' ? ' · mostrando o último dado salvo' : ''}</span></div>`;
       return;
     }
 
@@ -1660,6 +1670,33 @@
   @keyframes indIn { from { opacity:0; } to { opacity:1; } }
   .ind-skel { height:12px; border-radius:6px; background:var(--surface-2); animation: skelPulse 1.2s ease-in-out infinite; }
   .ind-skel.w60 { width:60%; height:26px; } .ind-skel.w40 { width:40%; } .ind-skel.h60 { height:80px; margin-top:auto; }
+  .tdl { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-top:4px; align-items:start; }
+  .tdl-g { border:1px solid var(--line); border-radius:10px; background:var(--surface-2); overflow:hidden; }
+  .tdl-g header { display:flex; align-items:baseline; gap:8px; padding:9px 12px 8px; border-bottom:1px solid var(--line); }
+  .tdl-g h4 { margin:0; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
+  .tdl-g header span { font-size:11px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tdl-g header em { margin-left:auto; font-style:normal; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-3); white-space:nowrap; }
+  .tdl-g ul { list-style:none; margin:0; padding:0; }
+  .tdl-g li { position:relative; padding:7px 12px 8px; border-bottom:1px solid var(--line); }
+  .tdl-g li:last-child { border-bottom:0; }
+  .tdl-g li:hover { background:color-mix(in srgb, var(--accent) 5%, transparent); }
+  .tdl-a { display:flex; align-items:center; gap:6px; }
+  .tdl-a b { font-size:14px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+  .tdl-tag { font-size:9.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-3); border:1px solid var(--line); border-radius:4px; padding:0 4px; line-height:15px; }
+  .tdl-tx { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:13.5px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tdl-b { display:flex; justify-content:space-between; gap:8px; margin-top:2px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-3); font-variant-numeric:tabular-nums; }
+  @media (max-width: 640px) {
+    .tdl { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .tdl-g header { flex-wrap:wrap; row-gap:0; padding:8px 10px 7px; }
+    .tdl-g header span { display:none; }
+    .tdl-g li { padding:6px 10px 7px; }
+    .tdl-a { column-gap:5px; }
+    .tdl-a b { font-size:13px; }
+    .tdl-tag { font-size:0; padding:0 3px; line-height:13px; }
+    .tdl-tag::after { content:'S'; font-size:8.5px; }
+    .tdl-tx { font-size:12.5px; }
+    .tdl-b { flex-direction:column; gap:0; font-size:10px; }
+  }
   .ind-tbl-wrap { overflow-x:auto; margin:4px -4px 0; }
   .ind-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
   .ind-tbl th { text-align:left; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); font-weight:700; padding:6px 8px; border-bottom:1px solid var(--line); }
