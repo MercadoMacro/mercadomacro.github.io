@@ -4993,7 +4993,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'destaques.js?v=1';
+    sc.src = 'destaques.js?v=2';
     sc.onload = () => window.__destaquesRender && window.__destaquesRender(el);
     sc.onerror = () => { pedido = false; };
     document.body.appendChild(sc);

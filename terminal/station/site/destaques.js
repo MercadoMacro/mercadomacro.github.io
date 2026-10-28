@@ -108,9 +108,8 @@
         const b = e.target.closest('[data-alvo]');
         const alvo = b && document.getElementById(b.dataset.alvo);
         if (!alvo) return;
-        // as seções ficam dentro da "Análise avançada": abre antes de rolar
-        const tg = document.getElementById('ana-toggle');
-        if (alvo.offsetParent === null && tg && tg.getAttribute('aria-expanded') !== 'true') tg.click();
+        // com a barra de seções, troca para a seção do cartão antes de rolar
+        if (window.__anaSecao) window.__anaSecao(b.dataset.alvo);
         requestAnimationFrame(() => alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       });
     }
