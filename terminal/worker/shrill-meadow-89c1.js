@@ -584,35 +584,74 @@ async function handleCripto(env, ctx, cors) {
   return new Response(body, { status: ok ? 200 : 502, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Cache': 'MISS', ...cors } });
 }
 
-// DI futuro da B3 (todos os vencimentos do DI1), pelo site público de cotações da B3 (atraso de cerca de 15 minutos).
-// t = última taxa negociada hoje (null se ainda não negociou), aj = ajuste do pregão anterior, oi = contratos em aberto.
-async function handleDI(ctx, cors) {
-  const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/di-v1');
-  const hit = await cache.match(cacheKey);
-  if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'HIT', ...cors } });
-  const num = (x) => (x != null && isFinite(+x) ? +x : null);
-  let j = null; const erros = [];
-  // pela rede da Cloudflare o https da B3 às vezes volta 526 (certificado); tenta também por http
+// Derivativos da B3 pelo site público de cotações (atraso de cerca de 15 minutos).
+// Pela rede da Cloudflare o https da B3 às vezes volta 526 (certificado); tenta também por http.
+async function b3Derivativo(ativo) {
+  const erros = [];
   for (const base of ['https://cotacao.b3.com.br', 'http://cotacao.b3.com.br']) {
     try {
-      const r = await fetch(base + '/mds/api/v1/DerivativeQuotation/DI1', {
+      const r = await fetch(base + '/mds/api/v1/DerivativeQuotation/' + ativo, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/json', Referer: 'https://www.b3.com.br/' },
+        signal: AbortSignal.timeout(12000),
       });
       if (!r.ok) { erros.push(base.slice(0, 5) + ' HTTP ' + r.status); continue; }
-      j = await r.json(); break;
+      return await r.json();
     } catch (e) { erros.push(base.slice(0, 5) + ' ' + e.message); }
   }
-  if (!j) return json({ error: 'B3: ' + erros.join('; ') }, 502, cors);
-  const c = (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && /^DI1[FGHJKMNQUVXZ]\d\d$/.test(x.symb || '')).map((x) => ({
+  throw new Error('B3 ' + ativo + ': ' + erros.join('; '));
+}
+const b3Num = (x) => (x != null && isFinite(+x) ? +x : null);
+// contratos futuros de um ativo: t = último negócio de hoje (null se não negociou), aj = ajuste do pregão anterior,
+// oi = contratos em aberto, neg = contratos negociados hoje
+function b3Futuros(j, ativo) {
+  const re = new RegExp('^' + ativo + '[FGHJKMNQUVXZ]\\d\\d$');
+  return (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && re.test(x.symb || '')).map((x) => ({
     s: x.symb, venc: x.asset?.AsstSummry?.mtrtyCode || null,
-    t: num(x.SctyQtn?.curPrc), aj: num(x.SctyQtn?.prvsDayAdjstmntPric),
-    oi: num(x.asset?.AsstSummry?.opnCtrcts) || 0, neg: num(x.asset?.AsstSummry?.traddCtrctsQty) || 0,
+    t: b3Num(x.SctyQtn?.curPrc), aj: b3Num(x.SctyQtn?.prvsDayAdjstmntPric),
+    oi: b3Num(x.asset?.AsstSummry?.opnCtrcts) || 0, neg: b3Num(x.asset?.AsstSummry?.traddCtrctsQty) || 0,
   })).filter((x) => x.venc && (x.t != null || x.aj != null)).sort((a, b) => (a.venc < b.venc ? -1 : 1));
+}
+const jsonCache = (body, cors, hit) => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': hit ? 'HIT' : 'MISS', ...cors } });
+
+// curva completa de um ativo de juros: DI1 (DI x pré) ou DAP (cupom de IPCA, juro real)
+async function handleDI(ctx, cors, ativo = 'DI1') {
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/' + (ativo === 'DI1' ? 'di-v1' : ativo.toLowerCase() + '-v1'));
+  const hit = await cache.match(cacheKey);
+  if (hit) return jsonCache(hit.body, cors, true);
+  let j;
+  try { j = await b3Derivativo(ativo); } catch (e) { return json({ error: e.message }, 502, cors); }
+  const c = b3Futuros(j, ativo);
   if (!c.length) return json({ error: 'B3 sem contratos' }, 502, cors);
   const body = JSON.stringify({ ts: Date.now(), b3: j?.Msg?.dtTm || null, c });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
-  return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': 'MISS', ...cors } });
+  return jsonCache(body, cors, false);
+}
+
+// Futuros da B3 na Mesa: um contrato por ativo, o mais negociado hoje (sem negócios, o de mais contratos em aberto)
+const FUT_B3 = [
+  ['WDO', 'Dólar futuro', 1], ['WIN', 'Ibovespa futuro', 0], ['ISP', 'S&P 500 futuro', 2], ['BIT', 'Bitcoin futuro (R$)', 0],
+  ['BGI', 'Boi gordo (R$/@)', 2], ['CCM', 'Milho (R$/saca)', 2], ['SJC', 'Soja (US$/saca)', 2], ['ICF', 'Café arábica (US$/saca)', 2], ['ETH', 'Etanol (R$/m³)', 1],
+];
+async function handleFutB3(ctx, cors) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/futb3-v1');
+  const hit = await cache.match(cacheKey);
+  if (hit) return jsonCache(hit.body, cors, true);
+  let b3 = null;
+  const res = await Promise.allSettled(FUT_B3.map(async ([a, nome, d]) => {
+    const j = await b3Derivativo(a);
+    if (!b3 && j?.Msg?.dtTm) b3 = j.Msg.dtTm;
+    const c = b3Futuros(j, a);
+    if (!c.length) throw new Error('sem contratos');
+    const ref = c.reduce((m, x) => (x.neg > m.neg || (x.neg === m.neg && x.oi > m.oi) ? x : m), c[0]);
+    return { a, nome, d, ...ref };
+  }));
+  const f = res.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  if (!f.length) return json({ error: 'B3 sem resposta' }, 502, cors);
+  const body = JSON.stringify({ ts: Date.now(), b3, f });
+  ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
+  return jsonCache(body, cors, false);
 }
 
 // Empresas dos EUA cujos balanços aparecem no Calendário (as maiores do S&P 500 + ADRs brasileiros e da América Latina)
@@ -858,6 +897,9 @@ const rotas = async (request, env, ctx) => {
     if (path === '/di') {
       return handleDI(ctx, cors);
     }
+    // ENDPOINT: /dap (cupom de IPCA, juro real, botão Real da curva) e /futb3 (bloco Futuros B3 da Mesa)
+    if (path === '/dap') return handleDI(ctx, cors, 'DAP');
+    if (path === '/futb3') return handleFutB3(ctx, cors);
 
     // =========================================================
     // ENDPOINT: /ind/bundle?g=br|us|mo  (aba Indicadores: tudo numa chamada, com cache de borda)
