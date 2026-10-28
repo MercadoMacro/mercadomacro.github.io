@@ -4981,6 +4981,27 @@ function newsReadMins(n) {
   } else els.forEach(carrega);
 })();
 /* =========================================================
+   DESTAQUES (topo da aba Análises): destaques.js só é baixado
+   quando a faixa aparece na tela
+   ========================================================= */
+(() => {
+  const el = document.querySelector('[data-destaques]');
+  if (!el) return;
+  let pedido = false;
+  const carrega = () => {
+    if (window.__destaquesRender) { window.__destaquesRender(el); return; }
+    if (pedido) return;
+    pedido = true;
+    const sc = document.createElement('script');
+    sc.src = 'destaques.js?v=1';
+    sc.onload = () => window.__destaquesRender && window.__destaquesRender(el);
+    sc.onerror = () => { pedido = false; };
+    document.body.appendChild(sc);
+  };
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) carrega(); }, { rootMargin: '200px 0px' }).observe(el);
+  else carrega();
+})();
+/* =========================================================
    OPÇÕES: o código fica em opcoes.js (mesma pasta do index.html)
    e só é baixado na primeira vez que a aba é aberta
    ========================================================= */
