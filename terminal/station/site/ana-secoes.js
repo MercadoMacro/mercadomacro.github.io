@@ -5,17 +5,18 @@
   const dq = document.getElementById('ana-destaques');
   if (!wrap || !dq) return;
   const SECOES = [
-    ['mercado', 'Mercado', 'fa-chart-line'],
     ['fluxo', 'Fluxo na B3', 'fa-right-left'],
     ['juros', 'Fed e Copom', 'fa-landmark'],
     ['cot', 'Especuladores', 'fa-scale-balanced'],
-    ['f13', 'Grandes fundos', 'fa-briefcase']
+    ['f13', 'Grandes fundos', 'fa-briefcase'],
+    ['mercado', 'Mercado', 'fa-chart-line']
   ];
   const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'juros', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13' };
   const CHAVE = 'ana_secao';
-  let secao = 'mercado';
-  try { secao = localStorage.getItem(CHAVE) || 'mercado'; } catch (e) { /* sem armazenamento */ }
-  if (!SECOES.some(([k]) => k === secao)) secao = 'mercado';
+  // sem escolha salva, abre na primeira seção (Mercado ficou por último a pedido do Severino)
+  let secao = SECOES[0][0];
+  try { secao = localStorage.getItem(CHAVE) || secao; } catch (e) { /* sem armazenamento */ }
+  if (!SECOES.some(([k]) => k === secao)) secao = SECOES[0][0];
 
   const nav = document.createElement('nav');
   nav.className = 'ana-jump';
