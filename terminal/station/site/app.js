@@ -4907,20 +4907,18 @@ function newsReadMins(n) {
   } else carrega();
 })();
 /* =========================================================
-   PROBABILIDADES DE JUROS (aba Análises): uma seção com a chave EUA / Brasil.
-   EUA = Fed (fed.js), Brasil = Copom (copom.js). Cada arquivo só é baixado
-   quando o seu lado aparece com a seção perto da tela. O lado fica salvo.
+   PROBABILIDADES DE JUROS (aba Análises): Fed (fed.js) e Copom (copom.js) lado a lado,
+   com uma divisória que se arrasta para ajustar a largura (pedido do Severino, 28/10/2026).
+   Cada arquivo só é baixado quando a seção chega perto da tela. A divisão fica salva.
    ========================================================= */
 (() => {
   const sec = document.getElementById('ana-sec-fed');
-  const chave = document.getElementById('pj-chave');
-  if (!sec || !chave) return;
+  const split = document.getElementById('pj-split'), div = document.getElementById('pj-div');
+  if (!sec || !split || !div) return;
   const LADOS = {
-    eua: { root: 'fed-root', js: 'fed.js?v=4', fn: '__fedRender', tit: 'Probabilidades do Fed', fonte: 'futuros de Fed Funds', ico: 'fa-landmark' },
-    br: { root: 'copom-root', js: 'copom.js?v=3', fn: '__copomRender', tit: 'Probabilidades do Copom', fonte: 'opções de Copom da B3', ico: 'fa-percent' },
+    eua: { root: 'fed-root', js: 'fed.js?v=4', fn: '__fedRender' },
+    br: { root: 'copom-root', js: 'copom.js?v=3', fn: '__copomRender' },
   };
-  let lado = 'eua', visto = false;
-  try { if (localStorage.getItem('juros_prob_lado') === 'br') lado = 'br'; } catch (e) { /* padrão */ }
   const pedidos = {};
   const carrega = (k) => {
     const L = LADOS[k], el = document.getElementById(L.root);
@@ -4933,24 +4931,47 @@ function newsReadMins(n) {
     sc.onerror = () => { pedidos[k] = false; el.innerHTML = `<div class="ind-boot">Não foi possível carregar o arquivo <b>${L.js.split('?')[0]}</b>.</div>`; };
     document.body.appendChild(sc);
   };
-  const mostra = () => {
-    for (const [k, L] of Object.entries(LADOS)) document.getElementById(L.root).hidden = k !== lado;
-    const L = LADOS[lado];
-    document.getElementById('pj-tit').textContent = L.tit;
-    document.getElementById('pj-fonte').textContent = L.fonte;
-    const ic = sec.querySelector('.sec-icon i');
-    if (ic) ic.className = `fas ${L.ico}`;
-    chave.setAttribute('aria-checked', lado === 'br' ? 'true' : 'false');
-    chave.classList.toggle('br', lado === 'br');
-    if (visto) carrega(lado);
+  // divisória: porcentagem da largura que fica com o Fed (35 a 65)
+  const CHAVE = 'juros_prob_div';
+  let pct = 50;
+  try { const v = +localStorage.getItem(CHAVE); if (v >= 35 && v <= 65) pct = v; } catch (e) { /* padrão */ }
+  const aplica = (v, salva) => {
+    pct = Math.round(Math.min(65, Math.max(35, v)));
+    split.style.setProperty('--pj-a', pct);
+    div.setAttribute('aria-valuenow', pct);
+    if (salva) { try { localStorage.setItem(CHAVE, pct); } catch (e) { /* cheio */ } }
   };
-  chave.addEventListener('click', () => {
-    lado = lado === 'br' ? 'eua' : 'br';
-    try { localStorage.setItem('juros_prob_lado', lado); } catch (e) { /* cheio */ }
-    mostra();
+  // os gráficos dos dois lados são desenhados com a largura real: avisa quando ela muda
+  let rt = 0;
+  const redesenha = () => { clearTimeout(rt); rt = setTimeout(() => window.dispatchEvent(new Event('resize')), 120); };
+  aplica(pct, false);
+  div.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    div.setPointerCapture(e.pointerId);
+    split.classList.add('arrastando');
+    const r = split.getBoundingClientRect();
+    const move = (ev) => aplica((ev.clientX - r.left) / r.width * 100, false);
+    const fim = () => {
+      div.removeEventListener('pointermove', move);
+      div.removeEventListener('pointerup', fim);
+      div.removeEventListener('pointercancel', fim);
+      split.classList.remove('arrastando');
+      aplica(pct, true);
+      redesenha();
+    };
+    div.addEventListener('pointermove', move);
+    div.addEventListener('pointerup', fim);
+    div.addEventListener('pointercancel', fim);
   });
-  mostra();
-  const abre = () => { visto = true; carrega(lado); };
+  div.addEventListener('dblclick', () => { aplica(50, true); redesenha(); });
+  div.addEventListener('keydown', (e) => {
+    const passo = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
+    if (!passo) return;
+    e.preventDefault();
+    aplica(pct + passo, true);
+    redesenha();
+  });
+  const abre = () => { carrega('eua'); carrega('br'); };
   if ('IntersectionObserver' in window) {
     new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); abre(); } }, { rootMargin: '600px 0px' }).observe(sec);
   } else abre();

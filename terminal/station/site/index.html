@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="estilo.css?v=53">
+<link rel="stylesheet" href="estilo.css?v=54">
 <link rel="stylesheet" href="watchlists-ui.css?v=2">
 <link rel="stylesheet" href="asset-search.css?v=2">
 <link rel="stylesheet" href="asset-history.css?v=4">
@@ -630,10 +630,18 @@
         <div id="fluxo-root"><div class="fx-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">O fluxo de investidores carrega quando você chega aqui.</div></div>
       </div>
       <div class="market-section" id="ana-sec-fed">
-        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-landmark"></i></span><h2 id="pj-tit">Probabilidades do Fed</h2><span class="sec-count" id="pj-fonte">futuros de Fed Funds</span>
-          <button type="button" class="pj-chave" id="pj-chave" role="switch" aria-checked="false" aria-label="Trocar entre Fed (EUA) e Copom (Brasil)"><span class="pj-l">EUA</span><span class="pj-tr"><i></i></span><span class="pj-r">Brasil</span></button></div>
-        <div id="fed-root"><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Fed carregam quando você chega aqui.</div></div>
-        <div id="copom-root" hidden><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Copom carregam quando você chega aqui.</div></div>
+        <div class="market-section-head"><span class="sec-icon"><i class="fas fa-landmark"></i></span><h2>Probabilidades de juros</h2><span class="sec-count">Fed e Copom</span></div>
+        <div class="pj-split" id="pj-split">
+          <div class="pj-col" id="pj-col-eua">
+            <div class="pj-sub"><b>Fed</b><span>EUA · futuros de Fed Funds</span></div>
+            <div id="fed-root"><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Fed carregam quando você chega aqui.</div></div>
+          </div>
+          <div class="pj-div" id="pj-div" role="separator" aria-orientation="vertical" aria-label="Ajustar a largura de Fed e Copom" aria-valuemin="35" aria-valuemax="65" aria-valuenow="50" tabindex="0" title="Arraste para ajustar. Duplo clique volta ao meio."><i></i></div>
+          <div class="pj-col" id="pj-col-br">
+            <div class="pj-sub"><b>Copom</b><span>Brasil · opções de Copom da B3</span></div>
+            <div id="copom-root"><div class="fw-msg" style="padding:28px;text-align:center;color:var(--text-3);font-size:13px">As probabilidades do Copom carregam quando você chega aqui.</div></div>
+          </div>
+        </div>
       </div>
       <div class="market-section" id="ana-sec-cot">
         <div class="market-section-head"><span class="sec-icon"><i class="fas fa-balance-scale"></i></span><h2>Posição dos especuladores</h2><span class="sec-count">CFTC, semanal</span></div>
@@ -778,7 +786,7 @@
 <script src="crypto-live.js?v=2"></script>
 <script src="forex-live.js?v=7"></script>
 <script src="feriados.js?v=2"></script>
-<script src="app.js?v=110"></script>
+<script src="app.js?v=111"></script>
 <script src="ana-secoes.js?v=2"></script>
 <script src="mesa-layout.js?v=2"></script>
 <script src="ajustes.js?v=23"></script>
