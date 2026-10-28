@@ -116,11 +116,14 @@
     meta.innerHTML = `<a href="https://comexstat.mdic.gov.br" target="_blank" rel="noopener">Comex Stat (MDIC)</a>${at}${err && cache ? ' · último dado salvo' : ''}`;
     let partes = [];
     try { partes = cache?.d ? extras(cache.d) : []; } catch (e) { partes = []; }
+    if (window.__indJumpBadges) window.__indJumpBadges();
     host.querySelector('.cx-par').innerHTML = partes.map(([t, h]) => `<div class="ib-box"><div class="ib-h"><h3>${t}</h3><span class="ib-meta">Comex Stat (MDIC)</span></div><div class="ib-in">${h}</div></div>`).join('');
   }
 
   // dados para outros módulos (watchlist): resumo da commodity pela chave, usando o mesmo cache
-  window.MMComex = { resumo: (k) => { const d = cache?.d, p = d?.produtos?.find((x) => x.k === k); return p ? resumoProduto(p, d.ultimo) : null; }, carregar: () => load(false), pronto: () => !!cache?.d };
+  window.MMComex = { resumo: (k) => { const d = cache?.d, p = d?.produtos?.find((x) => x.k === k); return p ? resumoProduto(p, d.ultimo) : null; }, carregar: () => load(false), pronto: () => !!cache?.d,
+    // saldo do último mês, para a etiqueta do atalho "Balança comercial" em Indicadores
+    saldo: () => { const u = cache?.d?.meses?.[cache.d.meses.length - 1]; return u && ok(u.exp) && ok(u.imp) ? { s: u.exp - u.imp, txt: bi(Math.abs(u.exp - u.imp)), mes: nomeMes(u.m, true) } : null; } };
 
   // chamado pelo indicadores.js toda vez que a área Brasil é desenhada
   window.__comexRender = (container, force = false) => {

@@ -676,6 +676,7 @@
       </div>
       <button class="btn-sm ind-refresh" id="ind-refresh" title="Buscar de novo"><i class="fas fa-sync-alt"></i> Atualizar</button>
     </div>
+    <nav class="ind-jump" id="ind-jump" aria-label="Partes da página" hidden></nav>
     <section class="ind-mo" id="ind-mo" aria-label="Leitura do momento"></section>
     <div id="ind-body"></div>`;
 
@@ -711,6 +712,7 @@
     if (!v) { main.innerHTML = '<div class="ind-val">—</div>'; return; }
 
     if (d.table) {
+      if (window.__indJumpBadges) requestAnimationFrame(window.__indJumpBadges);
       el.querySelector('[data-date]').textContent = s.ts ? 'às ' + new Date(s.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
       const grupos = {};
       (v.table || []).forEach((t) => {
@@ -770,6 +772,37 @@
     el._fmt = { unit: v.unitS || '', dk: d.dk };
   }
 
+  const ATALHOS = [['principais', 'Principais', 'fa-gauge-high'], ['comex', 'Balança comercial', 'fa-ship'], ['ibge', 'IBGE em detalhe', 'fa-building-columns'], ['tesouro', 'Tesouro Direto', 'fa-coins']];
+  const jump = root.querySelector('#ind-jump');
+  // etiquetas com dado real: saldo da balança do último mês e quantidade de títulos à venda
+  function etiqueta(k) {
+    if (k === 'comex') {
+      const b = window.MMComex && window.MMComex.saldo ? window.MMComex.saldo() : null;
+      return b ? `<em class="ij-b ${b.s >= 0 ? 'up' : 'dn'}" title="Saldo da balança comercial de ${esc(b.mes)}">${b.s >= 0 ? '+' : '−'}US$ ${esc(b.txt)} bi</em>` : '';
+    }
+    if (k === 'tesouro') {
+      const n = (state['br-tesouro']?.raw?.t || []).length;
+      return n ? `<em class="ij-b" title="Títulos à venda no Tesouro Direto">${n}</em>` : '';
+    }
+    return '';
+  }
+  function pilula() {
+    const on = jump.querySelector('button.on'), p = jump.querySelector('.ij-pill');
+    if (!on || !p) return;
+    p.style.width = on.offsetWidth + 'px';
+    p.style.height = on.offsetHeight + 'px';
+    p.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
+  }
+  function desenhaAtalhos(secao) {
+    jump.hidden = !secao;
+    if (!secao) { jump.innerHTML = ''; return; }
+    jump.innerHTML = `<span class="ij-pill" aria-hidden="true"></span>${ATALHOS.map(([k, t, ic]) => `<button type="button" data-secao="${k}" class="${k === secao ? 'on' : ''}" aria-pressed="${k === secao}"><i class="fa-solid ${ic}" aria-hidden="true"></i><span>${t}</span>${etiqueta(k)}</button>`).join('')}`;
+    jump.classList.add('sem-anim');
+    requestAnimationFrame(() => { pilula(); requestAnimationFrame(() => jump.classList.remove('sem-anim')); });
+  }
+  window.__indJumpBadges = () => { if (prefs.area === 'br' && !jump.hidden) ATALHOS.forEach(([k]) => { const b = jump.querySelector(`[data-secao="${k}"]`); if (!b) return; b.querySelector('.ij-b')?.remove(); b.insertAdjacentHTML('beforeend', etiqueta(k)); }); pilula(); };
+  window.addEventListener('resize', () => pilula());
+
   function renderArea() {
     const area = prefs.area;
     root.querySelectorAll('.ind-area button').forEach((b) => b.classList.toggle('on', b.dataset.a === area));
@@ -777,13 +810,13 @@
     if (on && bar) { bar.style.width = on.offsetWidth + 'px'; bar.style.transform = `translateX(${on.offsetLeft}px)`; }
     const defs = DEFS.filter((d) => d.area === area);
     const grupos = [...new Set(defs.map((d) => d.grp))];
-    // Brasil: barrinha de atalhos no topo; cada botão mostra só uma parte da página (28/10/2026)
-    const ATALHOS = [['principais', 'Principais'], ['comex', 'Balança comercial'], ['ibge', 'IBGE em detalhe'], ['tesouro', 'Tesouro Direto']];
+    // Brasil: barrinha de atalhos logo abaixo do título; cada botão mostra só uma parte da página (28/10/2026)
     let secao = 'principais';
     if (area === 'br') { try { secao = localStorage.getItem('ind_secao_br') || 'principais'; } catch (e) { /* sem armazenamento */ } }
     if (!ATALHOS.some(([k]) => k === secao)) secao = 'principais';
-    if (area === 'br') body.dataset.secao = secao; else delete body.dataset.secao;
-    body.innerHTML = (area === 'br' ? `<nav class="ind-jump" aria-label="Partes da página">${ATALHOS.map(([k, t]) => `<button type="button" data-secao="${k}" class="${k === secao ? 'on' : ''}" aria-pressed="${k === secao}">${t}</button>`).join('')}</nav>` : '') + grupos.map((g) => {
+    if (area === 'br') { body.dataset.secao = secao; root.dataset.secao = secao; } else { delete body.dataset.secao; delete root.dataset.secao; }
+    desenhaAtalhos(area === 'br' ? secao : null);
+    body.innerHTML = grupos.map((g) => {
       const ds = defs.filter((d) => d.grp === g);
       return `<section class="ind-sec" data-s="${g === 'Tesouro Direto' ? 'tesouro' : 'principais'}"><div class="market-section-head"><span class="sec-icon"><i class="fas ${GROUP_ICON[g] || 'fa-chart-line'}"></i></span><h2>${esc(g)}</h2><span class="sec-count">${ds.length} ${ds.length > 1 ? 'indicadores' : 'indicador'}</span></div>
         <div class="ind-grid">${ds.map(cardHTML).join('')}</div></section>`;
@@ -816,7 +849,7 @@
     if (comexAsked) return;
     comexAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'comex.js?v=6';
+    sc.src = 'comex.js?v=7';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
     document.body.appendChild(sc);
@@ -890,9 +923,10 @@
     const atalho = e.target.closest('.ind-jump [data-secao]');
     if (atalho) {
       const k = atalho.dataset.secao;
-      body.dataset.secao = k;
+      body.dataset.secao = k; root.dataset.secao = k;
       try { localStorage.setItem('ind_secao_br', k); } catch (e2) { /* sem armazenamento */ }
-      body.querySelectorAll('.ind-jump [data-secao]').forEach((b) => { const on = b.dataset.secao === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+      jump.querySelectorAll('[data-secao]').forEach((b) => { const on = b.dataset.secao === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+      pilula();
       return;
     }
     if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); bea(true); return; }
@@ -1647,10 +1681,30 @@
   .ind-refresh.spinning i { animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .ind-sec { margin-bottom:26px; }
-  .ind-jump { display:flex; gap:2px; width:max-content; max-width:100%; overflow-x:auto; scrollbar-width:none; margin:0 0 18px; padding:3px; border:1px solid var(--line); border-radius:999px; background:var(--surface-2); }
-  .ind-jump button { border:0; background:none; color:var(--text-2); font:inherit; font-size:13px; padding:6px 15px; border-radius:999px; cursor:pointer; white-space:nowrap; }
-  .ind-jump button:hover { color:var(--text); }
-  .ind-jump button.on { background:var(--surface); color:var(--text); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.12), 0 0 0 1px var(--line); }
+  .ind-jump { position:relative; display:flex; gap:4px; width:max-content; max-width:100%; overflow-x:auto; scrollbar-width:none; margin:0 0 22px; padding:5px; border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .ind-jump[hidden] { display:none; }
+  .ind-jump::-webkit-scrollbar { display:none; }
+  .ind-jump button { position:relative; z-index:1; display:flex; align-items:center; gap:8px; border:0; background:none; color:var(--text-2); font:inherit; font-size:13.5px; font-weight:500; padding:9px 16px; border-radius:10px; cursor:pointer; white-space:nowrap; transition:color .2s, background .2s, box-shadow .2s, transform .2s; }
+  .ind-jump button i { font-size:13px; color:var(--accent-ink); transition:color .2s; }
+  .ind-jump button:not(.on):hover { background:var(--surface-2); color:var(--text); box-shadow:0 2px 6px rgba(0,0,0,.1); transform:translateY(-1px); }
+  .ind-jump button.on { color:#fff; font-weight:600; }
+  .ind-jump button.on i { color:inherit; }
+  .ij-pill { position:absolute; z-index:0; top:0; left:0; width:0; height:0; border-radius:10px; background:color-mix(in srgb, var(--accent) 72%, #000); box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent); transition:transform .3s var(--ease,ease), width .3s var(--ease,ease), height .3s var(--ease,ease); }
+  body:not(.light) .ij-pill { background:var(--accent); }
+  body:not(.light) .ind-jump button.on { color:#17120a; }
+  .ind-jump.sem-anim .ij-pill { transition:none; }
+  .ij-b { font-style:normal; font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; padding:1px 7px; border-radius:999px; background:var(--surface-2); color:var(--text-2); border:1px solid var(--line); }
+  .ij-b.up { color:var(--pos-ink, var(--pos)); background:color-mix(in srgb, var(--pos) 12%, transparent); border-color:color-mix(in srgb, var(--pos) 30%, transparent); }
+  .ij-b.dn { color:var(--neg); background:color-mix(in srgb, var(--neg) 12%, transparent); border-color:color-mix(in srgb, var(--neg) 30%, transparent); }
+  .ind-jump button.on .ij-b { background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.35); color:inherit; }
+  body:not(.light) .ind-jump button.on .ij-b { background:rgba(0,0,0,.14); border-color:rgba(0,0,0,.2); }
+  #ind-root[data-secao]:not([data-secao="principais"]) #ind-mo { display:none; }
+  @media (max-width: 640px) {
+    .ind-jump { display:grid; grid-template-columns:1fr 1fr; width:100%; overflow:visible; }
+    .ind-jump button { justify-content:center; flex-wrap:wrap; row-gap:3px; padding:9px 8px; font-size:13px; white-space:normal; text-align:center; }
+    .ind-jump button:not(.on):hover { transform:none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ij-pill, .ind-jump button { transition:none; } }
   #ind-body[data-secao="principais"] .ind-sec:not([data-s="principais"]),
   #ind-body[data-secao="tesouro"] .ind-sec:not([data-s="tesouro"]),
   #ind-body[data-secao="comex"] .ind-sec:not(#comex-sec),
