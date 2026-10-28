@@ -335,12 +335,50 @@ let yahooInflight = null;  // lote em andamento (evita chamadas duplicadas)
 let yahooLastError = null;
 let yahooErrorTs = 0;
 
+/* ---- B3: Ibovespa e ações brasileiras pelo site de cotações da B3 (/b3 do worker, atraso de cerca de 15 min).
+   Troca preço, variação, hora e gráfico do dia do Yahoo; se a B3 falhar, fica o Yahoo. ---- */
+const b3Ticker = (sym) => (sym === '^BVSP' ? 'IBOV' : /^[A-Z0-9]{4,6}\.SA$/.test(sym) ? sym.slice(0, -3) : null);
+async function b3Cotacoes(syms) {
+  const pares = syms.map((s) => [s, b3Ticker(s)]).filter(([, t]) => t);
+  const out = {};
+  for (let i = 0; i < pares.length; i += 12) {
+    const parte = pares.slice(i, i + 12);
+    try {
+      const res = await fetchT(`${CORS_PROXY}/b3?s=${parte.map(([, t]) => t).join(',')}`, {}, 15000);
+      if (!res.ok) continue;
+      const q = (await res.json())?.q || {};
+      parte.forEach(([s, t]) => { if (q[t] && isFinite(q[t].p)) out[s] = q[t]; });
+    } catch (e) { /* fica o Yahoo */ }
+  }
+  return out;
+}
+// junta a cotação da B3 (b) com a do Yahoo já processada (y, pode faltar)
+function b3Junta(b, y) {
+  const sp = Array.isArray(b.sp) && b.sp.length > 1 ? downsample(b.sp, 32) : (y?.sparkline || []);
+  const ts = b.ts || y?.ts || null;
+  return {
+    ...(y || {}),
+    value: b.p,
+    change: isFinite(b.c) ? b.c : (y?.change ?? NaN),
+    ts,
+    date: ts ? new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : (y?.date || ''),
+    sparkline: sp,
+    volume: sp === y?.sparkline ? (y?.volume || []) : [],
+    fonte: 'B3',
+    dia: { abertura: b.ab, max: b.mx, min: b.mn, medio: b.md }
+  };
+}
+window.mmB3 = { cotacoes: b3Cotacoes, junta: b3Junta, ticker: b3Ticker };
+const B3_SYMBOLS = () => YAHOO_SYMBOLS.filter(b3Ticker);
+
 function ensureYahooBatch(force = false) {
   if (!force && Date.now() - yahooBatchTs < YAHOO_MEMO_TTL) return Promise.resolve();
   if (yahooInflight) return yahooInflight;
   // após uma falha, não tenta de novo por 10 s (evita esperar vários timeouts seguidos)
   if (!force && yahooLastError && Date.now() - yahooErrorTs < 10000) return Promise.reject(yahooLastError);
   yahooInflight = (async () => {
+    const b3 = b3Cotacoes(B3_SYMBOLS());
+    const aplicaB3 = async () => { const q = await b3; Object.entries(q).forEach(([sym, b]) => { yahooMemo[sym] = b3Junta(b, yahooMemo[sym]); }); };
     try {
       const res = await fetchT(`${CORS_PROXY}/quotes?symbols=${encodeURIComponent(YAHOO_SYMBOLS.join(','))}`, {}, 20000);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -349,10 +387,12 @@ function ensureYahooBatch(force = false) {
         try { yahooMemo[sym] = parseYahooChart(chart); }
         catch { delete yahooMemo[sym]; }
       });
+      await aplicaB3();
       yahooBatchTs = Date.now();
       yahooLastError = null;
     } catch (e) {
       yahooBatchTs = 0;            // invalida: os cards passam a mostrar "dado antigo" em vez de fingir sucesso
+      try { await aplicaB3(); } catch (e2) { /* sem a B3 também */ }  // sem o Yahoo, o Ibovespa e as ações ainda vêm da B3
       yahooLastError = e;
       yahooErrorTs = Date.now();
       throw e;
@@ -4811,7 +4851,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=25';
+    sc.src = 'mesa.js?v=28';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');

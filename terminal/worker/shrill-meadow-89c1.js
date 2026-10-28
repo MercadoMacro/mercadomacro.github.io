@@ -586,20 +586,26 @@ async function handleCripto(env, ctx, cors) {
 
 // Derivativos da B3 pelo site público de cotações (atraso de cerca de 15 minutos).
 // Pela rede da Cloudflare o https da B3 às vezes volta 526 (certificado); tenta também por http.
-async function b3Derivativo(ativo) {
+let b3Base = 'https://cotacao.b3.com.br'; // o endereço que respondeu por último (https ou http)
+async function b3Get(caminho, cacheTtl = 0) {
   const erros = [];
-  for (const base of ['https://cotacao.b3.com.br', 'http://cotacao.b3.com.br']) {
+  const outro = b3Base.startsWith('https') ? 'http://cotacao.b3.com.br' : 'https://cotacao.b3.com.br';
+  for (const base of [b3Base, outro]) {
     try {
-      const r = await fetch(base + '/mds/api/v1/DerivativeQuotation/' + ativo, {
+      const r = await fetch(base + '/mds/api/v1/' + caminho, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/json', Referer: 'https://www.b3.com.br/' },
         signal: AbortSignal.timeout(12000),
+        ...(cacheTtl ? { cf: { cacheTtl, cacheEverything: true } } : {}),
       });
       if (!r.ok) { erros.push(base.slice(0, 5) + ' HTTP ' + r.status); continue; }
-      return await r.json();
+      const j = await r.json();
+      b3Base = base;
+      return j;
     } catch (e) { erros.push(base.slice(0, 5) + ' ' + e.message); }
   }
-  throw new Error('B3 ' + ativo + ': ' + erros.join('; '));
+  throw new Error('B3 ' + caminho + ': ' + erros.join('; '));
 }
+const b3Derivativo = (ativo) => b3Get('DerivativeQuotation/' + ativo);
 const b3Num = (x) => (x != null && isFinite(+x) ? +x : null);
 // contratos futuros de um ativo: t = último negócio de hoje (null se não negociou), aj = ajuste do pregão anterior,
 // oi = contratos em aberto, neg = contratos negociados hoje
@@ -650,6 +656,45 @@ async function handleFutB3(ctx, cors) {
   const f = res.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   if (!f.length) return json({ error: 'B3 sem resposta' }, 502, cors);
   const body = JSON.stringify({ ts: Date.now(), b3, f });
+  ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
+  return jsonCache(body, cors, false);
+}
+
+// Ações, ETFs e índices da B3 (/b3?s=IBOV,PETR4,...): preço, variação do dia, abertura, máxima, mínima e preço médio
+// (InstrumentQuotation), mais a hora do último minuto e um gráfico do dia (DailyFluctuationHistory). Atraso de cerca de 15 min.
+// Até 12 ativos por chamada: cada ativo usa 2 subrequests (4 se o https falhar) e o plano grátis permite 50.
+const B3_MAX = 12;
+async function handleB3Acoes(url, ctx, cors) {
+  const lista = [...new Set((url.searchParams.get('s') || '').toUpperCase().split(',').map((x) => x.trim()).filter(Boolean))].sort();
+  if (!lista.length) return json({ error: 'Parâmetro s ausente' }, 400, cors);
+  if (lista.length > B3_MAX) return json({ error: `Máximo de ${B3_MAX} ativos por chamada` }, 400, cors);
+  if (!lista.every((x) => /^[A-Z0-9]{4,12}$/.test(x))) return json({ error: 'Ativo inválido' }, 400, cors);
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/b3-v1?s=' + lista.join(','));
+  const hit = await cache.match(cacheKey);
+  if (hit) return jsonCache(hit.body, cors, true);
+  const q = {};
+  await Promise.all(lista.map(async (t) => {
+    const [a, h] = await Promise.allSettled([b3Get('InstrumentQuotation/' + t, 60), b3Get('DailyFluctuationHistory/' + t, 60)]);
+    const sq = a.status === 'fulfilled' ? a.value?.Trad?.[0]?.scty?.SctyQtn : null;
+    const p = b3Num(sq?.curPrc);
+    if (p == null || p <= 0) return;
+    const o = { p, c: b3Num(sq.prcFlcn), ab: b3Num(sq.opngPric), mx: b3Num(sq.maxPric), mn: b3Num(sq.minPric), md: b3Num(sq.avrgPric), ts: null, sp: [] };
+    const hd = h.status === 'fulfilled' ? h.value?.TradgFlr : null;
+    const lst = (hd?.scty?.lstQtn || []).filter((x) => b3Num(x?.closPric) != null);
+    const ult = lst[lst.length - 1];
+    // a B3 dá a data do pregão e a hora de Brasília (UTC-3, sem horário de verão desde 2019)
+    if (ult && /^\d{4}-\d{2}-\d{2}$/.test(hd.date || '') && /^\d{2}:\d{2}(:\d{2})?$/.test(ult.dtTm || '')) {
+      const ts = Date.parse(hd.date + 'T' + (ult.dtTm.length === 5 ? ult.dtTm + ':00' : ult.dtTm) + '-03:00');
+      if (isFinite(ts)) o.ts = ts;
+      const passo = Math.max(1, Math.ceil(lst.length / 48));
+      for (let i = 0; i < lst.length; i += passo) o.sp.push(+lst[i].closPric);
+      if (o.sp[o.sp.length - 1] !== +ult.closPric) o.sp.push(+ult.closPric);
+    }
+    q[t] = o;
+  }));
+  if (!Object.keys(q).length) return json({ error: 'B3 sem cotações' }, 502, cors);
+  const body = JSON.stringify({ ts: Date.now(), q });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
   return jsonCache(body, cors, false);
 }
@@ -900,6 +945,7 @@ const rotas = async (request, env, ctx) => {
     // ENDPOINT: /dap (cupom de IPCA, juro real, botão Real da curva) e /futb3 (bloco Futuros B3 da Mesa)
     if (path === '/dap') return handleDI(ctx, cors, 'DAP');
     if (path === '/futb3') return handleFutB3(ctx, cors);
+    if (path === '/b3') return handleB3Acoes(url, ctx, cors);
 
     // =========================================================
     // ENDPOINT: /ind/bundle?g=br|us|mo  (aba Indicadores: tudo numa chamada, com cache de borda)

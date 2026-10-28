@@ -91,6 +91,8 @@
     const parts = [];
     for (let i = 0; i < SYMS.length; i += 45) parts.push(SYMS.slice(i, i + 45));
     let ok = 0;
+    // Ibovespa e ações brasileiras: B3 (site de cotações, atraso ~15 min) no lugar do Yahoo; se a B3 falhar, fica o Yahoo
+    const b3 = window.mmB3 ? window.mmB3.cotacoes(SYMS.filter(window.mmB3.ticker)).catch(() => ({})) : Promise.resolve({});
     const res = await Promise.allSettled(parts.map((p) => getJSON(`${PROXY}/quotes?symbols=${encodeURIComponent(p.join(','))}`)));
     res.forEach((r) => {
       if (r.status !== 'fulfilled') return;
@@ -102,6 +104,11 @@
           ok++;
         } catch (e) { /* sem dados desse ativo: fica o último valor salvo, marcado como antigo */ }
       });
+    });
+    Object.entries(await b3).forEach(([sym, b]) => {
+      const v = window.mmB3.junta(b, null);
+      if (!Q[sym]?.live) ok++;
+      Q[sym] = { v: v.value, c: v.change, ts: v.ts || Q[sym]?.ts || null, sp: v.sparkline.length > 1 ? v.sparkline : (Q[sym]?.sp || []), live: true, b3: true };
     });
     return ok;
   }
@@ -434,7 +441,7 @@
     }
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
-    const fonte = fq ? ` · ${fonteFx(fq)}` : '';
+    const fonte = fq ? ` · ${fonteFx(fq)}` : q?.b3 ? ' · fonte: B3, atraso de cerca de 15 min' : '';
     const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo pela Deriv · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
     return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
