@@ -86,6 +86,18 @@
   .ana-wrap[data-secao="copom"] #pj-col-eua,
   .ana-wrap[data-secao="cot"] .ana-extra > .market-section:not(#ana-sec-cot),
   .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f) { display:none !important; }
+  /* seções no formato do Resumo semanal: cartão centralizado, título grande e margens fixas (28/10/2026) */
+  #analysis-panel .ana-wrap { width:100%; max-width:1180px; margin-left:auto; margin-right:auto; }
+  .ana-extra > .market-section { padding:20px 24px 22px; border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
+  .ana-extra > .market-section > .market-section-head { border-bottom:0; padding-bottom:0; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+  .ana-extra > .market-section > .market-section-head .sec-icon { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:13px; }
+  .ana-extra > .market-section > .market-section-head h2 { font-size:20px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--text); line-height:1.3; }
+  .ana-extra > .market-section > .market-section-head::after { background:none; }
+  .ana-extra > .market-section > .market-section-head .sec-count { font:11px 'JetBrains Mono', monospace; color:var(--text-3); border:1px solid var(--line); border-radius:99px; padding:2px 8px; }
+  @media (max-width: 640px) {
+    .ana-extra > .market-section { padding:16px 14px 18px; border-radius:14px; }
+    .ana-extra > .market-section > .market-section-head h2 { font-size:17px; }
+  }
   @media (max-width: 640px) {
     .ana-jump { display:grid; grid-template-columns:1fr 1fr; width:100%; overflow:visible; }
     .ana-jump button { justify-content:center; padding:9px 8px; font-size:13px; white-space:normal; text-align:center; }
