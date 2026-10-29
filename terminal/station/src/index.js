@@ -881,8 +881,8 @@ async function apiAuth(req, env, acao, ctx) {
     // cadastros que não confirmaram o e-mail em 7 dias são apagados
     await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
     // depois do cadastro a pessoa entra e escolhe um plano; desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis
-    const MSG_FILA = 'Cadastro feito. Agora é só entrar com seu e-mail e senha e escolher seu plano para começar a usar.';
-    const MSG_CONF = 'Enviamos um link para ' + email + '. Confirme o e-mail e depois entre para escolher seu plano. Não chegou? Veja o spam.';
+    const MSG_FILA = 'Cadastro feito. Agora é só entrar com seu e-mail e senha para começar.';
+    const MSG_CONF = 'Enviamos um link para ' + email + '. Confirme o e-mail e depois entre para começar. Não chegou? Veja o spam.';
     const existe = await env.DB.prepare('SELECT id, nome, status FROM usuarios WHERE email = ?').bind(email).first();
     if (existe && existe.status === 'confirmar') {
       // pediu de novo sem ter confirmado: manda outro link
