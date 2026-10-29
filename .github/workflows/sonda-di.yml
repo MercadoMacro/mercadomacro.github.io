@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -s -A 'Mozilla/5.0' 'https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp' -o aj.html; ls -la aj.html
+          curl -sL -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0' 'https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp' -o aj.html; ls -la aj.html
           python3 - <<'PY'
           import re,html
           s=open('aj.html',encoding='latin1').read()
