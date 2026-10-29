@@ -16,7 +16,7 @@
     { "binding": "LOG", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
   ],
   // "registrar": só anota quem chega sem passe; "bloquear": recusa (ver conferePasse)
-  "vars": { "PASSE_MODO": "registrar" },
+  "vars": { "PASSE_MODO": "bloquear" },
   "ratelimits": [
     { "name": "API_RATE_GENERAL", "namespace_id": "2026101801", "simple": { "limit": 600, "period": 60 } },
     { "name": "API_RATE_HISTORY", "namespace_id": "2026101802", "simple": { "limit": 180, "period": 60 } },
