@@ -160,6 +160,7 @@
   #market-panel > .market-wrap:not(.mn-root) { display:none !important; }
 </style>
 <script>(() => { const h = document.documentElement; h.classList.add('mm-boot'); try { if (localStorage.getItem('trader_theme') === 'light') h.classList.add('mm-boot-claro'); } catch (e) { /* sem armazenamento */ } setTimeout(() => h.classList.remove('mm-boot'), 5000); })();</script>
+<link rel="stylesheet" href="/vitrine/ajuda.css?v=1">
 </head>
 <body>
 <script>/* barra lateral: recolhida só se a pessoa recolheu (o app.js monta a barra) */ try { if (localStorage.getItem('trader_side_collapsed') === '1') document.body.classList.add('side-collapsed'); } catch (e) { /* sem armazenamento */ }</script>
@@ -799,5 +800,7 @@
 <script src="topo-acoes.js?v=1"></script>
 <script src="navegacao-mobile.js?v=2"></script>
 <script>requestAnimationFrame(() => document.documentElement.classList.remove('mm-boot'));</script>
+<script defer src="/vitrine/ajuda-conteudo.js?v=1"></script>
+<script defer src="/vitrine/ajuda.js?v=1"></script>
 </body>
 </html>
