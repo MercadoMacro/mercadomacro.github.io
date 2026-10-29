@@ -4078,7 +4078,7 @@ window.__onTabSwitch = (tabId) => {
     ['Visão geral', ['market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
     ['Informação', ['news-panel', 'weekly-panel', 'calendar-panel']],
     ['Análise', ['analysis-panel', 'fund-panel']],
-    ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel']]
+    ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel', 'edu-panel']]
   ];
   const tabInfo = (id) => {
     const b = document.querySelector(`.tab-btn[data-tab="${id}"]`);
@@ -4101,6 +4101,7 @@ window.__onTabSwitch = (tabId) => {
     'fund-panel': '<path class="f" d="M13 3a8 8 0 0 1 8 8h-8Z"/><path d="M10.5 5.5A8 8 0 1 0 18.5 13.5h-8Z"/><path d="M13.5 3a7.5 7.5 0 0 1 7.5 7.5h-7.5Z"/>',
     'indicators-panel': '<path class="f" d="m3 17 6-9 6 5 6-8v15H3Z" opacity=".6"/><path d="m3 17 6-9 6 5 6-8"/><circle cx="9" cy="8" r="1.3"/><circle cx="15" cy="13" r="1.3"/>',
     'calculator-panel': '<rect class="f" x="8" y="5.5" width="8" height="4" rx="1"/><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="4" rx="1"/><path d="M8.5 13.5h.01m3.5 0h.01m3.5 0h.01M8.5 17.5h.01m3.5 0h.01m3.5 0h.01"/>',
+    'edu-panel': '<path class="f" d="M2.5 9 12 4.5 21.5 9 12 13.5Z"/><path d="M2.5 9 12 4.5 21.5 9 12 13.5Z"/><path d="M6.5 11v4.5c0 1.6 2.5 3 5.5 3s5.5-1.4 5.5-3V11M21.5 9v5"/>',
     'options-panel': '<circle class="f" cx="12" cy="5" r="3"/><circle cx="12" cy="5" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="m10.5 7.5-4 8m7-8 4 8M8 18h8"/>',
     'buscar': '<circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/>',
     'resumo': '<path class="f" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8h-6Z"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5"/>',
