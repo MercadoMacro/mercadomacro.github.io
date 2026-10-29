@@ -47,29 +47,56 @@
   .ia-form button{min-height:42px;padding:0 14px;border:0;border-radius:9px;background:var(--accent,#2563eb);color:#fff;font-weight:600;cursor:pointer}
   .ia-form button:disabled{opacity:.55;cursor:default}
   .ia-aviso{margin:8px 0 0;font-size:11.5px;color:var(--muted,#777);line-height:1.4}
+  .ia-rot{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#777);margin-bottom:6px}
+  .ia-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .ia-acoes button,.ia-acoes a{border:1px solid var(--line-2,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
+  .ia-acoes button:hover,.ia-acoes a:hover{border-color:var(--accent,#2563eb)}
   .ia-pensando{align-self:flex-start;color:var(--muted,#777);font-size:13px}
   @media (max-width:560px){.ia-painel{width:100%;border-left:0}}`;
 
-  const SUGESTOES = ['O que é a curva de juros DI x pré e como ler?', 'Como o Fed decide os juros e o que é o FedWatch?', 'Explique o que é IPCA e como ele afeta a Selic.'];
-  let painel, msgs, campo, enviar, limite = null, ocupado = false;
+  const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
+  let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false;
 
   function desenhar() {
     if (!conversa.length) {
-      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. O assistente não vê as cotações de agora.${SUGESTOES.map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
+      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini ? 'Dúvidas comuns têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => gemini || prontaPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
       msgs.querySelectorAll('.ia-vazio button').forEach((b) => (b.onclick = () => { campo.value = b.textContent; perguntar(); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${md(x.r)}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? '<div class="ia-rot">Resposta pronta</div>' : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando">Pensando…</div>' : '');
+    msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
+    msgs.querySelectorAll('[data-ia-gemini]').forEach((b) => (b.onclick = () => { const x = conversa[+b.dataset.iaGemini]; if (x) { campo.value = x.p; perguntar(true); } }));
     msgs.scrollTop = msgs.scrollHeight;
   }
 
-  async function perguntar() {
+  // resposta pronta (base local do /vitrine/ajuda-conteudo.js): atalho para a aba e opção de perguntar ao Gemini
+  function rodapePronta(x, i) {
+    const a = x.acao;
+    let h = '<div class="ia-acoes">';
+    if (a && a.aba && document.querySelector('.tab-btn[data-tab="' + a.aba + '"]')) h += `<button type="button" data-ia-aba="${esc(a.aba)}">${esc(a.texto)}</button>`;
+    else if (a && a.publico) h += `<a href="${esc(a.publico)}"${/^mailto:/.test(a.publico) ? '' : ' target="_blank" rel="noopener"'}>${esc(a.texto)}</a>`;
+    if (gemini) h += `<button type="button" data-ia-gemini="${i}">Perguntar ao Gemini</button>`;
+    return h + '</div>';
+  }
+  function prontaPara(p) {
+    try { return (window.MMAjudaConteudo && window.MMAjudaConteudo.buscar(p)[0]) || null; } catch (e) { return null; }
+  }
+
+  async function perguntar(soGemini) {
     const p = campo.value.trim();
     if (!p || ocupado) return;
     campo.value = ''; ajustar();
     const item = { p };
-    const historico = conversa.filter((x) => x.r).slice(-6).map((x) => ({ p: x.p, r: x.r }));
+    const pr = soGemini === true ? null : prontaPara(p);
+    if (pr || !gemini) {
+      // dúvida comum: responde na hora, sem gastar a cota do Google
+      if (pr) { item.r = pr.resposta.join('\n\n'); item.pronta = pr.id; item.acao = pr.acao || null; }
+      else item.e = 'Não achei resposta pronta para isso. Tente outras palavras ou escreva para contato@mercadomacro.com.br.';
+      conversa.push(item); salvar(); desenhar(); campo.focus();
+      return;
+    }
+    const historico = conversa.filter((x) => x.r && !x.pronta).slice(-6).map((x) => ({ p: x.p, r: x.r }));
     conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
     try {
       const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pergunta: p, historico, stream: true }) });
@@ -100,11 +127,11 @@
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
     painel.setAttribute('aria-label', 'Assistente'); painel.setAttribute('aria-hidden', 'true');
-    painel.innerHTML = `<div class="ia-cab"><h2>Assistente<small>Google Gemini${limite ? ` · ${limite} perguntas por dia` : ''}</small></h2>
+    painel.innerHTML = `<div class="ia-cab"><h2>Assistente<small>${gemini ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
         <button type="button" data-ia="limpar" title="Apagar a conversa">Limpar</button><button type="button" data-ia="fechar" aria-label="Fechar">Fechar</button></div>
       <div class="ia-msgs" aria-live="polite"></div>
       <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit">Enviar</button></form>
-        <p class="ia-aviso">Respostas geradas por IA (Google Gemini). Podem conter erros e não são recomendação de investimento. Não escreva dados pessoais: as perguntas vão para o Google.</p></div>`;
+        <p class="ia-aviso">${gemini ? 'As respostas que não são prontas são geradas por IA (Google Gemini): podem conter erros e não são recomendação de investimento. Não escreva dados pessoais: essas perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
     document.body.appendChild(painel);
     msgs = painel.querySelector('.ia-msgs'); campo = painel.querySelector('textarea'); enviar = painel.querySelector('.ia-form button');
     painel.querySelector('form').onsubmit = (e) => { e.preventDefault(); perguntar(); };
@@ -140,8 +167,10 @@
   }
 
   fetch(API, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
-    if (!j || !j.ligado) return;
-    limite = j.limite;
+    // sem a chave do Gemini, o painel funciona só com as respostas prontas
+    if (!j) return;
+    gemini = !!j.ligado;
+    limite = gemini ? j.limite : null;
     botoes();
     // a barra lateral pode ser redesenhada depois; repõe o botão se sumir
     new MutationObserver(() => { if (!document.getElementById('side-ia') && document.querySelector('.side-foot')) botoes(); })
