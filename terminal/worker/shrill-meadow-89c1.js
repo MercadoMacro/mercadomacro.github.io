@@ -611,8 +611,11 @@ const b3Num = (x) => (x != null && isFinite(+x) ? +x : null);
 // sobre ele. À noite o "prvsDayAdjstmntPric" já vira o ajuste de hoje e a conta último/ajuste dava quase zero
 // (28/10/2026: WIN -0,30% em vez de -2,7%); a variação "prcFlcn" da B3 também alterna entre os dois servidores.
 function refPregao(q) {
-  const lo = b3Num(q?.bottomLmtPric), hi = b3Num(q?.topLmtPric);
-  return lo != null && hi != null && lo > 0 && hi > lo ? (lo + hi) / 2 : null;
+  const lo = b3Num(q?.bottomLmtPric), hi = b3Num(q?.topLmtPric), aj = b3Num(q?.prvsDayAdjstmntPric);
+  if (lo == null || hi == null || !(lo > 0) || !(hi > lo)) return null;
+  const m = (lo + hi) / 2;
+  // alguns contratos não têm limite (a B3 manda 0,01 a 999.990): aí fica o ajuste
+  return (hi - lo) / m < 0.5 && (!aj || Math.abs(m / aj - 1) < 0.15) ? m : null;
 }
 // contratos futuros de um ativo: t = último negócio de hoje (null se não negociou), aj = ajuste do pregão anterior,
 // oi = contratos em aberto, neg = contratos negociados hoje
