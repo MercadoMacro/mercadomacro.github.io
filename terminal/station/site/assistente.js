@@ -52,6 +52,16 @@
   .ia-acoes button,.ia-acoes a{border:1px solid var(--line-2,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
   .ia-acoes button:hover,.ia-acoes a:hover{border-color:var(--accent,#2563eb)}
   .ia-pensando{align-self:flex-start;color:var(--muted,#777);font-size:13px}
+  .ia-marca{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--accent-soft,#fff3dc)}
+  .ia-marca svg{width:18px;height:18px;fill:var(--accent,#d4920f)}
+  .ia-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:60;display:inline-flex;align-items:center;gap:10px;padding:7px 16px 7px 7px;border:1px solid var(--line-2,#ddd);border-radius:999px;background:var(--surface,#fff);color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.28);cursor:pointer;font:inherit;text-align:left;transition:transform .15s ease,border-color .15s ease}
+  .ia-fab:hover{transform:translateY(-2px);border-color:var(--accent,#2563eb)}
+  .ia-fab-txt{display:flex;flex-direction:column;line-height:1.15}
+  .ia-fab-txt b{font-size:13.5px;font-weight:700}
+  .ia-fab-txt small{font-size:11px;color:var(--muted,#777)}
+  body.ia-aberto .ia-fab{display:none}
+  @media print{.ia-fab{display:none}}
+  @media (max-width:640px){.ia-fab{right:10px;bottom:calc(60px + env(safe-area-inset-bottom));padding:5px 12px 5px 5px;gap:8px}.ia-fab .ia-marca{width:30px;height:30px;flex-basis:30px}.ia-fab .ia-marca svg{width:15px;height:15px}.ia-fab-txt small{display:none}.ia-fab-txt b{font-size:12.5px}}
   @media (max-width:560px){.ia-painel{width:100%;border-left:0}}`;
 
   const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
@@ -122,12 +132,13 @@
 
   function ajustar() { campo.style.height = 'auto'; campo.style.height = Math.min(campo.scrollHeight, 140) + 'px'; }
 
+  function estilo() { const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st); }
+
   function montar() {
-    const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
     painel.setAttribute('aria-label', 'Assistente'); painel.setAttribute('aria-hidden', 'true');
-    painel.innerHTML = `<div class="ia-cab"><h2>Assistente<small>${gemini ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
+    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><h2>Assistente IA<small>${gemini ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
         <button type="button" data-ia="limpar" title="Apagar a conversa">Limpar</button><button type="button" data-ia="fechar" aria-label="Fechar">Fechar</button></div>
       <div class="ia-msgs" aria-live="polite"></div>
       <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit">Enviar</button></form>
@@ -142,28 +153,18 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && painel.classList.contains('aberto')) fechar(); });
   }
 
-  function abrir() { if (!painel) montar(); desenhar(); painel.classList.add('aberto'); painel.setAttribute('aria-hidden', 'false'); setTimeout(() => campo.focus(), 50); }
-  function fechar() { painel.classList.remove('aberto'); painel.setAttribute('aria-hidden', 'true'); }
+  function abrir() { if (!painel) montar(); desenhar(); document.body.classList.add('ia-aberto'); painel.classList.add('aberto'); painel.setAttribute('aria-hidden', 'false'); setTimeout(() => campo.focus(), 50); }
+  function fechar() { document.body.classList.remove('ia-aberto'); painel.classList.remove('aberto'); painel.setAttribute('aria-hidden', 'true'); }
 
-  const ICONE = '<svg class="si-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>';
-
-  function botoes() {
-    const pe = document.querySelector('.side-foot');
-    if (pe && !document.getElementById('side-ia')) {
-      const b = document.createElement('button');
-      b.className = 'side-item'; b.id = 'side-ia'; b.type = 'button'; b.title = 'Assistente (Google Gemini)';
-      b.innerHTML = ICONE + '<span class="si-lbl">Assistente</span>';
-      b.onclick = abrir;
-      pe.insertBefore(b, pe.firstChild);
-    }
-    const lista = document.querySelector('.topbar-more-list');
-    if (lista && !document.getElementById('menu-ia')) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.id = 'menu-ia';
-      b.innerHTML = '<i class="fas fa-comments" aria-hidden="true"></i><span>Assistente</span>';
-      b.onclick = () => { const m = document.getElementById('topbar-more'); if (m) m.open = false; abrir(); };
-      lista.insertBefore(b, lista.firstChild);
-    }
+  // botão flutuante no canto inferior direito (no celular, acima do botão Resumo)
+  function botao() {
+    if (document.getElementById('ia-fab')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'ia-fab'; b.className = 'ia-fab';
+    b.setAttribute('aria-label', 'Abrir o Assistente IA do Mercado Macro');
+    b.innerHTML = '<span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
+    b.onclick = abrir;
+    document.body.appendChild(b);
   }
 
   fetch(API, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
@@ -171,9 +172,7 @@
     if (!j) return;
     gemini = !!j.ligado;
     limite = gemini ? j.limite : null;
-    botoes();
-    // a barra lateral pode ser redesenhada depois; repõe o botão se sumir
-    new MutationObserver(() => { if (!document.getElementById('side-ia') && document.querySelector('.side-foot')) botoes(); })
-      .observe(document.body, { childList: true, subtree: true });
+    estilo();
+    botao();
   }).catch(() => {});
 })();
