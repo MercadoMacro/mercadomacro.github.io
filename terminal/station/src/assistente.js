@@ -24,7 +24,7 @@ Regras:
 - Se não souber, diga que não sabe. Não use emojis.`;
 
 async function gemini(chave, contents) {
-  let ultimo = '';
+  let ultimo = '', ocupado = 0;
   for (const m of MODELOS) {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: 'POST',
@@ -33,12 +33,14 @@ async function gemini(chave, contents) {
     }).catch((e) => ({ ok: false, status: 0, erroRede: String(e) }));
     if (r.status === 404) { ultimo = 'modelo ' + m + ' indisponível'; continue; }
     const j = r.json ? await r.json().catch(() => ({})) : {};
+    // modelo sobrecarregado (503/500): tenta o próximo modelo antes de desistir
+    if (r.status === 503 || r.status === 500) { ultimo = j?.error?.message || 'HTTP ' + r.status; ocupado = r.status; continue; }
     if (!r.ok) return { ok: false, status: r.status, erro: j?.error?.message || r.erroRede || 'HTTP ' + r.status };
     const texto = (j?.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
     if (!texto) return { ok: false, status: 502, erro: j?.promptFeedback?.blockReason ? 'pergunta bloqueada pelo filtro do Google' : 'resposta vazia' };
     return { ok: true, texto, modelo: m };
   }
-  return { ok: false, status: 404, erro: ultimo || 'nenhum modelo disponível' };
+  return { ok: false, status: ocupado || 404, erro: ultimo || 'nenhum modelo disponível' };
 }
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
@@ -59,6 +61,7 @@ export async function apiAssistente(req, env, u) {
   const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }]);
   if (r.ok) return json({ resposta: r.texto });
   if (r.status === 429) return json({ erro: 'O assistente atingiu o limite gratuito do Google por agora. Tente de novo mais tarde.' }, 429);
+  if (r.status === 503 || r.status === 500) return json({ erro: 'O Google está com muita procura agora. Tente de novo em alguns minutos.' }, 503);
   return json({ erro: 'O assistente não conseguiu responder agora. Tente de novo em instantes.' }, 502);
 }
 
@@ -72,7 +75,7 @@ export async function apiAdminAssistente(req, env) {
     const chave = String(b.chave || '').replace(/\s+/g, '');
     if (!/^[\w.~+/=-]{20,400}$/.test(chave)) return json({ erro: 'Cole a chave como aparece no Google AI Studio.' }, 400);
     const t = await gemini(chave, [{ role: 'user', parts: [{ text: 'Responda só: ok' }] }]);
-    if (!t.ok && t.status !== 429) return json({ erro: 'O Google não aceitou a chave: ' + t.erro }, 400);
+    if (!t.ok && ![429, 500, 503].includes(t.status)) return json({ erro: 'O Google não aceitou a chave: ' + t.erro }, 400);
     await salvarConfig(env, { gemini_key: chave, gemini_desde: new Date().toISOString() });
     return json({ ok: true });
   }
@@ -80,7 +83,8 @@ export async function apiAdminAssistente(req, env) {
   if (b.acao === 'testar') {
     if (!c.gemini_key) return json({ erro: 'Salve a chave primeiro.' }, 400);
     const t = await gemini(c.gemini_key, [{ role: 'user', parts: [{ text: 'Em uma frase: o que é a taxa Selic?' }] }]);
-    return t.ok ? json({ ok: true, resposta: t.texto, modelo: t.modelo }) : json({ erro: 'O Gemini não respondeu: ' + t.erro }, 502);
+    if (t.ok) return json({ ok: true, resposta: t.texto, modelo: t.modelo });
+    return json({ erro: [500, 503].includes(t.status) ? 'A chave está certa, mas o Google está com muita procura agora. Tente de novo em alguns minutos.' : 'O Gemini não respondeu: ' + t.erro }, 502);
   }
   return json({ erro: 'Ação inválida.' }, 400);
 }
