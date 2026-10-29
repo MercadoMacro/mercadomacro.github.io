@@ -255,7 +255,7 @@
     // barra empilhada: a divisão das chances numa linha só (aparece quando há mais de uma faixa possível)
     const vis = estados.filter((st) => R.dist[st] >= 0.5);
     const pilha = vis.length > 1 ? `<div class="fw-pilha" role="img" aria-label="${vis.map((st) => `${faixa(st)}: ${pct(R.dist[st])}`).join(', ')}">${vis.map((st) =>
-      `<i style="flex:${R.dist[st].toFixed(2)};background:${corEst(st)}" title="${faixa(st)} · ${nomeMov(st)}: ${pct(R.dist[st])}">${R.dist[st] >= 30 ? `<span>${faixa(st)} · ${pct(R.dist[st])}</span>` : R.dist[st] >= 12 ? `<span>${pct(R.dist[st])}</span>` : ''}</i>`).join('')}</div>` : '';
+      `<i style="flex:${R.dist[st].toFixed(2)};background:${corEst(st)}" title="${faixa(st)} · ${nomeMov(st)}: ${pct(R.dist[st])}">${R.dist[st] >= 30 ? `<span><em>${faixa(st)} · </em>${pct(R.dist[st])}</span>` : R.dist[st] >= 12 ? `<span>${pct(R.dist[st])}</span>` : ''}</i>`).join('')}</div>` : '';
 
     const barras = estados.filter((st) => R.dist[st] >= 0.05 || st === 0).map((st) => {
       const p = R.dist[st] || 0, po = ontem[sel]?.dist?.[st] ?? (ontem[sel] ? 0 : null), ps = semana[sel]?.dist?.[st] ?? (semana[sel] ? 0 : null);
@@ -320,7 +320,7 @@
     </div>`;
     // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
     const fc = root.querySelector('.fw-chips');
-    const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); };
+    const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); fc.parentElement.classList.toggle('cabe', fc.scrollWidth <= fc.clientWidth + 4); };
     fc.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     fc.addEventListener('scroll', bordas, { passive: true });
     bordas();
@@ -349,6 +349,8 @@
   #fed-root .fw-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
   #fed-root .fw-top { display:flex; align-items:center; gap:8px; min-width:0; }
   #fed-root .fw-nav { flex:none; width:32px; height:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; font-size:12px; }
+  #fed-root .fw-top.cabe .fw-nav { display:none; }
+  #fed-root .fw-pilha em { font-style:normal; }
   #fed-root .fw-nav:hover { color:var(--text); border-color:var(--line-2); }
   #fed-root .fw-chips { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; min-width:0; flex:1; scroll-behavior:smooth; }
   #fed-root .fw-chips::-webkit-scrollbar { display:none; }
@@ -461,6 +463,7 @@
     #fed-root .fw-ctr { gap:6px; }
     #fed-root .fw-chip { padding:5px 9px; font-size:11.5px; }
     #fed-root .fw-chip > i { display:none; }
+    #fed-root .fw-pilha em { display:none; }
     #fed-root .fw-tg { margin-left:0; }
   }`;
   document.head.appendChild(css);

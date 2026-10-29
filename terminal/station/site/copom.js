@@ -134,65 +134,88 @@
     const faltam = diasAte(R.data);
     const vivoHoje = Object.values(R.vivo || {}).some((v) => (v.t || '').slice(0, 10) === hojeBR());
 
-    const chips = reun.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}">${curta(x.data)}</button>`).join('');
+    const ate = (x) => { const d = diasAte(x.data); return d === 0 ? 'Hoje' : d === 1 ? 'amanhã' : `${d} dias`; };
+    const chips = reun.map((x, i) => `<button class="${i === sel ? 'on' : ''}" data-r="${i}" aria-pressed="${i === sel}"><b>${curta(x.data)}</b><small>${ate(x)}</small></button>`).join('');
+    // manter âmbar, cortes em verdes, altas em vermelhos
+    const corMov = (m) => ({ 0: 'var(--accent)', '-25': '#22c55e', '-50': '#16a34a', '-75': '#15803d', '-100': '#166534', 25: '#f97316', 50: '#ef4444', 75: '#dc2626', 100: '#b91c1c' }[m] || '#94a3b8');
+    const rotMov = (m) => (m === 0 ? 'Manter' : `${m > 0 ? '+' : '−'}${num(Math.abs(m) / 100)}`);
+
+    // barra empilhada: a divisão das chances numa linha só (aparece quando há mais de um cenário)
+    const vis = movs.filter((m) => (P[m] || 0) >= 0.5);
+    const pilha = vis.length > 1 ? `<div class="fw-pilha" role="img" aria-label="${vis.map((m) => `${nomeMov(m)}: ${pct(P[m])}`).join(', ')}">${vis.map((m) =>
+      `<i style="flex:${P[m].toFixed(2)};background:${corMov(m)}" title="${nomeMov(m)}: ${pct(P[m])}">${P[m] >= 30 ? `<span><em>${nomeMov(m)} · </em>${pct(P[m])}</span>` : P[m] >= 12 ? `<span>${pct(P[m])}</span>` : ''}</i>`).join('')}</div>` : '';
 
     const barras = movs.map((m) => {
       const p = P[m], v = R.vivo?.[m];
       const hoje = vivoHoje && v && (v.t || '').slice(0, 10) === hojeBR() ? ` <span>·</span> hoje ${pct(v.p)} (${hhmm(v.t)})` : '';
       return `<div class="fw-bar${m === maisProv ? ' top' : ''}">
         <div class="fw-bl">${sel === 0 ? `<b>${ok(selic) ? `${num(selic + m / 100)}%` : '—'}</b><span class="${tomMov(m)}">${m === 0 ? 'Manter (Selic atual)' : nomeMov(m)}</span>` : `<b class="${tomMov(m)}">${nomeMov(m)}</b><span>${m === 0 ? 'sem mudança nesta reunião' : 'nesta reunião'}</span>`}</div>
-        <div class="fw-bt"><i style="width:${Math.max(0.5, Math.min(100, p || 0)).toFixed(1)}%"></i></div>
+        <div class="fw-bt"><i style="width:${Math.max(0.5, Math.min(100, p || 0)).toFixed(1)}%;background:${corMov(m)}">${(p || 0) >= 25 ? `<span>${pct(p)}</span>` : ''}</i></div>
         <div class="fw-bv">${pct(p)}</div>
         <div class="fw-bc">ontem ${pct(o?.p?.[m])} <span>·</span> 1 semana ${pct(s?.p?.[m])}${hoje}</div>
       </div>`;
     }).join('');
 
-    // tabela: todas as reuniões x cenários (cada reunião sozinha: a decisão daquela reunião)
+    // tabela: todas as reuniões x cenários (cada reunião sozinha: a decisão daquela reunião), como mapa de calor
     const cols = [...new Set(reun.flatMap((x) => { const p = ultimos(x).u.p; return Object.keys(p).filter((k) => p[k] >= 1).map(Number); }))].sort((a, b) => a - b);
-    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((m) => `<th>${m === 0 ? 'Manter' : `${m > 0 ? '+' : '−'}${num(Math.abs(m) / 100)}`}</th>`).join('')}<th>Contratos em aberto</th><th>Pregão</th></tr></thead><tbody>${reun.map((x, i) => {
+    const tabela = `<table class="fw-tab"><thead><tr><th>Reunião</th>${cols.map((m) => `<th>${rotMov(m)}</th>`).join('')}<th>Contratos em aberto</th><th>Pregão</th></tr></thead><tbody>${reun.map((x, i) => {
       const ux = ultimos(x).u, p = ux.p;
       const mx = Math.max(...Object.values(p));
       const oi = Object.values(ux.oi || {}).reduce((t, v) => t + v, 0);
       return `<tr class="${i === sel ? 'sel' : ''}" data-r="${i}"><td>${dmy(x.data)}</td>${cols.map((m) => {
         const v = p[m];
-        if (!ok(v) || v < 0.5) return '<td class="z">—</td>';
+        if (!ok(v) || v < 0.5) return '<td class="z">–</td>';
         return `<td class="${v === mx ? 'mx' : ''}" style="--a:${Math.min(1, v / 100).toFixed(3)}">${num(v, 1)}%</td>`;
-      }).join('')}<td class="fw-ct">${int(oi)}</td><td class="fw-ct">${dm(ux.d)}</td></tr>`;
+      }).join('')}<td class="fw-pr">${int(oi)}</td><td class="fw-pr">${dm(ux.d)}</td></tr>`;
     }).join('')}</tbody></table>`;
 
-    const bp = (v) => (ok(v) ? `${v >= 0 ? '+' : '−'}${num(Math.abs(v), 1)} bp` : '—');
+    const bp = (v) => (ok(v) ? `${Math.abs(v) < 0.05 ? '' : v > 0 ? '+' : '−'}${num(Math.abs(v), 1)} bp` : '—');
     const oiTot = Object.values(u.oi || {}).reduce((t, v) => t + v, 0), negTot = Object.values(u.n || {}).reduce((t, v) => t + v, 0);
+    const kpi = (ic, t, b, sm, cls = '') => `<div class="fw-kpi"><span class="fw-ki"><i class="fa-solid ${ic}" aria-hidden="true"></i></span><div><span>${t}</span><b class="${cls}">${b}</b><small>${sm}</small></div></div>`;
     root.innerHTML = `<div class="fw-card">
       <div class="fw-top">
+        <button class="fw-nav" data-act="esq" aria-label="Reuniões anteriores"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="fw-chips" role="tablist" aria-label="Reuniões do Copom">${chips}</div>
-        <span class="fw-sp"></span>
-        <button class="fw-ib" data-act="reload" title="Atualizar"${busy ? ' disabled' : ''}><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}"></i></button>
+        <button class="fw-nav" data-act="dir" aria-label="Próximas reuniões"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="fw-upd"><span>Pregão de</span><b>${dmy(u.d)}</b></div>
+        <button class="fw-ib" data-act="reload" title="Atualizar" aria-label="Atualizar"${busy ? ' disabled' : ''}><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}"></i></button>
       </div>
       <div class="fw-kpis">
-        <div><span>Reunião</span><b>${dmy(R.data)}</b><small>${faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`}</small></div>
-        <div><span>Selic atual</span><b>${ok(selic) ? `${num(selic)}%` : '—'}</b><small>meta do Copom</small></div>
-        <div><span>Mais provável</span><b class="${tomMov(maisProv)}">${nomeMov(maisProv)}</b><small>${pct(P[maisProv])} de chance</small></div>
-        <div><span>Decisão média esperada</span><b>${bp(esperado)}</b><small>${sel === 0 ? `Selic de ${ok(selic) && ok(esperado) ? `${num(selic + esperado / 100)}%` : '—'} depois` : 'nesta reunião'}</small></div>
+        ${kpi('fa-calendar-days', 'Reunião do Copom', dmy(R.data), faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`)}
+        ${kpi('fa-bullseye', 'Selic atual', ok(selic) ? `${num(selic)}%` : '—', 'meta do Copom')}
+        ${kpi('fa-chart-simple', 'Cenário mais provável', nomeMov(maisProv), `${pct(P[maisProv])} de chance`, tomMov(maisProv))}
+        ${kpi('fa-percent', 'Decisão média esperada', bp(esperado), sel === 0 ? `Selic de ${ok(selic) && ok(esperado) ? `${num(selic + esperado / 100)}%` : '—'} depois` : 'nesta reunião')}
       </div>
-      <div class="fw-sec">Chance de cada decisão na reunião de ${dmy(R.data)} ${sel === 0 ? '<small>(e a Selic depois dela)</small>' : '<small>(mudança nesta reunião, além do que for decidido antes)</small>'}</div>
-      <div class="fw-ctr">
-        <span class="fw-ctr-t">Opções de Copom</span>
-        <span>pregão</span><b>${dmy(u.d)}</b>
-        <span>contratos em aberto</span><b>${int(oiTot)}</b>
-        <span>negociados no dia</span><b>${int(negTot)}</b>
-        <span>soma das chances</span><b>${pct(soma)}</b>
+      <div class="fw-blk">
+        <div class="fw-sec fw-sec-b">Chance de cada decisão na reunião de ${dmy(R.data)} ${sel === 0 ? '<small>(e a Selic depois dela)</small>' : '<small>(mudança nesta reunião, além do que for decidido antes)</small>'}
+          <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> ${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
+        <div class="fw-ctr">
+          <span class="fw-chip"><i class="fa-solid fa-file-contract"></i>Opções de Copom <b>B3</b></span>
+          <span class="fw-chip"><i class="fa-solid fa-calendar-day"></i>Pregão <b>${dmy(u.d)}</b></span>
+          <span class="fw-chip"><i class="fa-solid fa-layer-group"></i>Contratos em aberto <b>${int(oiTot)}</b></span>
+          <span class="fw-chip"><i class="fa-solid fa-right-left"></i>Negociados no dia <b>${int(negTot)}</b></span>
+          <span class="fw-chip"><i class="fa-solid fa-equals"></i>Soma das chances <b>${pct(soma)}</b></span>
+        </div>
+        ${pilha}
+        <div class="fw-bars">${barras}</div>
+        ${prefs.graf ? `<div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div><div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>` : ''}
       </div>
-      <div class="fw-bars">${barras}</div>
-      <div class="fw-sec fw-sec-b">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small>
-        <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}">${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
-      ${prefs.graf ? '<div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>' : ''}
-      <div class="fw-sec">Todas as reuniões <small>(chance de cada decisão, reunião por reunião)</small></div>
-      <div class="fw-tabw">${tabela}</div>
-      <div class="fw-foot">Preço de referência das opções de Copom da B3 no pregão de ${dmy(u.d)}${vivoHoje ? '; "hoje" é o último negócio do dia' : ''}.
-        Cada opção paga se o Copom decidir exatamente aquele cenário, então o preço (de 0 a 100) é a chance que o mercado dá a ele; por isso a soma pode passar ou ficar abaixo de 100%.
-        Cada reunião tem as suas opções: a chance é da decisão daquela reunião. Reuniões sem opções negociadas não aparecem.
-        Fonte: B3, painel público de opções de Copom.${erro ? ` <b>${esc(erro)}</b>` : ''}</div>
+      <div class="fw-blk">
+        <div class="fw-sec fw-sec-b">Todas as reuniões <small>(chance de cada decisão, reunião por reunião)</small>
+          <span class="fw-esc" aria-hidden="true">Cor mais forte = chance maior <b>0%</b><i></i><b>100%</b></span></div>
+        <div class="fw-tabw">${tabela}</div>
+      </div>
+      <div class="fw-foot">
+        <div><b><i class="fa-solid fa-gear"></i> Metodologia</b><p>Cada opção de Copom paga se o Copom decidir exatamente aquele cenário, então o preço (de 0 a 100) é a chance que o mercado dá a ele; por isso a soma pode passar ou ficar abaixo de 100%. Cada reunião tem as suas opções: a chance é da decisão daquela reunião. Reuniões sem opções negociadas não aparecem.</p></div>
+        <div><b><i class="fa-solid fa-database"></i> Fontes</b><p>B3, painel público de opções de Copom. Preço de referência do pregão de ${dmy(u.d)}${vivoHoje ? '; "hoje" é o último negócio do dia' : ''}.${erro ? ` <b>${esc(erro)}</b>` : ''}</p></div>
+      </div>
     </div>`;
+    // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
+    const fc = root.querySelector('.fw-chips');
+    const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); fc.parentElement.classList.toggle('cabe', fc.scrollWidth <= fc.clientWidth + 4); };
+    fc.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    fc.addEventListener('scroll', bordas, { passive: true });
+    bordas();
     if (prefs.graf) {
       hist = historico(R);
       larg = root.querySelector('.fw-hbox')?.clientWidth || 0;
@@ -206,65 +229,101 @@
       if (b) { prefs.sel = +b.dataset.r; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="graf"]')) { prefs.graf = !prefs.graf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="reload"]') && !busy) load(true);
+      const nv = e.target.closest('[data-act="esq"],[data-act="dir"]');
+      if (nv) { const fc = el.querySelector('.fw-chips'); fc.scrollBy({ left: (nv.dataset.act === 'dir' ? 1 : -1) * fc.clientWidth * 0.7, behavior: 'smooth' }); }
     });
   }
 
   const css = document.createElement('style');
   css.textContent = `
-  #copom-root { min-width:0; max-width:100%; }
-  #copom-root .fw-card { min-width:0; max-width:100%; }
+  #copom-root { min-width:0; max-width:100%; font-variant-numeric:tabular-nums; }
+  #copom-root .fw-card { min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
   #copom-root .fw-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
-  #copom-root .fw-card { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); overflow:hidden; }
-  #copom-root .fw-top { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); }
-  #copom-root .fw-chips { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; min-width:0; }
-  #copom-root .fw-chips button { flex:none; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; padding:6px 12px; border-radius:99px; cursor:pointer; white-space:nowrap; }
-  #copom-root .fw-chips button i { font-style:normal; color:var(--accent-ink); margin-left:2px; }
-  #copom-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent-ink); font-weight:600; }
-  #copom-root .fw-sp { flex:1; }
-  #copom-root .fw-ib { height:32px; min-width:32px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:9px; cursor:pointer; flex:none; }
-  #copom-root .fw-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-bottom:1px solid var(--line); }
-  #copom-root .fw-kpis > div { padding:12px 14px; display:flex; flex-direction:column; gap:3px; min-width:0; }
-  #copom-root .fw-kpis > div + div { border-left:1px solid var(--line); }
-  #copom-root .fw-kpis span { font-size:11.5px; color:var(--text-3); }
-  #copom-root .fw-kpis b { font:600 18px 'JetBrains Mono', monospace; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #copom-root .fw-kpis small { font-size:11px; color:var(--text-3); }
-  #copom-root .fw-man { color:var(--info) !important; }
+  #copom-root .fw-top { display:flex; align-items:center; gap:8px; min-width:0; }
+  #copom-root .fw-nav { flex:none; width:32px; height:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; font-size:12px; }
+  #copom-root .fw-top.cabe .fw-nav { display:none; }
+  #copom-root .fw-pilha em { font-style:normal; }
+  #copom-root .fw-nav:hover { color:var(--text); border-color:var(--line-2); }
+  #copom-root .fw-chips { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; min-width:0; flex:1; scroll-behavior:smooth; }
+  #copom-root .fw-chips::-webkit-scrollbar { display:none; }
+  #copom-root .fw-chips.dir { -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent); }
+  #copom-root .fw-chips.esq { -webkit-mask-image:linear-gradient(90deg,transparent,#000 40px); mask-image:linear-gradient(90deg,transparent,#000 40px); }
+  #copom-root .fw-chips.esq.dir { -webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent); mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent); }
+  #copom-root .fw-chips button { flex:none; display:flex; flex-direction:column; align-items:center; gap:1px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; padding:6px 14px; border-radius:10px; cursor:pointer; white-space:nowrap; min-width:92px; }
+  #copom-root .fw-chips button b { font-size:12.5px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:6px; }
+  #copom-root .fw-chips button small { font-size:11px; color:var(--text-3); }
+  #copom-root .fw-chips button:hover { border-color:var(--line-2); }
+  #copom-root .fw-chips button.on { background:var(--accent-soft); border-color:var(--accent); }
+  #copom-root .fw-chips button.on b, #copom-root .fw-chips button.on small { color:var(--accent-ink); }
+  #copom-root .fw-sep { color:var(--accent-ink); font-size:10.5px; }
+  #copom-root .fw-upd { flex:none; display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; margin-left:6px; }
+  #copom-root .fw-upd span { font-size:10.5px; color:var(--text-3); }
+  #copom-root .fw-upd b { font-size:13px; color:var(--text); font-weight:600; }
+  #copom-root .fw-ib { height:40px; min-width:40px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; flex:none; }
+  #copom-root .fw-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
+  #copom-root .fw-kpi { display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); box-shadow:0 1px 3px rgba(0,0,0,.08); min-width:0; }
+  #copom-root .fw-kpi > div { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  #copom-root .fw-ki { flex:none; width:44px; height:44px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:17px; }
+  #copom-root .fw-kpi span { font-size:12.5px; color:var(--text-2); font-weight:500; }
+  #copom-root .fw-kpi b { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-.01em; line-height:1.25; }
+  #copom-root .fw-kpi small { font-size:12px; color:var(--text-3); }
+  #copom-root .fw-man { color:var(--accent-ink) !important; }
   #copom-root .fw-alta { color:var(--neg) !important; }
   #copom-root .fw-corte { color:var(--pos-ink) !important; }
-  #copom-root .fw-sec { padding:14px 14px 6px; font-size:12.5px; font-weight:600; color:var(--text); }
-  #copom-root .fw-sec small { font-weight:400; color:var(--text-3); }
-  #copom-root .fw-bars { padding:4px 14px 10px; display:flex; flex-direction:column; gap:8px; }
-  #copom-root .fw-bar { display:grid; grid-template-columns:190px minmax(0,1fr) 64px 190px; align-items:center; gap:12px; }
+  #copom-root .fw-blk { border:1px solid var(--line); border-radius:14px; background:var(--surface-2); padding:4px 0 10px; min-width:0; }
+  #copom-root .fw-sec { padding:14px 16px 8px; font-size:15px; font-weight:700; color:var(--text); }
+  #copom-root .fw-sec small { font-weight:400; color:var(--text-3); font-size:12.5px; }
+  #copom-root .fw-sec-b { display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; }
+  #copom-root .fw-tg { margin-left:auto; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--accent-line, var(--line-2)); background:transparent; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:7px 14px; border-radius:9px; cursor:pointer; }
+  #copom-root .fw-tg i { color:var(--accent-ink); }
+  #copom-root .fw-tg:hover { background:var(--accent-soft); }
+  #copom-root .fw-ctr { display:flex; flex-wrap:wrap; gap:8px; padding:0 16px 12px; }
+  #copom-root .fw-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:9px; background:var(--surface); padding:6px 11px; font-size:12px; color:var(--text-3); white-space:nowrap; }
+  #copom-root .fw-chip > i { color:var(--text-3); font-size:11px; }
+  #copom-root .fw-chip b { font-size:13px; color:var(--text); font-weight:700; }
+  #copom-root .fw-chip em { font-style:normal; font-weight:600; color:var(--text-3); }
+  #copom-root .fw-chip em.fw-up { color:var(--pos-ink); } #copom-root .fw-chip em.fw-dn { color:var(--neg); }
+  #copom-root .fw-pilha { display:flex; gap:2px; height:26px; margin:0 16px 12px; border-radius:7px; overflow:hidden; }
+  #copom-root .fw-pilha i, #copom-root .fw-bt i { font-style:normal; }
+  #copom-root .fw-pilha i { display:flex; align-items:center; justify-content:center; min-width:3px; overflow:hidden; }
+  #copom-root .fw-pilha span { font-size:11.5px; font-weight:700; color:#111; white-space:nowrap; padding:0 6px; }
+  #copom-root .fw-bars { padding:2px 16px 6px; display:flex; flex-direction:column; gap:10px; }
+  #copom-root .fw-bar { display:grid; grid-template-columns:180px minmax(0,1fr) 64px 190px; align-items:center; gap:12px; }
   #copom-root .fw-bl { display:flex; flex-direction:column; gap:1px; min-width:0; }
-  #copom-root .fw-bl b { font:600 13px 'JetBrains Mono', monospace; color:var(--text); }
-  #copom-root .fw-bl span { font-size:11px; }
-  #copom-root .fw-bt { height:14px; border-radius:4px; background:var(--surface-2); overflow:hidden; }
-  #copom-root .fw-bt i { display:block; height:100%; background:color-mix(in srgb, var(--info) 70%, transparent); border-radius:4px; }
-  #copom-root .fw-bar.top .fw-bt i { background:var(--accent); }
-  #copom-root .fw-bv { font:600 14px 'JetBrains Mono', monospace; text-align:right; color:var(--text); }
-  #copom-root .fw-bc { font-size:11px; color:var(--text-3); white-space:nowrap; }
+  #copom-root .fw-bl b { font-size:15px; font-weight:700; color:var(--text); }
+  #copom-root .fw-bl span { font-size:12.5px; }
+  #copom-root .fw-bt { height:20px; border-radius:6px; background:var(--surface); overflow:hidden; }
+  #copom-root .fw-bt i { display:flex; align-items:center; justify-content:center; height:100%; border-radius:6px; opacity:.85; }
+  #copom-root .fw-bar.top .fw-bt i { opacity:1; }
+  #copom-root .fw-bt i span { font-size:12px; font-weight:700; color:#111; }
+  #copom-root .fw-bv { font-size:15px; font-weight:700; text-align:right; color:var(--text); }
+  #copom-root .fw-bc { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
   #copom-root .fw-bc span { opacity:.6; }
-  #copom-root .fw-tabw { overflow-x:auto; padding:0 14px 6px; }
-  #copom-root .fw-tab { width:100%; border-collapse:collapse; font-size:12px; }
-  #copom-root .fw-tab th { text-align:right; font-weight:600; color:var(--text-3); padding:7px 8px; border-bottom:1px solid var(--line); white-space:nowrap; font-family:'JetBrains Mono', monospace; font-size:11px; }
-  #copom-root .fw-tab th:first-child, #copom-root .fw-tab td:first-child { text-align:left; font-family:inherit; }
-  #copom-root .fw-tab td { text-align:right; padding:7px 8px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono', monospace; color:var(--text-2); white-space:nowrap;
-    background:color-mix(in srgb, var(--info) calc(var(--a, 0) * 34%), transparent); }
-  #copom-root .fw-tab td.z { color:var(--text-3); opacity:.5; }
-  #copom-root .fw-tab td.mx { color:var(--text); font-weight:700; box-shadow:inset 0 -2px 0 var(--accent); }
-  #copom-root .fw-tab td.fw-tx { color:var(--text); background:none; }
+  #copom-root .fw-esc { margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:11.5px; font-weight:400; color:var(--text-3); }
+  #copom-root .fw-esc b { font-weight:500; color:var(--text-3); }
+  #copom-root .fw-esc i { width:110px; height:10px; border-radius:3px; background:linear-gradient(90deg, color-mix(in srgb, var(--info) 6%, transparent), var(--info)); }
+  #copom-root .fw-tabw { overflow-x:auto; margin:0 16px; border:1px solid var(--line); border-radius:10px; }
+  #copom-root .fw-tab { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  #copom-root .fw-tab th { text-align:right; font-weight:600; color:var(--text-2); padding:9px 10px; border-bottom:1px solid var(--line); white-space:nowrap; font-size:12px; background:var(--surface); }
+  #copom-root .fw-tab td { text-align:right; padding:8px 10px; border-bottom:1px solid var(--line); color:var(--text-2); white-space:nowrap;
+    background:color-mix(in srgb, var(--info) calc(var(--a, 0) * 78%), transparent); }
+  #copom-root .fw-tab tr:last-child td { border-bottom:0; }
+  #copom-root .fw-tab th:first-child, #copom-root .fw-tab td:first-child { text-align:left; position:sticky; left:0; z-index:1; background:var(--surface); border-right:1px solid var(--line); }
+  #copom-root .fw-tab td:first-child .fw-sep { margin-left:6px; }
+  #copom-root .fw-tab td.z { color:var(--text-3); opacity:.25; background:none; }
+  #copom-root .fw-tab td.mx { color:var(--text); font-weight:700; }
+  #copom-root .fw-tab td[style] { color:var(--text); }
+  #copom-root .fw-tab th.fw-ct, #copom-root .fw-tab td.fw-ct { text-align:left; padding-left:18px; }
+  #copom-root .fw-tab td.fw-ct, #copom-root .fw-tab td.fw-pr { background:none; color:var(--text-2); }
+  #copom-root .fw-tab td.fw-tx { color:var(--text); font-weight:700; background:none; }
   #copom-root .fw-tab tr { cursor:pointer; }
-  #copom-root .fw-tab tr:hover td:first-child, #copom-root .fw-tab tr.sel td:first-child { color:var(--accent-ink); font-weight:600; }
-  #copom-root .fw-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; border-top:1px solid var(--line); margin-top:8px; }
-  #copom-root .fw-ctr { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin:2px 14px 8px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); font-size:11.5px; color:var(--text-3); }
-  #copom-root .fw-ctr b { font:700 13px 'JetBrains Mono', monospace; color:var(--text); margin-right:-8px; }
-  #copom-root .fw-ctr-t { text-transform:uppercase; letter-spacing:.06em; font-size:10px; font-weight:700; }
-  #copom-root .fw-ctr-p { font:600 13px 'JetBrains Mono', monospace; color:var(--accent-ink); }
-  #copom-root .fw-tab td.fw-ct { background:none; color:var(--text-3); font-size:11px; }
-  #copom-root .fw-tab td.fw-ct b { color:var(--text-2); font-weight:600; }
-  #copom-root .fw-sec-b { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  #copom-root .fw-tg { margin-left:auto; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); font:inherit; font-size:12px; font-weight:500; padding:5px 12px; border-radius:8px; cursor:pointer; }
-  #copom-root .fw-tg:hover { color:var(--text); border-color:var(--line-2); }
+  #copom-root .fw-tab tr:hover td:first-child { color:var(--text); }
+  #copom-root .fw-tab tr.sel td:first-child { color:var(--accent-ink); font-weight:700; box-shadow:inset 3px 0 0 var(--accent); }
+  #copom-root .fw-foot { display:grid; grid-template-columns:1fr 1fr; gap:14px 28px; padding:14px 18px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); }
+  #copom-root .fw-foot b { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text); }
+  #copom-root .fw-foot b i { color:var(--accent-ink); }
+  #copom-root .fw-foot p { margin:6px 0 0; font-size:12px; line-height:1.55; color:var(--text-3); }
+  #copom-root .fw-foot p b { display:inline; color:var(--neg); }
   #copom-root .fw-hleg { display:flex; flex-wrap:wrap; gap:4px 14px; padding:0 14px 4px; font-size:11.5px; color:var(--text-2); }
   #copom-root .fw-hleg span { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; }
   #copom-root .fw-hleg i, #copom-root .fw-tip i { width:10px; height:3px; border-radius:2px; display:inline-block; }
@@ -278,13 +337,26 @@
   #copom-root .fw-tip b { display:block; color:var(--text); margin-bottom:4px; }
   #copom-root .fw-tip div { display:flex; align-items:center; gap:7px; line-height:1.7; font-family:'JetBrains Mono', monospace; }
   #copom-root .fw-tip span { margin-left:auto; padding-left:10px; color:var(--text); font-weight:600; }
-  @media (max-width: 900px) {
+  @container (max-width: 900px) {
     #copom-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
-    #copom-root .fw-kpis > div:nth-child(3) { border-left:0; }
-    #copom-root .fw-kpis > div:nth-child(n+3) { border-top:1px solid var(--line); }
     #copom-root .fw-bar { grid-template-columns:minmax(0,1fr) 60px; grid-template-areas:"l v" "t t" "c c"; gap:4px 10px; }
     #copom-root .fw-bl { grid-area:l; } #copom-root .fw-bv { grid-area:v; } #copom-root .fw-bt { grid-area:t; } #copom-root .fw-bc { grid-area:c; }
-    #copom-root .fw-kpis b { font-size:15px; }
+    #copom-root .fw-upd, #copom-root .fw-nav { display:none; }
+    #copom-root .fw-foot { grid-template-columns:1fr; }
+    #copom-root .fw-esc { margin-left:0; }
+  }
+  @container (max-width: 560px) {
+    #copom-root .fw-kpis { gap:8px; }
+    #copom-root .fw-kpi { padding:12px; }
+    #copom-root .fw-ki { display:none; }
+    #copom-root .fw-kpi span { font-size:11.5px; }
+    #copom-root .fw-kpi b { font-size:18px; }
+    #copom-root .fw-kpi small { font-size:11px; }
+    #copom-root .fw-ctr { gap:6px; }
+    #copom-root .fw-chip { padding:5px 9px; font-size:11.5px; }
+    #copom-root .fw-chip > i { display:none; }
+    #copom-root .fw-pilha em { display:none; }
+    #copom-root .fw-tg { margin-left:0; }
   }`;
   document.head.appendChild(css);
 
