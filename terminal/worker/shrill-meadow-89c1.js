@@ -607,13 +607,23 @@ async function b3Get(caminho, cacheTtl = 0) {
 }
 const b3Derivativo = (ativo) => b3Get('DerivativeQuotation/' + ativo);
 const b3Num = (x) => (x != null && isFinite(+x) ? +x : null);
+// preço de referência do pregão (o ajuste do dia anterior): o meio dos limites de oscilação, que a B3 calcula
+// sobre ele. À noite o "prvsDayAdjstmntPric" já vira o ajuste de hoje e a conta último/ajuste dava quase zero
+// (28/10/2026: WIN -0,30% em vez de -2,7%); a variação "prcFlcn" da B3 também alterna entre os dois servidores.
+function refPregao(q) {
+  const lo = b3Num(q?.bottomLmtPric), hi = b3Num(q?.topLmtPric), aj = b3Num(q?.prvsDayAdjstmntPric);
+  if (lo == null || hi == null || !(lo > 0) || !(hi > lo)) return null;
+  const m = (lo + hi) / 2;
+  // alguns contratos não têm limite (a B3 manda 0,01 a 999.990): aí fica o ajuste
+  return (hi - lo) / m < 0.5 && (!aj || Math.abs(m / aj - 1) < 0.15) ? m : null;
+}
 // contratos futuros de um ativo: t = último negócio de hoje (null se não negociou), aj = ajuste do pregão anterior,
 // oi = contratos em aberto, neg = contratos negociados hoje
 function b3Futuros(j, ativo) {
   const re = new RegExp('^' + ativo + '[FGHJKMNQUVXZ]\\d\\d$');
   return (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && re.test(x.symb || '')).map((x) => ({
     s: x.symb, venc: x.asset?.AsstSummry?.mtrtyCode || null,
-    t: b3Num(x.SctyQtn?.curPrc), aj: b3Num(x.SctyQtn?.prvsDayAdjstmntPric),
+    t: b3Num(x.SctyQtn?.curPrc), aj: b3Num(x.SctyQtn?.prvsDayAdjstmntPric), ref: refPregao(x.SctyQtn),
     oi: b3Num(x.asset?.AsstSummry?.opnCtrcts) || 0, neg: b3Num(x.asset?.AsstSummry?.traddCtrctsQty) || 0,
   })).filter((x) => x.venc && (x.t != null || x.aj != null)).sort((a, b) => (a.venc < b.venc ? -1 : 1));
 }
@@ -641,7 +651,7 @@ const FUT_B3 = [
 ];
 async function handleFutB3(ctx, cors) {
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/futb3-v1');
+  const cacheKey = new Request('https://cache.local/futb3-v2');
   const hit = await cache.match(cacheKey);
   if (hit) return jsonCache(hit.body, cors, true);
   let b3 = null;

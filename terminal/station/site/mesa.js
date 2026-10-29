@@ -456,7 +456,8 @@
     return `<section class="ms-box ms-tb ms-fb3" data-tb="b3">
       <div class="ms-head"><h3>Futuros B3</h3><span class="sp"></span><span class="ms-hsub" title="Site de cotações da B3, atraso de cerca de 15 minutos">${hora ? `B3 às ${hora}` : ''}</span></div>
       ${L.length ? `<table><tbody>${L.map((x) => {
-        const v = x.t != null ? x.t : x.aj, c = x.t != null && x.aj ? (x.t / x.aj - 1) * 100 : null;
+        // variação contra a referência do pregão (meio dos limites da B3); sem ela, contra o ajuste anterior
+        const base = x.ref || x.aj, v = x.t != null ? x.t : x.aj, c = x.t != null && base ? (x.t / base - 1) * 100 : null;
         return `<tr title="${esc(x.nome)} · contrato ${esc(x.s)}${x.t == null ? ' · sem negócio hoje, valor do ajuste anterior' : ''} · fonte: B3, atraso de cerca de 15 min" class="${x.t == null ? 'old' : ''}">
           <td class="nm">${esc(x.nome)}<small>${esc(x.s)}</small></td>
           <td class="px">${v != null ? nf(v, x.d) : '—'}</td>
