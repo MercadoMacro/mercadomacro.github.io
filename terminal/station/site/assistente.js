@@ -38,6 +38,7 @@
   .ia-eu{align-self:flex-end;background:var(--accent-soft,#e8f0ff);color:var(--accent-ink,var(--text))}
   .ia-ele{align-self:flex-start;background:var(--surface-2,#f3f3f3)}
   .ia-erro{align-self:flex-start;color:var(--down,#c0392b);font-size:13px}
+  .ia-erro a{color:var(--accent,#2563eb);font-weight:600}
   .ia-vazio{color:var(--muted,#777);font-size:14px;line-height:1.5}
   .ia-vazio button{display:block;width:100%;text-align:left;margin-top:8px;border:1px solid var(--line-2,#ddd);background:transparent;color:var(--text);border-radius:9px;padding:9px 11px;cursor:pointer;font-size:13px}
   .ia-vazio button:hover{background:var(--surface-2)}
@@ -65,15 +66,15 @@
   @media (max-width:560px){.ia-painel{width:100%;border-left:0}}`;
 
   const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
-  let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false;
+  let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
     if (!conversa.length) {
-      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => gemini || prontaPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
+      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini && assinante ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : gemini ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora. As perguntas livres ao Google Gemini são para assinantes.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => (gemini && assinante) || prontaPara(x) || licaoPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
       msgs.querySelectorAll('.ia-vazio button').forEach((b) => (b.onclick = () => { campo.value = b.textContent; perguntar(); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando">Pensando…</div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
     msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
@@ -88,7 +89,8 @@
     if (a && a.aba && document.querySelector('.tab-btn[data-tab="' + a.aba + '"]')) h += `<button type="button" data-ia-aba="${esc(a.aba)}">${esc(a.texto)}</button>`;
     else if (a && a.publico) h += `<a href="${esc(a.publico)}"${/^mailto:/.test(a.publico) ? '' : ' target="_blank" rel="noopener"'}>${esc(a.texto)}</a>`;
     if (x.licao && window.MMEdu) h += `<button type="button" data-ia-licao="${esc(x.licao.id)}">Abrir a lição: ${esc(x.licao.titulo)}</button>`;
-    if (gemini) h += `<button type="button" data-ia-gemini="${i}">Perguntar ao Gemini</button>`;
+    if (gemini && assinante) h += `<button type="button" data-ia-gemini="${i}">Perguntar ao Gemini</button>`;
+    else if (gemini) h += '<a href="/assinar">Assinar para perguntar ao Gemini</a>';
     return h + '</div>';
   }
   function prontaPara(p) {
@@ -107,11 +109,12 @@
     const item = { p };
     const pr = soGemini === true ? null : prontaPara(p);
     const li = soGemini === true ? null : licaoPara(p);
-    if (pr || li || !gemini) {
+    if (pr || li || !gemini || !assinante) {
       // dúvida comum ou assunto de uma lição: responde na hora, sem gastar a cota do Google
       if (li) item.licao = { id: li.id, titulo: li.titulo, trilha: li.trilha };
       if (pr) { item.r = pr.resposta.join('\n\n'); item.pronta = pr.id; item.acao = pr.acao || null; }
       else if (li) { item.r = li.abertura + (li.pontos.length ? '\n\n**Pontos principais**\n' + li.pontos.map((x) => '- ' + x).join('\n') : ''); item.pronta = 'licao'; }
+      else if (gemini && !assinante) { item.e = 'Não achei resposta pronta para isso. No plano grátis o assistente responde as dúvidas prontas e os assuntos das lições; as outras perguntas vão ao Gemini, que é para assinantes.'; item.assinar = true; }
       else item.e = 'Não achei resposta pronta para isso. Tente outras palavras ou escreva para contato@mercadomacro.com.br.';
       conversa.push(item); salvar(); desenhar(); campo.focus();
       return;
@@ -148,7 +151,7 @@
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
     painel.setAttribute('aria-label', 'Assistente'); painel.setAttribute('aria-hidden', 'true');
-    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><h2>Assistente IA<small>${gemini ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
+    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><h2>Assistente IA<small>${gemini && assinante ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
         <button type="button" data-ia="limpar" title="Apagar a conversa">Limpar</button><button type="button" data-ia="fechar" aria-label="Fechar">Fechar</button></div>
       <div class="ia-msgs" aria-live="polite"></div>
       <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit">Enviar</button></form>
@@ -182,7 +185,8 @@
     // sem a chave do Gemini, o painel funciona só com as respostas prontas
     if (!j) return;
     gemini = !!j.ligado;
-    limite = gemini ? j.limite : null;
+    assinante = j.assinante !== false;
+    limite = gemini && assinante ? j.limite : null;
     estilo();
     botao();
   }).catch(() => {});

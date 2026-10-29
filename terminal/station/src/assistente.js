@@ -95,10 +95,12 @@ function textoDoSSE(body) {
 }
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
-export async function apiAssistente(req, env, u) {
+export async function apiAssistente(req, env, u, gratis) {
   const c = await config(env);
-  if (req.method === 'GET') return json({ ligado: !!c.gemini_key, limite: u.admin ? null : PERGUNTAS_DIA });
+  if (req.method === 'GET') return json({ ligado: !!c.gemini_key, limite: u.admin ? null : PERGUNTAS_DIA, assinante: !gratis });
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
+  // plano grátis: só as respostas prontas (no navegador); o Gemini é para assinantes
+  if (gratis) return json({ erro: 'As perguntas ao Gemini são para assinantes.', codigo: 'assinar' }, 403);
   if (!c.gemini_key) return json({ erro: 'O assistente ainda não está ligado.' }, 503);
   const b = await req.json().catch(() => ({}));
   const pergunta = String(b.pergunta || '').trim().slice(0, MAX_PERGUNTA);
