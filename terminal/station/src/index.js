@@ -4,6 +4,7 @@ import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
+import { apiAssistente, apiAdminAssistente, ligarAssistente } from './assistente.js';
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
@@ -139,6 +140,7 @@ export default {
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p === '/api/passe') return await emitirPasse(env, u);
+      if (p === '/api/assistente') return await apiAssistente(req, env, u);
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
         if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
@@ -1257,6 +1259,7 @@ async function apiAdmin(req, env, acao, eu) {
     }
     return json({ erro: 'Ação inválida.' }, 400);
   }
+  if (acao === 'assistente') return await apiAdminAssistente(req, env);
   if (acao === 'capital') {
     const c = await config(env);
     if (req.method === 'GET') return json(c.cap_key ? { ligado: true, login: mascarar(c.cap_id), ambiente: c.cap_amb || 'demo' } : { ligado: false });
@@ -2084,6 +2087,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
       <h2>E-mail (Resend)</h2><div id="email"><p class="vazio">Carregando…</p></div></div>
     <div><h2>Avisos no Telegram</h2><div id="avisos"><p class="vazio">Carregando…</p></div>
+      <h2>Assistente (Google Gemini)</h2><div id="assistente"><p class="vazio">Carregando…</p></div>
       <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div>
       <h2>Sua conta de administrador</h2><div id="aparelhos"><p class="vazio">Carregando…</p></div></div>
   </div>
@@ -2554,6 +2558,29 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       if ((el = document.getElementById('em-teste'))) el.onclick = function(){ acao({ acao: 'teste' }, this, function(r){ diz(true, 'E-mail de teste enviado para ' + r.para + '. Confira a caixa de entrada (e o spam).'); }); };
     }).catch(function(){ em.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  var ia = document.getElementById('assistente');
+  function assistente(){
+    fetch('/api/admin/assistente', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
+      ia.innerHTML = (j.ligado
+        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + '. Quem está logado vê o botão Assistente e pode fazer 25 perguntas por dia; você não tem limite.</p><div class="linha"><button type="button" id="ia-testar" style="' + bt + '">Testar</button><button type="button" id="ia-off" style="' + bt + '">Desligar e apagar a chave</button></div><div id="ia-res"></div></div>'
+        : '<div class="caixa"><p>Cole a chave da API do Gemini (Google AI Studio, botão "Get API key"). Na faixa grátis o Google limita os pedidos por dia e pode usar as conversas para melhorar os produtos dele; a página de privacidade avisa isso.</p>'
+          + '<div class="linha"><input id="ia-chave" aria-label="Chave da API do Gemini" type="password" autocomplete="off" spellcheck="false" placeholder="chave da API do Gemini" style="' + inp + '"><button type="button" id="ia-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<p>Fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="ia-msg"></p>';
+      var m = document.getElementById('ia-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function acao(corpo, b, depois){ if (b) b.disabled = true; diz(true, 'Aguarde…');
+        fetch('/api/admin/assistente', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+          .then(function(r){ return r.json().then(function(x){ if (!r.ok) throw x; return x; }); })
+          .then(function(r){ diz(true, ''); depois(r); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }).then(function(){ if (b) b.disabled = false; }); }
+      var el;
+      if ((el = document.getElementById('ia-salvar'))) el.onclick = function(){ acao({ acao: 'chave', chave: document.getElementById('ia-chave').value }, this, assistente); };
+      if ((el = document.getElementById('ia-off'))) el.onclick = function(){ if (confirm('Desligar o assistente e apagar a chave do Gemini?')) acao({ acao: 'desligar' }, this, assistente); };
+      if ((el = document.getElementById('ia-testar'))) el.onclick = function(){ acao({ acao: 'testar' }, this, function(r){
+        document.getElementById('ia-res').innerHTML = '<p style="margin-top:10px"><b>Pergunta:</b> Em uma frase: o que é a taxa Selic?<br><b>Resposta (' + esc(r.modelo) + '):</b> ' + esc(r.resposta) + '</p>'; }); };
+    }).catch(function(){ ia.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
   var cp = document.getElementById('capital');
   function postCap(corpo){
     return fetch('/api/admin/capital', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
@@ -2718,6 +2745,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   aparelhos();
   pagamentos();
   capital();
+  assistente();
   email();
   avisos();
   carregar();
@@ -2815,6 +2843,7 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 </script></body></html>`;
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
+ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
 ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
 ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });
