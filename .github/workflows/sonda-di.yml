@@ -1,0 +1,22 @@
+name: sonda-di
+on: { push: { branches: [sonda-di] } }
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for A in DI1 DAP; do
+            curl -s -A 'Mozilla/5.0' -H 'Referer: https://www.b3.com.br/' "http://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/$A" > $A.json
+            python3 - "$A" <<'PY'
+          import json,sys
+          j=json.load(open(sys.argv[1]+'.json'))
+          print(sys.argv[1], j.get('Msg'))
+          s=[x for x in j.get('Scty',[]) if x.get('mkt',{}).get('cd')=='FUT']
+          print(json.dumps(s[0].get('SctyQtn'))); print(json.dumps(s[0].get('asset',{}).get('AsstSummry')))
+          for x in s[:40]:
+            q=x.get('SctyQtn',{}); a=x.get('asset',{}).get('AsstSummry',{})
+            lo,hi,aj=q.get('bottomLmtPric'),q.get('topLmtPric'),q.get('prvsDayAdjstmntPric')
+            m=(lo+hi)/2 if lo and hi else None
+            print(x['symb'], 'cur',q.get('curPrc'),'aj',aj,'lo',lo,'hi',hi,'mid',m and round(m,4),'flc',q.get('prcFlcn'),'oi',a.get('opnCtrcts'),'neg',a.get('traddCtrctsQty'))
+          PY
+          done
