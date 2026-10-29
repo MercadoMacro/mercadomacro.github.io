@@ -60,7 +60,7 @@
       return;
     }
     msgs.innerHTML = conversa.map((x) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${md(x.r)}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
-      + (ocupado ? '<div class="ia-pensando">Pensando…</div>' : '');
+      + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando">Pensando…</div>' : '');
     msgs.scrollTop = msgs.scrollHeight;
   }
 
@@ -72,10 +72,24 @@
     const historico = conversa.filter((x) => x.r).slice(-6).map((x) => ({ p: x.p, r: x.r }));
     conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
     try {
-      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pergunta: p, historico }) });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && j.resposta) item.r = j.resposta; else item.e = j.erro || 'Não foi possível responder agora.';
-    } catch (e) { item.e = 'Sem conexão. Tente de novo.'; }
+      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pergunta: p, historico, stream: true }) });
+      if (r.ok && r.body && /text\/plain/.test(r.headers.get('content-type') || '')) {
+        // a resposta chega aos pedaços: mostra enquanto o Gemini escreve
+        const leitor = r.body.getReader(), dec = new TextDecoder();
+        item.r = '';
+        for (;;) {
+          const { done, value } = await leitor.read();
+          if (done) break;
+          item.r += dec.decode(value, { stream: true });
+          desenhar();
+        }
+        item.r = item.r.trim();
+        if (!item.r) { delete item.r; item.e = 'Não foi possível responder agora.'; }
+      } else {
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.resposta) item.r = j.resposta; else item.e = j.erro || 'Não foi possível responder agora.';
+      }
+    } catch (e) { if (item.r) item.r += '\n\n(A resposta foi interrompida.)'; else item.e = 'Sem conexão. Tente de novo.'; }
     ocupado = false; enviar.disabled = false; salvar(); desenhar(); campo.focus();
   }
 

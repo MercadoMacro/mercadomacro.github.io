@@ -23,24 +23,73 @@ Regras:
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
 - Se não souber, diga que não sabe. Não use emojis.`;
 
-async function gemini(chave, contents) {
+// modelo que respondeu "muita procura" fica de lado por uns minutos (evita uma ida e volta perdida a cada pergunta)
+const ocupadoAte = {};
+// pensar pouco: o Gemini 3 pensa bastante por padrão e isso atrasa a resposta; se o Google recusar o campo, segue sem ele
+let semThinking = false;
+
+async function chamar(m, chave, contents, stream, comThinking) {
+  const gc = { maxOutputTokens: 2048 };
+  if (comThinking) gc.thinkingConfig = { thinkingLevel: 'low' };
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`;
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: INSTRUCOES }] }, contents, generationConfig: gc }),
+  }).catch((e) => ({ ok: false, status: 0, erroRede: String(e) }));
+}
+
+// stream = true devolve {ok, corpo: ReadableStream de texto puro}; sem stream, {ok, texto}
+async function gemini(chave, contents, stream = false) {
   let ultimo = '', ocupado = 0;
-  for (const m of MODELOS) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: INSTRUCOES }] }, contents, generationConfig: { maxOutputTokens: 1200 } }),
-    }).catch((e) => ({ ok: false, status: 0, erroRede: String(e) }));
+  const agora = Date.now();
+  const lista = MODELOS.filter((m) => !(ocupadoAte[m] > agora));
+  for (const m of lista.length ? lista : MODELOS) {
+    let r = await chamar(m, chave, contents, stream, !semThinking);
+    if (r.status === 400 && !semThinking) {
+      const t = await r.text().catch(() => '');
+      if (/thinking/i.test(t)) { semThinking = true; r = await chamar(m, chave, contents, stream, false); }
+      else r = { ok: false, status: 400, json: async () => { try { return JSON.parse(t); } catch (e) { return {}; } } };
+    }
     if (r.status === 404) { ultimo = 'modelo ' + m + ' indisponível'; continue; }
-    const j = r.json ? await r.json().catch(() => ({})) : {};
-    // modelo sobrecarregado (503/500): tenta o próximo modelo antes de desistir
-    if (r.status === 503 || r.status === 500) { ultimo = j?.error?.message || 'HTTP ' + r.status; ocupado = r.status; continue; }
-    if (!r.ok) return { ok: false, status: r.status, erro: j?.error?.message || r.erroRede || 'HTTP ' + r.status };
-    const texto = (j?.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+    if (!r.ok) {
+      const j = r.json ? await r.json().catch(() => ({})) : {};
+      // modelo sobrecarregado (503/500): tenta o próximo modelo antes de desistir
+      if (r.status === 503 || r.status === 500) { ultimo = j?.error?.message || 'HTTP ' + r.status; ocupado = r.status; ocupadoAte[m] = Date.now() + 5 * 60000; continue; }
+      return { ok: false, status: r.status, erro: j?.error?.message || r.erroRede || 'HTTP ' + r.status };
+    }
+    if (stream) return { ok: true, corpo: textoDoSSE(r.body), modelo: m };
+    const j = await r.json().catch(() => ({}));
+    const texto = (j?.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('').trim();
     if (!texto) return { ok: false, status: 502, erro: j?.promptFeedback?.blockReason ? 'pergunta bloqueada pelo filtro do Google' : 'resposta vazia' };
     return { ok: true, texto, modelo: m };
   }
   return { ok: false, status: ocupado || 404, erro: ultimo || 'nenhum modelo disponível' };
+}
+
+// converte o SSE do Google ("data: {...}") em texto puro, pedaço a pedaço
+function textoDoSSE(body) {
+  const dec = new TextDecoder(), enc = new TextEncoder();
+  let buf = '', algum = false;
+  const linha = (l, ctl) => {
+    if (!l.startsWith('data:')) return;
+    try {
+      const j = JSON.parse(l.slice(5));
+      const t = (j?.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
+      if (t) { algum = true; ctl.enqueue(enc.encode(t)); }
+    } catch (e) {}
+  };
+  return body.pipeThrough(new TransformStream({
+    transform(chunk, ctl) {
+      buf += dec.decode(chunk, { stream: true });
+      const ls = buf.split(/\r?\n/); buf = ls.pop();
+      for (const l of ls) linha(l, ctl);
+    },
+    flush(ctl) {
+      if (buf) linha(buf, ctl);
+      if (!algum) ctl.enqueue(enc.encode('O Google não devolveu resposta para esta pergunta. Tente reformular.'));
+    },
+  }));
 }
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
@@ -58,7 +107,8 @@ export async function apiAssistente(req, env, u) {
   const hist = (Array.isArray(b.historico) ? b.historico : []).slice(-MAX_HISTORICO)
     .filter((x) => x && typeof x.p === 'string' && typeof x.r === 'string')
     .flatMap((x) => [{ role: 'user', parts: [{ text: x.p.slice(0, MAX_PERGUNTA) }] }, { role: 'model', parts: [{ text: x.r.slice(0, 4000) }] }]);
-  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }]);
+  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }], !!b.stream);
+  if (r.ok && r.corpo) return new Response(r.corpo, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   if (r.ok) return json({ resposta: r.texto });
   if (r.status === 429) return json({ erro: 'O assistente atingiu o limite gratuito do Google por agora. Tente de novo mais tarde.' }, 429);
   if (r.status === 503 || r.status === 500) return json({ erro: 'O Google está com muita procura agora. Tente de novo em alguns minutos.' }, 503);
