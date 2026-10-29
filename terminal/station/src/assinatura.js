@@ -12,9 +12,9 @@ export function ligarAssinatura(u) {
 }
 
 export const PLANOS = {
-  // desde 29/10/2026 quem nunca assinou ganha 48 horas grátis (sem Pix); a degustação paga saiu da lista e fica só para os pedidos antigos
+  // desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis (sem Pix); a degustação continua para quem nunca pagou
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
-  degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true, oculto: true },
+  degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
   mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 2990 },
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990 },
   semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 14990 },
@@ -451,7 +451,7 @@ export async function apiAdminAssinatura(req, env, acao) {
 /* ---------------- planos na vitrine (montados aqui para os preços nunca ficarem diferentes) ---------------- */
 export function planosVitrine() {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
-  const nota = { gratis: 'Para conhecer, sem pagar nada', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
+  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
   return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'semestral' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
@@ -473,10 +473,10 @@ header a,header button{color:var(--accent-text);font-size:13px;background:none;b
 .sit b{color:var(--text)}
 .sit.alerta{border-color:var(--accent)}
 h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
-.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.pl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;min-height:120px}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.pl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;min-height:120px;padding:14px 12px}
 .pl:hover,.pl[aria-pressed=true]{border-color:var(--accent)}
-.pl .n{font-weight:700}.pl .v{font-size:22px;font-weight:700}.pl .p{color:var(--text-3);font-size:12.5px}
+.pl .n{font-weight:700}.pl .v{font-size:20px;font-weight:700;white-space:nowrap}.pl .p{color:var(--text-3);font-size:12.5px}
 .pl .m{color:var(--text-2);font-size:12px;margin-top:auto}
 .pix{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:16px;display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
 .qr{background:#fff;border-radius:10px;padding:8px;width:220px}.qr svg{display:block;width:100%;height:auto}
@@ -491,7 +491,7 @@ h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text
 .arq input[type=file]{color:var(--text-2);font-size:13px;max-width:100%;margin-bottom:10px;display:block}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}th{color:var(--text-3);font-weight:600;border-top:0}
 .nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
-@media (max-width:600px){.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
+@media (max-width:600px){.planos .pl:last-child:nth-child(odd){grid-column:1/-1}.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
 </style></head><body><main>
 <header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
