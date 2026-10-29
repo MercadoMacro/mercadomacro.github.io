@@ -9,7 +9,7 @@ Gera, na pasta indicada (padrão: historico/):
 Regra do painel: nada inventado. Fonte que falha deixa o arquivo como estava.
 Fontes: Tesouro Transparente (CSV oficial), Banco Central (Olinda), Worker do site (Yahoo, Investing, Tesouro).
 """
-import csv, io, json, os, sys, urllib.parse, urllib.request
+import csv, io, json, os, sys, time, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta, timezone
 
 # calendário de feriados da B3 (o mesmo do robô da curva DI)
@@ -25,11 +25,39 @@ HOJE = datetime.now(BRT).date()   # Brasília
 erros = []
 
 
+_passe = {'v': '', 'ate': 0}
+
+
+def passe_robo():
+    # troca o token OIDC do GitHub (id-token no historico.yml) por um passe de 10 min do servidor de dados
+    if _passe['v'] and time.time() < _passe['ate']:
+        return _passe['v']
+    u, t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL'), os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+    if not u or not t:
+        return ''
+    try:
+        req = urllib.request.Request(u + '&audience=mercadomacro-passe', headers={'Authorization': 'bearer ' + t, 'User-Agent': UA})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            oidc = json.loads(r.read())['value']
+        req = urllib.request.Request('https://mercadomacro.com.br/api/robo/passe', data=b'', method='POST',
+                                     headers={'Authorization': 'Bearer ' + oidc, 'User-Agent': UA})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            _passe['v'] = json.loads(r.read()).get('passe', '')
+            _passe['ate'] = time.time() + 7 * 60
+    except Exception as e:
+        print('sem passe do robô:', e)
+    return _passe['v']
+
+
 def baixa(url, origem=False, tempo=120, cabecalhos=False):
     h = {'User-Agent': UA, 'Accept': '*/*'}
     if origem:
         h['Origin'] = ORIGEM
         h['X-MM-Robo'] = 'historico'
+    if url.startswith(API):
+        p = passe_robo()
+        if p:
+            url += ('&' if '?' in url else '?') + 'mmp=' + urllib.parse.quote(p, safe='')
     with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=tempo) as r:
         return (r.read(), r.headers) if cabecalhos else r.read()
 

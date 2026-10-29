@@ -10,6 +10,28 @@ const NEWS = 'https://news.cota-cotacao10.workers.dev/';
 const VITRINE = 'https://mercadomacro-vitrine.cota-cotacao10.workers.dev';
 const HDR = { Origin: SITE, 'X-MM-Robo': 'vigia', 'User-Agent': 'MercadoMacro-Vigia/1.0', Accept: 'application/json,text/html,*/*' };
 
+// passe do servidor de dados: troca o token OIDC do GitHub (permissão id-token no vigia.yml) por um passe
+// de 10 min em /api/robo/passe. Fora do GitHub (teste local), segue sem passe.
+let passe = '', passeAte = 0;
+async function pegaPasse() {
+  if (passe && Date.now() < passeAte) return passe;
+  const { ACTIONS_ID_TOKEN_REQUEST_URL: u, ACTIONS_ID_TOKEN_REQUEST_TOKEN: t } = process.env;
+  if (!u || !t) return '';
+  try {
+    const oidc = await (await fetch(u + '&audience=mercadomacro-passe', { headers: { Authorization: 'bearer ' + t }, signal: AbortSignal.timeout(20000) })).json();
+    const r = await fetch('https://mercadomacro.com.br/api/robo/passe', { method: 'POST', headers: { Authorization: 'Bearer ' + oidc.value }, signal: AbortSignal.timeout(20000) });
+    const j = await r.json();
+    if (r.ok && j.passe) { passe = j.passe; passeAte = Date.now() + 7 * 60000; }
+    else console.log('passe do robô recusado: HTTP ' + r.status);
+  } catch (e) { console.log('sem passe do robô: ' + e.message); }
+  return passe;
+}
+async function comPasse(url) {
+  if (!url.startsWith(API)) return url;
+  const p = await pegaPasse();
+  return p ? url + (url.includes('?') ? '&' : '?') + 'mmp=' + encodeURIComponent(p) : url;
+}
+
 const temLista = (x) => Array.isArray(x) && x.length > 0;
 const hoje = new Date();
 const ymd = (d) => d.toISOString().slice(0, 10);
@@ -61,7 +83,7 @@ const ROTAS = [
 async function testa([nome, url, valJson, valTexto]) {
   const t0 = Date.now();
   try {
-    const r = await fetch(url, { headers: HDR, signal: AbortSignal.timeout(25000) });
+    const r = await fetch(await comPasse(url), { headers: HDR, signal: AbortSignal.timeout(25000) });
     const texto = await r.text();
     const ms = Date.now() - t0;
     if (!r.ok) {

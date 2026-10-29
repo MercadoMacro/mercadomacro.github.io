@@ -35,12 +35,14 @@
   window.fetch = function (input, init) {
     const url = urlDe(input);
     if (!url.startsWith(DADOS)) return original(input, init);
-    return esperar().then(() => {
+    const comPasse = () => {
       if (!valido()) return original(input, init);
       const u = new URL(url);
       u.searchParams.set('mmp', passe);
       return original(typeof input === 'string' || input instanceof URL ? u.href : new Request(u.href, input), init);
-    });
+    };
+    // recusado por falta de passe (aba parada, passe demorou): renova e tenta de novo uma vez
+    return esperar().then(comPasse).then((r) => (r.status === 401 ? garantir(true).then(() => (valido() ? comPasse() : r)) : r));
   };
   // aba de volta depois de muito tempo parada: renova antes do próximo pedido
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !valido()) garantir(true); });

@@ -52,10 +52,11 @@ const ALLOWED_HOSTS = [
 // A chave pública vem de mercadomacro.com.br/api/publico/passe-chave.
 // PASSE_MODO: 'registrar' (padrão: só anota quem chega sem passe válido, na tabela passe_registro do D1)
 // ou 'bloquear' (recusa com 401). A vitrine pública marca os pedidos com mmp=vitrine e os robôs do GitHub
-// com o cabeçalho X-MM-Robo; no modo registrar eles só aparecem no registro com esse nome.
+// com o cabeçalho X-MM-Robo e um passe "robo:<arquivo>" que a station troca pelo token OIDC do GitHub (/api/robo/passe).
 // O registro não guarda IP nem o passe: só dia, rota, motivo e de onde veio (site/navegador ou script).
 // =========================================================
 const CHAVE_PASSE_URL = 'https://mercadomacro.com.br/api/publico/passe-chave';
+const VITRINE_ROTAS = ['/bcb', '/quotes'];
 let chavePasse = null, chavePasseEm = 0;
 const passeDoPedido = new WeakMap(); // pedido -> motivo, devolvido no cabeçalho X-Passe
 async function pegaChavePasse(env) {
@@ -907,7 +908,9 @@ const rotas = async (request, env, ctx) => {
       passeDoPedido.set(request, motivo);
       if (motivo !== 'ok') {
         registraPasse(env, ctx, request, url, motivo);
-        if (env.PASSE_MODO === 'bloquear' && motivo !== 'vitrine' && motivo !== 'sem-chave') {
+        // a vitrine pública (sem login) só usa /bcb e /quotes como reserva; mmp=vitrine não abre as outras rotas
+        const vitrineOk = motivo === 'vitrine' && VITRINE_ROTAS.includes(path);
+        if (env.PASSE_MODO === 'bloquear' && !vitrineOk && motivo !== 'sem-chave') {
           return json({ error: 'Faça login no Mercado Macro para usar estes dados.' }, 401, cors);
         }
       }
