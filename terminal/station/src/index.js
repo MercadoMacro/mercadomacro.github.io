@@ -802,6 +802,15 @@ const CHAVES_DADOS = {
       if (!l || typeof l.id !== 'string' || !/^[a-zA-Z0-9_-]{1,48}$/.test(l.id) || ids.has(l.id) || !name || l.name.length > 30 || names.has(name) || !CHAVES_DADOS.watchlist(l.items) || l.items.some(x => !x.s.length) || new Set(l.items.map(x => x.s)).size !== l.items.length) return false;
       ids.add(l.id); names.add(name); return true;
     });
+  },
+  // progresso da aba Educação: lições feitas, respostas do quiz e a última aberta
+  edu: v => {
+    const id = k => /^[a-z0-9-]{1,40}$/.test(k), obj = o => o && typeof o === 'object' && !Array.isArray(o);
+    if (!obj(v) || !obj(v.feitas) || !obj(v.quiz) || !(v.ultima == null || typeof v.ultima === 'string' && id(v.ultima))) return false;
+    const f = Object.keys(v.feitas), q = Object.keys(v.quiz);
+    return f.length <= 200 && q.length <= 200 && f.every(k => id(k) && v.feitas[k] === true)
+      && q.every(k => id(k) && obj(v.quiz[k]) && Object.keys(v.quiz[k]).length <= 10
+        && Object.entries(v.quiz[k]).every(([i, o]) => /^\d$/.test(i) && Number.isInteger(o) && o >= 0 && o < 10));
   }
 };
 async function apiDados(req, env, u) {
@@ -830,7 +839,8 @@ async function apiDados(req, env, u) {
     if (migrated) return json({ erro: 'Suas listas usam uma versão mais nova. Recarregue o painel.' }, 409);
   }
   const cleanItems = items => items.map(x => x.n ? { s: x.s, n: x.n } : { s: x.s });
-  const v = b.k === 'watchlists'
+  const v = b.k === 'edu' ? { feitas: b.v.feitas, quiz: b.v.quiz, ultima: b.v.ultima || null }
+    : b.k === 'watchlists'
     ? { version: 1, lists: b.v.lists.map(l => ({ id: l.id, name: l.name.trim().replace(/\s+/g, ' '), items: cleanItems(l.items) })) }
     : cleanItems(b.v);
   if (b.k === 'watchlists' && b.migracao === true) {
@@ -844,7 +854,7 @@ async function apiDados(req, env, u) {
     ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
     .bind(u.id, b.k, JSON.stringify(v), ts).run();
   // nada gravado: a conta já tem uma versão mais nova (de outro aparelho); o site deve recarregar a da conta
-  if (res.meta?.changes === 0) return json({ erro: 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
+  if (res.meta?.changes === 0) return json({ erro: b.k === 'edu' ? 'Seu progresso mudou em outro aparelho.' : 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
   return json({ ok: true });
 }
 

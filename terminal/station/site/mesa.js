@@ -209,13 +209,16 @@
     dapTentou = true;
     if (root && curveKind === 'dap') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
   }
+  // taxa do ajuste do pregão anterior: o worker manda "ref" (meio dos limites da B3), que não muda à noite;
+  // o "aj" da B3 vira o ajuste de hoje depois do fechamento
+  const ajAnt = (c) => (c.ref != null ? c.ref : c.aj);
   const dapTx = (c) => (c.t != null && c.neg >= 50 ? c.t : null);
   function dapPoints(campo) {
     if (!dapVivo) return [];
     const hoje = Date.now();
     return dapVivo.c.filter((c) => c.oi >= 10000).map((c) => {
       const venc = new Date(c.venc + 'T12:00:00'), y = (venc - hoje) / (365.25 * 86400000);
-      const taxa = campo === 'aj' ? c.aj : (dapTx(c) != null ? dapTx(c) : c.aj);
+      const taxa = campo === 'aj' ? ajAnt(c) : (dapTx(c) != null ? dapTx(c) : c.aj);
       return { nome: `${c.s} · DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y, s: c.s, hoje: dapTx(c) != null };
     }).filter((p) => p.y >= 1 && p.y <= 30 && p.taxa != null && isFinite(p.taxa));
   }
@@ -237,9 +240,9 @@
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${dapTentou && !dapVivo ? 'Curva de juro real indisponível agora.' : 'Carregando curva…'}</div>`}</div>
       ${L.length ? `<div class="ms-dilw"><table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
-        const t = dapTx(c), v = t != null && c.aj != null ? t - c.aj : null, venc = new Date(c.venc + 'T12:00:00');
+        const t = dapTx(c), a = ajAnt(c), v = t != null && a != null ? t - a : null, venc = new Date(c.venc + 'T12:00:00');
         return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
-          + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(c.aj, 3)}</td></tr>`;
+          + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(a, 3)}</td></tr>`;
       }).join('')}</tbody></table></div>` : ''}
       <div class="ms-foot">${dapVivo ? `Juro real: DAP (cupom de IPCA) da B3, taxa ao ano acima da inflação. ${negociou ? `Taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}, com atraso de cerca de 15 minutos` : 'Sem negócios ainda hoje: taxas do ajuste do pregão anterior'}. Contratos com poucos negócios hoje entram pelo ajuste anterior; o gráfico começa em 1 ano, porque os vencimentos curtos variam com a inflação do mês. Fonte: B3, site de cotações.` : ''}</div>`;
   }
@@ -252,7 +255,7 @@
     const hoje = Date.now();
     return diVivo.c.filter((c) => c.oi >= 10000).map((c) => {
       const venc = new Date(c.venc + 'T12:00:00'), y = (venc - hoje) / (365.25 * 86400000);
-      const taxa = campo === 'aj' ? c.aj : (diTx(c) != null ? diTx(c) : c.aj);
+      const taxa = campo === 'aj' ? ajAnt(c) : (diTx(c) != null ? diTx(c) : c.aj);
       return { nome: `${c.s} · DI ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y, s: c.s, hoje: diTx(c) != null };
     }).filter((p) => p.y > 0.02 && p.y <= 10.5 && p.taxa != null && isFinite(p.taxa));
   }
@@ -343,9 +346,9 @@
     const L = diVivo.c.filter((c) => /^DI1F\d\d$/.test(c.s) && +c.venc.slice(0, 4) <= hoje + 10);
     if (!L.length) return '';
     return `<div class="ms-dilw"><table class="ms-dil"><thead><tr><th>Contrato</th><th>Taxa</th><th title="Diferença para o ajuste do pregão anterior, em pontos percentuais">Var.</th><th>Ajuste ant.</th></tr></thead><tbody>${L.map((c) => {
-      const t = diTx(c), v = t != null && c.aj != null ? t - c.aj : null;
+      const t = diTx(c), a = ajAnt(c), v = t != null && a != null ? t - a : null;
       return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DI jan/${c.venc.slice(0, 4)}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
-        + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(c.aj, 3)}</td></tr>`;
+        + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(a, 3)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
   function curveHTMLdi() {

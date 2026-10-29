@@ -1,5 +1,5 @@
 /* Aba Educação (29/10/2026): trilhas de lições com texto próprio, quiz e progresso.
-   Conteúdo em educacao-conteudo.js. Progresso salvo neste navegador (mm_edu_v1). */
+   Conteúdo em educacao-conteudo.js. Progresso salvo neste navegador (mm_edu_v1) e na conta (/api/conta/dados?k=edu). */
 (() => {
   'use strict';
   const root = document.getElementById('edu-root');
@@ -8,7 +8,52 @@
   const GUARDA = 'mm_edu_v1';
   let est = { feitas: {}, ultima: null, quiz: {} };
   try { est = Object.assign(est, JSON.parse(localStorage.getItem(GUARDA) || '{}')); } catch (e) {}
-  const salvar = () => { try { localStorage.setItem(GUARDA, JSON.stringify(est)); } catch (e) {} };
+  const guardar = () => { try { localStorage.setItem(GUARDA, JSON.stringify(est)); } catch (e) {} };
+  const salvar = () => { guardar(); conta.agendar(); };
+
+  // ---------- progresso na conta ----------
+  // o progresso só cresce: juntar os dois lados (lições feitas e respostas) nunca perde nada
+  const conta = {
+    usuario: null, timer: 0,
+    juntar(a, b) {
+      const quiz = Object.assign({}, b.quiz || {});
+      for (const [k, v] of Object.entries(a.quiz || {})) quiz[k] = Object.assign({}, quiz[k] || {}, v);
+      return { feitas: Object.assign({}, b.feitas || {}, a.feitas || {}), quiz };
+    },
+    valor: () => ({ feitas: est.feitas, quiz: est.quiz, ultima: est.ultima }),
+    async carregar() {
+      try {
+        const r = await fetch('/api/conta/dados?k=edu', { credentials: 'same-origin', cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!Number.isSafeInteger(j.usuario)) return;
+        this.usuario = j.usuario;
+        const remoto = j.v || { feitas: {}, quiz: {}, ultima: null };
+        // outra conta já usou este navegador: vale só o progresso da conta que entrou
+        const base = est.conta && est.conta !== j.usuario ? { feitas: {}, quiz: {} } : est;
+        const novo = this.juntar(base, remoto);
+        const ultima = (j.ts > (est.ts || 0) ? remoto.ultima : base.ultima) || remoto.ultima || base.ultima || null;
+        const mudouAqui = JSON.stringify(novo) !== JSON.stringify({ feitas: est.feitas, quiz: est.quiz }) || ultima !== est.ultima;
+        const mudouLa = JSON.stringify(novo) !== JSON.stringify(this.juntar({}, remoto));
+        Object.assign(est, novo, { ultima, conta: j.usuario, ts: Math.max(j.ts || 0, est.ts || 0) });
+        guardar();
+        if (mudouAqui) redesenhar();
+        if (mudouLa) this.enviar();
+      } catch (e) {}
+    },
+    agendar() { est.ts = Date.now(); guardar(); clearTimeout(this.timer); this.timer = setTimeout(() => this.enviar(), 1500); },
+    async enviar(denovo) {
+      if (!this.usuario) return;
+      const ts = Math.max(Date.now(), (est.ts || 0) + 1);
+      try {
+        const r = await fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: this.usuario, k: 'edu', v: this.valor(), ts }) });
+        if (r.ok) { est.ts = ts; guardar(); return; }
+        // outro aparelho gravou depois: junta com o da conta e tenta uma vez mais
+        if (r.status === 409 && !denovo) { await this.carregar(); return this.enviar(true); }
+      } catch (e) {}
+    },
+  };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 
@@ -48,7 +93,11 @@
   }
 
   // ---------- início ----------
+  let atual = null;
+  const redesenhar = () => { if (atual) atual(); };
+
   function inicio() {
+    atual = inicio;
     const ult = est.ultima && acha(est.ultima);
     const proxima = ult ? (est.feitas[ult.l.id] ? (todas[todas.indexOf(ult) + 1] || ult) : ult) : todas[0];
     const totalFeitas = todas.filter((x) => est.feitas[x.l.id]).length;
@@ -79,6 +128,7 @@
 
   // ---------- trilha ----------
   function trilha(id) {
+    atual = () => trilha(id);
     const t = ativas.find((x) => x.id === id) || ativas[0];
     root.innerHTML = `
       <button type="button" class="edu-voltar" data-ir="inicio">${ICO.volta} Educação</button>
@@ -97,6 +147,7 @@
   // ---------- lição ----------
   function licao(id) {
     const x = acha(id) || todas[0];
+    atual = () => licao(x.l.id);
     const { t, l } = x;
     const i = t.licoes.indexOf(l), ant = t.licoes[i - 1], prox = t.licoes[i + 1];
     est.ultima = l.id; salvar();
@@ -268,5 +319,37 @@
   }`;
   document.head.appendChild(css);
 
+  // ---------- busca (usada pelo assistente) ----------
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const VAZIAS = new Set('a o as os de do da dos das e em no na nos nas um uma uns umas que qual quais como onde por para pra eu meu minha meus minhas voce voces quero consigo posso usar ver esta esse essa isso se com ao me nao sim e sao ser ter tem funciona funcionam significa explica explique sobre saber entender diferenca entre mais menos quando porque qualquer fazer faz vale ou'.split(' '));
+  const indice = todas.map((x) => ({ x, tit: norm(x.l.titulo + ' ' + (x.l.termos || '').replace(/p\/l/g, 'pl')).split(' '), corpo: norm([x.l.abertura, ...(x.l.pontos || [])].join(' ')).split(' ') }));
+  const bate = (w, t) => w === t || w === t + 's' || t === w + 's' || (t.length >= 4 && w.startsWith(t));
+  function buscar(pergunta) {
+    const termos = [...new Set(norm(String(pergunta || '').replace(/\bp\s*\/\s*([lv])/gi, 'p$1')).slice(0, 200).split(' ').filter((t) => t.length >= 2 && !VAZIAS.has(t)))];
+    if (!termos.length) return [];
+    return indice.map(({ x, tit, corpo }, i) => {
+      let pontos = 0, acertos = 0, noTitulo = 0;
+      for (const t of termos) {
+        if (tit.some((w) => bate(w, t))) { acertos++; noTitulo++; pontos += 4; }
+        else if (corpo.some((w) => bate(w, t))) { acertos++; pontos += 1; }
+      }
+      // precisa bater no título, ou todas as palavras baterem no texto; e pelo menos metade das palavras
+      if (acertos < Math.ceil(termos.length / 2) || (!noTitulo && (acertos < termos.length || acertos < 2))) pontos = 0;
+      return { x, pontos, i };
+    }).filter((r) => r.pontos > 0).sort((a, b) => b.pontos - a.pontos || a.i - b.i).slice(0, 3)
+      .map(({ x }) => ({ id: x.l.id, titulo: x.l.titulo, trilha: x.t.titulo, abertura: x.l.abertura, pontos: x.l.pontos || [], feita: !!est.feitas[x.l.id] }));
+  }
+
+  // abre uma lição a partir de fora da aba (assistente)
+  function abrir(id) {
+    if (!acha(id)) return false;
+    const b = document.querySelector('.tab-btn[data-tab="edu-panel"]');
+    if (b) b.click();
+    licao(id); topo();
+    return true;
+  }
+  window.MMEdu = Object.freeze({ buscar, abrir });
+
   inicio();
+  conta.carregar();
 })();

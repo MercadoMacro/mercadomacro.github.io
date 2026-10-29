@@ -69,13 +69,14 @@
 
   function desenhar() {
     if (!conversa.length) {
-      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini ? 'Dúvidas comuns têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => gemini || prontaPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
+      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => gemini || prontaPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
       msgs.querySelectorAll('.ia-vazio button').forEach((b) => (b.onclick = () => { campo.value = b.textContent; perguntar(); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? '<div class="ia-rot">Resposta pronta</div>' : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando">Pensando…</div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
+    msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
     msgs.querySelectorAll('[data-ia-gemini]').forEach((b) => (b.onclick = () => { const x = conversa[+b.dataset.iaGemini]; if (x) { campo.value = x.p; perguntar(true); } }));
     msgs.scrollTop = msgs.scrollHeight;
   }
@@ -86,11 +87,17 @@
     let h = '<div class="ia-acoes">';
     if (a && a.aba && document.querySelector('.tab-btn[data-tab="' + a.aba + '"]')) h += `<button type="button" data-ia-aba="${esc(a.aba)}">${esc(a.texto)}</button>`;
     else if (a && a.publico) h += `<a href="${esc(a.publico)}"${/^mailto:/.test(a.publico) ? '' : ' target="_blank" rel="noopener"'}>${esc(a.texto)}</a>`;
+    if (x.licao && window.MMEdu) h += `<button type="button" data-ia-licao="${esc(x.licao.id)}">Abrir a lição: ${esc(x.licao.titulo)}</button>`;
     if (gemini) h += `<button type="button" data-ia-gemini="${i}">Perguntar ao Gemini</button>`;
     return h + '</div>';
   }
   function prontaPara(p) {
     try { return (window.MMAjudaConteudo && window.MMAjudaConteudo.buscar(p)[0]) || null; } catch (e) { return null; }
+  }
+
+  // lição da aba Educação que trata do assunto (educacao.js)
+  function licaoPara(p) {
+    try { return (window.MMEdu && window.MMEdu.buscar(p)[0]) || null; } catch (e) { return null; }
   }
 
   async function perguntar(soGemini) {
@@ -99,9 +106,12 @@
     campo.value = ''; ajustar();
     const item = { p };
     const pr = soGemini === true ? null : prontaPara(p);
-    if (pr || !gemini) {
-      // dúvida comum: responde na hora, sem gastar a cota do Google
+    const li = soGemini === true ? null : licaoPara(p);
+    if (pr || li || !gemini) {
+      // dúvida comum ou assunto de uma lição: responde na hora, sem gastar a cota do Google
+      if (li) item.licao = { id: li.id, titulo: li.titulo, trilha: li.trilha };
       if (pr) { item.r = pr.resposta.join('\n\n'); item.pronta = pr.id; item.acao = pr.acao || null; }
+      else if (li) { item.r = li.abertura + (li.pontos.length ? '\n\n**Pontos principais**\n' + li.pontos.map((x) => '- ' + x).join('\n') : ''); item.pronta = 'licao'; }
       else item.e = 'Não achei resposta pronta para isso. Tente outras palavras ou escreva para contato@mercadomacro.com.br.';
       conversa.push(item); salvar(); desenhar(); campo.focus();
       return;
