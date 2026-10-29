@@ -140,6 +140,7 @@
     if (busy) return;
     busy = true;
     root.querySelector('.ms-refresh')?.classList.add('busy');
+    carimbo();
     // valores vindos do cache ficam marcados como antigos até chegar o novo
     Object.values(Q).forEach((q) => { q.live = false; });
     Object.values(X).forEach((q) => { if (q) q.live = false; });
@@ -580,14 +581,37 @@
     }).join('')}</ul>`;
   }
 
+  // hora e Atualizar na linha da frase, no canto direito, como na aba Mercado (mercado-novo.js);
+  // sem essa linha (celular), o cabeçalho .ms-bar aparece no lugar
+  function carimbo() {
+    const qb = document.querySelector('.qbanner');
+    const ativo = panel.classList.contains('active');
+    if (!qb || !qb.offsetParent) { root.classList.remove('ms-qb'); return; }
+    let el = qb.querySelector('.qb-ms');
+    if (!el) {
+      el = document.createElement('span');
+      el.className = 'qb-ms';
+      el.innerHTML = '<span class="qb-mn-t"></span><button type="button" class="qb-mn-r" title="Atualizar cotações" aria-label="Atualizar cotações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>';
+      el.querySelector('button').addEventListener('click', () => refresh(true));
+      qb.appendChild(el);
+    }
+    el.hidden = !ativo;
+    el.classList.toggle('busy', busy);
+    const t = el.querySelector('.qb-mn-t');
+    t.title = errMsg || '';
+    t.textContent = errMsg ? 'Sem conexão' : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando…' : 'Últimos valores salvos';
+    t.classList.toggle('err', !!errMsg);
+    root.classList.add('ms-qb');
+  }
+
   function render() {
+    carimbo();
     const col = (n) => TABLES.filter((t) => t.col === n).map(tableHTML).join('');
     const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
-        <div class="ms-info"><span class="dot ${errMsg ? 'bad' : lastTs ? '' : 'off'}"></span>${errMsg ? `<span class="dn">${esc(errMsg)}</span>` : lastTs ? `Atualizado às <b>${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</b> · a cada 2 min com a aba aberta` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</div>
-        ${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}
-        <button type="button" class="btn-sm ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo"><i class="fas fa-sync-alt"></i> Atualizar</button>
+        <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
+        <button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button>
       </div>
       <div class="ms-crypto"><button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
@@ -710,7 +734,10 @@
     window.addEventListener('pageshow', syncForex);
     document.addEventListener('click', (e) => { if (e.target.closest?.('[data-act="sair"]')) forexStream.setActive(false); }, true);
   }
-  new MutationObserver(() => { syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
+  // a linha da frase pode nascer depois: põe a hora nela assim que aparecer
+  const topo = document.querySelector('.topbar');
+  if (topo) new MutationObserver(() => { if (!topo.querySelector('.qb-ms')) carimbo(); }).observe(topo, { childList: true });
+  new MutationObserver(() => { carimbo(); syncCrypto(); syncForex(); if (panel.classList.contains('active') && Date.now() - lastTs > 60 * 1000) refresh(); else if (panel.classList.contains('active')) render(); })
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
   setInterval(() => { if (active() && curveKind === 'di') loadDIvivo(); if (active() && curveKind === 'dap') loadDAP(); }, 60 * 1000);
@@ -724,16 +751,19 @@
   css.textContent = `
   #mesa-root { padding:0; overflow:hidden; display:flex; flex-direction:column; }
   .ms-wrap { flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; }
-  .ms-bar { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-  .ms-info { flex:1; min-width:0; font-size:12.5px; line-height:1.5; color:var(--text-2); }
-  .ms-info b { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
-  .ms-wrap .ms-info .dn { color:inherit; }
-  @media (max-width:600px) { .ms-bar { flex-wrap:wrap; } .ms-info { flex-basis:100%; } }
-  .ms-info .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--pos); margin-right:7px; vertical-align:1px; }
-  .ms-info .dot.bad { background:var(--accent); }
-  .ms-info .dot.off { background:var(--text-3); }
-  .ms-refresh { display:inline-flex; align-items:center; gap:6px; }
-  .ms-refresh.busy i { animation:spin .8s linear infinite; }
+  /* mesmo cabeçalho da aba Mercado (mercado-novo.js): título, hora e Atualizar à direita */
+  .ms-bar { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .ms-bar h2 { margin:0; font-size:20px; color:var(--text); }
+  .ms-sub { display:block; font-size:12.5px; color:var(--text-3); }
+  .ms-err { color:var(--neg); }
+  .ms-refresh { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .ms-refresh:hover { color:var(--text); }
+  .ms-refresh.busy { opacity:.6; pointer-events:none; }
+  #mesa-root.ms-qb .ms-bar { display:none; }
+  .qb-ms { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .qb-ms[hidden] { display:none; }
+  .qb-ms.busy .qb-mn-r svg { animation:spin 1s linear infinite; }
+  @media (max-width: 640px) { .qb-ms { max-width:45%; padding-left:6px; } .qb-ms .qb-mn-t { overflow:hidden; text-overflow:ellipsis; } }
   .ms-wrap .up { color:var(--pos-ink); } .ms-wrap .dn { color:var(--neg); } .ms-wrap .na, .ms-wrap .eq { color:var(--text-3); }
 
   /* faixa de cripto em carrossel: arrasta com o mouse, rola com a roda ou pelas setas; no celular, com o dedo */
