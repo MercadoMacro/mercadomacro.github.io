@@ -607,13 +607,20 @@ async function b3Get(caminho, cacheTtl = 0) {
 }
 const b3Derivativo = (ativo) => b3Get('DerivativeQuotation/' + ativo);
 const b3Num = (x) => (x != null && isFinite(+x) ? +x : null);
+// preço de referência do pregão (o ajuste do dia anterior): o meio dos limites de oscilação, que a B3 calcula
+// sobre ele. À noite o "prvsDayAdjstmntPric" já vira o ajuste de hoje e a conta último/ajuste dava quase zero
+// (28/10/2026: WIN -0,30% em vez de -2,7%); a variação "prcFlcn" da B3 também alterna entre os dois servidores.
+function refPregao(q) {
+  const lo = b3Num(q?.bottomLmtPric), hi = b3Num(q?.topLmtPric);
+  return lo != null && hi != null && lo > 0 && hi > lo ? (lo + hi) / 2 : null;
+}
 // contratos futuros de um ativo: t = último negócio de hoje (null se não negociou), aj = ajuste do pregão anterior,
 // oi = contratos em aberto, neg = contratos negociados hoje
 function b3Futuros(j, ativo) {
   const re = new RegExp('^' + ativo + '[FGHJKMNQUVXZ]\\d\\d$');
   return (j?.Scty || []).filter((x) => x?.mkt?.cd === 'FUT' && re.test(x.symb || '')).map((x) => ({
     s: x.symb, venc: x.asset?.AsstSummry?.mtrtyCode || null,
-    t: b3Num(x.SctyQtn?.curPrc), aj: b3Num(x.SctyQtn?.prvsDayAdjstmntPric),
+    t: b3Num(x.SctyQtn?.curPrc), aj: b3Num(x.SctyQtn?.prvsDayAdjstmntPric), ref: refPregao(x.SctyQtn),
     oi: b3Num(x.asset?.AsstSummry?.opnCtrcts) || 0, neg: b3Num(x.asset?.AsstSummry?.traddCtrctsQty) || 0,
   })).filter((x) => x.venc && (x.t != null || x.aj != null)).sort((a, b) => (a.venc < b.venc ? -1 : 1));
 }
@@ -651,13 +658,7 @@ async function handleFutB3(ctx, cors) {
     const c = b3Futuros(j, a);
     if (!c.length) throw new Error('sem contratos');
     const ref = c.reduce((m, x) => (x.neg > m.neg || (x.neg === m.neg && x.oi > m.oi) ? x : m), c[0]);
-    // variação do dia pela própria B3: depois do fechamento o "ajuste anterior" já vira o ajuste de hoje,
-    // e a conta último/ajuste dava quase zero à noite (28/10/2026: WIN -0,28% em vez de -2,74%)
-    let v = null;
-    if (ref.t != null) {
-      try { v = b3Num((await b3Get('InstrumentQuotation/' + ref.s, 60))?.Trad?.[0]?.scty?.SctyQtn?.prcFlcn); } catch (e) { /* fica sem */ }
-    }
-    return { a, nome, d, ...ref, v };
+    return { a, nome, d, ...ref };
   }));
   const f = res.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   if (!f.length) return json({ error: 'B3 sem resposta' }, 502, cors);
