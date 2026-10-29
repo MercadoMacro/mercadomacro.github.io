@@ -6,12 +6,12 @@ jobs:
   sonda:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
       - run: |
-          cd terminal/worker
-          (npx --yes wrangler@4 dev --port 8799 > w.log 2>&1 &)
-          for i in $(seq 1 60); do curl -s -o /dev/null localhost:8799/ && break; sleep 2; done
-          curl -s -H "Origin: https://mercadomacro.com.br" localhost:8799/futb3 | jq -c '.f[] | {s, t, aj, v}'
-          tail -5 w.log
+          for i in 1 2 3; do
+            for b in https http; do
+              for t in WINZ26 WDOX26 ISPZ26; do
+                echo "$b $t $(curl -s -A 'Mozilla/5.0' -H 'Referer: https://www.b3.com.br/' "$b://cotacao.b3.com.br/mds/api/v1/InstrumentQuotation/$t" | jq -c '[.Msg.dtTm, .Trad[0].scty.SctyQtn.curPrc, .Trad[0].scty.SctyQtn.prcFlcn, .Trad[0].scty.SctyQtn.opngPric]')"
+              done
+            done
+            sleep 8
+          done
