@@ -12,6 +12,8 @@ export function ligarAssinatura(u) {
 }
 
 export const PLANOS = {
+  // desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis (sem Pix); a degustação continua para quem nunca pagou
+  gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
   mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 2990 },
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990 },
@@ -27,7 +29,8 @@ const reais = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
 const dataBR = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
 export function somarPeriodo(baseIso, plano) {
   const d = new Date(baseIso);
-  if (plano.dias) d.setTime(d.getTime() + plano.dias * 864e5);
+  if (plano.horas) d.setTime(d.getTime() + plano.horas * 36e5);
+  else if (plano.dias) d.setTime(d.getTime() + plano.dias * 864e5);
   else {
     // 31/01 + 1 mês = 28/02 (ou 29/02), não 03/03
     const dia = d.getUTCDate();
@@ -180,7 +183,7 @@ export async function rotinaAssinaturas(env) {
     for (const u of venceram) await emailVenceu(env, u).catch(() => {});
   }
   const vencendo = (await env.DB.prepare(`SELECT id, nome, email, expira FROM usuarios WHERE status = 'ativo' AND admin = 0 AND expira > ? AND expira <= ?
-    AND (aviso_venc IS NULL OR aviso_venc != expira)`).bind(agora, limite).all()).results;
+    AND (aviso_venc IS NULL OR aviso_venc != expira) AND COALESCE(plano, '') != 'gratis'`).bind(agora, limite).all()).results;
   let avisados = 0;
   for (const u of vencendo) {
     const r = await emailVencendo(env, u, Math.max(1, Math.ceil((Date.parse(u.expira) - Date.now()) / 864e5))).catch(() => ({ ok: false }));
@@ -211,6 +214,13 @@ async function jaUsouDegustacao(env, uid) {
   // a degustação é para quem nunca pagou: some depois de qualquer pagamento enviado ou aprovado
   return !!(await env.DB.prepare(`SELECT 1 FROM pagamentos WHERE usuario_id = ? AND status IN ('enviado', 'aprovado')`).bind(uid).first());
 }
+// as 48 horas grátis: uma vez por conta, só para quem nunca pagou
+async function podeGratis(env, conta) {
+  if (conta.admin) return false;
+  if (await jaUsouDegustacao(env, conta.id)) return false;
+  return !(await env.DB.prepare(`SELECT 1 FROM usuarios WHERE id = ? AND plano = 'gratis'`).bind(conta.id).first())
+    && !(await env.DB.prepare(`SELECT 1 FROM historico WHERE usuario_id = ? AND texto LIKE 'Ativou o plano grátis%'`).bind(conta.id).first());
+}
 function pedidoPix(pix, p) {
   const copia = brcode({ ...pix, valor: p.valor, txid: 'MM' + String(p.id).padStart(6, '0') });
   return { id: p.id, plano: p.plano, valor: p.valor, status: p.status, copia, svg: qrSvg(copia) };
@@ -221,20 +231,33 @@ export async function apiAssinatura(req, env, conta, acao) {
   if (acao === '' && req.method === 'GET') {
     const pags = (await env.DB.prepare('SELECT id, plano, valor, status, criado, enviado, decidido, validade FROM pagamentos WHERE usuario_id = ? ORDER BY id DESC LIMIT 20').bind(conta.id).all()).results;
     const deg = await jaUsouDegustacao(env, conta.id);
+    const gratis = await podeGratis(env, conta);
     return json({
       nome: conta.nome, status: conta.status, expira: conta.expira, admin: !!conta.admin,
       liberado: !!conta.admin || (conta.status === 'ativo' && (!conta.expira || conta.expira > new Date().toISOString())),
       pix: !!(await pixConfig(env)),
-      planos: Object.entries(PLANOS).filter(([k, p]) => !(p.unico && deg)).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, unico: !!p.unico })),
+      planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, unico: !!p.unico })),
       pagamentos: pags,
     });
   }
   if (req.method !== 'POST') return json({ erro: 'Método não permitido.' }, 405);
   if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+  if (acao === 'gratis') {
+    if (!(await podeGratis(env, conta))) return json({ erro: 'As 48 horas grátis são só para quem ainda não usou nem assinou. Escolha um plano.' }, 400);
+    if (!(await dentroDoLimite(env, 'gratis:' + conta.id, 3, 3600))) return json({ erro: 'Muitas tentativas. Tente de novo mais tarde.' }, 429);
+    const agora = new Date().toISOString();
+    const validade = somarPeriodo(baseValidade(conta.status === 'ativo' ? conta.expira : null), PLANOS.gratis);
+    await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = 'gratis', aviso_venc = NULL, decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END WHERE id = ?`)
+      .bind(validade, agora, conta.id).run();
+    limparCacheSessao();
+    await registrar(env, conta.id, `Ativou o plano grátis de 48 horas, acesso até ${new Date(validade).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}`);
+    await avisar(env, 'Plano grátis ativado', `${conta.nome} começou as 48 horas grátis.`).catch(() => {});
+    return json({ ok: true, expira: validade });
+  }
   if (acao === 'pedido') {
     const b = await req.json().catch(() => ({}));
     const plano = PLANOS[b.plano];
-    if (!plano) return json({ erro: 'Plano inválido.' }, 400);
+    if (!plano || plano.oculto || plano.gratis) return json({ erro: 'Plano inválido.' }, 400);
     const pix = await pixConfig(env);
     if (!pix) return json({ erro: 'O pagamento por Pix ainda não está disponível. Escreva para contato@mercadomacro.com.br.' }, 503);
     if (plano.unico && (await jaUsouDegustacao(env, conta.id))) return json({ erro: 'A degustação é só para quem ainda não assinou.' }, 400);
@@ -428,8 +451,8 @@ export async function apiAdminAssinatura(req, env, acao) {
 /* ---------------- planos na vitrine (montados aqui para os preços nunca ficarem diferentes) ---------------- */
 export function planosVitrine() {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
-  const nota = { degustacao: 'Para conhecer, uma vez só', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
-  return Object.entries(PLANOS).map(([id, p]) => `<li class="vt-pl${id === 'semestral' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
+  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
+  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'semestral' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
 /* ---------------- página /assinar ---------------- */
@@ -450,10 +473,10 @@ header a,header button{color:var(--accent-text);font-size:13px;background:none;b
 .sit b{color:var(--text)}
 .sit.alerta{border-color:var(--accent)}
 h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
-.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-.pl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;min-height:120px}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.pl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;min-height:120px;padding:14px 12px}
 .pl:hover,.pl[aria-pressed=true]{border-color:var(--accent)}
-.pl .n{font-weight:700}.pl .v{font-size:22px;font-weight:700}.pl .p{color:var(--text-3);font-size:12.5px}
+.pl .n{font-weight:700}.pl .v{font-size:20px;font-weight:700;white-space:nowrap}.pl .p{color:var(--text-3);font-size:12.5px}
 .pl .m{color:var(--text-2);font-size:12px;margin-top:auto}
 .pix{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:16px;display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
 .qr{background:#fff;border-radius:10px;padding:8px;width:220px}.qr svg{display:block;width:100%;height:auto}
@@ -468,7 +491,7 @@ h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text
 .arq input[type=file]{color:var(--text-2);font-size:13px;max-width:100%;margin-bottom:10px;display:block}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}th{color:var(--text-3);font-weight:600;border-top:0}
 .nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
-@media (max-width:600px){.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
+@media (max-width:600px){.planos .pl:last-child:nth-child(odd){grid-column:1/-1}.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
 </style></head><body><main>
 <header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
@@ -494,7 +517,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   }
   function situacao(j){
     if (j.admin) return '<div class="sit">Conta de administrador: sem validade.</div>';
-    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Para começar a usar, escolha um plano abaixo. Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia; o valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</div>';
+    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Para começar a usar, escolha um plano abaixo' + (j.planos.some(function(p){ return p.id === 'gratis'; }) ? ', ou comece com 48 horas grátis' : '') + '. Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia; o valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</div>';
     if (!j.liberado) return '<div class="sit alerta">Seu acesso terminou' + (j.expira ? ' em <b>' + data(j.expira) + '</b>' : '') + '. Seus dados e listas continuam guardados. Escolha um plano para voltar.</div>';
     return '<div class="sit">Seu acesso vale ' + (j.expira ? 'até <b>' + data(j.expira) + '</b>. Se renovar antes, o novo período começa depois dessa data.' : '<b>sem data para terminar</b>.') + '</div>';
   }
@@ -507,8 +530,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
     else {
       h += '<h2>Planos</h2><div class="planos">' + j.planos.map(function(p){
-        return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + reais(p.valor) + '</span><span class="p">' + esc(p.periodo) + ' de acesso</span>'
-          + '<span class="m">' + (p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6))) + ' por mês') + '</span></button>';
+        return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + esc(p.periodo) + ' de acesso</span>'
+          + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6))) + ' por mês') + '</span></button>';
       }).join('') + '</div><div id="pix"></div>';
       h += '<p class="nota">Pagamento único pelo Pix, sem renovação automática. Quer parcelar? Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar: o banco parcela no seu cartão.</p>';
     }
@@ -519,7 +542,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     raiz.innerHTML = h;
     if (escolhido) pedir(escolhido);
   }
-  function nomePlano(id){ return { degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral' }[id] || id; }
+  function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral' }[id] || id; }
   raiz.addEventListener('click', function(e){
     var b = e.target.closest('.pl'); if (!b) return;
     escolhido = b.dataset.p;
@@ -528,6 +551,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   });
   function pedir(plano){
     var box = document.getElementById('pix'); if (!box) return;
+    if (plano === 'gratis') {
+      box.innerHTML = '<div class="pix" style="display:block"><h3>48 horas grátis</h3><p>Você ganha 48 horas de acesso completo, sem pagar nada e sem cadastrar cartão. Depois, se gostar, é só escolher um plano.</p>'
+        + '<button type="button" class="bt" id="gratis">Começar agora</button><p class="msg" id="msg" role="status" aria-live="polite"></p></div>';
+      document.getElementById('gratis').onclick = function(){
+        var b = this, m = document.getElementById('msg'); b.disabled = true; m.className = 'msg'; m.textContent = 'Liberando…';
+        api('/api/assinatura/gratis', { method: 'POST' }).then(function(){ m.textContent = 'Pronto! Abrindo o Mercado Macro…'; location.href = '/'; })
+          .catch(function(j){ b.disabled = false; m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível liberar agora. Tente de novo.'; });
+      };
+      return;
+    }
     box.innerHTML = '<p class="nota">Gerando o Pix…</p>';
     api('/api/assinatura/pedido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano }) }).then(function(p){
       box.innerHTML = '<div class="pix"><div class="qr">' + p.svg + '</div><div><h3>' + esc(nomePlano(p.plano)) + ': ' + reais(p.valor) + '</h3>'
