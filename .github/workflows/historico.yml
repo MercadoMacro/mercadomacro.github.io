@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write   # token do GitHub trocado por um passe do servidor de dados
 
 concurrency:
   group: historico

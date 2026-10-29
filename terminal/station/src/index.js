@@ -90,6 +90,7 @@ export default {
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
+      if (p === '/api/robo/passe') return await passeDoRobo(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/api/robo/abertura') return await roboAbertura(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
@@ -1534,9 +1535,21 @@ const GH_ISS = 'https://token.actions.githubusercontent.com';
 const GH_AUD = 'mercadomacro-vigia';
 const GH_REPO = 'MercadoMacro/mercadomacro.github.io';
 const ROBOS_AVISO = ['vigia.yml', 'resumo.yml', 'abertura.yml']; // robôs que podem mandar mensagem no Telegram
+// robôs do GitHub que buscam dados no servidor de dados: trocam o token OIDC do GitHub (audience mercadomacro-passe)
+// por um passe "robo:<arquivo>" em /api/robo/passe. Nenhuma chave guardada: o GitHub assina o token.
+const GH_AUD_PASSE = 'mercadomacro-passe';
+const ROBOS_PASSE = ['vigia.yml', 'historico.yml'];
+async function passeDoRobo(req, env) {
+  if (req.method !== 'POST') return json({ erro: 'Método não permitido.' }, 405);
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  const quem = await tokenDoGitHub(tok, GH_AUD_PASSE, ROBOS_PASSE).catch(() => null);
+  if (!quem) return json({ erro: 'Não autorizado.' }, 401);
+  const arq = (String(quem.workflow_ref || '').match(/workflows\/([\w.-]+)\.yml@/) || [])[1] || 'robo';
+  return emitirPasse(env, { id: 'robo:' + arq });
+}
 let jwksCache = null; // { chaves, ate }
 const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
-async function tokenDoGitHub(tok) {
+async function tokenDoGitHub(tok, aud = GH_AUD, robos = ROBOS_AVISO) {
   const [h, p, sig] = String(tok).split('.');
   if (!h || !p || !sig) return null;
   const cab = JSON.parse(new TextDecoder().decode(b64url(h)));
@@ -1552,8 +1565,8 @@ async function tokenDoGitHub(tok) {
   const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, b64url(sig), new TextEncoder().encode(h + '.' + p));
   const agora = Date.now() / 1000;
-  if (!ok || dados.iss !== GH_ISS || dados.aud !== GH_AUD || dados.repository !== GH_REPO || dados.ref !== 'refs/heads/main'
-    || !ROBOS_AVISO.some((w) => String(dados.workflow_ref || '').startsWith(GH_REPO + '/.github/workflows/' + w + '@')) || !(dados.exp > agora) || (dados.nbf && dados.nbf > agora + 60)) return null;
+  if (!ok || dados.iss !== GH_ISS || dados.aud !== aud || dados.repository !== GH_REPO || dados.ref !== 'refs/heads/main'
+    || !robos.some((w) => String(dados.workflow_ref || '').startsWith(GH_REPO + '/.github/workflows/' + w + '@')) || !(dados.exp > agora) || (dados.nbf && dados.nbf > agora + 60)) return null;
   return dados;
 }
 async function avisoDoVigia(req, env) {
