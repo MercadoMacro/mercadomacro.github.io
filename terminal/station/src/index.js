@@ -141,7 +141,7 @@ export default {
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       if (p === '/api/passe') return await emitirPasse(env, u);
-      if (p === '/api/assistente') return await apiAssistente(req, env, u);
+      if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u));
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
         if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
@@ -777,7 +777,7 @@ async function usuarioDaSessao(req, env) {
   await garantirAssinatura(env);
   // validade vencida corta o acesso na hora, mesmo antes do robô diário marcar a conta como expirada
   const u = await env.DB.prepare(
-    `SELECT u.id, u.nome, u.email, u.admin, u.expira FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
+    `SELECT u.id, u.nome, u.email, u.admin, u.expira, u.plano FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
      WHERE s.token = ? AND s.expira > ? AND u.status = 'ativo' AND (u.admin = 1 OR u.expira IS NULL OR u.expira > ?)`).bind(h, agora, new Date(agora).toISOString()).first();
   if (u) {
     if (cacheSessao.size > 500) cacheSessao.clear();
@@ -785,6 +785,8 @@ async function usuarioDaSessao(req, env) {
   }
   return u || null;
 }
+// plano grátis de 48 horas: só Mesa, Notícias e Educação; o Gemini fica para quem assina
+const soGratis = (u) => !!u && !u.admin && u.plano === 'gratis' && !!u.expira;
 function cookieSessao(tok, maxAge) {
   return `${COOKIE}=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 }
@@ -863,7 +865,7 @@ async function apiAuth(req, env, acao, ctx) {
   if (acao === 'eu' && req.method === 'GET') {
     const u = await usuarioDaSessao(req, env);
     if (!u) return json({ logado: false }, 401);
-    const out = { logado: true, nome: u.nome, email: u.email, admin: !!u.admin, expira: u.admin ? null : u.expira || null };
+    const out = { logado: true, nome: u.nome, email: u.email, admin: !!u.admin, expira: u.admin ? null : u.expira || null, gratis: soGratis(u) };
     if (u.admin) out.pendentes = (await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`).first()).n;
     return json(out);
   }

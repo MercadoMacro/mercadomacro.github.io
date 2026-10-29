@@ -8,19 +8,23 @@
   const byId = new Map(originals.map(b => [b.dataset.tab, b]));
   const PIN_KEY = 'trader_mobile_nav_v1', PIN_MAX = 3;
   const DEFAULT_PINS = ['market-panel', 'watch-panel', 'news-panel'];
-  let primary = DEFAULT_PINS;
+  // plano grátis (plano-livre.js): a barra padrão traz as áreas abertas
+  const GRATIS_PINS = ['mesa-panel', 'news-panel', 'edu-panel'];
+  let gratis = false, escolheu = false;
+  try { gratis = localStorage.getItem('mm_plano') === 'gratis'; } catch { /* sem armazenamento */ }
+  let primary = gratis ? GRATIS_PINS : DEFAULT_PINS;
   try {
     const saved = JSON.parse(localStorage.getItem(PIN_KEY) || 'null');
     if (Array.isArray(saved)) {
       const ok = [...new Set(saved)].filter(id => byId.has(id)).slice(0, PIN_MAX);
-      if (ok.length) primary = ok;
+      if (ok.length) { primary = ok; escolheu = true; }
     }
   } catch { /* padrão */ }
   const groups = [
     ['Visão geral', ['market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
     ['Informação', ['news-panel', 'weekly-panel', 'calendar-panel']],
     ['Análise', ['analysis-panel', 'fund-panel']],
-    ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel']],
+    ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel', 'edu-panel']],
   ];
   const label = b => [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() || b.textContent.trim();
   const nav = document.createElement('nav');
@@ -90,6 +94,7 @@
       primary = originals.map(b => b.dataset.tab).filter(x => x === id || primary.includes(x));
       live.textContent = name + ' fixada na barra.';
     }
+    escolheu = true;
     try { localStorage.setItem(PIN_KEY, JSON.stringify(primary)); } catch { /* sem armazenamento: vale até recarregar */ }
     fillBar(); syncPins(); sync();
   }
@@ -128,6 +133,12 @@
     current.textContent = secondary ? label(active) : '';
     all.setAttribute('aria-label', secondary ? 'Todas as áreas. Atual: ' + label(active) : 'Todas as áreas');
   }
+  document.addEventListener('mm-plano', e => {
+    if (escolheu || !!e.detail?.gratis === gratis) return;
+    gratis = !!e.detail?.gratis;
+    primary = gratis ? GRATIS_PINS : DEFAULT_PINS;
+    fillBar(); syncPins(); sync();
+  });
   nav.append(bar, list, current);
   tabs.before(nav);
   document.body.classList.add('mobile-nav-ready');
