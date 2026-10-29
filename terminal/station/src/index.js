@@ -2564,7 +2564,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
       ia.innerHTML = (j.ligado
-        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + '. Quem está logado vê o botão Assistente e pode fazer 25 perguntas por dia; você não tem limite.</p><div class="linha"><button type="button" id="ia-testar" style="' + bt + '">Testar</button><button type="button" id="ia-off" style="' + bt + '">Desligar e apagar a chave</button></div><div id="ia-res"></div></div>'
+        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + '. Quem está logado vê o botão Assistente e pode fazer 25 perguntas por dia; você não tem limite.' + (j.modelo ? ' Modelo em uso: ' + esc(j.modelo) + '.' : '') + ' O botão Testar mede quanto cada modelo demora.</p><div class="linha"><button type="button" id="ia-testar" style="' + bt + '">Testar</button><button type="button" id="ia-off" style="' + bt + '">Desligar e apagar a chave</button></div><div id="ia-res"></div></div>'
         : '<div class="caixa"><p>Cole a chave da API do Gemini (Google AI Studio, botão "Get API key"). Na faixa grátis o Google limita os pedidos por dia e pode usar as conversas para melhorar os produtos dele; a página de privacidade avisa isso.</p>'
           + '<div class="linha"><input id="ia-chave" aria-label="Chave da API do Gemini" type="password" autocomplete="off" spellcheck="false" placeholder="chave da API do Gemini" style="' + inp + '"><button type="button" id="ia-salvar" style="' + bt + '">Salvar e conferir</button></div>'
           + '<p>Fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="ia-msg"></p>';
@@ -2578,7 +2578,15 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       if ((el = document.getElementById('ia-salvar'))) el.onclick = function(){ acao({ acao: 'chave', chave: document.getElementById('ia-chave').value }, this, assistente); };
       if ((el = document.getElementById('ia-off'))) el.onclick = function(){ if (confirm('Desligar o assistente e apagar a chave do Gemini?')) acao({ acao: 'desligar' }, this, assistente); };
       if ((el = document.getElementById('ia-testar'))) el.onclick = function(){ acao({ acao: 'testar' }, this, function(r){
-        document.getElementById('ia-res').innerHTML = '<p style="margin-top:10px"><b>Pergunta:</b> Em uma frase: o que é a taxa Selic?<br><b>Resposta (' + esc(r.modelo) + '):</b> ' + esc(r.resposta) + '</p>'; }); };
+        var res = document.getElementById('ia-res');
+        res.innerHTML = '<p style="margin-top:10px">Pergunta de teste: "Em uma frase: o que é a taxa Selic?"</p><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:6px 4px">Modelo</th><th style="text-align:right;padding:6px 4px">Tempo</th><th style="text-align:left;padding:6px 4px">Resultado</th><th></th></tr>'
+          + r.resultados.map(function(x){
+            var usado = x.modelo === r.preferido;
+            return '<tr style="border-top:1px solid var(--line-2)"><td style="padding:6px 4px;white-space:nowrap">' + esc(x.modelo) + '</td><td style="padding:6px 4px;text-align:right;white-space:nowrap">' + (x.ms / 1000).toFixed(1).replace('.', ',') + ' s</td><td style="padding:6px 4px">' + (x.ok ? esc(x.resposta) : '<span style="color:var(--down)">' + esc(x.erro) + '</span>') + '</td><td style="padding:6px 4px;white-space:nowrap">'
+              + (usado ? '<b>em uso</b>' : x.ok ? '<button type="button" data-preferir="' + esc(x.modelo) + '" style="' + bt + '">Usar este</button>' : '') + '</td></tr>';
+          }).join('') + '</table>';
+        res.querySelectorAll('[data-preferir]').forEach(function(bb){ bb.onclick = function(){ acao({ acao: 'preferir', modelo: bb.getAttribute('data-preferir') }, bb, function(){ diz(true, 'Pronto: o assistente usa ' + bb.getAttribute('data-preferir') + ' primeiro.'); document.getElementById('ia-testar').click(); }); }; });
+      }); };
     }).catch(function(){ ia.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   var cp = document.getElementById('capital');

@@ -40,11 +40,13 @@ async function chamar(m, chave, contents, stream, comThinking) {
 }
 
 // stream = true devolve {ok, corpo: ReadableStream de texto puro}; sem stream, {ok, texto}
-async function gemini(chave, contents, stream = false) {
+// preferido: modelo escolhido no /admin (config gemini_modelo), tentado antes dos outros
+async function gemini(chave, contents, stream = false, preferido = '') {
   let ultimo = '', ocupado = 0;
   const agora = Date.now();
-  const lista = MODELOS.filter((m) => !(ocupadoAte[m] > agora));
-  for (const m of lista.length ? lista : MODELOS) {
+  const todos = [...new Set([preferido, ...MODELOS].filter(Boolean))];
+  const lista = todos.filter((m) => !(ocupadoAte[m] > agora));
+  for (const m of lista.length ? lista : todos) {
     let r = await chamar(m, chave, contents, stream, !semThinking);
     if (r.status === 400 && !semThinking) {
       const t = await r.text().catch(() => '');
@@ -107,7 +109,7 @@ export async function apiAssistente(req, env, u) {
   const hist = (Array.isArray(b.historico) ? b.historico : []).slice(-MAX_HISTORICO)
     .filter((x) => x && typeof x.p === 'string' && typeof x.r === 'string')
     .flatMap((x) => [{ role: 'user', parts: [{ text: x.p.slice(0, MAX_PERGUNTA) }] }, { role: 'model', parts: [{ text: x.r.slice(0, 4000) }] }]);
-  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }], !!b.stream);
+  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }], !!b.stream, c.gemini_modelo);
   if (r.ok && r.corpo) return new Response(r.corpo, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   if (r.ok) return json({ resposta: r.texto });
   if (r.status === 429) return json({ erro: 'O assistente atingiu o limite gratuito do Google por agora. Tente de novo mais tarde.' }, 429);
@@ -118,7 +120,7 @@ export async function apiAssistente(req, env, u) {
 // /api/admin/assistente: GET situação; POST {acao: 'chave', chave} | {acao: 'desligar'} | {acao: 'testar'}
 export async function apiAdminAssistente(req, env) {
   const c = await config(env);
-  if (req.method === 'GET') return json({ ligado: !!c.gemini_key, desde: c.gemini_desde || null });
+  if (req.method === 'GET') return json({ ligado: !!c.gemini_key, desde: c.gemini_desde || null, modelo: c.gemini_modelo || '' });
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
   const b = await req.json().catch(() => ({}));
   if (b.acao === 'chave') {
@@ -129,12 +131,36 @@ export async function apiAdminAssistente(req, env) {
     await salvarConfig(env, { gemini_key: chave, gemini_desde: new Date().toISOString() });
     return json({ ok: true });
   }
-  if (b.acao === 'desligar') { await salvarConfig(env, { gemini_key: null, gemini_desde: null }); return json({ ok: true }); }
+  if (b.acao === 'desligar') { await salvarConfig(env, { gemini_key: null, gemini_desde: null, gemini_modelo: null }); return json({ ok: true }); }
   if (b.acao === 'testar') {
     if (!c.gemini_key) return json({ erro: 'Salve a chave primeiro.' }, 400);
-    const t = await gemini(c.gemini_key, [{ role: 'user', parts: [{ text: 'Em uma frase: o que é a taxa Selic?' }] }]);
-    if (t.ok) return json({ ok: true, resposta: t.texto, modelo: t.modelo });
-    return json({ erro: [500, 503].includes(t.status) ? 'A chave está certa, mas o Google está com muita procura agora. Tente de novo em alguns minutos.' : 'O Gemini não respondeu: ' + t.erro }, 502);
+    // mede cada modelo "flash" que a chave enxerga (até 5), um de cada vez, com a mesma pergunta curta
+    const lst = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': c.gemini_key } })
+      .then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+    const disponiveis = (lst.models || [])
+      .filter((x) => (x.supportedGenerationMethods || []).includes('generateContent'))
+      .map((x) => String(x.name || '').replace(/^models\//, ''))
+      .filter((n) => /^gemini-[\d.]+-flash(-lite)?$/.test(n));
+    const candidatos = [...new Set([c.gemini_modelo, ...MODELOS, ...disponiveis.sort().reverse()].filter(Boolean))].slice(0, 5);
+    const pergunta = [{ role: 'user', parts: [{ text: 'Em uma frase: o que é a taxa Selic?' }] }];
+    const resultados = [];
+    for (const m of candidatos) {
+      const t0 = Date.now();
+      let r = await chamar(m, c.gemini_key, pergunta, false, !semThinking);
+      if (r.status === 400 && !semThinking) r = await chamar(m, c.gemini_key, pergunta, false, false);
+      const ms = Date.now() - t0;
+      const j = r.json ? await r.json().catch(() => ({})) : {};
+      const texto = (j?.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('').trim();
+      resultados.push({ modelo: m, ms, ok: r.ok && !!texto, status: r.status, resposta: texto.slice(0, 300), erro: r.ok ? '' : (j?.error?.message || 'HTTP ' + r.status).slice(0, 160) });
+      if (r.ok) delete ocupadoAte[m];
+    }
+    return json({ ok: true, resultados, preferido: c.gemini_modelo || '' });
+  }
+  if (b.acao === 'preferir') {
+    const m = String(b.modelo || '');
+    if (m && !/^gemini-[\w.-]{1,40}$/.test(m)) return json({ erro: 'Modelo inválido.' }, 400);
+    await salvarConfig(env, { gemini_modelo: m || null });
+    return json({ ok: true });
   }
   return json({ erro: 'Ação inválida.' }, 400);
 }
