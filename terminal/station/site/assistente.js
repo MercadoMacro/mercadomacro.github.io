@@ -165,6 +165,7 @@
     b.innerHTML = '<span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
     b.onclick = abrir;
     document.body.appendChild(b);
+    if (window.MMAbaBorda) window.MMAbaBorda.marcar(b);
   }
 
   fetch(API, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
