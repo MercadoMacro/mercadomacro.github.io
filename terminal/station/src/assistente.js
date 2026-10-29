@@ -69,8 +69,8 @@ export async function apiAdminAssistente(req, env) {
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
   const b = await req.json().catch(() => ({}));
   if (b.acao === 'chave') {
-    const chave = String(b.chave || '').trim();
-    if (!/^[\w-]{20,100}$/.test(chave)) return json({ erro: 'Cole a chave como aparece no Google AI Studio.' }, 400);
+    const chave = String(b.chave || '').replace(/\s+/g, '');
+    if (!/^[\w.~+/=-]{20,400}$/.test(chave)) return json({ erro: 'Cole a chave como aparece no Google AI Studio.' }, 400);
     const t = await gemini(chave, [{ role: 'user', parts: [{ text: 'Responda só: ok' }] }]);
     if (!t.ok && t.status !== 429) return json({ erro: 'O Google não aceitou a chave: ' + t.erro }, 400);
     await salvarConfig(env, { gemini_key: chave, gemini_desde: new Date().toISOString() });
