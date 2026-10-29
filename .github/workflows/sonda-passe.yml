@@ -1,0 +1,15 @@
+# temporário: confere o bloqueio do servidor de dados (apagar depois)
+name: Sonda passe
+on:
+  push:
+    branches: [sonda-passe]
+jobs:
+  sonda:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          A=https://shrill-meadow-89c1.danilo-nillo.workers.dev
+          O='Origin: https://mercadomacro.com.br'
+          for q in "/bcb?c=432&q=%2Fultimos%2F1" "/history?symbols=%5EBVSP" "/history?symbols=%5EBVSP&mmp=vitrine" "/bcb?c=432&q=%2Fultimos%2F1&mmp=vitrine" "/quotes?symbols=%5EBVSP&mmp=vitrine" "/quotes?symbols=%5EBVSP&mmp=abc.def"; do
+            echo "$(curl -s -m 30 -o /dev/null -w '%{http_code}' -H "$O" "$A$q") $q"
+          done
