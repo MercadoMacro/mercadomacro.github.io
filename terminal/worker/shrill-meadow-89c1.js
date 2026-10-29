@@ -641,7 +641,7 @@ const FUT_B3 = [
 ];
 async function handleFutB3(ctx, cors) {
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/futb3-v1');
+  const cacheKey = new Request('https://cache.local/futb3-v2');
   const hit = await cache.match(cacheKey);
   if (hit) return jsonCache(hit.body, cors, true);
   let b3 = null;
@@ -651,7 +651,13 @@ async function handleFutB3(ctx, cors) {
     const c = b3Futuros(j, a);
     if (!c.length) throw new Error('sem contratos');
     const ref = c.reduce((m, x) => (x.neg > m.neg || (x.neg === m.neg && x.oi > m.oi) ? x : m), c[0]);
-    return { a, nome, d, ...ref };
+    // variação do dia pela própria B3: depois do fechamento o "ajuste anterior" já vira o ajuste de hoje,
+    // e a conta último/ajuste dava quase zero à noite (28/10/2026: WIN -0,28% em vez de -2,74%)
+    let v = null;
+    if (ref.t != null) {
+      try { v = b3Num((await b3Get('InstrumentQuotation/' + ref.s, 60))?.Trad?.[0]?.scty?.SctyQtn?.prcFlcn); } catch (e) { /* fica sem */ }
+    }
+    return { a, nome, d, ...ref, v };
   }));
   const f = res.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   if (!f.length) return json({ error: 'B3 sem resposta' }, 502, cors);
