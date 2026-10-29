@@ -1,0 +1,16 @@
+name: Sonda futuros B3 (temporária)
+on:
+  push:
+    branches: [sonda-futb3]
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for a in WIN WDO; do
+            curl -s -A "Mozilla/5.0" "https://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/$a" > $a.json || true
+            echo "== $a"; jq -c '.Msg' $a.json
+            jq -c '[.Scty[] | select(.mkt.cd=="FUT")] | sort_by(-(.asset.AsstSummry.traddCtrctsQty // 0)) | .[0]' $a.json
+          done
+          curl -s -A "Mozilla/5.0" "https://cotacao.b3.com.br/mds/api/v1/InstrumentQuotation/WINZ26" | jq -c '.' | head -c 3000; echo
+          curl -s -A "Mozilla/5.0" "https://cotacao.b3.com.br/mds/api/v1/DailyFluctuationHistory/WINZ26" | jq -c '.TradgFlr | {date, n: (.scty.lstQtn|length), first: .scty.lstQtn[0], last: .scty.lstQtn[-1]}'
