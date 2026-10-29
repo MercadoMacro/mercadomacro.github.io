@@ -14,6 +14,9 @@
   css.textContent = `
   html[data-gratis] :is(.side-item[data-tab], .tab-btn[data-tab], [data-mobile-tab])${fora}::after{content:'';display:inline-block;width:12px;height:12px;margin-left:auto;flex:0 0 auto;background:currentColor;opacity:.55;-webkit-mask:${tranca} center/contain no-repeat;mask:${tranca} center/contain no-repeat}
   html[data-gratis] .tab-btn[data-tab]${fora}::after,html[data-gratis] [data-mobile-tab]${fora}::after{margin-left:6px}
+  html[data-gratis] :is(#side-summary, [data-topbar-action="summary-btn"])::after{content:'';display:inline-block;width:12px;height:12px;margin-left:auto;flex:0 0 auto;background:currentColor;opacity:.55;-webkit-mask:${tranca} center/contain no-repeat;mask:${tranca} center/contain no-repeat}
+  .mm-cad-fundo{position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.55)}
+  .mm-cad-fundo .mm-cadeado{display:flex;margin:0;box-shadow:0 20px 50px rgba(0,0,0,.35)}
   html[data-gratis] .tab-panel.mm-trancada > :not(.mm-cadeado){display:none !important}
   .mm-cadeado{display:none}
   html[data-gratis] .tab-panel.mm-trancada > .mm-cadeado{display:flex}
@@ -29,17 +32,40 @@
   document.head.appendChild(css);
 
   const NOMES = { 'mesa-panel': 'Mesa', 'news-panel': 'Notícias', 'edu-panel': 'Educação' };
-  function cartao(painel) {
+  function cartao(painel, texto) {
     if (painel.querySelector(':scope > .mm-cadeado')) return;
     const d = document.createElement('div');
     d.className = 'mm-cadeado';
     d.innerHTML = `<span class="mm-cad-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
       <h3>Disponível para assinantes</h3>
-      <p>No plano grátis você usa a Mesa, as Notícias e a Educação. Assine um plano para abrir esta aba e todo o resto do terminal.</p>
+      <p>No plano grátis você usa a Mesa, as Notícias e a Educação. Assine um plano para abrir ${texto || 'esta aba'} e todo o resto do terminal.</p>
       <div class="mm-cad-acoes"><a class="prim" href="/assinar">Ver planos</a>${LIVRES.map((id) => `<button type="button" data-ir-aba="${id}">Ir para ${NOMES[id]}</button>`).join('')}</div>`;
-    d.addEventListener('click', (e) => { const b = e.target.closest('[data-ir-aba]'); if (b) document.getElementById('tab-' + b.dataset.irAba)?.click(); });
+    d.addEventListener('click', (e) => { const b = e.target.closest('[data-ir-aba]'); if (b) { painel.closest('.mm-cad-fundo')?.remove(); document.getElementById('tab-' + b.dataset.irAba)?.click(); } });
     painel.prepend(d);
   }
+
+  // Resumo para cliente: também é para assinantes (botão flutuante, menu lateral, menu do topo e Alt+M)
+  function avisoResumo() {
+    const f = document.createElement('div');
+    f.className = 'mm-cad-fundo'; f.setAttribute('role', 'dialog'); f.setAttribute('aria-modal', 'true');
+    cartao(f, 'o Resumo para cliente');
+    f.querySelector('.mm-cad-acoes').insertAdjacentHTML('beforeend', '<button type="button" data-fechar>Fechar</button>');
+    f.addEventListener('click', (e) => { if (e.target === f || e.target.closest('[data-fechar]')) f.remove(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { f.remove(); document.removeEventListener('keydown', esc); } });
+    document.body.appendChild(f);
+    f.querySelector('a')?.focus();
+  }
+  const RESUMO = '#fab-summary, #side-summary, [data-topbar-action="summary-btn"], #summary-btn';
+  document.addEventListener('click', (e) => {
+    const b = gratis && e.target.closest?.(RESUMO);
+    // no celular o primeiro toque só abre a aba da borda (abas-borda.js)
+    if (!b || (b.classList.contains('aba-borda') && !b.classList.contains('aba-aberta') && matchMedia('(max-width: 640px)').matches)) return;
+    e.preventDefault(); e.stopImmediatePropagation(); avisoResumo();
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (!gratis || !e.altKey || e.ctrlKey || e.metaKey || e.code !== 'KeyM') return;
+    e.preventDefault(); e.stopImmediatePropagation(); avisoResumo();
+  }, true);
 
   function aplicar() {
     document.documentElement.toggleAttribute('data-gratis', gratis);
