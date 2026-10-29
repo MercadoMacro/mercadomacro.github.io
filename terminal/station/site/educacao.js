@@ -129,7 +129,9 @@
             <h4>Nesta trilha</h4>
             <ol>${t.licoes.map((m, k) => `<li><button type="button" data-licao="${m.id}" class="${m === l ? 'atual' : ''} ${est.feitas[m.id] ? 'feita' : ''}"><span>${est.feitas[m.id] ? ICO.ok : k + 1}</span>${esc(m.titulo)}</button></li>`).join('')}</ol>
           </div>
-          ${l.painel ? `<div class="edu-caixa"><h4>No painel</h4><button type="button" class="edu-btn edu-cheio" data-aba="${l.painel.aba}">${esc(l.painel.texto)} ${ICO.seta}</button></div>` : ''}
+          ${l.painel ? `<div class="edu-caixa"><h4>${l.painel.url ? 'Simule' : 'No painel'}</h4>${l.painel.url
+            ? `<a class="edu-btn edu-cheio" href="${esc(l.painel.url)}" target="_blank" rel="noopener">${esc(l.painel.texto)} ${ICO.seta}</a>`
+            : `<button type="button" class="edu-btn edu-cheio" data-aba="${l.painel.aba}">${esc(l.painel.texto)} ${ICO.seta}</button>`}</div>` : ''}
           <div class="edu-caixa"><h4>Para ir além</h4><a class="edu-livro" href="${l.livro.url}" target="_blank" rel="noopener">${ICO.livro}<span>Livro <b>${esc(l.livro.titulo)}</b>, da CVM. Distribuição gratuita no Portal do Investidor.</span></a></div>
         </aside>
       </div>`;
@@ -183,7 +185,7 @@
   .edu-anel .fundo{fill:none;stroke:var(--line-2);stroke-width:6}
   .edu-anel .cheio{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .4s ease}
   #edu-root .edu-anel{width:auto;height:auto;stroke-width:6}
-  .edu-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:10px;padding:10px 14px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;min-height:42px}
+  .edu-btn{text-decoration:none;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:10px;padding:10px 14px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left;min-height:42px}
   .edu-btn:hover{border-color:var(--accent)}
   .edu-prim{background:var(--accent);border-color:var(--accent);color:#141006}
   .edu-prim:hover{filter:brightness(1.05)}
