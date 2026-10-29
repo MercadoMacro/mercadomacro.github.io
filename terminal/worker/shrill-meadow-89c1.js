@@ -630,16 +630,44 @@ function b3Futuros(j, ativo) {
 }
 const jsonCache = (body, cors, hit) => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', 'X-Cache': hit ? 'HIT' : 'MISS', ...cors } });
 
+// Ajuste do pregão anterior nos contratos de taxa (DI1, DAP). Depois do fechamento a B3 troca o
+// prvsDayAdjstmntPric pelo ajuste de hoje e a variação da noite dava quase zero. O meio dos limites, que
+// resolve nos Futuros B3, não serve aqui: os limites de taxa não são simétricos (29/10/2026: DI1F29 com
+// meio 14,98 e ajuste anterior 14,824). Então guarda no D1 o ajuste visto durante o pregão (10h às 15h59
+// no horário da B3, quando ele ainda é o do dia anterior) e usa esse à noite.
+let tabelaAjuste = false;
+async function ajusteDoPregao(env, ativo, b3, c) {
+  if (!env.LOG || !/^\d{4}-\d\d-\d\d \d\d/.test(b3 || '')) return null;
+  const dia = b3.slice(0, 10), hora = +b3.slice(11, 13);
+  if (hora < 10) return null;
+  try {
+    if (!tabelaAjuste) {
+      await env.LOG.prepare('CREATE TABLE IF NOT EXISTS b3_ajuste (dia TEXT, ativo TEXT, aj TEXT, PRIMARY KEY (dia, ativo))').run();
+      tabelaAjuste = true;
+    }
+    if (hora < 16) {
+      const aj = Object.fromEntries(c.filter((x) => x.aj != null).map((x) => [x.s, x.aj]));
+      await env.LOG.prepare('INSERT OR IGNORE INTO b3_ajuste (dia, ativo, aj) VALUES (?, ?, ?)').bind(dia, ativo, JSON.stringify(aj)).run();
+      return null;
+    }
+    const r = await env.LOG.prepare('SELECT aj FROM b3_ajuste WHERE dia = ? AND ativo = ?').bind(dia, ativo).first();
+    return r ? JSON.parse(r.aj) : null;
+  } catch (e) { return null; }
+}
+
 // curva completa de um ativo de juros: DI1 (DI x pré) ou DAP (cupom de IPCA, juro real)
-async function handleDI(ctx, cors, ativo = 'DI1') {
+// ref = ajuste do pregão anterior guardado (só à noite); sem ele, o site usa o aj da B3
+async function handleDI(env, ctx, cors, ativo = 'DI1') {
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/' + (ativo === 'DI1' ? 'di-v1' : ativo.toLowerCase() + '-v1'));
+  const cacheKey = new Request('https://cache.local/' + (ativo === 'DI1' ? 'di-v2' : ativo.toLowerCase() + '-v2'));
   const hit = await cache.match(cacheKey);
   if (hit) return jsonCache(hit.body, cors, true);
   let j;
   try { j = await b3Derivativo(ativo); } catch (e) { return json({ error: e.message }, 502, cors); }
   const c = b3Futuros(j, ativo);
   if (!c.length) return json({ error: 'B3 sem contratos' }, 502, cors);
+  const guardado = await ajusteDoPregao(env, ativo, j?.Msg?.dtTm, c);
+  for (const x of c) x.ref = guardado && guardado[x.s] != null ? guardado[x.s] : null;
   const body = JSON.stringify({ ts: Date.now(), b3: j?.Msg?.dtTm || null, c });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' } })));
   return jsonCache(body, cors, false);
@@ -953,10 +981,10 @@ const rotas = async (request, env, ctx) => {
 
     // ENDPOINT: /di  (DI futuro da B3 para a curva da aba Mesa)
     if (path === '/di') {
-      return handleDI(ctx, cors);
+      return handleDI(env, ctx, cors);
     }
     // ENDPOINT: /dap (cupom de IPCA, juro real, botão Real da curva) e /futb3 (bloco Futuros B3 da Mesa)
-    if (path === '/dap') return handleDI(ctx, cors, 'DAP');
+    if (path === '/dap') return handleDI(env, ctx, cors, 'DAP');
     if (path === '/futb3') return handleFutB3(ctx, cors);
     if (path === '/b3') return handleB3Acoes(url, ctx, cors);
 

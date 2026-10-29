@@ -171,6 +171,7 @@ Compare sempre o rendimento **líquido** (depois de imposto e custos), no **mesm
         },
         {
           id: 'acoes',
+          termos: 'acao dividendo dividendos jcp',
           titulo: 'Ações: virando sócio de uma empresa',
           minutos: 7,
           abertura: 'Comprar uma ação é comprar um pedaço de uma empresa. Você passa a participar dos resultados, bons e ruins.',
@@ -210,6 +211,7 @@ Ações oscilam bastante no curto prazo. Faz sentido investir em ações com din
         },
         {
           id: 'fundos',
+          termos: 'come cotas gestor taxa administracao',
           titulo: 'Fundos de investimento',
           minutos: 7,
           abertura: 'Num fundo, muita gente junta o dinheiro e um gestor profissional decide onde aplicar. Você compra cotas e divide o resultado com os outros cotistas.',
@@ -554,6 +556,7 @@ Uma LCI que rende um percentual menor do CDI pode render mais que um CDB depois 
         },
         {
           id: 'fiis',
+          termos: 'fii fiis imobiliario aluguel',
           titulo: 'Fundos imobiliários',
           minutos: 6,
           abertura: 'Com um fundo imobiliário, dá para ter um pedaço de shoppings, galpões, lajes corporativas ou títulos do setor, com cotas negociadas na bolsa.',
@@ -630,6 +633,7 @@ ETFs são uma boa base para a parte de longo prazo, com aportes regulares. Quem 
         },
         {
           id: 'operar-na-bolsa',
+          termos: 'home broker corretora ordem liquidacao',
           titulo: 'Como operar na bolsa',
           minutos: 7,
           abertura: 'Antes da primeira ordem, vale entender como ela funciona, quando o dinheiro sai da conta e quanto custa.',
@@ -830,6 +834,7 @@ Para bancos e seguradoras, dívida é matéria-prima do negócio. Esses indicado
         },
         {
           id: 'multiplos',
+          termos: 'pl p/l ev ebitda dividend yield',
           titulo: 'Múltiplos: caro ou barato?',
           minutos: 7,
           abertura: 'Múltiplos comparam o preço de uma ação com algum número da empresa. São atalhos úteis, desde que se saiba o que cada um esconde.',
