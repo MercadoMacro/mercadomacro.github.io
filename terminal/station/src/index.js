@@ -880,7 +880,7 @@ async function apiAuth(req, env, acao, ctx) {
     await garantirAssinatura(env);
     // cadastros que não confirmaram o e-mail em 7 dias são apagados
     await env.DB.prepare(`DELETE FROM usuarios WHERE status = 'confirmar' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()).run();
-    // desde 26/10/2026 não há liberação grátis: depois do cadastro a pessoa entra e escolhe um plano (a degustação custa R$ 4,99)
+    // depois do cadastro a pessoa entra e escolhe um plano; desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis
     const MSG_FILA = 'Cadastro feito. Agora é só entrar com seu e-mail e senha e escolher seu plano para começar a usar.';
     const MSG_CONF = 'Enviamos um link para ' + email + '. Confirme o e-mail e depois entre para escolher seu plano. Não chegou? Veja o spam.';
     const existe = await env.DB.prepare('SELECT id, nome, status FROM usuarios WHERE email = ?').bind(email).first();
@@ -1389,7 +1389,7 @@ async function emailConfirmar(env, req, id, nome, email) {
   const tok = await criarLink(env, id, 'confirmar', 72);
   return enviarEmail(env, req, {
     para: email, nome, assunto: 'Confirme seu e-mail no Mercado Macro',
-    paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para continuar, confirme que este e-mail é seu.', 'Depois de confirmar, é só entrar e escolher seu plano. Para conhecer, a degustação de 7 dias sai por R$ 4,99.'],
+    paragrafos: ['Recebemos seu pedido de acesso ao Mercado Macro. Para continuar, confirme que este e-mail é seu.', 'Depois de confirmar, é só entrar e escolher seu plano. Para conhecer, você pode começar com 48 horas grátis.'],
     botao: 'Confirmar meu e-mail', link: siteDe(req) + '/confirmar?t=' + tok,
     nota: 'O link vale por 3 dias. Se você não pediu acesso, ignore este e-mail.', canal: true,
   });
@@ -1430,7 +1430,7 @@ async function paginaConfirmar(req, env, ctx) {
     env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ? AND status = 'confirmar'`).bind(l.id),
   ]);
   if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
-  return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado.</p><p>Agora é só entrar com seu e-mail e senha e escolher seu plano. Para conhecer, a degustação de 7 dias sai por R$ 4,99.</p>'
+  return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado.</p><p>Agora é só entrar com seu e-mail e senha e escolher seu plano. Para conhecer, você pode começar com 48 horas grátis.</p>'
     + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>'
     + '<a class="bt" href="/entrar?volta=%2Fassinar">Escolher meu plano</a></div>');
 }
@@ -1514,7 +1514,7 @@ async function irParaCanal(req, env, ctx, url) {
 // tela "cadastro enviado": os planos (os mesmos preços de /assinar) e se o canal está ligado (o convite só aparece com canal)
 async function previaCanal(env) {
   const c = await config(env);
-  const planos = Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
+  const planos = Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
   return json({ canal: !!(c.tg_token && c.tg_canal), planos }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
 async function avisar(env, titulo, texto) {
@@ -2157,7 +2157,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     if (!u.expira) return 'sem validade';
     return '<span class="' + (em7(u) ? 'venc' : '') + '">até ' + dia(u.expira) + '</span>';
   }
-  var NOMEP = { cortesia: 'Cortesia', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', sem: 'Sem validade', data: 'Data definida' };
+  var NOMEP = { cortesia: 'Cortesia', gratis: 'Grátis 48h', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', sem: 'Sem validade', data: 'Data definida' };
   function plano(u){
     if (u.admin) return '—';
     if (u.plano) return NOMEP[u.plano] || u.plano;
@@ -2325,7 +2325,6 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   // janela "Acesso": define o plano/validade de uma pessoa
   var OPC = [
     ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
-    ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
     ['mensal', 'Mensal', '1 mês', 2990, { meses: 1 }],
     ['trimestral', 'Trimestral', '3 meses', 7990, { meses: 3 }],
     ['semestral', 'Semestral', '6 meses', 14990, { meses: 6 }],
@@ -2626,7 +2625,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'

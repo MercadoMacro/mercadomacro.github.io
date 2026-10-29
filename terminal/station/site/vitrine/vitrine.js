@@ -83,8 +83,8 @@
     fetch('/api/publico/canal').then(okJson).then(function (j) {
       if (j.planos && j.planos.length) {
         $('pronto-pl').innerHTML = j.planos.map(function (p) {
-          return '<li' + (p.id === 'degustacao' ? ' class="destaque"' : '') + '><span><b>' + esc(p.nome) + '</b><small>' + esc(p.periodo) + ' de acesso' + (p.id === 'degustacao' ? ', para conhecer' : '') + '</small></span>'
-            + '<strong>' + reaisC(p.valor) + (p.meses > 1 ? '<small>' + reaisC(Math.round(p.valor / p.meses)) + ' por mês</small>' : '') + '</strong></li>';
+          return '<li' + (p.id === 'gratis' ? ' class="destaque"' : '') + '><span><b>' + esc(p.nome) + '</b><small>' + esc(p.periodo) + ' de acesso' + (p.id === 'gratis' ? ', sem pagar nada' : '') + '</small></span>'
+            + '<strong>' + (p.valor ? reaisC(p.valor) : 'R$ 0') + (p.meses > 1 ? '<small>' + reaisC(Math.round(p.valor / p.meses)) + ' por mês</small>' : '') + '</strong></li>';
         }).join('');
         $('pronto-planos').hidden = false;
       }
