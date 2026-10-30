@@ -6,9 +6,9 @@
 import qrcode from './qrcode.js';
 import { boasVindasNoPagamento } from './boasvindas.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
-let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite;
+let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao;
 export function ligarAssinatura(u) {
-  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite } = u);
+  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao } = u);
 }
 
 export const PLANOS = {
@@ -57,12 +57,18 @@ export async function garantirAssinatura(env) {
   if (!cols.includes('plano')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN plano TEXT'));
   // celular opcional (só números, com 55 e DDD), para o administrador avisar pelo WhatsApp
   if (!cols.includes('celular')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN celular TEXT'));
+  // assinatura no cartão pelo Stripe (src/stripe.js): cliente e assinatura que renova sozinha
+  if (!cols.includes('stripe_cliente')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_cliente TEXT'));
+  if (!cols.includes('stripe_assinatura')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_assinatura TEXT'));
   // histórico do que o administrador fez em cada conta
   q.push(env.DB.prepare('CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, quando TEXT NOT NULL, texto TEXT NOT NULL)'));
   q.push(env.DB.prepare(`CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL,
     plano TEXT NOT NULL, valor INTEGER NOT NULL, status TEXT NOT NULL, criado TEXT NOT NULL, enviado TEXT, decidido TEXT,
     validade TEXT, arquivo BLOB, tipo_arq TEXT)`));
   await env.DB.batch(q);
+  // ref = fatura do Stripe ("stripe:in_..."), para não somar a mesma fatura duas vezes
+  const pcols = (await env.DB.prepare('PRAGMA table_info(pagamentos)').all()).results.map((c) => c.name);
+  if (!pcols.includes('ref')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN ref TEXT').run();
   pronto = true;
 }
 
@@ -142,7 +148,7 @@ function emailVenceu(env, u) {
     botao: 'Renovar acesso', link: SITE + '/assinar',
   });
 }
-async function emailAprovado(env, req, u, plano, validade, teste = false) {
+export async function emailAprovado(env, req, u, plano, validade, teste = false) {
   // primeiro pagamento: vai o e-mail de boas-vindas (src/boasvindas.js), que já traz o plano e a validade no topo
   const bv = teste ? null : await boasVindasNoPagamento(env, { id: u.uid ?? u.id, nome: u.nome, email: u.email }, { plano: plano.nome, valor: reais(plano.valor), ate: dataBR(validade) }).catch(() => null);
   if (bv && bv.ok) return bv;
@@ -183,7 +189,7 @@ export async function rotinaAssinaturas(env) {
     for (const u of venceram) await emailVenceu(env, u).catch(() => {});
   }
   const vencendo = (await env.DB.prepare(`SELECT id, nome, email, expira FROM usuarios WHERE status = 'ativo' AND admin = 0 AND expira > ? AND expira <= ?
-    AND (aviso_venc IS NULL OR aviso_venc != expira) AND COALESCE(plano, '') != 'gratis'`).bind(agora, limite).all()).results;
+    AND (aviso_venc IS NULL OR aviso_venc != expira) AND COALESCE(plano, '') != 'gratis' AND stripe_assinatura IS NULL`).bind(agora, limite).all()).results;
   let avisados = 0;
   for (const u of vencendo) {
     const r = await emailVencendo(env, u, Math.max(1, Math.ceil((Date.parse(u.expira) - Date.now()) / 864e5))).catch(() => ({ ok: false }));
@@ -236,6 +242,7 @@ export async function apiAssinatura(req, env, conta, acao) {
       nome: conta.nome, status: conta.status, expira: conta.expira, admin: !!conta.admin,
       liberado: !!conta.admin || (conta.status === 'ativo' && (!conta.expira || conta.expira > new Date().toISOString())),
       pix: !!(await pixConfig(env)),
+      ...(situacaoCartao ? await situacaoCartao(env, conta.id).catch(() => ({})) : {}),
       planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, unico: !!p.unico })),
       pagamentos: pags,
     });
@@ -499,6 +506,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
 <script>
 (function(){
   var raiz = document.getElementById('raiz'), dados = null, escolhido = null;
+  // volta do Stripe (?cartao=ok): o aviso do pagamento chega em segundos; confere de novo algumas vezes
+  var voltouCartao = new URLSearchParams(location.search).get('cartao') === 'ok', tentativas = 0;
+  if (voltouCartao) history.replaceState(null, '', '/assinar');
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
   function data(s){ return s ? new Date(s).toLocaleDateString('pt-BR') : '—'; }
@@ -513,6 +523,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       if (q && !escolhido && j.planos.some(function(p){ return p.id === q; })) escolhido = q;
       if (q) history.replaceState(null, '', '/assinar');
       desenhar();
+      if (voltouCartao && !j.renovaCartao && tentativas++ < 8) setTimeout(carregar, 2500);
     }).catch(function(){ raiz.innerHTML = '<p class="nota">Não foi possível carregar. Atualize a página.</p>'; });
   }
   function situacao(j){
@@ -525,6 +536,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     var j = dados;
     document.getElementById('volta').innerHTML = j.liberado ? '<a href="/">Voltar ao site</a>' : '';
     var h = situacao(j);
+    if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento no cartão recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
+    if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e a validade é renovada sozinha. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
     if (enviado) h += '<div class="sit">Recebemos seu comprovante do plano <b>' + esc(nomePlano(enviado.plano)) + '</b> (' + reais(enviado.valor) + '). Você recebe um e-mail quando o pagamento for conferido.</div>';
     if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
@@ -533,13 +546,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
         return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + esc(p.periodo) + ' de acesso</span>'
           + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6))) + ' por mês') + '</span></button>';
       }).join('') + '</div><div id="pix"></div>';
-      h += '<p class="nota">Pagamento único pelo Pix, sem renovação automática. Quer parcelar? Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar: o banco parcela no seu cartão.</p>';
+      h += '<p class="nota">' + (j.cartao ? 'No cartão o plano renova sozinho todo período e você cancela quando quiser; no Pix o pagamento é único, sem renovação. ' : 'Pagamento único pelo Pix, sem renovação automática. ') + 'Quer parcelar? Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar: o banco parcela no seu cartão.</p>';
     }
     if (j.pagamentos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + j.pagamentos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
     h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante é usado só para conferir o pagamento e é apagado 30 dias depois.</p>';
     raiz.innerHTML = h;
+    var g = document.getElementById('gerenciar');
+    if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
     if (escolhido) pedir(escolhido);
   }
   function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral' }[id] || id; }
@@ -561,7 +576,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       };
       return;
     }
-    box.innerHTML = '<p class="nota">Gerando o Pix…</p>';
+    var cartao = dados.cartao && !dados.renovaCartao && ['mensal', 'trimestral', 'semestral'].indexOf(plano) > -1;
+    box.innerHTML = (cartao ? '<div class="pix" style="display:block"><h3>Cartão de crédito, com renovação automática</h3><p>Você paga na página segura do Stripe e o plano renova sozinho a cada período. Cancele quando quiser, sem multa. O acesso é liberado assim que o pagamento é aprovado.</p>'
+      + '<button type="button" class="bt" id="pagar-cartao">Pagar com cartão</button><p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div><h2>Ou pague com Pix</h2>' : '') + '<div id="pixq"><p class="nota">Gerando o Pix…</p></div>';
+    if (cartao) document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };
+    box = document.getElementById('pixq');
     api('/api/assinatura/pedido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano }) }).then(function(p){
       box.innerHTML = '<div class="pix"><div class="qr">' + p.svg + '</div><div><h3>' + esc(nomePlano(p.plano)) + ': ' + reais(p.valor) + '</h3>'
         + '<p>Abra o app do seu banco, escolha pagar com Pix e leia o QR Code, ou use o Pix copia e cola:</p>'
@@ -572,6 +591,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
         (navigator.clipboard ? navigator.clipboard.writeText(p.copia) : Promise.reject()).then(function(){ t.textContent = 'Copiado'; }, function(){ try { document.execCommand('copy'); t.textContent = 'Copiado'; } catch (_) { t.textContent = 'Selecione e copie'; } }); };
       document.getElementById('enviar').onclick = function(){ enviar(p, this); };
     }).catch(function(j){ box.innerHTML = '<p class="msg erro">' + esc((j && j.erro) || 'Não foi possível gerar o Pix. Tente de novo.') + '</p>'; });
+  }
+  // cartão: o servidor cria a página de pagamento (ou do portal) no Stripe e o navegador vai para lá
+  function irStripe(url, corpo, b, m){
+    b.disabled = true; if (m) { m.className = 'msg'; m.textContent = 'Abrindo o Stripe…'; }
+    api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(j){ location.href = j.url; })
+      .catch(function(j){ b.disabled = false; var t = (j && j.erro) || 'Não foi possível abrir o pagamento agora. Tente de novo.'; if (m) { m.className = 'msg erro'; m.textContent = t; } else alert(t); });
   }
   // fotos grandes viram JPEG de até 1600 px antes de enviar
   function reduzir(f){
