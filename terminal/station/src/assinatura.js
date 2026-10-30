@@ -64,6 +64,8 @@ export async function garantirAssinatura(env) {
   if (!cols.includes('celular')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN celular TEXT'));
   // assinatura no cartão pelo Stripe (src/stripe.js): cliente e assinatura que renova sozinha
   if (!cols.includes('stripe_cliente')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_cliente TEXT'));
+  // última vez que o site aberto renovou o passe (a cada ~8 min): mostra quem está online no /admin (30/10/2026)
+  if (!cols.includes('visto')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN visto TEXT'));
   if (!cols.includes('stripe_assinatura')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_assinatura TEXT'));
   // histórico do que o administrador fez em cada conta
   q.push(env.DB.prepare('CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, quando TEXT NOT NULL, texto TEXT NOT NULL)'));
