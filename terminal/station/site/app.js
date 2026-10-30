@@ -4922,7 +4922,7 @@ function newsReadMins(n) {
   if (!sec) return;
   const LADOS = {
     eua: { root: 'fed-root', js: 'fed.js?v=8', fn: '__fedRender' },
-    br: { root: 'copom-root', js: 'copom.js?v=4', fn: '__copomRender' },
+    br: { root: 'copom-root', js: 'copom.js?v=5', fn: '__copomRender' },
   };
   const pedidos = {};
   const carrega = (k) => {

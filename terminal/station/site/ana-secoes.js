@@ -172,7 +172,7 @@
   .pj-como-box p { margin:0 0 8px; }
   .pj-como-box button { display:inline-flex; align-items:center; gap:8px; margin-top:4px; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--text); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
   .pj-como-box button i { color:var(--accent-ink); }
-  #analysis-panel .ana-wrap[data-secao="fed"] { max-width:1440px; }
+  #analysis-panel .ana-wrap[data-secao="fed"], #analysis-panel .ana-wrap[data-secao="copom"] { max-width:1440px; }
   @media (max-width: 640px) {
     #ana-sec-fed > .pj-head { flex-wrap:wrap; gap:10px 12px; }
     #ana-sec-fed > .pj-head .sec-icon { width:38px !important; height:38px !important; font-size:16px !important; }

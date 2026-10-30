@@ -26,7 +26,7 @@
   const hojeBR = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
   const diasAte = (iso) => Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(hojeBR() + 'T12:00:00Z')) / 86400000);
 
-  let prefs = { sel: 0, graf: false };
+  let prefs = { sel: 0, graf: false, inf: '' };
   try { prefs = { ...prefs, ...(JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}) }; } catch (e) { /* padrão */ }
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* cheio */ } };
   let base = null;
@@ -171,8 +171,66 @@
 
     const bp = (v) => (ok(v) ? `${Math.abs(v) < 0.05 ? '' : v > 0 ? '+' : '−'}${num(Math.abs(v), 1)} bp` : '—');
     const oiTot = Object.values(u.oi || {}).reduce((t, v) => t + v, 0), negTot = Object.values(u.n || {}).reduce((t, v) => t + v, 0);
+    // barra lateral (30/10/2026, igual à do Fed): opção em destaque, rosca, próximas reuniões e o que mexe com a Selic
+    const tk = R.cenarios?.[maisProv]?.tick || '—';
+    const pO = o?.p?.[maisProv], pS = s?.p?.[maisProv], pA = P[maisProv];
+    const dif = (a, b) => (ok(a) && ok(b) ? `${a - b >= 0 ? '+' : '−'}${num(Math.abs(a - b), 1)} p.p.` : '—');
+    const destaque = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-file-contract" aria-hidden="true"></i></span><b>Opção em destaque</b>
+        <a class="fw-lk" href="https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/juros/dashboard-publico-opcoes-de-copom/" target="_blank" rel="noopener">Ver na B3 <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+      <div class="fw-ct-box">
+        <div class="fw-ct-t"><b>${esc(tk)}</b><span>${esc(nomeMov(maisProv))}</span></div>
+        <div class="fw-ct-p"><strong>${pct(pA)}</strong>${ok(pA) && ok(pO) ? `<em class="${pA - pO > 0.05 ? 'fw-up' : pA - pO < -0.05 ? 'fw-dn' : ''}">${dif(pA, pO)} no pregão</em>` : ''}</div>
+        <div class="fw-ct-g">
+          <div><span>Pregão anterior</span><b>${pct(pO)}</b></div>
+          <div><span>1 semana</span><b>${pct(pS)}</b></div>
+          <div><span>Em aberto</span><b>${int(u.oi?.[maisProv])}</b></div>
+        </div>
+      </div>
+      <p class="fw-side-n">Opção do cenário mais provável na reunião de ${dmy(R.data)}; o preço, de 0 a 100, é a chance. Todos os cenários no pregão de ${dmy(u.d)}: ${int(oiTot)} contratos em aberto, ${int(negTot)} negociados, soma das chances ${pct(soma)}.</p>
+    </div>`;
+    let ac = 0;
+    const C = 2 * Math.PI * 42, tot = soma > 0 ? soma : 100;
+    const fatias = movs.filter((m) => (P[m] || 0) >= 0.05).map((m) => {
+      const p = P[m] / tot, d = `<circle cx="60" cy="60" r="42" fill="none" stroke="${corMov(m)}" stroke-width="16" stroke-dasharray="${(p * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-ac * C).toFixed(2)}" transform="rotate(-90 60 60)"/>`;
+      ac += p; return d;
+    }).join('');
+    const rosca = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></span><b>Distribuição de probabilidades</b></div>
+      <div class="fw-rosca">
+        <div class="fw-rd"><svg viewBox="0 0 120 120" role="img" aria-label="${movs.map((m) => `${nomeMov(m)}: ${pct(P[m] || 0)}`).join(', ')}"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--surface)" stroke-width="16"/>${fatias}</svg>
+          <div><b>${pct(pA)}</b><span class="${tomMov(maisProv)}">${maisProv === 0 ? 'Manter' : nomeMov(maisProv).replace(/ (\S+)$/, '&nbsp;$1')}</span></div></div>
+        <ul class="fw-rl">${movs.map((m) => `<li class="${m === maisProv ? 'top' : ''}"><i style="background:${corMov(m)}"></i><span>${rotMov(m)}</span><b>${pct(P[m] || 0)}</b></li>`).join('')}</ul>
+      </div>
+    </div>`;
+    // todas as próximas reuniões do calendário; só as que têm opções negociadas podem ser escolhidas
+    const prox = (base.reunioes || []).filter((x) => x.data >= hojeBR()).slice(0, 5).map((x) => {
+      const d = diasAte(x.data), i = reun.indexOf(x);
+      const conteudo = `<span class="fw-tl-d">${curta(x.data)}</span><span class="fw-tl-b${d === 0 ? ' hoje' : ''}">${d === 0 ? 'Hoje' : d === 1 ? 'Amanhã' : `${d} dias`}</span><span class="fw-tl-x">${i >= 0 ? 'Com opções na B3' : 'Ainda sem opções'}</span>`;
+      return `<li class="${i === sel ? 'on' : ''}">${i >= 0 ? `<button type="button" data-r="${i}">${conteudo}</button>` : `<button type="button" disabled>${conteudo}</button>`}</li>`;
+    }).join('');
+    const reunioes = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></span><b>Próximas reuniões</b>
+        <a class="fw-lk" href="https://www.bcb.gov.br/publicacoes/calendarioreunioescopom" target="_blank" rel="noopener">Calendário <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+      <ol class="fw-tl">${prox}</ol>
+    </div>`;
+    const INF = [
+      ['infl', 'fa-fire-flame-curved', 'Inflação', 'Inflação (IPCA)', 'IPCA acima da meta de 3% (com tolerância até 4,5%) pressiona o Copom a manter ou subir a Selic; inflação caindo abre espaço para cortes.'],
+      ['exp', 'fa-binoculars', 'Expectativas', 'Expectativas (Boletim Focus)', 'O Copom olha muito para a inflação esperada para os próximos anos: expectativas longe da meta seguram os juros altos.'],
+      ['cam', 'fa-dollar-sign', 'Câmbio', 'Dólar', 'Dólar subindo encarece importados e pressiona a inflação; real forte ajuda a baixar os preços.'],
+      ['fis', 'fa-building-columns', 'Contas públicas', 'Contas do governo', 'Gasto público alto e dívida crescendo aumentam o risco e a inflação, e tiram espaço para cortes.'],
+      ['ext', 'fa-earth-americas', 'Exterior', 'Fed e cenário global', 'Juros altos nos EUA atraem dinheiro para fora do Brasil; crises lá fora também pesam na decisão.'],
+    ];
+    const infAt = INF.find((x) => x[0] === prefs.inf);
+    const influencia = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><b>O que influencia essas probabilidades?</b></div>
+      <div class="fw-inf">${INF.map(([k, ic, t, tt]) => `<button type="button" class="fw-inf-${k}${prefs.inf === k ? ' on' : ''}" data-inf="${k}" aria-pressed="${prefs.inf === k}" title="${tt}"><span><i class="fa-solid ${ic}" aria-hidden="true"></i></span>${t}</button>`).join('')}</div>
+      <p class="fw-inf-t">${infAt ? `<b>${infAt[3]}:</b> ${infAt[4]}` : 'Toque em um tema para ver como ele mexe com as chances.'}</p>
+    </div>`;
+    const lateral = `<aside class="fw-side" aria-label="Resumo da reunião">${destaque}${rosca}${reunioes}${influencia}</aside>`;
+
     const kpi = (ic, t, b, sm, cls = '') => `<div class="fw-kpi"><span class="fw-ki"><i class="fa-solid ${ic}" aria-hidden="true"></i></span><div><span>${t}</span><b class="${cls}">${b}</b><small>${sm}</small></div></div>`;
-    root.innerHTML = `<div class="fw-card">
+    root.innerHTML = `<div class="fw-lay"><div class="fw-card">
       <div class="fw-top">
         <button class="fw-nav" data-act="esq" aria-label="Reuniões anteriores"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="fw-chips" role="tablist" aria-label="Reuniões do Copom">${chips}</div>
@@ -189,13 +247,6 @@
       <div class="fw-blk">
         <div class="fw-sec fw-sec-b">Chance de cada decisão na reunião de ${dmy(R.data)} ${sel === 0 ? '<small>(e a Selic depois dela)</small>' : '<small>(mudança nesta reunião, além do que for decidido antes)</small>'}
           <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> ${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
-        <div class="fw-ctr">
-          <span class="fw-chip"><i class="fa-solid fa-file-contract"></i>Opções de Copom <b>B3</b></span>
-          <span class="fw-chip"><i class="fa-solid fa-calendar-day"></i>Pregão <b>${dmy(u.d)}</b></span>
-          <span class="fw-chip"><i class="fa-solid fa-layer-group"></i>Contratos em aberto <b>${int(oiTot)}</b></span>
-          <span class="fw-chip"><i class="fa-solid fa-right-left"></i>Negociados no dia <b>${int(negTot)}</b></span>
-          <span class="fw-chip"><i class="fa-solid fa-equals"></i>Soma das chances <b>${pct(soma)}</b></span>
-        </div>
         ${pilha}
         <div class="fw-bars">${barras}</div>
         ${prefs.graf ? `<div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div><div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>` : ''}
@@ -209,11 +260,13 @@
         <div><b><i class="fa-solid fa-gear"></i> Metodologia</b><p>Cada opção de Copom paga se o Copom decidir exatamente aquele cenário, então o preço (de 0 a 100) é a chance que o mercado dá a ele; por isso a soma pode passar ou ficar abaixo de 100%. Cada reunião tem as suas opções: a chance é da decisão daquela reunião. Reuniões sem opções negociadas não aparecem.</p></div>
         <div><b><i class="fa-solid fa-database"></i> Fontes</b><p>B3, painel público de opções de Copom. Preço de referência do pregão de ${dmy(u.d)}${vivoHoje ? '; "hoje" é o último negócio do dia' : ''}.${erro ? ` <b>${esc(erro)}</b>` : ''}</p></div>
       </div>
-    </div>`;
+    </div>${lateral}</div>`;
     // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
     const fc = root.querySelector('.fw-chips');
     const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); fc.parentElement.classList.toggle('cabe', fc.scrollWidth <= fc.clientWidth + 4); };
-    fc.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // só rola a barra de datas na horizontal (scrollIntoView também rolava a página)
+    const on = fc.querySelector('.on');
+    if (on) { const a = fc.getBoundingClientRect(), b = on.getBoundingClientRect(); if (b.left < a.left || b.right > a.right) { fc.style.scrollBehavior = 'auto'; fc.scrollLeft += b.left < a.left ? b.left - a.left : b.right - a.right; fc.style.scrollBehavior = ''; } }
     fc.addEventListener('scroll', bordas, { passive: true });
     bordas();
     if (prefs.graf) {
@@ -227,6 +280,8 @@
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-r]');
       if (b) { prefs.sel = +b.dataset.r; savePrefs(); draw(); return; }
+      const inf = e.target.closest('[data-inf]');
+      if (inf) { prefs.inf = prefs.inf === inf.dataset.inf ? '' : inf.dataset.inf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="graf"]')) { prefs.graf = !prefs.graf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="reload"]') && !busy) load(true);
       const nv = e.target.closest('[data-act="esq"],[data-act="dir"]');
@@ -237,7 +292,8 @@
   const css = document.createElement('style');
   css.textContent = `
   #copom-root { min-width:0; max-width:100%; font-variant-numeric:tabular-nums; }
-  #copom-root .fw-card { min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
+  #copom-root .fw-lay { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+  #copom-root .fw-card { container-type:inline-size; min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
   #copom-root .fw-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
   #copom-root .fw-top { display:flex; align-items:center; gap:8px; min-width:0; }
   #copom-root .fw-nav { flex:none; width:32px; height:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; font-size:12px; }
@@ -337,6 +393,71 @@
   #copom-root .fw-tip b { display:block; color:var(--text); margin-bottom:4px; }
   #copom-root .fw-tip div { display:flex; align-items:center; gap:7px; line-height:1.7; font-family:'JetBrains Mono', monospace; }
   #copom-root .fw-tip span { margin-left:auto; padding-left:10px; color:var(--text); font-weight:600; }
+  #copom-root .fw-side { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:14px; align-content:start; min-width:0; }
+  #copom-root .fw-side-c { border:1px solid var(--line); border-radius:14px; background:var(--surface-2); padding:14px 16px; min-width:0; display:flex; flex-direction:column; gap:12px; }
+  #copom-root .fw-side-h { display:flex; align-items:center; gap:10px; min-width:0; }
+  #copom-root .fw-side-h > b { font-size:14.5px; color:var(--text); font-weight:700; min-width:0; }
+  #copom-root .fw-si { flex:none; width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:13px; }
+  #copom-root .fw-lk { margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-2); text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:5px 9px; white-space:nowrap; }
+  #copom-root .fw-lk i { font-size:10px; color:var(--text-3); }
+  #copom-root .fw-lk:hover { color:var(--text); border-color:var(--line-2); }
+  #copom-root .fw-ct-box { border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+  #copom-root .fw-ct-t { display:flex; align-items:baseline; gap:8px; }
+  #copom-root .fw-ct-t b { font-size:19px; color:var(--text); }
+  #copom-root .fw-ct-t span { font-size:13px; color:var(--text-3); }
+  #copom-root .fw-ct-p { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  #copom-root .fw-ct-p strong { font-size:28px; font-weight:700; color:var(--accent-ink); letter-spacing:-.01em; }
+  #copom-root .fw-ct-p em { font-style:normal; font-size:12px; font-weight:600; padding:3px 8px; border-radius:7px; background:var(--surface-2); color:var(--text-2); }
+  #copom-root .fw-ct-p em.fw-up { color:var(--pos-ink); background:color-mix(in srgb, var(--pos-ink) 14%, transparent); }
+  #copom-root .fw-ct-p em.fw-dn { color:var(--neg); background:color-mix(in srgb, var(--neg) 14%, transparent); }
+  #copom-root .fw-ct-g { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); border-top:1px solid var(--line); padding-top:8px; margin-top:2px; }
+  #copom-root .fw-ct-g div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid var(--line); min-width:0; }
+  #copom-root .fw-ct-g div:first-child { padding-left:0; border-left:0; }
+  #copom-root .fw-ct-g span { font-size:11px; color:var(--text-3); }
+  #copom-root .fw-ct-g b { font-size:14px; color:var(--text); }
+  #copom-root .fw-ct-g small { font-size:11px; color:var(--text-3); }
+  #copom-root .fw-side-n { margin:0; font-size:11.5px; color:var(--text-3); }
+  #copom-root .fw-rosca { display:flex; align-items:center; gap:16px; }
+  #copom-root .fw-rd { position:relative; flex:none; width:128px; height:128px; }
+  #copom-root .fw-rd svg { width:100%; height:100%; display:block; }
+  #copom-root .fw-rd div { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #copom-root .fw-rd b { font-size:19px; color:var(--text); }
+  #copom-root .fw-rd span { font-size:11px; font-weight:600; max-width:58px; line-height:1.2; }
+  #copom-root .fw-rl { list-style:none; margin:0; padding:0; flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+  #copom-root .fw-rl li { white-space:nowrap; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2); }
+  #copom-root .fw-rl li i { flex:none; width:10px; height:10px; border-radius:50%; }
+  #copom-root .fw-rl li b { margin-left:auto; color:var(--text-2); font-weight:600; }
+  #copom-root .fw-rl li.top span, #copom-root .fw-rl li.top b { color:var(--text); font-weight:700; }
+  #copom-root .fw-tl { list-style:none; margin:0; padding:0; position:relative; }
+  #copom-root .fw-tl::before { content:''; position:absolute; left:6px; top:14px; bottom:14px; width:2px; background:var(--line); }
+  #copom-root .fw-tl li button { position:relative; width:100%; display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:8px; padding:8px 0 8px 22px; border:0; background:none; font:inherit; color:var(--text-2); cursor:pointer; text-align:left; }
+  #copom-root .fw-tl li button::before { content:''; position:absolute; left:1px; top:50%; width:8px; height:8px; margin-top:-6px; border-radius:50%; background:var(--surface-2); border:2px solid var(--text-3); }
+  #copom-root .fw-tl li.on button::before { background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+  #copom-root .fw-tl-d { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; }
+  #copom-root .fw-tl-b { font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--surface); border:1px solid var(--line); color:var(--text-2); white-space:nowrap; }
+  #copom-root .fw-tl-b.hoje { background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
+  #copom-root .fw-tl-x { font-size:11.5px; color:var(--text-3); text-align:right; line-height:1.3; }
+  #copom-root .fw-tl li.on .fw-tl-d { color:var(--accent-ink); }
+  #copom-root .fw-tl li button:hover .fw-tl-d { color:var(--accent-ink); }
+  #copom-root .fw-inf { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:6px; }
+  #copom-root .fw-inf button { display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 2px; border:1px solid transparent; border-radius:10px; background:none; font:inherit; font-size:10.5px; line-height:1.25; color:var(--text-2); text-align:center; cursor:pointer; }
+  #copom-root .fw-inf button span { width:40px; height:40px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; background:color-mix(in srgb, var(--c) 16%, transparent); color:var(--c); }
+  #copom-root .fw-inf button:hover, #copom-root .fw-inf button.on { border-color:var(--line); background:var(--surface); color:var(--text); }
+  #copom-root .fw-inf-infl { --c:#f87171; } #copom-root .fw-inf-exp { --c:#60a5fa; } #copom-root .fw-inf-cam { --c:#34d399; } #copom-root .fw-inf-fis { --c:#a78bfa; } #copom-root .fw-inf-ext { --c:#fbbf24; }
+  #copom-root .fw-inf-t { margin:0; font-size:12.5px; line-height:1.5; color:var(--text-3); min-height:38px; }
+  #copom-root .fw-inf-t b { color:var(--text); }
+  @container (max-width: 520px) {
+    #copom-root .fw-rosca { flex-direction:column; align-items:stretch; }
+    #copom-root .fw-rd { align-self:center; width:140px; height:140px; }
+    #copom-root .fw-ct-p strong { font-size:24px; }
+  }
+  /* a barra lateral fica ao lado só quando sobra espaço; senão desce para baixo da tabela */
+  @container (min-width: 1120px) {
+    #copom-root .fw-lay { grid-template-columns:minmax(0,1fr) 330px; align-items:start; }
+    #copom-root .fw-side { grid-template-columns:minmax(0,1fr); }
+    #copom-root .fw-side-c:not(:last-child) .fw-side-h > b { white-space:nowrap; }
+  }
+  #copom-root .fw-tl li button:disabled { cursor:default; opacity:.6; }
   @container (max-width: 900px) {
     #copom-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
     #copom-root .fw-bar { grid-template-columns:minmax(0,1fr) 60px; grid-template-areas:"l v" "t t" "c c"; gap:4px 10px; }
