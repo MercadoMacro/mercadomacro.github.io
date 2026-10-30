@@ -3,9 +3,9 @@
    e usa a cópia guardada só quando está sem internet.
    Bibliotecas de CDN com versão fixa e fontes: usa a cópia guardada e atualiza por trás.
    Dados (worker, Banco Central, GitHub etc.) não passam por aqui: o site já guarda os últimos valores. */
-const CACHE = 'mm-site-v193';
+const CACHE = 'mm-site-v194';
 const CDN = 'mm-cdn-v1';
-const BASE = ['./', 'index.html', 'passe.js?v=3', 'estilo.css?v=59', 'crypto-live.js?v=2', 'forex-live.js?v=7', 'crypto-live.css?v=2', 'feriados.js?v=2', 'app.js?v=126', 'ana-secoes.js?v=10', 'analise-avancada.js?v=1', 'ajustes.js?v=23', 'asset-history.js?v=4', 'asset-history.css?v=4', 'extras.js?v=23', 'asset-catalog.js?v=1', 'asset-search-core.js?v=2', 'asset-search.js?v=2', 'asset-search.css?v=2', 'cabecalho.js?v=2', 'noticias2.js?v=6', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=3', 'watchlists-core.js?v=1', 'watchlists-store.js?v=2', 'watchlists-ui.js?v=2', 'watchlists-ui.css?v=2', 'mesa-layout.js?v=2', 'mesa-layout.css?v=2', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=12', 'watchlist-table.css?v=8', 'conforto.css?v=2', '/vitrine/ajuda-conteudo.js?v=2', 'educacao-conteudo.js?v=4', 'educacao.js?v=3', 'plano-livre.js?v=2', 'abas-borda.js?v=1', 'assistente.js?v=7',
+const BASE = ['./', 'index.html', 'passe.js?v=3', 'estilo.css?v=59', 'crypto-live.js?v=2', 'forex-live.js?v=7', 'crypto-live.css?v=2', 'feriados.js?v=2', 'app.js?v=127', 'ana-secoes.js?v=10', 'analise-avancada.js?v=1', 'ajustes.js?v=23', 'asset-history.js?v=4', 'asset-history.css?v=4', 'extras.js?v=23', 'asset-catalog.js?v=1', 'asset-search-core.js?v=2', 'asset-search.js?v=2', 'asset-search.css?v=2', 'cabecalho.js?v=2', 'noticias2.js?v=6', 'topo-acoes.js?v=1', 'navegacao-mobile.js?v=3', 'watchlists-core.js?v=1', 'watchlists-store.js?v=2', 'watchlists-ui.js?v=2', 'watchlists-ui.css?v=2', 'mesa-layout.js?v=2', 'mesa-layout.css?v=2', 'watchlist-table-core.js?v=2', 'watchlist-table.js?v=12', 'watchlist-table.css?v=8', 'conforto.css?v=2', '/vitrine/ajuda-conteudo.js?v=2', 'educacao-conteudo.js?v=4', 'educacao.js?v=3', 'plano-livre.js?v=2', 'abas-borda.js?v=1', 'assistente.js?v=7',
   'icone-mercado-macro.png', 'icone-192.png', 'logo-mercado-macro.png', 'logo-mercado-macro-claro.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
