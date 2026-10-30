@@ -370,7 +370,9 @@
     // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
     const fc = root.querySelector('.fw-chips');
     const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); fc.parentElement.classList.toggle('cabe', fc.scrollWidth <= fc.clientWidth + 4); };
-    fc.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // só rola a barra de datas na horizontal (scrollIntoView também rolava a página para cima)
+    const on = fc.querySelector('.on');
+    if (on) { const a = fc.getBoundingClientRect(), b = on.getBoundingClientRect(); if (b.left < a.left || b.right > a.right) { fc.style.scrollBehavior = 'auto'; fc.scrollLeft += b.left < a.left ? b.left - a.left : b.right - a.right; fc.style.scrollBehavior = ''; } }
     fc.addEventListener('scroll', bordas, { passive: true });
     bordas();
     if (prefs.graf) {
