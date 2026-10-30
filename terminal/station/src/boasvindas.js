@@ -138,7 +138,7 @@ export async function apiBoasVindas(req, env, eu) {
   if (req.method === 'GET') {
     const t = await textos(env);
     if (new URL(req.url).searchParams.get('previa') === '1')
-      return html(montarBoasVindas(t, eu.nome, { plano: 'Mensal', valor: 'R$ 19,90', ate: new Date(Date.now() + 30 * 864e5).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }, t.canal).html);
+      return html(montarBoasVindas(t, eu.nome, { plano: 'Mensal', valor: 'R$ 22,90', ate: new Date(Date.now() + 30 * 864e5).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }, t.canal).html);
     return json({ assunto: t.assunto, texto: t.texto, padrao: t.assunto === BV_PADRAO.assunto && t.texto === BV_PADRAO.texto, auto: t.auto, ligado: t.ligado, ...(await contar()) });
   }
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
@@ -154,7 +154,7 @@ export async function apiBoasVindas(req, env, eu) {
   const t = await textos(env);
   if (!t.mail_key) return json({ erro: 'Ligue o e-mail (Resend) em Ajustes primeiro.' }, 409);
   if (b.acao === 'teste') {
-    const m = montarBoasVindas(t, eu.nome, { plano: 'Mensal', valor: 'R$ 19,90', ate: new Date(Date.now() + 30 * 864e5).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }, t.canal);
+    const m = montarBoasVindas(t, eu.nome, { plano: 'Mensal', valor: 'R$ 22,90', ate: new Date(Date.now() + 30 * 864e5).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }, t.canal);
     const r = await mandar(t.mail_key, eu.email, { ...m, assunto: '[Teste] ' + m.assunto });
     return r.ok ? json({ ok: true, para: eu.email }) : json({ erro: 'O Resend não enviou: ' + r.erro + '.' }, 502);
   }

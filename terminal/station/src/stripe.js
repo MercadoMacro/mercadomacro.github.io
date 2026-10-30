@@ -14,7 +14,7 @@ const API = 'https://api.stripe.com/v1/';
 const EVENTOS = ['checkout.session.completed', 'invoice.paid', 'invoice.payment_failed', 'customer.subscription.deleted'];
 const reais = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
 const dataBR = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
-// planos que renovam no cartão: os de meses (mensal, trimestral, semestral)
+// planos que renovam no cartão: os de meses que estão à venda (mensal, semestral, anual)
 const recorrente = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto);
 
 // corpo no formato do Stripe (application/x-www-form-urlencoded, com colchetes para objetos e listas)
@@ -64,7 +64,7 @@ export async function apiCartao(req, env, conta, acao) {
       return json({ url: s.url });
     }
     const b = await req.json().catch(() => ({}));
-    if (!recorrente(b.plano)) return json({ erro: 'Escolha o plano mensal, trimestral ou semestral.' }, 400);
+    if (!recorrente(b.plano)) return json({ erro: 'Escolha o plano mensal, semestral ou anual.' }, 400);
     if (u.stripe_assinatura) return json({ erro: 'Você já tem a renovação automática no cartão. Use "Gerenciar cartão" para trocar de plano ou cancelar.' }, 400);
     const p = PLANOS[b.plano];
     const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {

@@ -15,9 +15,11 @@ export const PLANOS = {
   // desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis (sem Pix); a degustação continua para quem nunca pagou
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
-  mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 1990 },
-  trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 5490 },
-  semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 9990 },
+  mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 2290 },
+  // trimestral saiu da lista em 30/10/2026 (oculto): pedidos antigos ainda podem ser pagos e aprovados
+  trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990, oculto: true },
+  semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 11990 },
+  anual: { nome: 'Anual', periodo: '12 meses', meses: 12, valor: 19990 },
 };
 export const GRATIS_DIAS = 1; // liberação grátis feita pelo administrador (era 3 até 26/10/2026; no /admin ele escolhe os dias)
 const AVISO_DIAS = 3; // e-mail de aviso antes de vencer
@@ -53,7 +55,7 @@ export async function garantirAssinatura(env) {
   const q = [];
   if (!cols.includes('expira')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN expira TEXT'));
   if (!cols.includes('aviso_venc')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN aviso_venc TEXT'));
-  // plano do acesso atual: cortesia, degustacao, mensal, trimestral, semestral, sem (sem validade) ou data (data escolhida)
+  // plano do acesso atual: cortesia, degustacao, mensal, trimestral, semestral, anual, sem (sem validade) ou data (data escolhida)
   if (!cols.includes('plano')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN plano TEXT'));
   // celular opcional (só números, com 55 e DDD), para o administrador avisar pelo WhatsApp
   if (!cols.includes('celular')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN celular TEXT'));
@@ -243,7 +245,7 @@ export async function apiAssinatura(req, env, conta, acao) {
       liberado: !!conta.admin || (conta.status === 'ativo' && (!conta.expira || conta.expira > new Date().toISOString())),
       pix: !!(await pixConfig(env)),
       ...(situacaoCartao ? await situacaoCartao(env, conta.id).catch(() => ({})) : {}),
-      planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, unico: !!p.unico })),
+      planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0, unico: !!p.unico })),
       pagamentos: pags,
     });
   }
@@ -268,7 +270,8 @@ export async function apiAssinatura(req, env, conta, acao) {
     const pix = await pixConfig(env);
     if (!pix) return json({ erro: 'O pagamento por Pix ainda não está disponível. Escreva para contato@mercadomacro.com.br.' }, 503);
     if (plano.unico && (await jaUsouDegustacao(env, conta.id))) return json({ erro: 'A degustação é só para quem ainda não assinou.' }, 400);
-    // um pedido em aberto por plano: escolher de novo mostra o mesmo QR Code
+    // um pedido em aberto por plano: escolher de novo mostra o mesmo QR Code; se o preço mudou, o pedido antigo vence e sai um novo
+    await env.DB.prepare(`UPDATE pagamentos SET status = 'vencido' WHERE usuario_id = ? AND plano = ? AND status = 'aguardando' AND valor != ?`).bind(conta.id, b.plano, plano.valor).run();
     let p = await env.DB.prepare(`SELECT id, plano, valor, status FROM pagamentos WHERE usuario_id = ? AND plano = ? AND status = 'aguardando'`).bind(conta.id, b.plano).first();
     if (!p) {
       const n = await env.DB.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE usuario_id = ? AND status = 'aguardando'`).bind(conta.id).first();
@@ -458,8 +461,8 @@ export async function apiAdminAssinatura(req, env, acao) {
 /* ---------------- planos na vitrine (montados aqui para os preços nunca ficarem diferentes) ---------------- */
 export function planosVitrine() {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
-  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Renove quando quiser', trimestral: 'Mais tempo, menos por mês', semestral: 'O menor preço por mês' };
-  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'semestral' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
+  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Renove quando quiser', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
+  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'anual' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.periodo} de acesso</span>${porMes(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
 /* ---------------- página /assinar ---------------- */
@@ -544,7 +547,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     else {
       h += '<h2>Planos</h2><div class="planos">' + j.planos.map(function(p){
         return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + esc(p.periodo) + ' de acesso</span>'
-          + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6))) + ' por mês') + '</span></button>';
+          + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.meses || 1))) + ' por mês') + '</span></button>';
       }).join('') + '</div><div id="pix"></div>';
       h += '<p class="nota">' + (j.cartao ? 'No cartão o plano renova sozinho todo período e você cancela quando quiser; no Pix o pagamento é único, sem renovação. ' : 'Pagamento único pelo Pix, sem renovação automática. ') + 'Quer parcelar? Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar: o banco parcela no seu cartão.</p>';
     }
@@ -557,7 +560,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
     if (escolhido) pedir(escolhido);
   }
-  function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral' }[id] || id; }
+  function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }[id] || id; }
   raiz.addEventListener('click', function(e){
     var b = e.target.closest('.pl'); if (!b) return;
     escolhido = b.dataset.p;
@@ -576,7 +579,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       };
       return;
     }
-    var cartao = dados.cartao && !dados.renovaCartao && ['mensal', 'trimestral', 'semestral'].indexOf(plano) > -1;
+    var cartao = dados.cartao && !dados.renovaCartao && ['mensal', 'semestral', 'anual'].indexOf(plano) > -1;
     box.innerHTML = (cartao ? '<div class="pix" style="display:block"><h3>Cartão de crédito, com renovação automática</h3><p>Você paga na página segura do Stripe e o plano renova sozinho a cada período. Cancele quando quiser, sem multa. O acesso é liberado assim que o pagamento é aprovado.</p>'
       + '<button type="button" class="bt" id="pagar-cartao">Pagar com cartão</button><p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div><h2>Ou pague com Pix</h2>' : '') + '<div id="pixq"><p class="nota">Gerando o Pix…</p></div>';
     if (cartao) document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };

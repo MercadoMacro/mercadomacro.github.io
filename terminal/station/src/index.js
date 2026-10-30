@@ -2199,7 +2199,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     if (!u.expira) return 'sem validade';
     return '<span class="' + (em7(u) ? 'venc' : '') + '">até ' + dia(u.expira) + '</span>';
   }
-  var NOMEP = { cortesia: 'Cortesia', gratis: 'Grátis 48h', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', sem: 'Sem validade', data: 'Data definida' };
+  var NOMEP = { cortesia: 'Cortesia', gratis: 'Grátis 48h', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual', sem: 'Sem validade', data: 'Data definida' };
   function plano(u){
     if (u.admin) return '—';
     if (u.plano) return NOMEP[u.plano] || u.plano;
@@ -2368,9 +2368,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   var OPC = [
     ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
     ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
-    ['mensal', 'Mensal', '1 mês', 1990, { meses: 1 }],
-    ['trimestral', 'Trimestral', '3 meses', 5490, { meses: 3 }],
-    ['semestral', 'Semestral', '6 meses', 9990, { meses: 6 }],
+    ['mensal', 'Mensal', '1 mês', 2290, { meses: 1 }],
+    ['semestral', 'Semestral', '6 meses', 11990, { meses: 6 }],
+    ['anual', 'Anual', '12 meses', 19990, { meses: 12 }],
     ['sem', 'Sem validade', 'não vence', 0, null],
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
   ];
@@ -2633,7 +2633,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
       st.innerHTML = (j.ligado
-        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar aparece o botão "Pagar com cartão" nos planos mensal, trimestral e semestral, com renovação automática. Assinantes no cartão agora: ' + j.assinantes + '.</p>'
+        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar aparece o botão "Pagar com cartão" nos planos mensal, semestral e anual, com renovação automática. Assinantes no cartão agora: ' + j.assinantes + '.</p>'
           + '<div class="linha"><input id="st-chave" aria-label="Trocar a chave do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="trocar a chave (sk_live_...)" style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Trocar</button><button type="button" id="st-off" style="' + bt + '">Desligar</button></div></div>'
         : '<div class="caixa"><p>Cole a chave secreta do Stripe (no painel do Stripe: Desenvolvedores, Chaves de API, "Chave secreta", começa com sk_live_ ou sk_test_ para testar). O site confere a chave e cria sozinho o aviso de pagamentos (webhook).</p>'
           + '<div class="linha"><input id="st-chave" aria-label="Chave secreta do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="sk_live_..." style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Salvar e conferir</button></div>'
@@ -2721,7 +2721,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 19,90, trimestral R$ 54,90 e semestral R$ 99,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 22,90, semestral R$ 119,90 e anual R$ 199,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
