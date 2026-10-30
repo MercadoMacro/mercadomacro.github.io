@@ -71,7 +71,7 @@ export async function apiCartao(req, env, conta, acao) {
       mode: 'subscription', locale: 'pt-BR',
       ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
       client_reference_id: String(u.id),
-      line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: plano ${p.nome}` } } }],
+      line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: plano ${p.nome}` } } }],
       metadata: { usuario_id: String(u.id), plano: b.plano },
       subscription_data: { metadata: { usuario_id: String(u.id), plano: b.plano } },
       success_url: SITE + '/assinar?cartao=ok', cancel_url: SITE + '/assinar',
