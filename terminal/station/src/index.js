@@ -1535,7 +1535,7 @@ async function irParaCanal(req, env, ctx, url) {
 // tela "cadastro enviado": os planos (os mesmos preços de /assinar) e se o canal está ligado (o convite só aparece com canal)
 async function previaCanal(env) {
   const c = await config(env);
-  const planos = Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
+  const planos = Object.entries(PLANOS).filter(([, p]) => !p.oculto && !p.soCartao).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
   return json({ canal: !!(c.tg_token && c.tg_canal), planos }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
 async function avisar(env, titulo, texto) {
@@ -2722,7 +2722,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, semestral R$ 149,90 e anual R$ 249,90 (no cartão: R$ 19,90, R$ 99,90 e R$ 179,90).</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), 1 mês R$ 29,90 e 6 meses R$ 149,90 (no cartão: R$ 19,90 e R$ 99,90; 12 meses só no cartão, R$ 179,90).</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
