@@ -150,9 +150,12 @@
   .ana-wrap[data-secao="cot"] .ana-extra > .market-section:not(#ana-sec-cot),
   .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f) { display:none !important; }
   /* seções no formato do Resumo semanal: cartão centralizado, título grande e margens fixas (28/10/2026) */
-  #analysis-panel .ana-wrap { width:100%; max-width:1180px; margin-left:auto; margin-right:auto; }
-  /* a Análise avançada é um painel com colunas lado a lado: usa mais largura */
-  #analysis-panel .ana-wrap[data-secao="mercado"] { max-width:1520px; }
+  /* todas as seções com a mesma largura (Severino, 30/10/2026: trocar de seção deixava a página torta).
+     A .ana-wrap é quem rola: fica com a largura toda, para a barra de rolagem ficar no canto da tela,
+     e o conteúdo é centralizado pelo espaçamento lateral. */
+  #analysis-panel .ana-wrap { --aw-larg:1520px; --aw-pad:24px; width:100%; max-width:none; margin:0;
+    padding-left:max(var(--aw-pad), calc((100% - var(--aw-larg)) / 2)); padding-right:max(var(--aw-pad), calc((100% - var(--aw-larg)) / 2)); }
+  @media (max-width: 640px) { #analysis-panel .ana-wrap { --aw-pad:12px; } }
   .ana-extra > .market-section { padding:20px 24px 22px; border:1px solid var(--line); border-radius:16px; background:radial-gradient(120% 160% at 0% 0%, var(--accent-soft), transparent 50%), var(--surface); }
   .ana-extra > .market-section > .market-section-head { border-bottom:0; padding-bottom:0; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
   .ana-extra > .market-section > .market-section-head .sec-icon { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--accent-line, var(--line)); color:var(--accent-ink); font-size:13px; }
@@ -172,7 +175,6 @@
   .pj-como-box p { margin:0 0 8px; }
   .pj-como-box button { display:inline-flex; align-items:center; gap:8px; margin-top:4px; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--text); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
   .pj-como-box button i { color:var(--accent-ink); }
-  #analysis-panel .ana-wrap[data-secao="fed"], #analysis-panel .ana-wrap[data-secao="copom"] { max-width:1440px; }
   @media (max-width: 640px) {
     #ana-sec-fed > .pj-head { flex-wrap:wrap; gap:10px 12px; }
     #ana-sec-fed > .pj-head .sec-icon { width:38px !important; height:38px !important; font-size:16px !important; }
