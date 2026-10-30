@@ -1144,6 +1144,17 @@ const rotas = async (request, env, ctx) => {
     // /minerio?m=dce: só Dalian (linha própria na aba Mercado, pedido do Severino 30/10/2026)
     if (path === '/minerio') {
       const erros = [], soDCE = url.searchParams.get('m') === 'dce';
+      // Dalian em dólar (pedido do Severino, 30/10/2026: "tem que ser tudo em dólares"):
+      // preço em yuan dividido pelo câmbio USD/CNY do Yahoo; a variação é a do contrato, em yuan
+      const dce = async (ultimo, variacao, fonte, data) => {
+        if (!soDCE) return json({ valor: ultimo, variacao, moeda: 'CNY', unidade: 't', mercado: 'DCE', fonte, data: data || null, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+        const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/CNY%3DX?interval=1d&range=1d', {
+          headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(8000), cf: { cacheTtl: 300, cacheEverything: true }
+        });
+        const cny = r.ok ? (await r.json())?.chart?.result?.[0]?.meta?.regularMarketPrice : null;
+        if (!(cny > 5 && cny < 10)) throw new Error('sem câmbio USD/CNY');
+        return json({ valor: +(ultimo / cny).toFixed(2), variacao, moeda: 'USD', unidade: 't', mercado: 'DCE', fonte: fonte + ' e Yahoo (câmbio)', valorCNY: ultimo, cambio: cny, data: data || null, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      };
       if (!soDCE) try {
         const r = await fetch('https://br.investing.com/commodities/iron-ore-62-cfr-futures', {
           headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'pt-BR,pt;q=0.9' },
@@ -1170,7 +1181,7 @@ const rotas = async (request, env, ctx) => {
         const ultimo = parseFloat(f[8]), ajusteAnt = parseFloat(f[10]);
         if (!(ultimo > 100 && ultimo < 5000)) throw new Error('resposta sem preço');
         const variacao = ajusteAnt > 0 ? +((ultimo / ajusteAnt - 1) * 100).toFixed(2) : null;
-        return json({ valor: ultimo, variacao, moeda: 'CNY', unidade: 't', mercado: 'DCE', fonte: 'Sina', data: f[17] || null, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+        return await dce(ultimo, variacao, 'Sina', f[17]);
       } catch (err) { erros.push('Sina: ' + err.message); }
       // reserva para Dalian: Eastmoney, contrato principal do minério (secid 114.im); f43 último, f60 ajuste anterior, f59 casas
       if (soDCE) try {
@@ -1183,7 +1194,7 @@ const rotas = async (request, env, ctx) => {
         const k = 10 ** (Number.isInteger(d.f59) ? d.f59 : 0), ultimo = d.f43 / k, ant = d.f60 / k;
         if (!(ultimo > 100 && ultimo < 5000)) throw new Error('resposta sem preço');
         const variacao = ant > 0 ? +((ultimo / ant - 1) * 100).toFixed(2) : null;
-        return json({ valor: ultimo, variacao, moeda: 'CNY', unidade: 't', mercado: 'DCE', fonte: 'Eastmoney', ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+        return await dce(ultimo, variacao, 'Eastmoney');
       } catch (err) { erros.push('Eastmoney: ' + err.message); }
       return json({ error: 'Minério falhou: ' + erros.join(' | ') }, 502, cors);
     }
