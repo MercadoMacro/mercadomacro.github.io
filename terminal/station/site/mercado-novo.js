@@ -60,7 +60,7 @@
     { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
     { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
     { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
-    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério (Cingapura)', 2], ['@minerio_dce', 'Minério (Dalian)', 1]],
+    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério (Cingapura)', 2], ['@minerio_dce', 'Minério (Dalian)', 2]],
       mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café (US¢/lb)', 2], ['ZS=F', 'Soja (US¢/bushel)', 2]] },
     { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['XRP-USD', 'Ripple', 4, 'US$ ']],
       mais: [['ADA-USD', 'Cardano', 4, 'US$ '], ['DOGE-USD', 'Dogecoin', 4, 'US$ ']] }
@@ -311,7 +311,7 @@
   const valor = (s) => { const i = INFO[s], q = atual(s); return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
   const linhaEsp = (r, l) => {
     const d = esp(l[0]), pctUnid = l[0] !== '@minerio' && l[0] !== '@minerio_dce';
-    const pre = !d || pctUnid ? '' : /yuan/i.test(d.note || '') ? '¥ ' : 'US$ ';
+    const pre = !d || pctUnid ? '' : 'US$ '; // minério sempre em dólar (Dalian convertido no servidor, 30/10/2026)
     const v = d ? `${pre}${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
     // Treasury 20 anos (FRED): variação em p.b., como as outras linhas de juros
     const pbFred = l[0] === '@fred' && d && ok(d.change) ? (d.value - d.value / (1 + d.change / 100)) * 100 : null;

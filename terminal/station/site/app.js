@@ -308,7 +308,9 @@ async function fetchMinerioDCE() {
   const r = await fetchT(`${CORS_PROXY}/minerio?m=dce`, {}, 12000);
   const j = await r.json();
   if (!r.ok || j.valor == null || !isFinite(j.valor)) throw new Error(j.error || 'HTTP ' + r.status);
-  return { value: j.valor, change: Number.isFinite(j.variacao) ? j.variacao : NaN, unit: '¥', note: 'Bolsa de Dalian (China), contrato principal, yuan por tonelada' };
+  if (j.moeda !== 'USD') throw new Error('sem preço em dólar');
+  const cny = Number.isFinite(j.valorCNY) ? ` (¥ ${j.valorCNY.toLocaleString('pt-BR')} a ${j.cambio.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} yuan por dólar)` : '';
+  return { value: j.valor, change: Number.isFinite(j.variacao) ? j.variacao : NaN, unit: 'US$', note: `Bolsa de Dalian (China), contrato principal, convertido para US$ por tonelada${cny}` };
 }
 // AwesomeAPI fica direto do navegador: ela recusa (HTTP 429) as chamadas vindas da Cloudflare.
 // Se ela falhar, a reserva é a Twelve Data pelo worker (/td).
@@ -4852,7 +4854,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=24';
+  sc.src = 'mercado-novo.js?v=25';
   document.body.appendChild(sc);
 })();
 /* =========================================================
