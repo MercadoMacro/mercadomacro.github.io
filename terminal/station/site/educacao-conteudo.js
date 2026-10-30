@@ -9,6 +9,9 @@
   const LIVRO_MVM = { titulo: 'TOP Mercado de Valores Mobiliários Brasileiro', url: CVM };
   const LIVRO_PFP = { titulo: 'TOP Planejamento Financeiro Pessoal', url: CVM };
   const LIVRO_AI = { titulo: 'TOP Análise de Investimentos', url: CVM };
+  const FONTE_IBGE = { titulo: 'IBGE', url: 'https://www.ibge.gov.br/', nota: 'Calendário de divulgações e notas técnicas de IPCA, PIB, indústria, varejo e desemprego.' };
+  const FONTE_BLS = { titulo: 'BLS (Bureau of Labor Statistics)', url: 'https://www.bls.gov/', nota: 'Órgão dos EUA que publica o payroll e o CPI, com o calendário de divulgações.' };
+  const FONTE_BCB = { titulo: 'Banco Central do Brasil', url: 'https://www.bcb.gov.br/', nota: 'Comunicados e atas do Copom, boletim Focus e IBC-Br.' };
   const GUIA_B3 = { titulo: 'Por Dentro da B3', url: 'https://edu.b3.com.br/', nota: 'Guia da B3, gratuito no B3 Educação.' };
 
   const trilhas = [
@@ -1192,6 +1195,251 @@ A B3 divulga o saldo de compras e vendas por tipo de investidor. Entradas fortes
           ],
           painel: { texto: 'Ver as moedas no Mercado', aba: 'market-panel' },
           livro: LIVRO_MVM,
+        },
+      ],
+    },
+    {
+      id: 'indicadores',
+      titulo: 'Indicadores econômicos',
+      nivel: 'Intermediário',
+      resumo: 'Como ler o calendário econômico: emprego, inflação, PIB, PMI, bancos centrais, balança comercial e os dados que mais mexem com juros, dólar e bolsa.',
+      licoes: [
+        {
+          id: 'ler-indicador',
+          termos: 'calendario economico consenso surpresa revisao preliminar final expectativa',
+          titulo: 'Como ler um indicador: consenso, surpresa e revisão',
+          minutos: 6,
+          abertura: 'Um dado bom pode derrubar a bolsa e um dado ruim pode animá-la. O que move o preço não é o número em si, mas a distância entre ele e o que o mercado esperava.',
+          texto: `## O calendário econômico
+Os principais indicadores saem em datas e horários marcados com antecedência. O calendário econômico reúne essas divulgações, com três números para cada uma:
+- **Anterior:** o resultado do período passado.
+- **Projeção (consenso):** a mediana das estimativas dos economistas consultados.
+- **Atual:** o número divulgado.
+
+## A surpresa
+O preço de um ativo já embute o consenso. Quando o dado sai em linha, a reação costuma ser pequena. Quando sai muito acima ou abaixo, o mercado precisa se reposicionar, e é aí que aparecem os movimentos fortes, muitas vezes nos primeiros minutos.
+
+Por isso, a mesma notícia pode ter efeitos opostos. Um dado de emprego muito forte é bom para a economia, mas pode derrubar a bolsa se fizer o mercado esperar juros mais altos por mais tempo.
+
+## Preliminar, revisado e final
+Muitos indicadores saem em mais de uma versão. A primeira estimativa, com dados incompletos, é a que mais mexe com o mercado. As revisões seguintes ajustam o número e às vezes mudam bastante a leitura, por isso vale olhar também como o período anterior foi revisado.
+
+## O que está por trás do número
+- **Tendência:** um mês isolado engana. Médias de três meses e o acumulado em 12 meses mostram a direção.
+- **Composição:** o número cheio pode esconder itens voláteis, como alimentos e energia na inflação.
+- **Contexto:** o mesmo dado pesa mais quando o banco central diz que está olhando para ele.
+
+> Exemplo hipotético: o consenso para a inflação mensal é 0,30% e sai 0,45%. As taxas de juros futuras sobem logo após a divulgação, porque o mercado passa a esperar um banco central mais duro. Se tivesse saído 0,30%, quase nada mudaria.`,
+          pontos: [
+            'O calendário mostra o dado anterior, o consenso e o resultado.',
+            'O preço já embute o consenso; o que move o mercado é a surpresa.',
+            'A primeira estimativa mexe mais; as revisões podem mudar a leitura.',
+            'Olhe tendência e composição, não só o número do mês.',
+          ],
+          quiz: [
+            { p: 'O que costuma provocar a maior reação do mercado?', o: ['Um dado em linha com o consenso', 'Um dado muito diferente do consenso', 'A data de divulgação'], c: 1, e: 'O preço já reflete o esperado; a surpresa obriga o reposicionamento.' },
+            { p: 'O "consenso" de um indicador é:', o: ['O resultado oficial', 'A mediana das projeções dos economistas', 'O dado do mês anterior'], c: 1, e: 'É a expectativa média do mercado antes da divulgação.' },
+            { p: 'Um dado de emprego muito forte pode derrubar a bolsa porque:', o: ['Indica recessão', 'Pode levar a juros mais altos por mais tempo', 'Nunca derruba'], c: 1, e: 'Juros mais altos pesam no valor das empresas.' },
+          ],
+          painel: { texto: 'Abrir o Calendário', aba: 'calendar-panel' },
+          livro: FONTE_BCB,
+        },
+        {
+          id: 'emprego',
+          termos: 'payroll nfp folha pagamento desemprego salario bls caged pnad',
+          titulo: 'Emprego: payroll, Caged e desemprego',
+          minutos: 7,
+          abertura: 'O mercado de trabalho mostra se as famílias têm renda para consumir. Nos EUA, o payroll é provavelmente o dado mensal mais aguardado do mundo.',
+          texto: `## Payroll (EUA)
+O relatório de emprego do BLS, o órgão de estatísticas do trabalho americano, sai em geral na primeira sexta-feira do mês, sobre o mês anterior. Ele traz três números que o mercado olha juntos:
+- **Vagas criadas fora da agricultura (nonfarm payroll):** quantos empregos foram abertos ou fechados.
+- **Taxa de desemprego:** vem de uma pesquisa separada, com as famílias.
+- **Salário médio por hora:** mostra a pressão do trabalho sobre a inflação.
+
+O relatório também revisa os dois meses anteriores, e essas revisões às vezes pesam tanto quanto o número novo.
+
+## Outros dados americanos
+- **Pedidos de seguro-desemprego:** saem toda quinta-feira e são o sinal mais rápido de demissões.
+- **Abertura de vagas (JOLTS):** mostra quantas vagas estão em aberto, um termômetro da demanda por trabalhadores.
+
+## No Brasil
+- **Caged:** o saldo de empregos com carteira assinada, divulgado pelo Ministério do Trabalho.
+- **PNAD Contínua:** a pesquisa do IBGE que calcula a taxa de desemprego, incluindo o trabalho informal, em trimestres móveis.
+
+## Como o mercado lê
+Emprego forte e salários subindo rápido sugerem consumo firme e inflação persistente, o que tende a adiar cortes de juros. Emprego fraco aponta para desaceleração e abre espaço para juros menores. A reação depende do que o banco central está priorizando no momento.
+
+> Exemplo hipotético: o consenso é de 150 mil vagas e saem 300 mil, com salários acima do esperado. Os juros dos títulos americanos sobem, o dólar se fortalece no mundo e as bolsas recuam com a perspectiva de juros altos por mais tempo.`,
+          pontos: [
+            'O payroll sai em geral na primeira sexta-feira do mês, com vagas, desemprego e salário.',
+            'Seguro-desemprego (semanal) e JOLTS completam o quadro nos EUA.',
+            'No Brasil: Caged para emprego formal e PNAD Contínua para o desemprego.',
+            'Emprego e salários fortes tendem a adiar cortes de juros.',
+          ],
+          quiz: [
+            { p: 'Quem divulga o payroll?', o: ['O Fed', 'O BLS, órgão de estatísticas do trabalho dos EUA', 'A bolsa de Nova York'], c: 1, e: 'O relatório de emprego é do Bureau of Labor Statistics.' },
+            { p: 'No Brasil, a taxa de desemprego vem:', o: ['Do Caged', 'Da PNAD Contínua, do IBGE', 'Do Banco Central'], c: 1, e: 'O Caged mede o saldo de empregos formais; a taxa de desemprego é da PNAD.' },
+            { p: 'Salários subindo muito acima do esperado tendem a:', o: ['Antecipar cortes de juros', 'Adiar cortes de juros', 'Não importar'], c: 1, e: 'Salário em alta pressiona a inflação de serviços.' },
+          ],
+          painel: { texto: 'Ver os dados dos EUA em Indicadores', aba: 'indicators-panel' },
+          livro: FONTE_BLS,
+        },
+        {
+          id: 'inflacao',
+          termos: 'cpi ipc pce ppi ipp ipca ipca-15 igp-m nucleo inflacao',
+          titulo: 'Inflação: CPI, PCE, IPCA e os núcleos',
+          minutos: 7,
+          abertura: 'Inflação é o dado que mais diretamente decide os juros. Vale saber qual índice cada banco central persegue e por que o mercado olha tanto para os núcleos.',
+          texto: `## EUA
+- **CPI (índice de preços ao consumidor):** sai todo mês pelo BLS. É o dado de inflação com maior impacto imediato no mercado.
+- **PCE:** outro índice de preços ao consumidor, com cesta e pesos diferentes. É sobre ele que o Fed define a meta de 2% ao ano.
+- **PPI (preços ao produtor):** mede os preços na porta da fábrica e no atacado. Pode antecipar pressões que chegam depois ao consumidor.
+
+## Brasil
+- **IPCA:** a inflação oficial, medida pelo IBGE. É sobre ele que o CMN fixa a meta que o Banco Central persegue.
+- **IPCA-15:** a mesma pesquisa, com coleta deslocada. Sai antes e funciona como uma prévia do IPCA.
+- **IGP-M:** índice da FGV que pesa muito os preços no atacado, como commodities e câmbio. É usado em contratos de aluguel e tarifas.
+
+## Cheio e núcleo
+O índice cheio inclui tudo. Os **núcleos** tiram ou suavizam os itens mais voláteis, como alimentos e energia, para mostrar a tendência de fundo. Uma alta de combustível pode passar; uma inflação de serviços espalhada tende a ficar. Por isso o banco central e o mercado dão muito peso aos núcleos.
+
+## Na hora da divulgação
+- Inflação acima do esperado: juros futuros sobem, a moeda local tende a se fortalecer e a bolsa costuma sofrer.
+- Abaixo do esperado: o contrário, com mais espaço para cortes.
+
+> Exemplo hipotético: o CPI cheio vem abaixo do esperado por causa de uma queda da gasolina, mas o núcleo vem acima. O mercado tende a dar mais peso ao núcleo, e a reação pode ser de juros em alta, mesmo com o número cheio "bom".`,
+          pontos: [
+            'EUA: CPI é o dado de maior impacto; o Fed mira 2% no PCE.',
+            'Brasil: IPCA é a inflação oficial; o IPCA-15 é a prévia.',
+            'Os núcleos tiram itens voláteis e mostram a tendência de fundo.',
+            'Inflação acima do esperado tende a levar os juros futuros para cima.',
+          ],
+          quiz: [
+            { p: 'Qual índice o Fed usa para a meta de 2%?', o: ['CPI', 'PCE', 'PPI'], c: 1, e: 'A meta do Fed é definida sobre o PCE.' },
+            { p: 'O IPCA-15 é:', o: ['Uma prévia do IPCA', 'A inflação do atacado', 'A meta de inflação'], c: 0, e: 'É a mesma pesquisa com coleta deslocada, divulgada antes.' },
+            { p: 'Por que olhar o núcleo da inflação?', o: ['Porque inclui só alimentos', 'Porque mostra a tendência sem os itens mais voláteis', 'Porque sai antes'], c: 1, e: 'Ele tira ou suaviza itens como alimentos e energia.' },
+          ],
+          painel: { texto: 'Ver a inflação em Indicadores', aba: 'indicators-panel' },
+          livro: FONTE_IBGE,
+        },
+        {
+          id: 'atividade',
+          termos: 'pib gdp pmi ism producao industrial varejo vendas ibc-br atividade',
+          titulo: 'Atividade: PIB, PMI, indústria e varejo',
+          minutos: 7,
+          abertura: 'O PIB conta a história completa, mas chega tarde. Os dados mensais e as pesquisas com empresas mostram antes para onde a economia está indo.',
+          texto: `## PIB
+O PIB soma o valor de tudo o que a economia produz num período. Sai por trimestre e com atraso, então serve mais para confirmar uma tendência do que para antecipá-la.
+- **Nos EUA**, sai primeiro uma estimativa antecipada, depois duas revisões. A primeira é a que mais mexe com o mercado.
+- **No Brasil**, o IBGE divulga o PIB trimestral. O Banco Central publica todo mês o **IBC-Br**, usado como uma prévia da atividade.
+- **Na zona do euro**, Alemanha e França costumam divulgar antes do dado do bloco, e o mercado já ajusta a expectativa com eles.
+
+## PMI e ISM
+São pesquisas mensais com gestores de compras de empresas da indústria e dos serviços. A leitura é simples:
+- **Acima de 50:** a maioria vê expansão.
+- **Abaixo de 50:** a maioria vê contração.
+
+Como saem logo no início do mês seguinte e olham para a frente, estão entre os primeiros sinais de mudança no ciclo.
+
+## Indústria e varejo
+- **Produção industrial:** mede o volume produzido por fábricas, minas e empresas de energia.
+- **Vendas no varejo:** mostram o consumo das famílias, que é a maior parte da economia nos EUA e no Brasil.
+- **Encomendas de bens duráveis (EUA):** pedidos de itens feitos para durar anos, como máquinas, carros e aviões. Costuma-se olhar o número sem transporte, porque os pedidos de aviões oscilam muito.
+
+## Como o mercado lê
+Atividade forte ajuda o lucro das empresas, mas pode pressionar a inflação e os juros. Atividade fraca reduz a pressão sobre os preços, mas aumenta o risco de recessão. O efeito final depende do momento do ciclo.
+
+> Exemplo hipotético: o PMI da indústria sai a 47 depois de três meses acima de 50. É sinal de que o setor passou a encolher, antes de isso aparecer na produção industrial e no PIB.`,
+          pontos: [
+            'O PIB é trimestral e chega tarde; a primeira estimativa mexe mais.',
+            'IBC-Br é a prévia mensal da atividade no Brasil.',
+            'PMI acima de 50 indica expansão; abaixo, contração.',
+            'Indústria, varejo e bens duráveis mostram o ciclo mês a mês.',
+          ],
+          quiz: [
+            { p: 'Um PMI de 46 indica:', o: ['Expansão', 'Contração', 'Inflação alta'], c: 1, e: 'Abaixo de 50, a maioria dos gestores vê contração.' },
+            { p: 'Qual dado do Banco Central funciona como prévia mensal do PIB?', o: ['IBC-Br', 'IPCA', 'Caged'], c: 0, e: 'O IBC-Br é o índice de atividade econômica do Banco Central.' },
+            { p: 'Nas encomendas de bens duráveis, por que olhar o número sem transporte?', o: ['Porque os pedidos de aviões oscilam muito', 'Porque transporte não é bem durável', 'Porque é proibido'], c: 0, e: 'Poucos pedidos de aviões mudam muito o número cheio.' },
+          ],
+          painel: { texto: 'Ver a atividade em Indicadores', aba: 'indicators-panel' },
+          livro: FONTE_IBGE,
+        },
+        {
+          id: 'bancos-centrais',
+          termos: 'banco central bce ecb fed copom discurso comunicado ata draghi refinanciamento',
+          titulo: 'Bancos centrais: decisões, comunicados e discursos',
+          minutos: 7,
+          abertura: 'Uma frase de um presidente de banco central pode mexer mais com o mercado do que um mês inteiro de dados. Entender a comunicação deles é parte do trabalho.',
+          texto: `## Os três que mais importam para nós
+- **Fed (EUA):** decide a faixa dos fed funds em oito reuniões por ano. Tem um mandato duplo: preços estáveis e emprego máximo.
+- **BCE (zona do euro):** decide as taxas do euro, entre elas a taxa de depósito e a taxa das operações principais de refinanciamento, que é o custo do dinheiro emprestado aos bancos. Também se reúne cerca de oito vezes por ano, com entrevista coletiva logo depois.
+- **Copom (Brasil):** decide a meta da Selic em oito reuniões por ano, com comunicado no dia e ata na semana seguinte.
+
+## O que mexe com o mercado
+- **A decisão:** quase sempre já está no preço.
+- **O comunicado e a coletiva:** o tom indica os próximos passos. Palavras novas ou retiradas são lidas com lupa.
+- **Atas e projeções:** mostram o raciocínio e as estimativas do comitê.
+- **Discursos:** entre as reuniões, falas de diretores e presidentes ajustam as expectativas.
+
+## O poder das palavras
+Em julho de 2012, no auge da crise da dívida na zona do euro, o então presidente do BCE, Mario Draghi, disse em Londres que faria "o que fosse preciso" para preservar o euro. A frase, sem nenhuma medida concreta no dia, derrubou os juros dos títulos de países como Espanha e Itália e virou um marco da crise. Mostra como a credibilidade de um banco central é, por si só, um instrumento.
+
+## Duro ou brando
+- **Hawkish (duro):** preocupação com inflação, viés de juros altos. Tende a fortalecer a moeda.
+- **Dovish (brando):** foco em crescimento, espaço para cortes. Tende a enfraquecer a moeda e ajudar a bolsa.
+
+> Exemplo hipotético: o BCE mantém as taxas, como esperado, mas a presidente diz na coletiva que os cortes "não estão em discussão". O euro sobe e as bolsas europeias recuam, sem nenhuma mudança nos juros naquele dia.`,
+          pontos: [
+            'Fed, BCE e Copom se reúnem cerca de oito vezes por ano.',
+            'A decisão costuma estar no preço; comunicado, coletiva e ata movem o mercado.',
+            'Discursos entre reuniões ajustam as expectativas.',
+            'Tom duro tende a fortalecer a moeda; tom brando, a enfraquecê-la.',
+          ],
+          quiz: [
+            { p: 'Qual é o mandato do Fed?', o: ['Só inflação', 'Preços estáveis e emprego máximo', 'Câmbio fixo'], c: 1, e: 'O Fed tem mandato duplo.' },
+            { p: 'Um comunicado "hawkish" sugere:', o: ['Viés de juros mais altos', 'Cortes rápidos', 'Nenhuma mudança'], c: 0, e: 'Hawkish é o tom duro, preocupado com a inflação.' },
+            { p: 'Por que a frase de Draghi em 2012 mexeu tanto com o mercado?', o: ['Porque anunciou um corte de juros', 'Porque a credibilidade do BCE mudou as expectativas', 'Porque foi feriado'], c: 1, e: 'Sem medida concreta no dia, a promessa bastou para derrubar os juros dos países em crise.' },
+          ],
+          painel: { texto: 'Ver as probabilidades em Análises', aba: 'analysis-panel' },
+          livro: FONTE_BCB,
+        },
+        {
+          id: 'comercio-imoveis-choques',
+          termos: 'balanca comercial exportacao importacao imoveis licencas construcao vendas casas geopolitica guerra petroleo desastre',
+          titulo: 'Balança comercial, imóveis e choques geopolíticos',
+          minutos: 7,
+          abertura: 'Nem tudo que move o mercado está no calendário. Além dos dados de comércio e de imóveis, guerras e desastres podem mudar preços de uma hora para outra.',
+          texto: `## Balança comercial
+É a diferença entre o que um país exporta e o que importa. Um **superávit** significa mais dólares entrando, o que tende a apoiar a moeda; um **déficit**, mais dólares saindo. No Brasil, o resultado depende muito do preço das commodities, como petróleo, minério e soja. Nos EUA, o déficit é estrutural, e o mercado olha mais as mudanças do que o nível.
+
+## Setor imobiliário (EUA)
+O mercado imobiliário americano reage rápido aos juros das hipotecas e puxa vários outros setores, como construção, móveis e crédito.
+- **Licenças de construção:** autorizações para novas obras. São um indicador antecedente: a licença vem antes do canteiro.
+- **Início de construções:** obras efetivamente iniciadas.
+- **Vendas de imóveis usados:** a maior parte das vendas de casas nos EUA. Mostram o apetite das famílias e o efeito dos juros.
+
+## Choques geopolíticos
+- **Guerras e conflitos:** em regiões produtoras de petróleo, a simples ameaça de interrupção da oferta pode fazer o preço subir. Ações de defesa e de energia tendem a se beneficiar; bolsas em geral sofrem com a aversão a risco, e o dinheiro procura dólar, ouro e títulos americanos.
+- **Desastres:** destroem infraestrutura, interrompem produção e podem atingir duramente as empresas envolvidas. Em 2010, a explosão da plataforma Deepwater Horizon, operada para a BP no Golfo do México, causou um grande vazamento de petróleo, derrubou as ações da empresa e afetou a economia de toda a costa.
+- **Sanções e tarifas:** mudam o fluxo de comércio e o preço de commodities e moedas.
+
+## Como lidar
+Esses eventos não têm data marcada. O que dá para fazer é conhecer a exposição da sua carteira (petróleo, câmbio, um único país ou setor) e não concentrar demais num risco só.
+
+> Exemplo hipotético: um conflito ameaça uma rota de petroleiros. O petróleo sobe 8% no dia, as ações de petroleiras sobem, as de companhias aéreas caem e o dólar se fortalece contra moedas de países importadores de petróleo.`,
+          pontos: [
+            'Superávit comercial tende a apoiar a moeda; déficit, a pressioná-la.',
+            'Licenças de construção antecipam o setor imobiliário americano.',
+            'Guerras e desastres mexem com petróleo, setores específicos e aversão a risco.',
+            'Sem data marcada: a defesa é conhecer a exposição e diversificar.',
+          ],
+          quiz: [
+            { p: 'Um superávit comercial significa:', o: ['Mais importações que exportações', 'Mais exportações que importações', 'Inflação alta'], c: 1, e: 'O país vende mais do que compra do exterior.' },
+            { p: 'Por que as licenças de construção são um indicador antecedente?', o: ['Porque vêm antes do início das obras', 'Porque saem uma vez por ano', 'Porque medem preços'], c: 0, e: 'A licença precede a obra e o emprego que ela gera.' },
+            { p: 'Num conflito em região produtora de petróleo, o que tende a acontecer?', o: ['Petróleo cai', 'Petróleo sobe e aumenta a aversão a risco', 'Nada muda'], c: 1, e: 'A ameaça à oferta pressiona o preço e o dinheiro busca proteção.' },
+          ],
+          painel: { texto: 'Ver a balança em Indicadores', aba: 'indicators-panel' },
+          livro: FONTE_IBGE,
         },
       ],
     },
