@@ -17,6 +17,9 @@ import { paginaBalanca } from './balanca-publica.js';
 const COOKIE = 'mm_s';
 const SESSAO_DIAS = 90;
 const SESSAO_DIAS_ADMIN = 30; // conta de administrador: sessão mais curta (auditoria de 28/10/2026)
+// cada conta fica aberta em até 2 aparelhos; o 3º login encerra a sessão mais antiga (30/10/2026, contra senha dividida)
+const LIMITE_APARELHOS = 2;
+const ALERTA_TROCAS = 4; // trocas de aparelho em 7 dias que aparecem no /admin como possível senha dividida
 const ITER = 30000;
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
 const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
@@ -124,6 +127,12 @@ export default {
         if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
       }
       if (!u && conta) return navegacao(req) ? redirect('/assinar') : json({ erro: 'Seu acesso não está ativo.', assinar: true }, 403);
+      if (!u && (await foiDerrubada(req, env))) {
+        // a conta entrou em outro aparelho e esta sessão foi encerrada: volta ao login com o aviso
+        const limpa = cookieSessao('', 0);
+        if (navegacao(req)) return new Response(null, { status: 302, headers: { Location: '/entrar?aparelho=1', 'Cache-Control': 'no-store', 'Set-Cookie': limpa } });
+        return json({ erro: 'Sua conta foi aberta em outro aparelho. Entre de novo.', codigo: 'aparelho' }, 401, { 'X-MM-Sessao': 'aparelho', 'Set-Cookie': limpa });
+      }
       if (!u) {
         // a página inicial mostra a vitrine para quem não entrou (e para o Google), sem redirecionar
         if ((p === '/' || p === '/index.html') && navegacao(req)) { contar(env, ctx, req, 'vitrine'); return paginaEntrar(req, env, true); }
@@ -791,6 +800,34 @@ async function usuarioDaSessao(req, env) {
 }
 // plano grátis de 48 horas: só Mesa, Notícias e Educação; o Gemini fica para quem assina
 const soGratis = (u) => !!u && !u.admin && u.plano === 'gratis' && !!u.expira;
+// sessões encerradas por login em outro aparelho: guardadas 30 dias para avisar quem caiu e contar as trocas no /admin
+let derrubadasOk = false;
+async function garantirDerrubadas(env) {
+  if (derrubadasOk) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS sessoes_derrubadas (token TEXT PRIMARY KEY, usuario_id INTEGER NOT NULL, quando INTEGER NOT NULL)').run();
+  derrubadasOk = true;
+}
+async function limitarAparelhos(env, uid) {
+  await garantirDerrubadas(env);
+  // a sessão mais antiga é a que vence primeiro (todas da conta duram o mesmo tanto)
+  const velhas = (await env.DB.prepare('SELECT token FROM sessoes WHERE usuario_id = ? ORDER BY expira DESC LIMIT -1 OFFSET ?').bind(uid, LIMITE_APARELHOS).all()).results;
+  if (!velhas.length) return 0;
+  const agora = Date.now();
+  await env.DB.batch([
+    ...velhas.map((v) => env.DB.prepare('INSERT OR REPLACE INTO sessoes_derrubadas (token, usuario_id, quando) VALUES (?, ?, ?)').bind(v.token, uid, agora)),
+    ...velhas.map((v) => env.DB.prepare('DELETE FROM sessoes WHERE token = ?').bind(v.token)),
+    env.DB.prepare('DELETE FROM sessoes_derrubadas WHERE quando < ?').bind(agora - 30 * 864e5),
+  ]);
+  cacheSessao.clear();
+  await registrar(env, uid, `Entrou em outro aparelho: ${velhas.length === 1 ? 'a sessão mais antiga foi encerrada' : velhas.length + ' sessões antigas foram encerradas'} (limite de ${LIMITE_APARELHOS} aparelhos)`);
+  return velhas.length;
+}
+async function foiDerrubada(req, env) {
+  const tok = lerCookie(req);
+  if (!tok) return false;
+  await garantirDerrubadas(env);
+  return !!(await env.DB.prepare('SELECT 1 FROM sessoes_derrubadas WHERE token = ?').bind(await sha256hex(tok)).first());
+}
 function cookieSessao(tok, maxAge) {
   return `${COOKIE}=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 }
@@ -1058,6 +1095,7 @@ async function apiAuth(req, env, acao, ctx) {
       env.DB.prepare('INSERT INTO sessoes (token, usuario_id, expira) VALUES (?, ?, ?)').bind(await sha256hex(tok), u.id, agora + dias * 864e5),
       env.DB.prepare('UPDATE usuarios SET ultimo_acesso = ? WHERE id = ?').bind(new Date().toISOString(), u.id),
     ]);
+    if (!u.admin) await limitarAparelhos(env, u.id).catch(() => 0);
     return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao(tok, dias * 86400) });
   }
   return json({ erro: 'Não encontrado.' }, 404);
@@ -1126,11 +1164,13 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
+    await garantirDerrubadas(env);
     const r = await env.DB.prepare(
       `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.expira,
-        COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano
-        FROM usuarios u ORDER BY u.criado DESC`).all();
-    return json({ eu: eu.id, usuarios: r.results });
+        COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano,
+        (SELECT COUNT(*) FROM sessoes_derrubadas d WHERE d.usuario_id = u.id AND d.quando > ?) trocas
+        FROM usuarios u ORDER BY u.criado DESC`).bind(Date.now() - 7 * 864e5).all();
+    return json({ eu: eu.id, usuarios: r.results, alertaTrocas: ALERTA_TROCAS });
   }
   if (acao === 'decidir' && req.method === 'POST') {
     if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
@@ -2166,7 +2206,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     bloqueado: [['liberar','Liberar de novo','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']]
   };
-  var US = [], PG = [], MES = null, filtro = 'todos';
+  var US = [], PG = [], MES = null, filtro = 'todos', ALERTA = 4;
   var SIT = { pendente: 'Sem plano', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
   var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
   var agora = function(){ return new Date().toISOString(); };
@@ -2252,10 +2292,13 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       + k('pagamentos', 'Recebido no mês', MES ? reais(rec) : '—', nrec + ' aprovado(s)')
       + k('pessoas:todos', 'Cadastros na semana', novos, US.length + ' no total');
     // desde 26/10/2026 não há liberação grátis: quem pede acesso escolhe um plano, e aqui fica só o Pix para conferir
-    document.getElementById('acao').innerHTML = env.length ? '<div class="lista">'
+    // contas que trocam muito de aparelho (o 3º login derruba o mais antigo): possível senha dividida
+    var dividem = US.filter(function(u){ return (u.trocas || 0) >= ALERTA; }).sort(function(a, b){ return b.trocas - a.trocas; });
+    document.getElementById('acao').innerHTML = env.length || dividem.length ? '<div class="lista">'
       + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
+      + dividem.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Possível senha dividida · ' + u.trocas + ' trocas de aparelho em 7 dias</div></div><div class="bts"><button type="button" class="lib" data-h="' + u.id + '">Ver histórico</button></div></div>'; }).join('')
       + '</div>'
-      : '<p class="vazio">Nenhum Pix para conferir. Tudo em dia.</p>';
+      : '<p class="vazio">Nenhum Pix para conferir e nenhuma conta suspeita de senha dividida. Tudo em dia.</p>';
     document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
     document.getElementById('cnt-pessoas').textContent = '';
     document.getElementById('cnt-pag').textContent = env.length || '';
@@ -2306,7 +2349,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function carregar(){
     funil(); origens();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
-      eu = j.eu; US = j.usuarios;
+      eu = j.eu; US = j.usuarios; ALERTA = j.alertaTrocas || 4;
       // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)
       US.forEach(function(u){ if (u.status === 'ativo' && !u.admin && u.expira && u.expira <= agora()) u.status = 'expirado'; });
       pessoas(); geral();

@@ -13,7 +13,7 @@
   async function buscar() {
     try {
       const r = await fetch('/api/passe', { credentials: 'same-origin', cache: 'no-store' });
-      if (!r.ok) return null;
+      if (!r.ok) { caiu(r); return null; }
       const j = await r.json();
       if (!j || typeof j.passe !== 'string' || !j.exp) return null;
       passe = j.passe; exp = j.exp;
@@ -32,9 +32,14 @@
   const esperar = () => Promise.race([garantir(), new Promise((r) => setTimeout(r, 3000))]).catch(() => null);
   const urlDe = (input) => (typeof input === 'string' ? input : input instanceof URL ? input.href : input && input.url) || '';
   const original = window.fetch.bind(window);
+  // a conta entrou em um 3º aparelho e esta sessão foi encerrada (30/10/2026): vai para o login com o aviso
+  function caiu(r) {
+    if (r && r.status === 401 && r.headers.get('X-MM-Sessao') === 'aparelho' && !caiu.foi) { caiu.foi = true; location.replace('/entrar?aparelho=1'); }
+    return r;
+  }
   window.fetch = function (input, init) {
     const url = urlDe(input);
-    if (!url.startsWith(DADOS)) return original(input, init);
+    if (!url.startsWith(DADOS)) return original(input, init).then(caiu);
     const comPasse = () => {
       if (!valido()) return original(input, init);
       const u = new URL(url);
