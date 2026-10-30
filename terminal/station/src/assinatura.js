@@ -21,7 +21,8 @@ export const PLANOS = {
   // trimestral saiu da lista em 30/10/2026 (oculto): pedidos antigos ainda podem ser pagos e aprovados
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990, oculto: true },
   semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 14990, valorCartao: 9990 },
-  anual: { nome: '12 meses', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990 },
+  // 12 meses só no cartão (30/10/2026): no Pix o desconto ficava grande demais; valor fica para 'pagamento por fora' no /admin
+  anual: { nome: '12 meses', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990, soCartao: true },
 };
 export const GRATIS_DIAS = 1; // liberação grátis feita pelo administrador (era 3 até 26/10/2026; no /admin ele escolhe os dias)
 const AVISO_DIAS = 3; // e-mail de aviso antes de vencer
@@ -242,12 +243,13 @@ export async function apiAssinatura(req, env, conta, acao) {
     const pags = (await env.DB.prepare('SELECT id, plano, valor, status, criado, enviado, decidido, validade FROM pagamentos WHERE usuario_id = ? ORDER BY id DESC LIMIT 20').bind(conta.id).all()).results;
     const deg = await jaUsouDegustacao(env, conta.id);
     const gratis = await podeGratis(env, conta);
+    const sit = situacaoCartao ? await situacaoCartao(env, conta.id).catch(() => ({})) : {};
     return json({
       nome: conta.nome, status: conta.status, expira: conta.expira, admin: !!conta.admin,
       liberado: !!conta.admin || (conta.status === 'ativo' && (!conta.expira || conta.expira > new Date().toISOString())),
       pix: !!(await pixConfig(env)),
-      ...(situacaoCartao ? await situacaoCartao(env, conta.id).catch(() => ({})) : {}),
-      planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, valorCartao: p.valorCartao || null, meses: p.meses || 0, unico: !!p.unico })),
+      ...sit,
+      planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && !(p.soCartao && !sit.cartao) && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, valorCartao: p.valorCartao || null, meses: p.meses || 0, unico: !!p.unico, soCartao: !!p.soCartao })),
       pagamentos: pags,
     });
   }
@@ -269,6 +271,7 @@ export async function apiAssinatura(req, env, conta, acao) {
     const b = await req.json().catch(() => ({}));
     const plano = PLANOS[b.plano];
     if (!plano || plano.oculto || plano.gratis) return json({ erro: 'Plano inválido.' }, 400);
+    if (plano.soCartao) return json({ erro: 'O plano de 12 meses é só no cartão.' }, 400);
     const pix = await pixConfig(env);
     if (!pix) return json({ erro: 'O pagamento por Pix ainda não está disponível. Escreva para contato@mercadomacro.com.br.' }, 503);
     if (plano.unico && (await jaUsouDegustacao(env, conta.id))) return json({ erro: 'A degustação é só para quem ainda não assinou.' }, 400);
@@ -466,7 +469,11 @@ export function planosVitrine(cartao = false) {
   // com o cartão ligado, cada plano mostra também o preço no cartão (renovação automática)
   const noCartao = (p) => (cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, renova sozinho</small>` : '');
   const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Para experimentar', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
-  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'anual' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
+  // plano só no cartão: aparece só com o Stripe ligado, com o preço do cartão no lugar do Pix
+  const soCartao = (p) => ({ ...p, valor: p.valorCartao });
+  return Object.entries(PLANOS).filter(([, p]) => !p.oculto && !(p.soCartao && !cartao)).map(([id, p]) => p.soCartao
+    ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>Só no cartão, renova sozinho</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
+    : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
 /* ---------------- página /assinar ---------------- */
@@ -551,6 +558,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
     else {
       h += '<h2>Planos</h2><div class="planos">' + j.planos.map(function(p){
+        if (p.soCartao) return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + reais(p.valorCartao) + '</span><span class="p">só no cartão, renova sozinho</span><span class="m">' + reais(Math.round(p.valorCartao / p.meses)) + ' por mês</span></button>';
         return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + (p.meses && !p.unico ? 'pagamento único no Pix' : esc(p.periodo) + ' de acesso') + '</span>'
           + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.meses || 1))) + ' por mês') + '</span>'
           + (j.cartao && p.valorCartao ? '<span class="cc2">No cartão: <b>' + reais(p.valorCartao) + '</b></span>' : '') + '</button>';
@@ -587,9 +595,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     }
     var pl = dados.planos.filter(function(x){ return x.id === plano; })[0] || {};
     var cartao = dados.cartao && !dados.renovaCartao && !!pl.valorCartao;
-    box.innerHTML = (cartao ? '<div class="pix" style="display:block"><h3>Cartão de crédito: ' + reais(pl.valorCartao) + (pl.meses > 1 ? ' a cada ' + pl.meses + ' meses' : ' por mês') + '</h3><p><b>Mais barato que no Pix</b> (' + reais(pl.valor) + '). Você paga na página segura do Stripe e o plano renova sozinho, pelo mesmo valor, a cada período. Cancele quando quiser, sem multa. O acesso é liberado assim que o pagamento é aprovado.</p>'
-      + '<button type="button" class="bt" id="pagar-cartao">Pagar com cartão</button><p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div><h2>Ou pague com Pix</h2>' : '') + '<div id="pixq"><p class="nota">Gerando o Pix…</p></div>';
+    if (pl.soCartao && !cartao) { box.innerHTML = '<div class="pix" style="display:block"><h3>12 meses só no cartão</h3><p>' + (dados.renovaCartao ? 'Você já tem a renovação automática no cartão ligada. Para trocar de plano, cancele a atual em "Trocar cartão ou cancelar" e assine de novo.' : 'O pagamento com cartão não está disponível agora. Escolha outro plano.') + '</p></div>'; return; }
+    box.innerHTML = (cartao ? '<div class="pix" style="display:block"><h3>Cartão de crédito: ' + reais(pl.valorCartao) + (pl.meses > 1 ? ' a cada ' + pl.meses + ' meses' : ' por mês') + '</h3><p>' + (pl.soCartao ? '' : '<b>Mais barato que no Pix</b> (' + reais(pl.valor) + '). ') + 'Você paga na página segura do Stripe e o plano renova sozinho, pelo mesmo valor, a cada período. Cancele quando quiser, sem multa. O acesso é liberado assim que o pagamento é aprovado.</p>'
+      + '<button type="button" class="bt" id="pagar-cartao">Pagar com cartão</button><p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div>' + (pl.soCartao ? '' : '<h2>Ou pague com Pix</h2>') : '') + (pl.soCartao ? '' : '<div id="pixq"><p class="nota">Gerando o Pix…</p></div>');
     if (cartao) document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };
+    if (pl.soCartao) return;
     box = document.getElementById('pixq');
     api('/api/assinatura/pedido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano }) }).then(function(p){
       box.innerHTML = '<div class="pix"><div class="qr">' + p.svg + '</div><div><h3>' + esc(nomePlano(p.plano)) + ': ' + reais(p.valor) + '</h3>'
