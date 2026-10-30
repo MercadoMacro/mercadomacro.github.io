@@ -711,6 +711,14 @@
   const CALL_L = 'ABCDEFGHIJKL', PUT_L = 'MNOPQRSTUVWX';
   // vencimento das opções de ações na B3: terceira sexta-feira do mês
   function thirdFriday(y, m) { const d = new Date(y, m, 1); const add = (5 - d.getDay() + 7) % 7; return new Date(y, m, 1 + add + 14); }
+  // feriado da B3 na sexta: o vencimento passa para o dia útil anterior (ex.: 20/11, Consciência Negra)
+  const isoDia = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  function vencimentoB3(y, m) {
+    const d = thirdFriday(y, m);
+    const fer = (x) => { const f = window.MMFeriados && window.MMFeriados.b3(isoDia(x)); return f && !f.abre; };
+    while (d.getDay() === 0 || d.getDay() === 6 || fer(d)) d.setDate(d.getDate() - 1);
+    return d;
+  }
   let decodeIn = 'PETRK400';
   function decode(code) {
     const c = String(code || '').trim().toUpperCase();
@@ -726,7 +734,7 @@
     const vencs = [];
     for (let i = 0; vencs.length < 12 && i < 14; i++) {
       const y = now.getFullYear() + Math.floor((now.getMonth() + i) / 12), m = (now.getMonth() + i) % 12;
-      const d = thirdFriday(y, m);
+      const d = vencimentoB3(y, m);
       if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) vencs.push(d);
     }
     const dd = decode(decodeIn);
@@ -1067,10 +1075,11 @@
   .opt-tbl th { text-align:left; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); padding:0 6px 7px; white-space:nowrap; border-bottom:1px solid var(--line); }
   .opt-tbl td { padding:6px; border-bottom:1px solid var(--line); vertical-align:middle; white-space:nowrap; }
   .opt-tbl tr:last-child td { border-bottom:0; }
-  #opt-legs input, #opt-legs select { width:78px; height:30px; padding:0 8px; border:1px solid var(--line) !important; border-radius:8px !important; background:var(--surface-2) !important; color:var(--text); font-family:var(--mono); font-size:12.5px; outline:none; }
-  #opt-legs select { width:86px; font-family:inherit; }
+  #opt-legs input, #opt-legs select { width:66px; height:30px; padding:0 6px; border:1px solid var(--line) !important; border-radius:8px !important; background:var(--surface-2) !important; color:var(--text); font-family:var(--mono); font-size:12.5px; outline:none; }
+  #opt-legs select { width:72px; font-family:inherit; }
   #opt-legs input:focus, #opt-legs select:focus { border-color:var(--accent-line) !important; box-shadow:0 0 0 3px var(--accent-soft); }
-  #opt-legs input[data-f="qty"] { width:72px; } #opt-legs input[data-f="days"] { width:58px; } #opt-legs input[data-f="iv"] { width:62px; }
+  #opt-legs input[data-f="qty"] { width:60px; } #opt-legs input[data-f="days"] { width:50px; } #opt-legs input[data-f="iv"] { width:54px; }
+  #opt-legs td { padding:6px 4px; } #opt-legs .opt-side { min-width:64px; padding:6px 8px; }
   #opt-legs input.theo { font-style:italic; color:var(--text-3); }
   .opt-side { border:0; font:inherit; font-size:11.5px; font-weight:700; padding:6px 10px; border-radius:8px; cursor:pointer; min-width:72px; }
   .opt-side.buy { color:var(--pos-ink); background:color-mix(in srgb, var(--pos) 13%, transparent); }
