@@ -357,7 +357,9 @@
     ['fa-building', 'Fundamentos', 'Balanços da B3 pela CVM e das empresas americanas.'],
     ['fa-percentage', 'Indicadores', 'Brasil e EUA com séries oficiais e 20 anos de comparação.'],
     ['fa-calculator', 'Calculadoras', 'Renda fixa, juros compostos, aposentadoria, financiamento e mais.'],
-    ['fa-bullseye', 'Opções', 'Montador de estratégias com gráfico de resultado, gregas e cenários.']
+    ['fa-bullseye', 'Opções', 'Montador de estratégias com gráfico de resultado, gregas e cenários.'],
+    ['fa-graduation-cap', 'Educação', 'Trilhas de lições curtas, do primeiro investimento aos derivativos, com quiz e progresso salvo.'],
+    ['fa-comments', 'Assistente', 'Tire dúvidas sobre o mercado e sobre o painel, com respostas na hora.']
   ];
   $('feats').innerHTML = FEATS.map(function (f) { return '<div class="ft rv"><div class="ft-ic"><i class="fas ' + f[0] + '" aria-hidden="true"></i></div><h3>' + f[1] + '</h3><p>' + f[2] + '</p></div>'; }).join('');
 
