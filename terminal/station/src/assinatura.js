@@ -16,11 +16,12 @@ export const PLANOS = {
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
   // valor = Pix (pagamento único); valorCartao = cartão pelo Stripe, com renovação automática (mais barato de propósito, 30/10/2026)
-  mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 2990, valorCartao: 1990 },
+  // no Pix o pagamento é único: o nome é o tempo de acesso (1 mês, 6 meses, 12 meses), não 'mensal' (30/10/2026)
+  mensal: { nome: '1 mês', periodo: '1 mês', meses: 1, valor: 2990, valorCartao: 1990 },
   // trimestral saiu da lista em 30/10/2026 (oculto): pedidos antigos ainda podem ser pagos e aprovados
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990, oculto: true },
-  semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 14990, valorCartao: 9990 },
-  anual: { nome: 'Anual', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990 },
+  semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 14990, valorCartao: 9990 },
+  anual: { nome: '12 meses', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990 },
 };
 export const GRATIS_DIAS = 1; // liberação grátis feita pelo administrador (era 3 até 26/10/2026; no /admin ele escolhe os dias)
 const AVISO_DIAS = 3; // e-mail de aviso antes de vencer
@@ -464,8 +465,8 @@ export function planosVitrine(cartao = false) {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
   // com o cartão ligado, cada plano mostra também o preço no cartão (renovação automática)
   const noCartao = (p) => (cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, renova sozinho</small>` : '');
-  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Renove quando quiser', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
-  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'anual' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.periodo} de acesso${p.valorCartao && cartao ? ' no Pix' : ''}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
+  const nota = { gratis: 'Para conhecer, sem pagar nada', degustacao: 'Uma semana, uma vez só', mensal: 'Para experimentar', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
+  return Object.entries(PLANOS).filter(([, p]) => !p.oculto).map(([id, p]) => `<li class="vt-pl${id === 'anual' ? ' destaque' : ''}"><b>${p.nome}</b><strong>${p.gratis ? 'Grátis' : reais(p.valor)}</strong><span>${p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
 /* ---------------- página /assinar ---------------- */
@@ -550,7 +551,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
     else {
       h += '<h2>Planos</h2><div class="planos">' + j.planos.map(function(p){
-        return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + esc(p.periodo) + ' de acesso</span>'
+        return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + (p.meses && !p.unico ? 'pagamento único no Pix' : esc(p.periodo) + ' de acesso') + '</span>'
           + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.meses || 1))) + ' por mês') + '</span>'
           + (j.cartao && p.valorCartao ? '<span class="cc2">No cartão: <b>' + reais(p.valorCartao) + '</b></span>' : '') + '</button>';
       }).join('') + '</div><div id="pix"></div>';
@@ -565,7 +566,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
     if (escolhido) pedir(escolhido);
   }
-  function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }[id] || id; }
+  function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: '1 mês', trimestral: '3 meses', semestral: '6 meses', anual: '12 meses' }[id] || id; }
   raiz.addEventListener('click', function(e){
     var b = e.target.closest('.pl'); if (!b) return;
     escolhido = b.dataset.p;
