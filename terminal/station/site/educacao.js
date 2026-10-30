@@ -106,7 +106,7 @@
         <div class="edu-hero-txt">
           <span class="edu-selo">Educação</span>
           <h2>Aprenda o mercado no seu ritmo</h2>
-          <p>Lições curtas, com exemplos, resumo e perguntas para fixar. Escritas pela equipe do Mercado Macro, com os livros da CVM como leitura indicada.</p>
+          <p>Lições curtas, com exemplos, resumo e perguntas para fixar. Escritas pela equipe do Mercado Macro, com os livros da CVM e o guia da B3 como leitura indicada.</p>
           <div class="edu-hero-acoes">
             <button type="button" class="edu-btn edu-prim" data-licao="${proxima.l.id}">${totalFeitas ? 'Continuar' : 'Começar'}: ${esc(proxima.l.titulo)} ${ICO.seta}</button>
           </div>
@@ -183,7 +183,7 @@
           ${l.painel ? `<div class="edu-caixa"><h4>${l.painel.url ? 'Simule' : 'No painel'}</h4>${l.painel.url
             ? `<a class="edu-btn edu-cheio" href="${esc(l.painel.url)}" target="_blank" rel="noopener">${esc(l.painel.texto)} ${ICO.seta}</a>`
             : `<button type="button" class="edu-btn edu-cheio" data-aba="${l.painel.aba}">${esc(l.painel.texto)} ${ICO.seta}</button>`}</div>` : ''}
-          <div class="edu-caixa"><h4>Para ir além</h4><a class="edu-livro" href="${l.livro.url}" target="_blank" rel="noopener">${ICO.livro}<span>Livro <b>${esc(l.livro.titulo)}</b>, da CVM. Distribuição gratuita no Portal do Investidor.</span></a></div>
+          <div class="edu-caixa"><h4>Para ir além</h4><a class="edu-livro" href="${l.livro.url}" target="_blank" rel="noopener">${ICO.livro}<span>${l.livro.nota ? `<b>${esc(l.livro.titulo)}</b>. ${esc(l.livro.nota)}` : `Livro <b>${esc(l.livro.titulo)}</b>, da CVM. Distribuição gratuita no Portal do Investidor.`}</span></a></div>
         </aside>
       </div>`;
     topo();

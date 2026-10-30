@@ -1,5 +1,5 @@
 /* Conteúdo da aba Educação (29/10/2026).
-   Texto próprio do Mercado Macro. Os livros TOP da CVM são só leitura indicada (licença CC BY-NC-ND:
+   Texto próprio do Mercado Macro. Os livros TOP da CVM e o guia Por Dentro da B3 são só leitura indicada (licença CC BY-NC-ND:
    não copiar nem adaptar trechos deles aqui). Sem cotações nem números de mercado atuais: os exemplos
    usam valores hipotéticos e dizem isso. Formato do texto: parágrafos separados por linha em branco,
    "## " para subtítulo, "- " para lista, "> " para quadro de exemplo, **negrito**. */
@@ -9,6 +9,7 @@
   const LIVRO_MVM = { titulo: 'TOP Mercado de Valores Mobiliários Brasileiro', url: CVM };
   const LIVRO_PFP = { titulo: 'TOP Planejamento Financeiro Pessoal', url: CVM };
   const LIVRO_AI = { titulo: 'TOP Análise de Investimentos', url: CVM };
+  const GUIA_B3 = { titulo: 'Por Dentro da B3', url: 'https://edu.b3.com.br/', nota: 'Guia da B3, gratuito no B3 Educação.' };
 
   const trilhas = [
     {
@@ -1191,6 +1192,253 @@ A B3 divulga o saldo de compras e vendas por tipo de investidor. Entradas fortes
           ],
           painel: { texto: 'Ver as moedas no Mercado', aba: 'market-panel' },
           livro: LIVRO_MVM,
+        },
+      ],
+    },
+    {
+      id: 'por-dentro-da-b3',
+      titulo: 'Por dentro da B3',
+      nivel: 'Intermediário',
+      resumo: 'O caminho de uma ordem até virar negócio, quem garante a liquidação, onde ficam os seus ativos, aluguel de ações, imposto e proteção do investidor.',
+      licoes: [
+        {
+          id: 'pregao',
+          termos: 'pregao leilao abertura fechamento call circuit breaker book ofertas after',
+          titulo: 'O pregão: como uma ordem vira negócio',
+          minutos: 7,
+          abertura: 'Ninguém grita mais no pregão. Hoje tudo acontece num livro eletrônico de ofertas, com regras para abrir, fechar e frear o mercado quando o pânico aparece.',
+          texto: `## O livro de ofertas
+Cada ativo tem um livro (o "book") com todas as ofertas de compra e de venda que estão esperando. De um lado ficam os preços que os compradores aceitam pagar; do outro, os preços que os vendedores aceitam receber. Um negócio sai quando uma oferta de compra encontra uma de venda no mesmo preço.
+
+A prioridade segue duas regras: primeiro o **melhor preço** (quem paga mais na compra, quem pede menos na venda) e, empatado o preço, **quem chegou antes**.
+
+## As fases do dia
+- **Pré-abertura:** as ofertas entram no livro, mas nada é executado ainda.
+- **Leilão de abertura:** o sistema calcula o preço que casa a maior quantidade possível entre compradores e vendedores, e todos os negócios saem por esse preço único.
+- **Negociação contínua:** os negócios saem a todo momento, conforme as ofertas se cruzam.
+- **Call de fechamento:** um leilão no fim do dia que define o preço de fechamento. É por isso que muitos fundos e índices concentram ordens nesse momento.
+- **After-market:** em alguns dias e ativos, há uma sessão estendida depois do fechamento, com limites de preço e de volume.
+
+## Freios automáticos
+- **Leilão por oscilação:** se um ativo sobe ou cai rápido demais, a negociação contínua dele para e vira um leilão, para que o preço se forme com mais ofertas.
+- **Circuit breaker:** se o Ibovespa cair 10% em relação ao fechamento anterior, todo o mercado para por 30 minutos. Se a queda chegar a 15%, para por 1 hora. Em 20%, a B3 pode suspender o pregão pelo tempo que definir.
+
+> Exemplo hipotético: no leilão de abertura, há compradores dispostos a pagar até R$ 20,10 e vendedores aceitando a partir de R$ 19,90. O sistema escolhe o preço que fecha o maior volume, digamos R$ 20,00, e todos os negócios do leilão saem a R$ 20,00, inclusive o de quem ofereceu pagar R$ 20,10.
+
+As regras de horário e os limites mudam com o tempo: confira o calendário e o manual de negociação vigentes no site da B3.`,
+          pontos: [
+            'O livro de ofertas organiza compras e vendas por preço e, no empate, por ordem de chegada.',
+            'O dia tem pré-abertura, leilão de abertura, negociação contínua e call de fechamento.',
+            'Oscilações bruscas num ativo levam a leilão; quedas fortes do Ibovespa disparam o circuit breaker.',
+            'Circuit breaker: 10% para 30 minutos, 15% para 1 hora, 20% a critério da B3.',
+          ],
+          quiz: [
+            { p: 'Duas ofertas de compra no mesmo preço. Qual executa primeiro?', o: ['A de maior quantidade', 'A que chegou antes', 'A de investidor estrangeiro'], c: 1, e: 'Empatado o preço, vale a ordem de chegada.' },
+            { p: 'No leilão de abertura, os negócios saem:', o: ['Cada um pelo preço da sua oferta', 'Todos por um preço único', 'Pelo preço do dia anterior'], c: 1, e: 'O leilão calcula um preço único que casa o maior volume.' },
+            { p: 'Se o Ibovespa cai 10% no dia, o que acontece?', o: ['Nada, o pregão segue', 'O mercado para por 30 minutos', 'O pregão é cancelado'], c: 1, e: 'É o primeiro estágio do circuit breaker.' },
+          ],
+          painel: { texto: 'Acompanhar o mercado na Mesa', aba: 'mesa-panel' },
+          livro: GUIA_B3,
+        },
+        {
+          id: 'contraparte-central',
+          termos: 'camara compensacao liquidacao contraparte central garantia margem d+2',
+          titulo: 'Câmara e contraparte central: por que o negócio é garantido',
+          minutos: 7,
+          abertura: 'Quando você compra uma ação, não sabe quem vendeu. E não precisa saber: entre vocês dois existe uma câmara que garante que o negócio vai ser cumprido.',
+          texto: `## Do negócio à liquidação
+Fechar um negócio é só o começo. Depois vêm três etapas:
+- **Compensação:** a câmara apura o que cada um deve entregar e receber.
+- **Liquidação:** o dinheiro sai de um lado, o ativo sai do outro, e as duas coisas acontecem juntas.
+- **Registro:** o ativo passa a constar na custódia em nome do comprador.
+
+No mercado à vista de ações, a liquidação acontece no **segundo dia útil** depois do negócio (D+2). É por isso que o dinheiro precisa estar na conta até lá, e não no momento da compra.
+
+## Contraparte central
+A câmara da B3 se coloca no meio de cada negócio: vira compradora de quem vendeu e vendedora de quem comprou. Se uma ponta não cumprir, a câmara cumpre com a outra e depois cobra de quem falhou. Essa figura se chama **contraparte central**.
+
+## De onde vem a garantia
+Para conseguir cumprir no lugar de quem falha, a câmara se protege em camadas:
+- **Margem:** quem tem posições com risco (derivativos, aluguel de ações, operações a termo) deposita garantias, como dinheiro ou títulos.
+- **Ajuste e recálculo diário:** o risco é medido todo dia, e a câmara pode pedir mais garantia se o mercado andar contra a posição.
+- **Responsabilidade da corretora:** a corretora responde perante a câmara pelos clientes que traz.
+- **Fundos e patrimônio da câmara:** recursos próprios separados para cobrir o que sobrar.
+
+> Exemplo hipotético: você compra 100 ações na segunda-feira. Na quarta (D+2), R$ 2.000 saem da sua conta e as ações entram na sua custódia. Se o vendedor não entregar, a câmara recompra as ações no mercado e entrega para você; o custo fica com quem falhou.`,
+          pontos: [
+            'Depois do negócio vêm compensação, liquidação e registro.',
+            'Ações à vista liquidam em D+2: o dinheiro precisa estar na conta até lá.',
+            'A câmara é contraparte central: compradora de quem vende e vendedora de quem compra.',
+            'Margens, recálculo diário e fundos próprios dão à câmara condições de garantir os negócios.',
+          ],
+          quiz: [
+            { p: 'Você comprou ações na segunda-feira, sem feriado. A liquidação é:', o: ['Na segunda', 'Na quarta', 'Na sexta'], c: 1, e: 'No mercado à vista, a liquidação é em D+2, dois dias úteis depois.' },
+            { p: 'O que faz a contraparte central?', o: ['Escolhe quem pode comprar', 'Fica no meio de cada negócio e garante o cumprimento', 'Define o preço das ações'], c: 1, e: 'Ela assume as duas pontas e cobre a falha de uma delas.' },
+            { p: 'Para que serve a margem de garantia?', o: ['Pagar a corretagem', 'Cobrir uma possível falha de quem tem a posição', 'É um imposto da B3'], c: 1, e: 'É o colchão que a câmara usa se a ponta não cumprir.' },
+          ],
+          painel: null,
+          livro: GUIA_B3,
+        },
+        {
+          id: 'custodia',
+          termos: 'custodia central depositaria cpf area do investidor extrato transferencia corretora',
+          titulo: 'Custódia: onde ficam os seus ativos',
+          minutos: 6,
+          abertura: 'As ações que você compra não ficam "na corretora". Elas ficam registradas no seu nome, numa central depositária, e você pode conferir isso por conta própria.',
+          texto: `## A central depositária
+A B3 mantém a central depositária: um grande registro de quem é dono de cada ação, cota de fundo listado, BDR, título privado e outros ativos. Cada investidor tem uma **conta individual**, ligada ao CPF ou CNPJ, aberta por meio de um agente de custódia, que costuma ser a sua corretora.
+
+## Por que isso protege você
+Como o registro fica no seu nome, os ativos não se misturam com os bens da corretora. Se ela fechar as portas, as ações continuam suas e podem ser transferidas para outra instituição.
+
+## Como conferir
+Na **Área do Investidor**, no site da B3, você vê a posição de ativos em seu nome, os negócios feitos e os proventos recebidos, sem depender do aplicativo da corretora. A B3 também envia avisos por e-mail quando há movimentação. Vale conferir de vez em quando se tudo bate.
+
+## Eventos corporativos
+É a central depositária que distribui dividendos, juros sobre capital próprio, bonificações e desdobramentos. A empresa informa a data-base; quem tem a ação em custódia no fim daquele dia tem direito ao provento, mesmo que venda depois.
+
+## Transferir de corretora
+Para levar os ativos para outra corretora, o pedido é feito na instituição de origem. A operação muda só o agente de custódia; os ativos continuam no seu CPF e não há venda nem imposto por isso.
+
+> Exemplo hipotético: uma empresa anuncia dividendos com data-base numa sexta. Quem tiver a ação em custódia no fim desse dia recebe o valor, mesmo que venda na segunda. Lembre que, por causa do D+2, é preciso ter comprado até a data-base para estar no registro.`,
+          pontos: [
+            'Os ativos ficam numa conta individual no seu CPF, na central depositária da B3.',
+            'Se a corretora fechar, os ativos continuam seus e podem ser transferidos.',
+            'A Área do Investidor da B3 mostra posição, negócios e proventos.',
+            'Proventos vão para quem está na custódia na data-base.',
+          ],
+          quiz: [
+            { p: 'Em nome de quem ficam registradas as ações que você compra?', o: ['Da corretora', 'Do seu CPF', 'Da empresa emissora'], c: 1, e: 'A conta na central depositária é individual, ligada ao CPF.' },
+            { p: 'Transferir ações de uma corretora para outra:', o: ['Exige vender e comprar de novo', 'Muda só o agente de custódia, sem venda', 'Gera imposto obrigatório'], c: 1, e: 'Os ativos não saem do seu nome; muda só quem cuida da custódia.' },
+            { p: 'Onde conferir sua posição sem depender da corretora?', o: ['Na Área do Investidor da B3', 'No site da empresa emissora', 'Não é possível'], c: 0, e: 'A B3 oferece acesso direto à posição em seu nome.' },
+          ],
+          painel: { texto: 'Ver os proventos no Calendário', aba: 'calendar-panel' },
+          livro: GUIA_B3,
+        },
+        {
+          id: 'aluguel-de-acoes',
+          termos: 'aluguel emprestimo btc doador tomador venda descoberto short taxa',
+          titulo: 'Aluguel de ações',
+          minutos: 6,
+          abertura: 'Quem tem ações paradas pode emprestá-las e receber uma taxa por isso. Quem toma emprestado quase sempre quer vender, apostando na queda.',
+          texto: `## Como funciona
+No empréstimo de ativos, o **doador** cede as ações por um prazo e recebe uma taxa combinada. O **tomador** recebe as ações, pode vendê-las ou usá-las em outras operações, e se compromete a devolver a mesma quantidade no fim do contrato.
+
+A B3 fica no meio como contraparte central: doador e tomador não se conhecem, e é a câmara que garante a devolução. Para isso, o tomador deposita garantias, recalculadas todos os dias.
+
+## E os proventos?
+Enquanto as ações estão emprestadas, quem recebe os dividendos da empresa é quem está com elas. Para o doador não perder, o tomador é obrigado a reembolsar o valor equivalente, nas mesmas datas. O que o doador perde é o direito de votar em assembleia durante o empréstimo.
+
+## Por que alguém toma emprestado
+- **Vender a descoberto:** vender agora, esperando recomprar mais barato depois para devolver. Se o preço subir, o prejuízo não tem limite teórico.
+- **Arbitragem:** aproveitar diferenças de preço entre mercados.
+- **Cobrir uma entrega:** ter as ações para liquidar uma venda.
+
+## Para o doador
+É uma renda extra sobre ações que seriam mantidas de qualquer jeito. Em geral, o doador pode pedir as ações de volta antes do prazo se o contrato permitir, e a corretora cobra uma parte da taxa. A taxa é tributada como renda fixa: confira a regra vigente.
+
+> Exemplo hipotético: você empresta 1.000 ações que valem R$ 20 cada, por uma taxa de 2% ao ano. Em um ano, isso dá cerca de R$ 400 brutos, além dos dividendos que você continua recebendo por reembolso.`,
+          pontos: [
+            'O doador cede ações por uma taxa; o tomador devolve a mesma quantidade no prazo.',
+            'A B3 garante a operação e cobra garantias do tomador todo dia.',
+            'O tomador reembolsa os proventos; o doador perde só o voto no período.',
+            'Vender a descoberto tem risco de perda ilimitada se o preço subir.',
+          ],
+          quiz: [
+            { p: 'Quem recebe a taxa do aluguel?', o: ['O tomador', 'O doador', 'A empresa emissora'], c: 1, e: 'O doador cede as ações e é remunerado por isso.' },
+            { p: 'Com as ações emprestadas, o doador perde:', o: ['Os dividendos', 'O direito de voto no período', 'As ações para sempre'], c: 1, e: 'Os proventos são reembolsados pelo tomador; o voto fica suspenso.' },
+            { p: 'Qual o maior risco de vender a descoberto?', o: ['A ação subir muito', 'A ação cair muito', 'A taxa ser zero'], c: 0, e: 'Para devolver, é preciso recomprar; se o preço subir, a perda cresce sem limite.' },
+          ],
+          painel: null,
+          livro: GUIA_B3,
+        },
+        {
+          id: 'imposto-na-bolsa',
+          termos: 'imposto renda ir darf isencao 20 mil day trade swing prejuizo compensar dedo duro irrf',
+          titulo: 'Imposto de renda na bolsa',
+          minutos: 7,
+          abertura: 'Na bolsa, quem calcula e paga o imposto sobre o ganho é você. Algumas regras simples evitam multa e fazem você pagar só o que deve.',
+          texto: `As regras abaixo são as mais conhecidas para pessoa física em ações. Leis tributárias mudam com frequência: confira sempre a regra vigente na Receita Federal antes de pagar.
+
+## Operação comum e day trade
+- **Operação comum (swing trade):** compra num dia e venda em outro. O ganho líquido do mês paga **15%**.
+- **Day trade:** compra e venda do mesmo ativo no mesmo dia. O ganho paga **20%**.
+
+## A isenção dos R$ 20 mil
+Se o total das **vendas** de ações no mercado à vista ficar em até R$ 20.000 no mês, o ganho com essas vendas é isento. Atenção aos detalhes:
+- O limite olha o valor vendido, não o lucro.
+- Vale só para ações. ETFs, BDRs e fundos imobiliários não entram.
+- Não vale para day trade nem para venda a descoberto com aluguel.
+
+## Como pagar
+O imposto é apurado por mês e pago por **DARF** até o último dia útil do mês seguinte. O custo de cada ação é o **preço médio** de compra, e as taxas da operação podem ser somadas ao custo.
+
+Existe uma pequena retenção na fonte, o "dedo-duro", que serve para a Receita acompanhar as operações. Ele é descontado do imposto que você tem a pagar.
+
+## Prejuízos
+Perdas podem ser compensadas com ganhos dos meses seguintes, sem prazo para acabar. Mas prejuízo de day trade só compensa ganho de day trade, e prejuízo de operação comum só compensa operação comum.
+
+## Proventos
+Juros sobre capital próprio já vêm com imposto retido na fonte. Os dividendos eram isentos para pessoa física, mas a lei mudou e passou a haver retenção para quem recebe valores mensais altos de uma mesma empresa. Confira a regra vigente.
+
+> Exemplo hipotético: num mês, você vende R$ 15.000 em ações com lucro de R$ 3.000, sem day trade. Como as vendas ficaram abaixo de R$ 20.000, esse ganho é isento. Se tivesse vendido R$ 25.000 com o mesmo lucro, pagaria 15% de R$ 3.000, ou R$ 450.`,
+          pontos: [
+            'Operação comum paga 15% sobre o ganho; day trade paga 20%.',
+            'Vendas de ações de até R$ 20 mil no mês são isentas (não vale para ETF, BDR, FII nem day trade).',
+            'O imposto sai por DARF até o último dia útil do mês seguinte.',
+            'Prejuízos compensam ganhos futuros do mesmo tipo de operação.',
+          ],
+          quiz: [
+            { p: 'A isenção dos R$ 20 mil considera:', o: ['O lucro do mês', 'O total vendido no mês', 'O total comprado no mês'], c: 1, e: 'O limite é sobre o valor das vendas de ações no mês.' },
+            { p: 'Vendas de R$ 10 mil em cotas de ETF no mês são isentas?', o: ['Sim, abaixo de R$ 20 mil', 'Não, a isenção vale só para ações', 'Só se for day trade'], c: 1, e: 'A isenção dos R$ 20 mil é exclusiva para ações.' },
+            { p: 'Prejuízo de day trade pode compensar:', o: ['Qualquer ganho', 'Só ganho de day trade', 'Nenhum ganho'], c: 1, e: 'Day trade só compensa com day trade.' },
+          ],
+          painel: { texto: 'Abrir a Calculadora', aba: 'calculator-panel' },
+          livro: GUIA_B3,
+        },
+        {
+          id: 'protecao-do-investidor',
+          termos: 'bsm mrp ressarcimento insider manipulacao spoofing layering golpe suitability',
+          titulo: 'Proteção do investidor e operações ilícitas',
+          minutos: 7,
+          abertura: 'Quem joga sujo na bolsa costuma ser pego. E o investidor prejudicado por erro de corretora tem a quem recorrer.',
+          texto: `## Quem vigia
+Além da CVM, a bolsa tem uma supervisão própria: a **BSM Supervisão de Mercados**. Ela acompanha os negócios, audita as corretoras e pune quem descumpre as regras.
+
+## O que é proibido
+- **Uso de informação privilegiada (insider trading):** negociar sabendo de um fato relevante que ainda não foi divulgado, como uma aquisição ou um balanço.
+- **Manipulação de preço:** criar movimentos artificiais para atrair outros investidores. Uma forma comum é colocar ofertas grandes que não se pretende executar, só para enganar o livro, e cancelar logo depois (spoofing, com uma oferta, ou layering, com várias).
+- **Operação fraudulenta e prática não equitativa:** qualquer artifício para levar vantagem indevida sobre os outros participantes.
+
+Essas condutas podem levar a multas e proibições pela CVM e, em vários casos, são crime.
+
+## Mecanismo de Ressarcimento de Prejuízos (MRP)
+Se você teve prejuízo por ação ou omissão de uma corretora ou de seus funcionários, como uma ordem não executada, uso indevido do seu dinheiro ou ativos, ou o encerramento das atividades da corretora, pode pedir ressarcimento à BSM. O pedido precisa ser feito em até 18 meses do fato, e a indenização tem limite por ocorrência, que hoje é de R$ 200 mil.
+
+O MRP **não cobre** perdas por oscilação de preço nem operações de balcão. Perder dinheiro porque a ação caiu é risco do investimento, não erro da corretora.
+
+## Perfil do investidor
+Antes de oferecer produtos, a instituição precisa avaliar o seu perfil (suitability) e só recomendar o que for adequado a ele. Se você insistir num produto fora do perfil, ela deve alertar você.
+
+## Sinais de golpe
+- Promessa de retorno alto e garantido.
+- Pressa para decidir e pedido de depósito em conta de pessoa física.
+- Instituição sem autorização da CVM ou do Banco Central.
+
+> Exemplo hipotético: a corretora não executa uma ordem de venda que você enviou corretamente, e a ação cai no dia seguinte. Esse prejuízo pode ser pedido no MRP. Já uma venda que você mesmo decidiu fazer na baixa não entra.`,
+          pontos: [
+            'A BSM supervisiona a bolsa e pune quem descumpre as regras.',
+            'Insider trading e manipulação, como spoofing e layering, são proibidos.',
+            'O MRP ressarce prejuízos causados por corretoras, em até 18 meses e com limite por ocorrência.',
+            'O MRP não cobre perdas por queda de preço.',
+          ],
+          quiz: [
+            { p: 'Comprar ações sabendo de uma aquisição ainda não anunciada é:', o: ['Estratégia legítima', 'Uso de informação privilegiada', 'Day trade'], c: 1, e: 'Negociar com fato relevante não divulgado é insider trading.' },
+            { p: 'O MRP cobre:', o: ['Perdas porque a ação caiu', 'Prejuízo por ordem não executada pela corretora', 'Qualquer investimento em banco'], c: 1, e: 'Ele cobre falhas de participantes da B3, não o risco de mercado.' },
+            { p: 'Colocar ofertas grandes sem intenção de executar, para enganar o mercado, é:', o: ['Spoofing', 'Leilão', 'Aluguel'], c: 0, e: 'É uma forma de manipulação de preço.' },
+          ],
+          painel: null,
+          livro: GUIA_B3,
         },
       ],
     },
