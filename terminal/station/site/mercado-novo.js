@@ -60,13 +60,13 @@
     { id: 'eu', t: 'Europa', tz: 'Europe/Berlin', ab: '09:00', fe: '17:30', linhas: [['^STOXX50E', 'Euro Stoxx 50', 2], ['^GDAXI', 'DAX', 2], ['^FTSE', 'FTSE 100', 2], ['^FCHI', 'CAC 40', 2]], mais: [] },
     { id: 'as', t: 'Ásia', tz: 'Asia/Tokyo', ab: '09:00', fe: '15:30', linhas: [['^N225', 'Nikkei 225', 2], ['^HSI', 'Hang Seng', 2], ['000001.SS', 'Shanghai Composite', 2], ['^KS11', 'KOSPI', 2]], mais: [] },
     { id: 'ju', t: 'Juros dos EUA', tz: 'America/New_York', cme: true, juros: true, linhas: [['^IRX', 'Treasury 13 semanas', 3], ['^TNX', 'Treasury 10 anos', 3], ['@fred', 'Treasury 20 anos', 2], ['^TYX', 'Treasury 30 anos', 3]], mais: [] },
-    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério de ferro', 2]],
+    { id: 'co', t: 'Commodities', tz: 'America/New_York', cme: true, linhas: [['BZ=F', 'Petróleo (Brent)', 2, 'US$ '], ['CL=F', 'Petróleo (WTI)', 2, 'US$ '], ['GC=F', 'Ouro', 2, 'US$ '], ['@minerio', 'Minério (Cingapura)', 2], ['@minerio_dce', 'Minério (Dalian)', 1]],
       mais: [['SI=F', 'Prata', 3, 'US$ '], ['KC=F', 'Café (US¢/lb)', 2], ['ZS=F', 'Soja (US¢/bushel)', 2]] },
     { id: 'cr', t: 'Criptomoedas', tz: 'UTC', h24: true, linhas: [['BTC-USD', 'Bitcoin', 0, 'US$ '], ['ETH-USD', 'Ethereum', 2, 'US$ '], ['SOL-USD', 'Solana', 2, 'US$ '], ['XRP-USD', 'Ripple', 4, 'US$ ']],
       mais: [['ADA-USD', 'Cardano', 4, 'US$ '], ['DOGE-USD', 'Dogecoin', 4, 'US$ ']] }
   ];
   // chave de cada linha @ no cache da aba Mercado de sempre (marketDataCache, app.js)
-  const ESPECIAL = { '@selic': 'selic', '@ipca': 'ipca', '@fred': 'fred', '@minerio': 'TIO=F' };
+  const ESPECIAL = { '@selic': 'selic', '@ipca': 'ipca', '@fred': 'fred', '@minerio': 'TIO=F', '@minerio_dce': 'DCE-I' };
   const esp = (s) => { try { const d = marketDataCache[ESPECIAL[s]]; return d && ok(d.value) ? d : null; } catch (e) { return null; } };
   const SYMS = [...new Set(REGIOES.flatMap((r) => [...r.linhas, ...r.mais].map((l) => l[0])))].filter((s) => !s.startsWith('@'));
   // Dólar futuro CME (26/10/2026, pedido do Severino): o contrato da CME é o real em dólares (6L=F, US$ por R$ 1).
@@ -310,7 +310,7 @@
   /* ---------------- tela ---------------- */
   const valor = (s) => { const i = INFO[s], q = atual(s); return q && ok(q.v) ? `${i.pre}${nf(q.v, i.d)}${i.juros ? '%' : ''}` : '—'; };
   const linhaEsp = (r, l) => {
-    const d = esp(l[0]), pctUnid = l[0] !== '@minerio';
+    const d = esp(l[0]), pctUnid = l[0] !== '@minerio' && l[0] !== '@minerio_dce';
     const pre = !d || pctUnid ? '' : /yuan/i.test(d.note || '') ? '¥ ' : 'US$ ';
     const v = d ? `${pre}${nf(d.value, l[2])}${pctUnid ? '%' : ''}` : '—';
     // Treasury 20 anos (FRED): variação em p.b., como as outras linhas de juros

@@ -1141,9 +1141,10 @@ const rotas = async (request, env, ctx) => {
     // Fonte 1: Investing, futuro de minério 62% Fe CFR China (SGX), em US$/t.
     // Fonte 2: Sina Finance, contrato contínuo da bolsa de Dalian (DCE), em yuan/t.
     // =========================================================
+    // /minerio?m=dce: só Dalian (linha própria na aba Mercado, pedido do Severino 30/10/2026)
     if (path === '/minerio') {
-      const erros = [];
-      try {
+      const erros = [], soDCE = url.searchParams.get('m') === 'dce';
+      if (!soDCE) try {
         const r = await fetch('https://br.investing.com/commodities/iron-ore-62-cfr-futures', {
           headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'pt-BR,pt;q=0.9' },
           signal: AbortSignal.timeout(8000), cf: { cacheTtl: 300, cacheEverything: true }
@@ -1171,6 +1172,19 @@ const rotas = async (request, env, ctx) => {
         const variacao = ajusteAnt > 0 ? +((ultimo / ajusteAnt - 1) * 100).toFixed(2) : null;
         return json({ valor: ultimo, variacao, moeda: 'CNY', unidade: 't', mercado: 'DCE', fonte: 'Sina', data: f[17] || null, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
       } catch (err) { erros.push('Sina: ' + err.message); }
+      // reserva para Dalian: Eastmoney, contrato principal do minério (secid 114.im); f43 último, f60 ajuste anterior, f59 casas
+      if (soDCE) try {
+        const r = await fetch('https://push2.eastmoney.com/api/qt/stock/get?secid=114.im&fields=f43,f59,f60', {
+          headers: { 'User-Agent': BROWSER_UA, 'Referer': 'https://quote.eastmoney.com/' },
+          signal: AbortSignal.timeout(8000), cf: { cacheTtl: 60, cacheEverything: true }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = (await r.json())?.data || {};
+        const k = 10 ** (Number.isInteger(d.f59) ? d.f59 : 0), ultimo = d.f43 / k, ant = d.f60 / k;
+        if (!(ultimo > 100 && ultimo < 5000)) throw new Error('resposta sem preço');
+        const variacao = ant > 0 ? +((ultimo / ant - 1) * 100).toFixed(2) : null;
+        return json({ valor: ultimo, variacao, moeda: 'CNY', unidade: 't', mercado: 'DCE', fonte: 'Eastmoney', ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=60' });
+      } catch (err) { erros.push('Eastmoney: ' + err.message); }
       return json({ error: 'Minério falhou: ' + erros.join(' | ') }, 502, cors);
     }
 

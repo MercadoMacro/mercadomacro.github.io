@@ -90,7 +90,8 @@ const MARKET_SECTIONS = [
     { name: 'Petróleo (Brent)', symbol: 'BZ=F', type: 'yahoo' },
     { name: 'Ouro', symbol: 'GC=F', type: 'yahoo' },
     { name: 'Prata', symbol: 'SI=F', type: 'yahoo' },
-    { name: 'Minério de ferro', symbol: 'TIO=F', type: 'minerio' },
+    { name: 'Minério de ferro (Cingapura)', symbol: 'TIO=F', type: 'minerio' },
+    { name: 'Minério de ferro (Dalian)', symbol: 'DCE-I', type: 'minerio_dce' },
     { name: 'Café', symbol: 'KC=F', type: 'yahoo' },
     { name: 'Soja', symbol: 'ZS=F', type: 'yahoo' },
   ]}
@@ -294,11 +295,20 @@ async function fetchMinerio() {
     const r = await fetchT(`${CORS_PROXY}/minerio`, {}, 12000);
     const j = await r.json();
     if (!r.ok || j.valor == null || !isFinite(j.valor)) throw new Error(j.error || 'HTTP ' + r.status);
-    return { value: j.valor, change: Number.isFinite(j.variacao) ? j.variacao : 0, note: j.mercado === 'DCE' ? 'Bolsa de Dalian (China), yuan por tonelada' : 'Futuro 62% Fe (Cingapura), US$ por tonelada' };
+    // Dalian tem linha própria desde 30/10/2026: aqui fica só Cingapura (SGX)
+    if (j.mercado === 'DCE') throw new Error('sem SGX');
+    return { value: j.valor, change: Number.isFinite(j.variacao) ? j.variacao : 0, note: 'Futuro 62% Fe (Cingapura), US$ por tonelada' };
   } catch (e) {
     const y = await fetchYahooChartSingle('TIO=F');
     return { ...y, note: 'Yahoo (TIO=F), US$ por tonelada; pode estar defasado' };
   }
+}
+// Minério de ferro na bolsa de Dalian (DCE), contrato principal, em yuan por tonelada (pedido do Severino, 30/10/2026)
+async function fetchMinerioDCE() {
+  const r = await fetchT(`${CORS_PROXY}/minerio?m=dce`, {}, 12000);
+  const j = await r.json();
+  if (!r.ok || j.valor == null || !isFinite(j.valor)) throw new Error(j.error || 'HTTP ' + r.status);
+  return { value: j.valor, change: Number.isFinite(j.variacao) ? j.variacao : NaN, unit: '¥', note: 'Bolsa de Dalian (China), contrato principal, yuan por tonelada' };
 }
 // AwesomeAPI fica direto do navegador: ela recusa (HTTP 429) as chamadas vindas da Cloudflare.
 // Se ela falhar, a reserva é a Twelve Data pelo worker (/td).
@@ -786,6 +796,7 @@ async function fetchItemQuote(item) {
   if (item.type === 'selic') return await fetchSelic();
   if (item.type === 'ipca') return await fetchIPCA();
   if (item.type === 'minerio') return await fetchMinerio();
+  if (item.type === 'minerio_dce') return await fetchMinerioDCE();
   if (item.type === 'fred') return await fetchTreasury20Y();
   if (item.type === 'yahoo') return await fetchYahooChart(item.symbol);
   throw new Error('Tipo desconhecido');
@@ -4841,7 +4852,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=23';
+  sc.src = 'mercado-novo.js?v=24';
   document.body.appendChild(sc);
 })();
 /* =========================================================
