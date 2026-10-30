@@ -57,6 +57,10 @@ export default {
       const quando = new Date(ev.scheduledTime);
       // às 12:15 UTC a rodada já leva assinaturas, vigia e abertura; as notícias ficam para a próxima
       if (!(quando.getUTCHours() === 12 && quando.getUTCMinutes() === 15)) ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
+      // 10h30 a 15h45 (Brasília) em dia útil: pede /di e /dap ao worker de dados, que guarda o ajuste do pregão
+      // anterior no D1 (b3_ajuste) para a variação da curva à noite; sem isso dependia de alguém abrir a curva
+      const hUtc = quando.getUTCHours(), mUtc = quando.getUTCMinutes();
+      if (hUtc >= 13 && hUtc <= 18 && (mUtc === 30 || mUtc === 45) && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(guardarAjusteDI(env));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       if (quando.getUTCHours() === 12) {
@@ -361,6 +365,15 @@ async function jurosTesouro(env) {
     if (ipca) out.ipca = { nome: ipca.nome, taxa: ipca.taxa };
   } catch (e) { /* fica "—" */ }
   return out;
+}
+async function guardarAjusteDI(env) {
+  for (const rota of ['/di', '/dap']) {
+    try {
+      const req = new Request(await urlDados(env, rota), { headers: { Origin: ORIGEM_SITE } });
+      const r = env.API ? await env.API.fetch(req) : await fetch(req);
+      if (!r.ok) console.error('ajuste ' + rota + ': HTTP ' + r.status);
+    } catch (e) { console.error('ajuste ' + rota + ':', e.message); }
+  }
 }
 async function dadosFechamento(env) {
   const api = async (rota) => {
