@@ -54,7 +54,7 @@ export const COMUNICADO = {
       ['Fechamento do mercado', 'todo dia útil às 18h, o resumo do dia em mercadomacro.com.br/fechamento-do-mercado.'],
     ]],
   ],
-  planos: [['Grátis', '48 horas', 'R$ 0,00'], ['Degustação', '7 dias', 'R$ 4,99'], ['Mensal', '1 mês', 'R$ 29,90'], ['Trimestral', '3 meses', 'R$ 79,90'], ['Semestral', '6 meses', 'R$ 149,90']],
+  planos: [['Grátis', '48 horas', 'R$ 0,00'], ['Degustação', '7 dias', 'R$ 4,99'], ['Mensal', '1 mês', 'R$ 19,90'], ['Trimestral', '3 meses', 'R$ 54,90'], ['Semestral', '6 meses', 'R$ 99,90']],
   ps: 'O café continua por sua conta. A cotação dele, não.',
 };
 

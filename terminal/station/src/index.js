@@ -103,6 +103,7 @@ export default {
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
+      if (p === '/planos' || p === '/termos') return await paginaPlanos(req, env);
       if (p === '/telegram') return await irParaCanal(req, env, ctx, url);
       if (p === '/api/publico/canal') return await previaCanal(env);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
@@ -1876,6 +1877,13 @@ async function paginaEntrar(req, env, jaSemLogin) {
   return new Response(corpo, { status: r.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
 }
 
+// /planos: preços (do mesmo PLANOS de assinatura.js), pagamento, cancelamento e reembolso; pública (o Stripe confere)
+async function paginaPlanos(req, env) {
+  const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/termos', req.url)));
+  const corpo = (await r.text()).replace('<!--PLANOS-->', () => planosVitrine());
+  return new Response(corpo, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
+}
+
 // páginas públicas fixas da pasta vitrine (privacidade e erro)
 async function paginaFixa(req, env, caminho, status) {
   const r = await env.ASSETS.fetch(new Request(new URL(caminho, req.url), { headers: req.headers }));
@@ -2360,9 +2368,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   var OPC = [
     ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
     ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
-    ['mensal', 'Mensal', '1 mês', 2990, { meses: 1 }],
-    ['trimestral', 'Trimestral', '3 meses', 7990, { meses: 3 }],
-    ['semestral', 'Semestral', '6 meses', 14990, { meses: 6 }],
+    ['mensal', 'Mensal', '1 mês', 1990, { meses: 1 }],
+    ['trimestral', 'Trimestral', '3 meses', 5490, { meses: 3 }],
+    ['semestral', 'Semestral', '6 meses', 9990, { meses: 6 }],
     ['sem', 'Sem validade', 'não vence', 0, null],
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
   ];
@@ -2713,7 +2721,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 19,90, trimestral R$ 54,90 e semestral R$ 99,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'

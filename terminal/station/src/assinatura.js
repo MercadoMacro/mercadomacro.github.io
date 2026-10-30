@@ -15,9 +15,9 @@ export const PLANOS = {
   // desde 29/10/2026 quem nunca assinou pode começar com 48 horas grátis (sem Pix); a degustação continua para quem nunca pagou
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
-  mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 2990 },
-  trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990 },
-  semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 14990 },
+  mensal: { nome: 'Mensal', periodo: '1 mês', meses: 1, valor: 1990 },
+  trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 5490 },
+  semestral: { nome: 'Semestral', periodo: '6 meses', meses: 6, valor: 9990 },
 };
 export const GRATIS_DIAS = 1; // liberação grátis feita pelo administrador (era 3 até 26/10/2026; no /admin ele escolhe os dias)
 const AVISO_DIAS = 3; // e-mail de aviso antes de vencer
@@ -551,7 +551,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (j.pagamentos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + j.pagamentos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
-    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante é usado só para conferir o pagamento e é apagado 30 dias depois.</p>';
+    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante é usado só para conferir o pagamento e é apagado 30 dias depois. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
     raiz.innerHTML = h;
     var g = document.getElementById('gerenciar');
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
