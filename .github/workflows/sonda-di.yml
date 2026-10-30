@@ -5,11 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sL -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0' 'https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp' -o aj.html; ls -la aj.html
-          python3 - <<'PY'
-          import re,html
-          s=open('aj.html',encoding='latin1').read()
-          t=re.sub(r'<[^>]+>','|',s); t=html.unescape(t); t=re.sub(r'\s+',' ',t); t=re.sub(r'(\|\s*)+','|',t)
-          i=t.find('DI1'); print(t[:300]); print(t[i-200:i+2500])
-          j=t.find('DAP'); print(t[j:j+1200])
-          PY
+          for u in https://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/DI1 http://cotacao.b3.com.br/mds/api/v1/DerivativeQuotation/DI1; do
+            echo "== $u"; curl -s --max-time 20 -A 'Mozilla/5.0' "$u" -o d.json; python3 -c "import json;j=json.load(open('d.json'));print('Msg',j.get('Msg'));s=j.get('Scty',[]);print(len(s));print(json.dumps(s[1] if len(s)>1 else s)[:700])" || echo falhou
+          done
+          echo "== worker /di"; curl -s --max-time 20 "https://shrill-meadow-89c1.danilo-nillo.workers.dev/di" -H "Origin: https://mercadomacro.com.br" | head -c 600
