@@ -5,6 +5,7 @@ import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente } from './assistente.js';
+import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
@@ -91,6 +92,7 @@ export default {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/robo/passe') return await passeDoRobo(req, env);
+      if (p === '/api/stripe/webhook') return await webhookStripe(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/api/robo/abertura') return await roboAbertura(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
@@ -101,6 +103,7 @@ export default {
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
+      if (p === '/planos' || p === '/termos') return await paginaPlanos(req, env);
       if (p === '/telegram') return await irParaCanal(req, env, ctx, url);
       if (p === '/api/publico/canal') return await previaCanal(env);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
@@ -117,6 +120,7 @@ export default {
       if (conta) {
         if (p === '/assinar') return paginaAssinar();
         if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
+        if ((p === '/api/assinatura/cartao' || p === '/api/assinatura/cartao-gerenciar') && req.method === 'POST' && mesmaOrigem(req)) return await apiCartao(req, env, conta, p.slice(16));
         if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
       }
       if (!u && conta) return navegacao(req) ? redirect('/assinar') : json({ erro: 'Seu acesso não está ativo.', assinar: true }, 403);
@@ -1273,6 +1277,7 @@ async function apiAdmin(req, env, acao, eu) {
     return json({ erro: 'Ação inválida.' }, 400);
   }
   if (acao === 'assistente') return await apiAdminAssistente(req, env);
+  if (acao === 'stripe') return await apiAdminStripe(req, env);
   if (acao === 'capital') {
     const c = await config(env);
     if (req.method === 'GET') return json(c.cap_key ? { ligado: true, login: mascarar(c.cap_id), ambiente: c.cap_amb || 'demo' } : { ligado: false });
@@ -1872,6 +1877,13 @@ async function paginaEntrar(req, env, jaSemLogin) {
   return new Response(corpo, { status: r.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
 }
 
+// /planos: preços (do mesmo PLANOS de assinatura.js), pagamento, cancelamento e reembolso; pública (o Stripe confere)
+async function paginaPlanos(req, env) {
+  const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/termos', req.url)));
+  const corpo = (await r.text()).replace('<!--PLANOS-->', () => planosVitrine());
+  return new Response(corpo, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
+}
+
 // páginas públicas fixas da pasta vitrine (privacidade e erro)
 async function paginaFixa(req, env, caminho, status) {
   const r = await env.ASSETS.fetch(new Request(new URL(caminho, req.url), { headers: req.headers }));
@@ -2110,6 +2122,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
 <section data-p="ajustes" hidden>
   <div class="cfg">
     <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
+      <h2>Cartão (Stripe)</h2><div id="stripe"><p class="vazio">Carregando…</p></div>
       <h2>E-mail (Resend)</h2><div id="email"><p class="vazio">Carregando…</p></div></div>
     <div><h2>Avisos no Telegram</h2><div id="avisos"><p class="vazio">Carregando…</p></div>
       <h2>Assistente (Google Gemini)</h2><div id="assistente"><p class="vazio">Carregando…</p></div>
@@ -2186,7 +2199,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     if (!u.expira) return 'sem validade';
     return '<span class="' + (em7(u) ? 'venc' : '') + '">até ' + dia(u.expira) + '</span>';
   }
-  var NOMEP = { cortesia: 'Cortesia', gratis: 'Grátis 48h', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', sem: 'Sem validade', data: 'Data definida' };
+  var NOMEP = { cortesia: 'Cortesia', gratis: 'Grátis 48h', degustacao: 'Degustação', mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual', sem: 'Sem validade', data: 'Data definida' };
   function plano(u){
     if (u.admin) return '—';
     if (u.plano) return NOMEP[u.plano] || u.plano;
@@ -2355,9 +2368,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   var OPC = [
     ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
     ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
-    ['mensal', 'Mensal', '1 mês', 2990, { meses: 1 }],
-    ['trimestral', 'Trimestral', '3 meses', 7990, { meses: 3 }],
-    ['semestral', 'Semestral', '6 meses', 14990, { meses: 6 }],
+    ['mensal', 'Mensal', '1 mês', 2290, { meses: 1 }],
+    ['semestral', 'Semestral', '6 meses', 11990, { meses: 6 }],
+    ['anual', 'Anual', '12 meses', 19990, { meses: 12 }],
     ['sem', 'Sem validade', 'não vence', 0, null],
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
   ];
@@ -2614,6 +2627,28 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       }); };
     }).catch(function(){ ia.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  var st = document.getElementById('stripe');
+  function stripeBox(){
+    fetch('/api/admin/stripe', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+      var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
+      st.innerHTML = (j.ligado
+        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar aparece o botão "Pagar com cartão" nos planos mensal, semestral e anual, com renovação automática. Assinantes no cartão agora: ' + j.assinantes + '.</p>'
+          + '<div class="linha"><input id="st-chave" aria-label="Trocar a chave do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="trocar a chave (sk_live_...)" style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Trocar</button><button type="button" id="st-off" style="' + bt + '">Desligar</button></div></div>'
+        : '<div class="caixa"><p>Cole a chave secreta do Stripe (no painel do Stripe: Desenvolvedores, Chaves de API, "Chave secreta", começa com sk_live_ ou sk_test_ para testar). O site confere a chave e cria sozinho o aviso de pagamentos (webhook).</p>'
+          + '<div class="linha"><input id="st-chave" aria-label="Chave secreta do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="sk_live_..." style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<p>Fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="st-msg"></p>';
+      var m = document.getElementById('st-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function acao(corpo, b){ if (b) b.disabled = true; diz(true, 'Aguarde…');
+        fetch('/api/admin/stripe', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+          .then(function(r){ return r.json().then(function(x){ if (!r.ok) throw x; return x; }); })
+          .then(function(){ stripeBox(); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); if (b) b.disabled = false; }); }
+      var el;
+      if ((el = document.getElementById('st-salvar'))) el.onclick = function(){ acao({ acao: 'chave', chave: document.getElementById('st-chave').value }, this); };
+      if ((el = document.getElementById('st-off'))) el.onclick = function(){ if (confirm('Desligar o pagamento com cartão? Quem já assina continua sendo cobrado pelo Stripe, mas o site deixa de receber os avisos.')) acao({ acao: 'desligar' }, this); };
+    }).catch(function(){ st.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
   var cp = document.getElementById('capital');
   function postCap(corpo){
     return fetch('/api/admin/capital', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
@@ -2686,7 +2721,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 29,90, trimestral R$ 79,90 e semestral R$ 149,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), mensal R$ 22,90, semestral R$ 119,90 e anual R$ 199,90.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
@@ -2779,6 +2814,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   pagamentos();
   capital();
   assistente();
+  stripeBox();
   email();
   avisos();
   carregar();
@@ -2877,6 +2913,7 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
-ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite });
+ligarStripe({ json, mesmaOrigem, config, salvarConfig, avisar, limparCacheSessao, dentroDoLimite });
+ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
 ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });
