@@ -2125,16 +2125,88 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
   .ferr input{min-width:0;width:100%}
 }
-</style></head><body><main>
-<header class="top"><div class="marca"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/">Voltar ao site</a></header>
+/* visual 2026-10-30: barra lateral no computador, cartões e tabela mais limpos */
+.app{max-width:1180px;margin:0 auto;padding:0 20px}
+.lado{display:contents}
+main{max-width:none;margin:0;padding:0 0 56px}
+.marca img{display:none;border-radius:8px}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.abas .ic{display:none}
+a.vol{display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+a.vol .ic{width:15px;height:15px}
+a.vol:hover{text-decoration:underline}
+.cab{margin:4px 0 16px}
+.cab h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.cab p{margin:2px 0 0;color:var(--text-3);font-size:13px}
+.kpi,.fun div,.u,.caixa,table.t,.mm{box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.kpi{border-radius:14px;padding:16px 18px;transition:border-color .15s,transform .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.kpi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kpi strong{font-size:clamp(22px,1.8vw,28px);white-space:nowrap;font-variant-numeric:tabular-nums}
+.kpi.alerta{border-color:var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
+.fun div{border-radius:14px;padding:14px 16px}.fun strong{font-variant-numeric:tabular-nums}
+.u,.caixa{border-radius:12px}
+.caixa{padding:16px 18px}
+h2{margin:26px 0 10px}
+button.b,.u button,.caixa button,details.mais summary{border-radius:8px;transition:border-color .15s,background .15s,filter .15s}
+button.b:hover,.u button:hover,.caixa button:hover,details.mais summary:hover{border-color:var(--text-3)}
+button.lib:hover,.u button.lib:hover{filter:brightness(1.07);border-color:transparent}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ferr input{border-radius:10px;min-height:42px}
+.ferr input:focus,.caixa input:focus,.caixa select:focus,.caixa textarea:focus{outline:0;border-color:var(--accent)}
+.chips button{transition:border-color .15s,color .15s}.chips button:hover{color:var(--text)}
+table.t{border-radius:14px}
+.t th:first-child{border-top-left-radius:13px}.t th:last-child{border-top-right-radius:13px}
+.t td{padding:11px 14px}
+.t tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 80%,transparent)}
+.t td.c{font-variant-numeric:tabular-nums}
+.pp{display:flex;gap:11px;align-items:center;min-width:0}.pp>div{min-width:0}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 15%,var(--surface-2));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.pill{border:0;background:color-mix(in srgb,currentColor 13%,transparent);padding:3px 10px 3px 8px}
+.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.menu{border-radius:11px;box-shadow:0 14px 34px rgba(0,0,0,.35)}
+dialog#dlg-hist,dialog#dlg-acesso{border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
+.lin input[type=number]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px}
+@media (max-width:820px){
+  .t td{padding:3px 0}
+  .t tbody tr:hover td{background:none}
+  .t td.p{padding-bottom:6px}
+}
+@media (min-width:1000px){
+  .app{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:none;padding:0;min-height:100vh;background:linear-gradient(90deg,var(--surface) 235px,var(--line) 235px 236px,transparent 236px)}
+  .lado{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 12px 16px}
+  .top{display:contents}
+  .marca{order:0;flex:none;display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;padding:0 8px 18px;border-bottom:1px solid var(--line)}
+  .marca img{display:block;grid-row:span 2}
+  .marca b{font-size:12px;letter-spacing:.2em}
+  .marca span{font-size:12px;line-height:1.2}
+  .abas{order:1;position:static;flex-direction:column;gap:2px;margin:14px 0 0;padding:0;border:0;background:none;overflow:visible}
+  .abas button{border:0;border-radius:9px;padding:9px 12px;font-size:14px;font-weight:500;gap:11px;width:100%;text-align:left;color:var(--text-2)}
+  .abas button:hover{background:var(--surface-2);color:var(--text)}
+  .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));color:var(--text);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+  .abas button[aria-selected=true] .ic{color:var(--accent-text)}
+  .abas .ic{display:block}
+  .abas .cnt{margin-left:auto}
+  a.vol{order:2;margin-top:auto;padding:10px 12px;border-top:1px solid var(--line);color:var(--text-2);font-size:13px}
+  a.vol:hover{color:var(--text)}
+  main{padding:30px 40px 64px;max-width:1280px;width:100%}
+  .cab{margin:0 0 20px}
+  .cab h1{font-size:26px}
+  #msg{top:12px}
+}
+</style></head><body><div class="app"><aside class="lado">
+<header class="top"><div class="marca"><img src="/icone-mercado-macro.png" alt="" width="30" height="30"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar ao site</a></header>
 <nav class="abas" role="tablist" aria-label="Seções">
-  <button type="button" role="tab" data-aba="geral" aria-selected="true">Visão geral</button>
-  <button type="button" role="tab" data-aba="pessoas" aria-selected="false">Pessoas <span class="cnt" id="cnt-pessoas"></span></button>
-  <button type="button" role="tab" data-aba="pagamentos" aria-selected="false">Pagamentos <span class="cnt" id="cnt-pag"></span></button>
-  <button type="button" role="tab" data-aba="comunicado" aria-selected="false">E-mails</button>
-  <button type="button" role="tab" data-aba="passe" aria-selected="false">Acessos sem passe</button>
-  <button type="button" role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
+  <button type="button" role="tab" data-aba="geral" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="rot">Visão geral</span></button>
+  <button type="button" role="tab" data-aba="pessoas" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span class="rot">Pessoas</span> <span class="cnt" id="cnt-pessoas"></span></button>
+  <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
+  <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">E-mails</span></button>
+  <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
+  <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
 </nav>
+</aside><main>
+<div class="cab"><h1 id="tit">Visão geral</h1><p id="sub"></p></div>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
 <div id="prov"></div>
 <section data-p="geral">
@@ -2189,7 +2261,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     <div class="dl-ac"><button type="button" class="b" data-fechar>Cancelar</button><button type="button" class="b lib" id="ac-salvar">Salvar</button></div>
   </div>
 </dialog>
-</main>
+</main></div>
 <script>
 (function(){
   var raiz = document.getElementById('raiz'), msg = document.getElementById('msg'), eu = 0;
@@ -2273,7 +2345,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
     raiz.innerHTML = lista.length ? '<table class="t"><thead><tr>' + COLS.map(function(c){ var on = ORD.c === c[0]; return '<th' + (on ? ' aria-sort="' + (ORD.d > 0 ? 'ascending' : 'descending') + '"' : '') + '><button type="button" class="ord' + (on ? ' on' : '') + '" data-o="' + c[0] + '">' + c[1] + '<i>' + (on ? (ORD.d > 0 ? '&#9650;' : '&#9660;') : '&#8597;') + '</i></button></th>'; }).join('') + '<th></th></tr></thead><tbody>'
       + lista.map(function(u){
-        return '<tr><td class="p"><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</td>'
+        return '<tr><td class="p"><div class="pp"><span class="av" aria-hidden="true">' + esc(iniciais(u.nome)) + '</span><div><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</div></div></td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
           + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
           + '<td class="ac">' + botoes(u) + '</td></tr>';
@@ -2357,10 +2429,15 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
+  function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
     document.querySelectorAll('[data-p]').forEach(function(x){ x.hidden = x.dataset.p !== n; });
     document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); if (x.dataset.aba === n && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+    var bt = document.querySelector('.abas button[data-aba="' + n + '"] .rot');
+    document.getElementById('tit').textContent = bt ? bt.textContent : '';
+    document.getElementById('sub').textContent = SUBT[n] || '';
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
@@ -2440,6 +2517,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   function abrirAcesso(id){
     AU = US.filter(function(u){ return u.id === id; })[0]; if (!AU) return;
     AT = AU.status === 'ativo' && AU.plano && AU.plano !== 'cortesia' && AU.plano !== 'sem' && AU.plano !== 'data' ? AU.plano : AU.status === 'ativo' ? 'mensal' : 'cortesia';
+    // plano que não está na janela (grátis 48h, trimestral antigo): começa no mensal (antes travava e a janela não abria)
+    if (!OPC.some(function(o){ return o[0] === AT; })) AT = 'mensal';
     document.getElementById('ac-t').textContent = AU.nome;
     document.getElementById('ac-e').textContent = AU.email;
     document.getElementById('ac-hoje').textContent = 'Situação: ' + (SIT[AU.status] || AU.status) + (AU.plano ? ' · ' + (NOMEP[AU.plano] || AU.plano) : '') + ' · ' + (AU.status === 'ativo' ? (AU.expira ? 'vale até ' + dia(AU.expira) : 'sem validade') : AU.status === 'expirado' ? 'venceu ' + dia(AU.expira) : 'sem acesso');
