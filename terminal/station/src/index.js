@@ -1989,6 +1989,7 @@ const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${BASE_CSS}
+[data-segredo]{-webkit-text-security:disc;text-security:disc}
 main{max-width:1180px;margin:0 auto;padding:0 20px 56px}
 .top{display:flex;align-items:center;gap:14px;padding:18px 0 12px}
 .marca{flex:1;display:flex;align-items:baseline;gap:10px;min-width:0}
@@ -2148,7 +2149,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <div id="origens"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
-  <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
+  <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore readonly aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
   <div id="raiz"><p class="vazio">Carregando…</p></div>
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
@@ -2390,6 +2391,8 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   // e ao recarregar a página ele devolve o que estava digitado): começa sempre vazia, a não ser que você esteja digitando nela
   (function(){
     var bq = document.getElementById('busca');
+    // só aceita texto depois que você toca nela: campo somente leitura o navegador não preenche
+    ['focus', 'pointerdown', 'keydown'].forEach(function(ev){ bq.addEventListener(ev, function(){ bq.removeAttribute('readonly'); }); });
     function limpa(){ if (bq.value && document.activeElement !== bq) { bq.value = ''; pessoas(); } }
     [0, 400, 1200, 2500].forEach(function(t){ setTimeout(limpa, t); });
     window.addEventListener('pageshow', limpa);
@@ -2656,7 +2659,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       ia.innerHTML = (j.ligado
         ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + '. Quem está logado vê o botão Assistente e pode fazer 25 perguntas por dia; você não tem limite.' + (j.modelo ? ' Modelo em uso: ' + esc(j.modelo) + '.' : '') + ' O botão Testar mede quanto cada modelo demora.</p><div class="linha"><button type="button" id="ia-testar" style="' + bt + '">Testar</button><button type="button" id="ia-off" style="' + bt + '">Desligar e apagar a chave</button></div><div id="ia-res"></div></div>'
         : '<div class="caixa"><p>Cole a chave da API do Gemini (Google AI Studio, botão "Get API key"). Na faixa grátis o Google limita os pedidos por dia e pode usar as conversas para melhorar os produtos dele; a página de privacidade avisa isso.</p>'
-          + '<div class="linha"><input id="ia-chave" aria-label="Chave da API do Gemini" type="password" autocomplete="off" spellcheck="false" placeholder="chave da API do Gemini" style="' + inp + '"><button type="button" id="ia-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<div class="linha"><input id="ia-chave" aria-label="Chave da API do Gemini" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="chave da API do Gemini" style="' + inp + '"><button type="button" id="ia-salvar" style="' + bt + '">Salvar e conferir</button></div>'
           + '<p>Fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="ia-msg"></p>';
       var m = document.getElementById('ia-msg');
       function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
@@ -2686,9 +2689,9 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
       st.innerHTML = (j.ligado
         ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar aparece o botão "Pagar com cartão" nos planos mensal, semestral e anual, com renovação automática. Assinantes no cartão agora: ' + j.assinantes + '.</p>'
-          + '<div class="linha"><input id="st-chave" aria-label="Trocar a chave do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="trocar a chave (sk_live_...)" style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Trocar</button><button type="button" id="st-off" style="' + bt + '">Desligar</button></div></div>'
+          + '<div class="linha"><input id="st-chave" aria-label="Trocar a chave do Stripe" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="trocar a chave (sk_live_...)" style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Trocar</button><button type="button" id="st-off" style="' + bt + '">Desligar</button></div></div>'
         : '<div class="caixa"><p>Cole a chave secreta do Stripe (no painel do Stripe: Desenvolvedores, Chaves de API, "Chave secreta", começa com sk_live_ ou sk_test_ para testar). O site confere a chave e cria sozinho o aviso de pagamentos (webhook).</p>'
-          + '<div class="linha"><input id="st-chave" aria-label="Chave secreta do Stripe" type="password" autocomplete="off" spellcheck="false" placeholder="sk_live_..." style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Salvar e conferir</button></div>'
+          + '<div class="linha"><input id="st-chave" aria-label="Chave secreta do Stripe" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="sk_live_..." style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Salvar e conferir</button></div>'
           + '<p>Fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="st-msg"></p>';
       var m = document.getElementById('st-msg');
       function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
@@ -2718,7 +2721,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
         h = '<div class="caixa"><p>Para testar as cotações da Capital.com. Na Capital.com, em Configurações, API, gere uma chave com uma <b>senha personalizada</b> (diferente da senha da conta). Use de preferência a <b>conta demo</b>: com esses dados dá para operar a conta.</p>'
           + '<div class="linha"><input id="cp-chave" aria-label="Chave da API da Capital.com" autocomplete="off" spellcheck="false" placeholder="chave da API" style="' + inp + '"></div>'
           + '<div class="linha"><input id="cp-login" aria-label="E-mail de login da Capital.com" autocomplete="off" spellcheck="false" placeholder="e-mail de login da Capital.com" style="' + inp + '"></div>'
-          + '<div class="linha"><input id="cp-senha" aria-label="Senha personalizada da API" type="password" autocomplete="new-password" placeholder="senha personalizada da API" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="cp-senha" aria-label="Senha personalizada da API" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="senha personalizada da API" style="' + inp + '"></div>'
           + '<div class="linha"><select id="cp-amb" aria-label="Ambiente da conta Capital.com" style="' + inp + ';flex:0 0 auto"><option value="demo">Conta demo (recomendado)</option><option value="real">Conta real</option></select><button type="button" id="cp-salvar" style="' + bt + '">Salvar e conferir</button></div>'
           + '<p>Fica guardado só no servidor do site e não aparece de novo nesta página.</p></div>';
       }
