@@ -2148,7 +2148,7 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
   <div id="origens"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
-  <div class="ferr"><input id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off" aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
+  <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
   <div id="raiz"><p class="vazio">Carregando…</p></div>
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
@@ -2386,6 +2386,14 @@ dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
     pessoas();
   });
   document.getElementById('busca').addEventListener('input', pessoas);
+  // o navegador preenche a busca sozinho (o gerenciador de senhas acha que é o campo de e-mail das caixas de chave,
+  // e ao recarregar a página ele devolve o que estava digitado): começa sempre vazia, a não ser que você esteja digitando nela
+  (function(){
+    var bq = document.getElementById('busca');
+    function limpa(){ if (bq.value && document.activeElement !== bq) { bq.value = ''; pessoas(); } }
+    [0, 400, 1200, 2500].forEach(function(t){ setTimeout(limpa, t); });
+    window.addEventListener('pageshow', limpa);
+  })();
   document.querySelector('main').addEventListener('click', function(e){
     var b = e.target.closest('[data-ir]'); if (!b) return;
     var x = b.dataset.ir.split(':'); aba(x[0], x[1]); window.scrollTo(0, 0);
