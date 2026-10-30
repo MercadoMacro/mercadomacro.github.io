@@ -4903,7 +4903,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'fluxo.js?v=4';
+    sc.src = 'fluxo.js?v=5';
     sc.onload = () => window.__fluxoRender && window.__fluxoRender(el);
     sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fluxo.js</b>.</div>'; };
     document.body.appendChild(sc);

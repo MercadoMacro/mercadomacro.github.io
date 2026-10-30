@@ -134,7 +134,7 @@
   }
 
   // altura acompanha a largura para o gráfico não ficar achatado em tela larga
-  const altura = (W) => Math.round(Math.min(440, Math.max(300, W * 0.34)));
+  const altura = (W) => Math.round(Math.min(560, Math.max(320, W * 0.5)));
 
   // gráfico do tipo escolhido: barras do saldo diário (eixo esquerdo) + linha do acumulado (eixo direito) + média móvel
   function svgGrafico(todos, i0, tipo, W) {
@@ -179,7 +179,7 @@
       if (cur.length) seg.push(cur);
       corpo += seg.filter((s) => s.length > 1).map((s) => `<polyline points="${s.join(' ')}" fill="none" stroke="${COR_MM}" stroke-width="1.6" stroke-dasharray="4 3"/>`).join('');
       corpo += `<polyline points="${acum.map((v, i) => `${xc(i).toFixed(1)},${ya(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${COR_ACUM}" stroke-width="2.2" stroke-linejoin="round"/>`;
-      vista = { dias, n, L, R, W, bw, xc, linhas: [{ y: (i) => y(sal[i]) }], tip: (i) => {
+      vista = { modo: 'barras', sal, acum, mm, mmN, dias, n, L, R, W, bw, xc, linhas: [{ y: (i) => y(sal[i]) }], tip: (i) => {
         const d = dias[i], t = d.tipos?.[tipo];
         return `<b>${dmyy(d.data)}</b>
           <div><i style="background:${ok(sal[i]) && sal[i] < 0 ? neg : pos}"></i>Fluxo do dia <span class="${tom(sal[i])}">${brl(sal[i])}</span></div>
@@ -194,7 +194,7 @@
       const pts = acum.map((v, i) => `${xc(i).toFixed(1)},${y(v).toFixed(1)}`);
       corpo += `<polygon points="${xc(0).toFixed(1)},${y(0).toFixed(1)} ${pts.join(' ')} ${xc(n - 1).toFixed(1)},${y(0).toFixed(1)}" fill="${COR_ACUM}" opacity=".14"/>`;
       corpo += `<polyline points="${pts.join(' ')}" fill="none" stroke="${COR_ACUM}" stroke-width="2.2" stroke-linejoin="round"/>`;
-      vista = { dias, n, L, R, W, bw, xc, tip: (i) => `<b>${dmyy(dias[i].data)}</b>
+      vista = { modo: 'linha', sal, acum, dias, n, L, R, W, bw, xc, tip: (i) => `<b>${dmyy(dias[i].data)}</b>
           <div><i style="background:${COR_ACUM}"></i>Acumulado no período <span class="${tom(acum[i])}">${brl(acum[i])}</span></div>
           <div><i style="background:${ok(sal[i]) && sal[i] < 0 ? neg : pos}"></i>Fluxo do dia <span class="${tom(sal[i])}">${brl(sal[i])}</span></div>` };
     }
@@ -214,9 +214,56 @@
     const bw = pw / Math.max(n, 1), xc = (i) => L + (i + 0.5) * bw;
     let corpo = e.ticks.map((t) => `<line class="fx-grid${t === 0 ? ' z' : ''}" x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"/><text class="fx-ty" x="${L - 8}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end">${eixo(t)}</text>`).join('');
     corpo += series.map((s) => `<polyline points="${s.v.map((v, i) => `${xc(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.cor}" stroke-width="2" stroke-linejoin="round"/>`).join('');
-    vista = { dias, n, L, R, W, bw, xc, tip: (i) => `<b>${dmyy(dias[i].data)}</b>${series.slice().sort((a, b) => b.v[i] - a.v[i]).map((s) => `<div><i style="background:${s.cor}"></i>${esc(s.nome)} <span class="${tom(s.v[i])}">${brl(s.v[i])}</span></div>`).join('')}<small>acumulado no período</small>` };
+    vista = { modo: 'comp', series, dias, n, L, R, W, bw, xc, tip: (i) => `<b>${dmyy(dias[i].data)}</b>${series.slice().sort((a, b) => b.v[i] - a.v[i]).map((s) => `<div><i style="background:${s.cor}"></i>${esc(s.nome)} <span class="${tom(s.v[i])}">${brl(s.v[i])}</span></div>`).join('')}<small>acumulado no período</small>` };
     return `<svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Comparação do fluxo acumulado por investidor">
       ${corpo}<g transform="translate(0 ${H - 8})">${marcasX(dias, xc, W)}</g><line class="fx-cross" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg>`;
+  }
+
+  // biblioteca de gráficos da TradingView (Lightweight Charts), a mesma do histórico dos ativos (30/10/2026)
+  let lwCarga = null, grafLW = null;
+  function carregaLW() {
+    if (globalThis.LightweightCharts?.createChart) return Promise.resolve(globalThis.LightweightCharts);
+    if (lwCarga) return lwCarga;
+    lwCarga = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js';
+      sc.async = true;
+      const falha = () => { clearTimeout(t); sc.remove(); rej(new Error('sem biblioteca')); };
+      const t = setTimeout(falha, 10000);
+      sc.onerror = falha;
+      sc.onload = () => { clearTimeout(t); if (globalThis.LightweightCharts?.createChart) res(globalThis.LightweightCharts); else falha(); };
+      document.head.appendChild(sc);
+    }).catch((e) => { lwCarga = null; throw e; });
+    return lwCarga;
+  }
+
+  // painel ao lado do gráfico: quem comprou e vendeu no período e números do tipo escolhido (só contas sobre o arquivo)
+  function lado(janela, tipo, comp, soma) {
+    const vals = TIPOS.map(([k, n, c]) => ({ k, n, c, v: soma(k) })).sort((a, b) => b.v - a.v);
+    const mx = Math.max(1, ...vals.map((x) => Math.abs(x.v)));
+    let h = `<section><h4 class="fx-lt">Quem comprou e quem vendeu no período</h4>${vals.map((x) => {
+      const w = (Math.abs(x.v) / mx * 50).toFixed(1);
+      return `<button type="button" class="fx-rk${!comp && x.k === tipo ? ' on' : ''}" data-tipo="${x.k}"><span>${esc(x.n)}</span><b class="${tom(x.v)}">${brl(x.v)}</b><span class="br"><i class="${x.v >= 0 ? 'p' : 'n'}" style="${x.v >= 0 ? 'left' : 'right'}:50%;width:${w}%"></i></span></button>`;
+    }).join('')}</section>`;
+    if (comp || !janela.length) return h;
+    const sal = janela.map((d) => d.tipos?.[tipo]?.saldo).filter(ok);
+    const nPos = sal.filter((v) => v > 0).length, nNeg = sal.filter((v) => v < 0).length, tot = nPos + nNeg;
+    h += `<section><h4 class="fx-lt">Dias de compra e de venda</h4>
+      <div class="fx-dv"><span class="fx-pos">${nPos} de compra</span><span class="fx-neg">${nNeg} de venda</span></div>
+      <div class="fx-split">${tot ? `<i class="p" style="width:${(nPos / tot * 100).toFixed(1)}%"></i><i class="n" style="width:${(nNeg / tot * 100).toFixed(1)}%"></i>` : ''}</div></section>`;
+    // sequência atual: pregões seguidos no mesmo sentido, contando do último para trás
+    const dd = janela.filter((d) => ok(d.tipos?.[tipo]?.saldo) && d.tipos[tipo].saldo !== 0);
+    if (dd.length) {
+      const sinal = Math.sign(dd[dd.length - 1].tipos[tipo].saldo);
+      let n = 0, t = 0;
+      for (let i = dd.length - 1; i >= 0 && Math.sign(dd[i].tipos[tipo].saldo) === sinal; i--) { n++; t += dd[i].tipos[tipo].saldo; }
+      h += `<section><h4 class="fx-lt">Sequência atual</h4><p class="fx-seq"><b class="${tom(sinal)}">${n} ${n === 1 ? 'pregão' : 'pregões'} de ${sinal > 0 ? 'compra' : 'venda'}</b><span>${brl(t)} desde ${dmy(dd[dd.length - n].data)}</span></p></section>`;
+    }
+    const top = (fn, cmp) => janela.filter((d) => ok(d.tipos?.[tipo]?.saldo) && fn(d.tipos[tipo].saldo)).sort((a, b) => cmp(a.tipos[tipo].saldo, b.tipos[tipo].saldo)).slice(0, 3);
+    const lista = (tit, xs) => `<section><h4 class="fx-lt">${tit}</h4>${xs.length ? xs.map((d) => `<div class="fx-dia"><span>${dmyy(d.data)}</span><b class="${tom(d.tipos[tipo].saldo)}">${brl(d.tipos[tipo].saldo)}</b></div>`).join('') : '<p class="fx-mut">—</p>'}</section>`;
+    h += lista('Maiores entradas', top((v) => v > 0, (a, b) => b - a));
+    h += lista('Maiores saídas', top((v) => v < 0, (a, b) => a - b));
+    return h;
   }
 
   function draw() {
@@ -277,9 +324,12 @@
         </div>`}
         <div class="fx-gh">
           <div class="fx-gt"><b>${comp ? 'Fluxo acumulado por investidor' : `Fluxo na B3: ${esc(nome)}`}</b><span class="fx-mut">${perTxt}${curto ? ` (o histórico começa em ${dmyy(primeiro)})` : ''}</span></div>
-          <div class="fx-lgs">${legenda}</div>
+          <div class="fx-lgs">${legenda}${janela.length ? '<div class="fx-zoom" role="group" aria-label="Zoom do gráfico"><button type="button" data-zoom="in" title="Aproximar" aria-label="Aproximar">+</button><button type="button" data-zoom="out" title="Afastar" aria-label="Afastar">&minus;</button><button type="button" data-zoom="fit" title="Mostrar o período todo">Ajustar</button></div>' : ''}</div>
         </div>
-        <div class="fx-graf">${janela.length ? '<div class="fx-svgbox"></div>' : '<div class="fx-msg">Sem pregões no período.</div>'}<div class="fx-tip" hidden></div></div>
+        <div class="fx-corpo">
+          <div class="fx-graf">${janela.length ? '<div class="fx-svgbox"></div>' : '<div class="fx-msg">Sem pregões no período.</div>'}<div class="fx-tip" hidden></div></div>
+          <aside class="fx-lado">${lado(janela, tipo, comp, soma)}</aside>
+        </div>
         <div class="fx-tw"><table class="fx-tab">
           <thead><tr><th>Investidor</th><th>${ult ? 'Pregão ' + dm(ult.data) : 'Pregão'}</th><th>No mês</th><th>No ano</th><th>No período</th></tr></thead>
           <tbody>${linhas}</tbody>
@@ -288,8 +338,94 @@
           Inclui todos os mercados de ações da B3 (à vista, termo, opções, exercícios e blocos), por isso pode diferir do número "à vista" citado na imprensa.
           ${erro ? `<span class="fx-err">${esc(erro)} Mostrando a última cópia salva.</span>` : ''}</div>
       </div>`;
-    desenhaSvg();
+    desenha();
   }
+
+  function desenha() {
+    if (grafLW) { grafLW.remove(); grafLW = null; }
+    if (globalThis.LightweightCharts?.createChart) { try { desenhaLW(globalThis.LightweightCharts); return; } catch (e) { if (grafLW) { grafLW.remove(); grafLW = null; } } }
+    desenhaSvg();
+    carregaLW().then(() => { if (root?.querySelector('.fx-svgbox')) desenha(); }).catch(() => { /* fica o desenho próprio */ });
+  }
+
+  const hora = (t) => (typeof t === 'string' ? t : t && typeof t === 'object' ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : '');
+  // gráfico da TradingView: barras do dia (escala da esquerda), acumulado (direita) e média; arrastar e zoom
+  function desenhaLW(L) {
+    const box = root?.querySelector('.fx-svgbox');
+    if (!box || !cache) return;
+    const dias = cache.dias || [];
+    const i0 = inicioPeriodo(dias, PERIODOS.some(([k]) => k === prefs.per) ? prefs.per : 'ytd');
+    const tipo = TIPOS.some(([k]) => k === prefs.tipo) ? prefs.tipo : 'estrangeiro';
+    const W = Math.max(320, Math.floor(box.clientWidth || 720));
+    larg = W;
+    // reaproveita as contas do desenho próprio (acumulado, média, dica)
+    if (prefs.aba === 'comp') svgComparacao(dias, i0, W); else svgGrafico(dias, i0, tipo, W);
+    const v = vista;
+    box.innerHTML = '';
+    box.style.height = altura(W) + 'px';
+    const txt = corVar('--text-3', '#8591a8'), grade = corVar('--line', '#1c2740'), grade2 = corVar('--line-2', '#24304d'), fundo = corVar('--surface', '#0e1524');
+    const pos = corVar('--pos', '#16c784'), neg = corVar('--neg', '#ea3943');
+    // rótulos dos eixos com até 2 casas em bilhões ("1,25 bi"), para os degraus do zoom não se repetirem
+    const eixoLW = (x) => { const a = Math.abs(x), sg = x < 0 ? '−' : ''; return a >= 1e6 ? `${sg}${(a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} bi` : eixo(Math.round(x)); };
+    const fmt = { type: 'custom', formatter: eixoLW, minMove: 1 };
+    const ch = L.createChart(box, {
+      autoSize: true,
+      layout: { background: { type: 'solid', color: fundo }, textColor: txt, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, attributionLogo: true },
+      grid: { vertLines: { visible: false }, horzLines: { color: grade } },
+      leftPriceScale: { visible: v.modo === 'barras', borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 } },
+      rightPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 } },
+      timeScale: { borderColor: grade, fixLeftEdge: true, fixRightEdge: true, rightOffset: 1, minBarSpacing: 2 },
+      localization: { locale: 'pt-BR', dateFormat: 'dd/MM/yy', priceFormatter: eixoLW },
+      crosshair: { mode: L.CrosshairMode.Magnet, vertLine: { labelBackgroundColor: grade2 }, horzLine: { labelBackgroundColor: grade2 } },
+      // a página rola com a roda do mouse: zoom pelos botões, pinça ou arrastando o eixo
+      handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true }
+    });
+    grafLW = ch;
+    const t = v.dias.map((d) => d.data);
+    const base = { priceFormat: fmt, priceLineVisible: false, lastValueVisible: true };
+    if (v.modo === 'barras') {
+      const h = ch.addSeries(L.HistogramSeries, { ...base, priceScaleId: 'left', lastValueVisible: false });
+      h.setData(v.sal.map((x, i) => (ok(x) ? { time: t[i], value: x, color: x >= 0 ? pos : neg } : { time: t[i] })));
+      h.createPriceLine({ price: 0, color: grade2, lineWidth: 1, lineStyle: L.LineStyle.Solid, axisLabelVisible: false });
+      if (v.mmN) ch.addSeries(L.LineSeries, { ...base, priceScaleId: 'left', color: COR_MM, lineWidth: 2, lineStyle: L.LineStyle.Dashed, lastValueVisible: false, crosshairMarkerVisible: false })
+        .setData(v.mm.map((x, i) => (ok(x) ? { time: t[i], value: x } : { time: t[i] })));
+      ch.addSeries(L.LineSeries, { ...base, priceScaleId: 'right', color: COR_ACUM, lineWidth: 2 }).setData(v.acum.map((x, i) => ({ time: t[i], value: x })));
+    } else if (v.modo === 'linha') {
+      const a = ch.addSeries(L.AreaSeries, { ...base, lineColor: COR_ACUM, topColor: 'rgba(59,130,246,.28)', bottomColor: 'rgba(59,130,246,0)', lineWidth: 2 });
+      a.setData(v.acum.map((x, i) => ({ time: t[i], value: x })));
+      a.createPriceLine({ price: 0, color: grade2, lineWidth: 1, lineStyle: L.LineStyle.Solid, axisLabelVisible: false });
+    } else {
+      v.series.forEach((sr, j) => {
+        const ls = ch.addSeries(L.LineSeries, { ...base, color: sr.cor, lineWidth: 2 });
+        ls.setData(sr.v.map((x, i) => ({ time: t[i], value: x })));
+        if (!j) ls.createPriceLine({ price: 0, color: grade2, lineWidth: 1, lineStyle: L.LineStyle.Solid, axisLabelVisible: false });
+      });
+    }
+    ch.timeScale().fitContent();
+    const idx = new Map(t.map((d, i) => [d, i]));
+    const graf = root.querySelector('.fx-graf'), tip = root.querySelector('.fx-tip');
+    ch.subscribeCrosshairMove((p) => {
+      const i = p.time != null ? idx.get(hora(p.time)) : undefined;
+      if (i == null || !p.point || p.point.x < 0) { tip.hidden = true; return; }
+      tip.innerHTML = v.tip(i);
+      tip.hidden = false;
+      const gx = p.point.x + (box.getBoundingClientRect().left - graf.getBoundingClientRect().left);
+      const tw = tip.offsetWidth, gw = graf.clientWidth;
+      tip.style.left = `${Math.max(4, Math.min(gw - tw - 4, gx + 16 + tw > gw ? gx - tw - 16 : gx + 16))}px`;
+    });
+  }
+  function zoom(q) {
+    if (!grafLW) return;
+    const ts = grafLW.timeScale();
+    if (q === 'fit') { ts.fitContent(); return; }
+    const r = ts.getVisibleLogicalRange();
+    if (!r) return;
+    const meio = (r.from + r.to) / 2, meia = (r.to - r.from) / 2 * (q === 'in' ? 0.6 : 1 / 0.6);
+    ts.setVisibleLogicalRange({ from: meio - Math.max(4, meia), to: meio + Math.max(4, meia) });
+  }
+  // troca de tema claro/escuro: redesenha com as cores novas
+  new MutationObserver(() => { if (grafLW && root?.isConnected) desenha(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   // o SVG é desenhado na largura real da caixa (textos sem deformar); redesenha quando a largura muda
   let larg = 0;
@@ -324,11 +460,12 @@
   let rzT = 0;
   window.addEventListener('resize', () => {
     clearTimeout(rzT);
-    rzT = setTimeout(() => { const b = root?.querySelector('.fx-svgbox'); if (b && Math.abs(b.clientWidth - larg) > 8) desenhaSvg(); }, 150);
+    rzT = setTimeout(() => { const b = root?.querySelector('.fx-svgbox'); if (!b || Math.abs(b.clientWidth - larg) <= 8) return; if (grafLW) { larg = b.clientWidth; b.style.height = altura(larg) + 'px'; } else desenhaSvg(); }, 150);
   });
 
   // "Baixar imagem": o SVG com cores e fundo vira PNG (2x), com título e fonte
   async function baixar() {
+    if (grafLW) return baixarLW();
     const svg = root?.querySelector('.fx-svg');
     if (!svg) return;
     const W = +svg.getAttribute('width'), H = +svg.getAttribute('height');
@@ -363,8 +500,32 @@
     a.click();
   }
 
+  function baixarLW() {
+    const shot = grafLW.takeScreenshot(), k = shot.width / (root.querySelector('.fx-svgbox').clientWidth || shot.width);
+    const cs = getComputedStyle(document.body);
+    const fundo = (cs.getPropertyValue('--surface') || '').trim() || '#11151c';
+    const txt = (cs.getPropertyValue('--text-3') || '').trim() || '#8591a8';
+    const txt1 = (cs.getPropertyValue('--text') || '').trim() || '#e8edf5';
+    const TOP = 46, FOOT = 26;
+    const cv = document.createElement('canvas');
+    cv.width = shot.width; cv.height = shot.height + (TOP + FOOT) * k;
+    const g = cv.getContext('2d');
+    g.fillStyle = fundo; g.fillRect(0, 0, cv.width, cv.height);
+    g.drawImage(shot, 0, TOP * k);
+    g.scale(k, k);
+    g.fillStyle = txt1; g.font = '600 15px Inter, system-ui, sans-serif'; g.fillText(root.querySelector('.fx-gt b')?.textContent || 'Fluxo na B3', 16, 22);
+    g.fillStyle = txt; g.font = '12px Inter, system-ui, sans-serif'; g.fillText(root.querySelector('.fx-gt .fx-mut')?.textContent || '', 16, 38);
+    g.fillText('Fonte: B3 (Boletim Diário). mercadomacro.com.br', 16, shot.height / k + TOP + 16);
+    const a = document.createElement('a');
+    a.download = `fluxo-b3-${prefs.aba === 'comp' ? 'comparacao' : prefs.tipo}-${prefs.per}.png`;
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  }
+
   function bind(el) {
     el.addEventListener('click', (e) => {
+      const z = e.target.closest('[data-zoom]');
+      if (z) { zoom(z.dataset.zoom); return; }
       const t = e.target.closest('[data-tipo],[data-aba],[data-modo],[data-oculta],[data-rf],[data-png]');
       if (!t) return;
       if (t.dataset.tipo) { prefs.tipo = t.dataset.tipo; prefs.aba = 'graf'; }
@@ -444,6 +605,36 @@
   #fluxo-root .fx-foot { padding:10px 14px 12px; font-size:11.5px; color:var(--text-3); line-height:1.5; }
   body.light #fluxo-root .fx-pos, body.light #fluxo-root .fx-kpis b.fx-pos { color:color-mix(in srgb, var(--pos) 72%, #000); }
   body.light #fluxo-root .fx-neg, body.light #fluxo-root .fx-kpis b.fx-neg { color:color-mix(in srgb, var(--neg) 85%, #000); }
+  #fluxo-root .fx-card { container-type:inline-size; }
+  #fluxo-root .fx-corpo { display:grid; grid-template-columns:minmax(0,1fr); }
+  #fluxo-root .fx-graf { min-width:0; }
+  #fluxo-root .fx-zoom { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); align-self:center; }
+  #fluxo-root .fx-zoom button { min-width:26px; height:24px; border:0; border-radius:6px; background:none; color:var(--text-2); font:inherit; font-size:12px; font-weight:600; cursor:pointer; padding:0 7px; }
+  #fluxo-root .fx-zoom button:hover { background:var(--surface); color:var(--text); }
+  #fluxo-root .fx-lado { border-top:1px solid var(--line); padding:12px 14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px 22px; align-content:start; }
+  #fluxo-root .fx-lado section { min-width:0; }
+  #fluxo-root .fx-lt { margin:0 0 6px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); }
+  #fluxo-root .fx-rk { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; width:100%; padding:6px 8px; margin:0 -8px; width:calc(100% + 16px); border:0; border-radius:8px; background:none; color:var(--text-2); font:inherit; font-size:12.5px; text-align:left; cursor:pointer; }
+  #fluxo-root .fx-rk:hover { background:var(--surface-2); }
+  #fluxo-root .fx-rk.on { background:var(--surface-2); color:var(--text); font-weight:600; }
+  #fluxo-root .fx-rk b { font:600 12px 'JetBrains Mono', monospace; }
+  #fluxo-root .fx-rk .br { grid-column:1 / -1; position:relative; height:6px; border-radius:3px; background:var(--surface-2); }
+  #fluxo-root .fx-rk.on .br { background:var(--surface); }
+  #fluxo-root .fx-rk .br::after { content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--line-2); }
+  #fluxo-root .fx-rk .br i, #fluxo-root .fx-split i { position:absolute; top:0; bottom:0; border-radius:3px; }
+  #fluxo-root i.p { background:var(--pos); } #fluxo-root i.n { background:var(--neg); }
+  #fluxo-root .fx-dv { display:flex; justify-content:space-between; font:600 12px 'JetBrains Mono', monospace; margin-bottom:6px; }
+  #fluxo-root .fx-split { display:flex; height:8px; border-radius:4px; overflow:hidden; background:var(--surface-2); gap:2px; }
+  #fluxo-root .fx-split i { position:static; border-radius:0; }
+  #fluxo-root .fx-seq { margin:0; display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--text-3); }
+  #fluxo-root .fx-seq b { font-size:14px; }
+  #fluxo-root .fx-dia { display:flex; justify-content:space-between; gap:10px; padding:4px 0; font-size:12.5px; color:var(--text-2); border-bottom:1px dashed var(--line); }
+  #fluxo-root .fx-dia:last-child { border-bottom:0; }
+  #fluxo-root .fx-dia b { font:600 12px 'JetBrains Mono', monospace; }
+  @container (min-width: 1000px) {
+    #fluxo-root .fx-corpo { grid-template-columns:minmax(0,1fr) 300px; }
+    #fluxo-root .fx-lado { border-top:0; border-left:1px solid var(--line); grid-template-columns:1fr; gap:18px; }
+  }
   #fluxo-root .fx-err { display:block; color:var(--neg); margin-top:4px; }
   #fluxo-root .fx-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
   @media (max-width: 900px) { #fluxo-root .fx-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); } #fluxo-root .fx-kpis > div:nth-child(3) { border-left:0; } #fluxo-root .fx-kpis > div:nth-child(n+3) { border-top:1px solid var(--line); } }
