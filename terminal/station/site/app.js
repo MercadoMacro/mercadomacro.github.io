@@ -4921,7 +4921,7 @@ function newsReadMins(n) {
   const sec = document.getElementById('ana-sec-fed');
   if (!sec) return;
   const LADOS = {
-    eua: { root: 'fed-root', js: 'fed.js?v=7', fn: '__fedRender' },
+    eua: { root: 'fed-root', js: 'fed.js?v=8', fn: '__fedRender' },
     br: { root: 'copom-root', js: 'copom.js?v=4', fn: '__copomRender' },
   };
   const pedidos = {};

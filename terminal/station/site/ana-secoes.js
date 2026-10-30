@@ -32,6 +32,10 @@
   if (como && comoBox) {
     como.addEventListener('click', () => { const abre = comoBox.hidden; if (abre) textoComo(); comoBox.hidden = !abre; como.setAttribute('aria-expanded', abre); });
     comoBox.addEventListener('click', (e) => { const b = e.target.closest('[data-licao]'); if (b && window.MMEdu) window.MMEdu.abrir(b.dataset.licao); });
+    // fecha ao clicar fora da explicação ou com Esc
+    const fechaComo = () => { comoBox.hidden = true; como.setAttribute('aria-expanded', 'false'); };
+    document.addEventListener('click', (e) => { if (!comoBox.hidden && !comoBox.contains(e.target) && !como.contains(e.target)) fechaComo(); }, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !comoBox.hidden) fechaComo(); });
   }
   const CHAVE = 'ana_secao';
   // sem escolha salva, abre na primeira seção (Mercado ficou por último a pedido do Severino)
