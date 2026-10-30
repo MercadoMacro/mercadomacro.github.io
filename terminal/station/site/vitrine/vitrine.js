@@ -26,6 +26,14 @@
   }
   tE.onclick = function () { aba(false, true); };
   tC.onclick = function () { aba(true, true); };
+  // sessão encerrada porque a conta entrou em outro aparelho (limite de 2 ao mesmo tempo)
+  if (/[?&]aparelho=1/.test(location.search)) {
+    aba(false);
+    var av = fE.querySelector('.vt-msg');
+    av.className = 'vt-msg erro';
+    av.textContent = 'Sua conta foi aberta em outro aparelho. Cada conta pode ficar conectada em até 2 aparelhos ao mesmo tempo. Entre de novo para continuar aqui.';
+    setTimeout(function () { $('acesso').scrollIntoView({ block: 'center' }); }, 50);
+  }
   if (location.hash === '#cadastrar') { aba(true); setTimeout(function () { $('acesso').scrollIntoView({ block: 'start' }); }, 50); }
   document.querySelectorAll('[data-ir]').forEach(function (b) {
     b.addEventListener('click', function () {
