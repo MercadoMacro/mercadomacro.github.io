@@ -8,6 +8,10 @@ API = 'https://api-comexstat.mdic.gov.br'
 UA = {'User-Agent': 'MercadoMacro/1.0 (+https://mercadomacro.com.br)', 'Accept': 'application/json', 'Content-Type': 'application/json'}
 
 
+class SemResposta(Exception):
+    pass
+
+
 def pedir(caminho, corpo=None, tentativas=6):
     time.sleep(12)  # a API limita o ritmo de consultas (HTTP 429): uma de cada vez, com folga
     for i in range(tentativas):
@@ -22,7 +26,7 @@ def pedir(caminho, corpo=None, tentativas=6):
         except Exception as e:  # a API do governo às vezes demora; tenta de novo
             print(f'  tentativa {i + 1} em {caminho}: {e}')
             time.sleep(15 * (i + 1))
-    raise SystemExit(f'Comex Stat não respondeu em {caminho}')
+    raise SemResposta(f'Comex Stat não respondeu em {caminho}')
 
 
 def lista(resp):
@@ -100,6 +104,11 @@ def paises(periodos):
 
 
 def main(saida):
+    caminho = f'{saida}/comex.json'
+    try:
+        antigo = json.load(open(caminho, encoding='utf-8'))
+    except Exception:
+        antigo = None
     upd = pedir('/general/dates/updated')
     print('atualizado:', json.dumps(upd, ensure_ascii=False)[:300])
     du = upd.get('data', {}) if isinstance(upd, dict) else {}
@@ -107,6 +116,10 @@ def main(saida):
     if not ano or not mes:
         hoje = datetime.date.today()
         ano, mes = hoje.year, hoje.month
+    # a API limita muito as consultas (HTTP 429): se o MDIC não publicou nada novo desde a última gravação, para aqui (30/10/2026)
+    if antigo and du.get('updated') and antigo.get('atualizado') == du.get('updated') and antigo.get('ultimo') == f'{ano}-{mes:02d}':
+        print('Sem dado novo (mesma data de atualização do MDIC)')
+        return
     # o filtro de período vale mês a mês dentro de cada ano (2023-01 a 2026-09 traz só jan-set de cada ano):
     # por isso uma consulta para os anos fechados e outra para o ano corrente
     periodos = [{'from': f'{ano - 3}-01', 'to': f'{ano - 1}-12'}, {'from': f'{ano}-01', 'to': f'{ano}-{mes:02d}'}]
@@ -128,13 +141,13 @@ def main(saida):
     out = {'fonte': 'Comex Stat (MDIC/SECEX)', 'unidade': 'US$ FOB', 'atualizado': du.get('updated') or '', 'ultimo': serie[-1]['m'], 'meses': serie}
     # do ano passado inteiro até o último mês divulgado: dá o mesmo mês de 12 meses atrás e o acumulado dos dois anos
     recentes = [{'from': f'{ano - 1}-01', 'to': f'{ano - 1}-12'}, {'from': f'{ano}-01', 'to': f'{ano}-{mes:02d}'}]
-    out['produtos'] = produtos(recentes)
-    out['paises'] = paises(recentes)
-    caminho = f'{saida}/comex.json'
-    try:
-        antigo = json.load(open(caminho, encoding='utf-8'))
-    except Exception:
-        antigo = None
+    # produtos e países são extras: se a API cansar no meio, ficam os do arquivo anterior e a balança nova é gravada
+    for k, fn in (('produtos', produtos), ('paises', paises)):
+        try:
+            out[k] = fn(recentes)
+        except SemResposta as e:
+            print(f'{k}: {e}; mantidos os do arquivo anterior')
+            out[k] = (antigo or {}).get(k, [])
     if antigo and all(antigo.get(k) == out[k] for k in ('meses', 'produtos', 'paises')):
         print('Sem dado novo')
         return
