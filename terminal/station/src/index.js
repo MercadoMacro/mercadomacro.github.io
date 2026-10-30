@@ -99,6 +99,7 @@ export default {
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/api/robo/abertura') return await roboAbertura(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
+      if (p === '/favicon.ico') return Response.redirect(new URL('/icone-192.png', req.url).toString(), 301);
       if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
