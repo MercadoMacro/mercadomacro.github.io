@@ -153,7 +153,11 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
-      if (p === '/api/passe') return await emitirPasse(env, u);
+      if (p === '/api/passe') {
+        // o site aberto renova o passe a cada ~8 min: serve de sinal de "online" no /admin
+        await env.DB.prepare('UPDATE usuarios SET visto = ? WHERE id = ?').bind(new Date().toISOString(), u.id).run().catch(() => 0);
+        return await emitirPasse(env, u);
+      }
       if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u));
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
@@ -1166,7 +1170,7 @@ async function apiAdmin(req, env, acao, eu) {
     await garantirAssinatura(env);
     await garantirDerrubadas(env);
     const r = await env.DB.prepare(
-      `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.expira,
+      `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.visto, u.expira,
         COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano,
         (SELECT COUNT(*) FROM sessoes_derrubadas d WHERE d.usuario_id = u.id AND d.quando > ?) trocas
         FROM usuarios u ORDER BY u.criado DESC`).bind(Date.now() - 7 * 864e5).all();
@@ -2009,7 +2013,7 @@ a.vol{color:var(--accent-text);font-size:13px;white-space:nowrap}
 #msg.ok,#msg.erro{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
 h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
 h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-left:6px;letter-spacing:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit}
 .kpi:hover{border-color:var(--line-2)}
 .kpi.alerta{border-color:var(--accent)}
@@ -2160,6 +2164,10 @@ table.t{border-radius:14px}
 .t td{padding:11px 14px}
 .t tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 80%,transparent)}
 .t td.c{font-variant-numeric:tabular-nums}
+.av{position:relative}.av.on::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
+.onl{color:var(--pos);font-weight:600;white-space:nowrap}.onl::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pos);margin-right:6px;vertical-align:1px}
+.kpi em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi strong.lg{font-size:clamp(18px,1.45vw,26px)}
 .pp{display:flex;gap:11px;align-items:center;min-width:0}.pp>div{min-width:0}
 .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 15%,var(--surface-2));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
 .pill{border:0;background:color-mix(in srgb,currentColor 13%,transparent);padding:3px 10px 3px 8px}
@@ -2284,8 +2292,12 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
   var agora = function(){ return new Date().toISOString(); };
   var em7 = function(u){ return u.status === 'ativo' && !u.admin && u.expira && u.expira > agora() && u.expira <= new Date(Date.now() + 7 * 864e5).toISOString(); };
+  // online: o site aberto renova o passe a cada ~8 min; sem sinal há 10 min, a pessoa saiu
+  function online(u){ return !!u.visto && Date.parse(u.visto) > Date.now() - 10 * 60000; }
+  function ultimo(u){ var a = u.ultimo_acesso || '', b = u.visto || ''; return (a > b ? a : b) || null; }
   var FILTROS = [
     ['todos', 'Todos', function(){ return true; }],
+    ['online', 'Online agora', function(u){ return online(u) && !u.admin; }],
     ['pendente', 'Sem plano', function(u){ return u.status === 'pendente'; }],
     ['ativo', 'Liberados', function(u){ return u.status === 'ativo' && !u.admin; }],
     ['vence', 'Vencem em 7 dias', em7],
@@ -2327,7 +2339,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     if (c === 'sit') return u.admin ? 'administrador' : semAc(SIT[u.status] || u.status || '');
     if (c === 'plano') { var p = plano(u); return p === '—' ? null : semAc(p); }
     if (c === 'val') return u.admin || (u.status !== 'ativo' && u.status !== 'expirado') ? null : (u.expira || (u.status === 'ativo' ? '9999' : null));
-    if (c === 'acesso') return u.ultimo_acesso || null;
+    if (c === 'acesso') return ultimo(u);
     if (c === 'criado') return u.criado || null;
     return null;
   }
@@ -2345,9 +2357,9 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     document.getElementById('chips').innerHTML = FILTROS.map(function(x){ return '<button type="button" data-f="' + x[0] + '" aria-pressed="' + (filtro === x[0]) + '">' + x[1] + '<i>' + US.filter(x[2]).length + '</i></button>'; }).join('');
     raiz.innerHTML = lista.length ? '<table class="t"><thead><tr>' + COLS.map(function(c){ var on = ORD.c === c[0]; return '<th' + (on ? ' aria-sort="' + (ORD.d > 0 ? 'ascending' : 'descending') + '"' : '') + '><button type="button" class="ord' + (on ? ' on' : '') + '" data-o="' + c[0] + '">' + c[1] + '<i>' + (on ? (ORD.d > 0 ? '&#9650;' : '&#9660;') : '&#8597;') + '</i></button></th>'; }).join('') + '<th></th></tr></thead><tbody>'
       + lista.map(function(u){
-        return '<tr><td class="p"><div class="pp"><span class="av" aria-hidden="true">' + esc(iniciais(u.nome)) + '</span><div><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</div></div></td>'
+        return '<tr><td class="p"><div class="pp"><span class="av' + (online(u) ? ' on' : '') + '" aria-hidden="true">' + esc(iniciais(u.nome)) + '</span><div><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</div></div></td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
-          + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + data(u.ultimo_acesso) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
+          + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + (online(u) ? '<span class="onl">online agora</span>' : data(ultimo(u))) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
           + '<td class="ac">' + botoes(u) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vazio">Ninguém ' + (q ? 'com essa busca' : 'nesta lista') + '.</p>';
     document.getElementById('nota-pessoas').textContent = US.some(function(u){ return u.status === 'confirmar'; }) ? 'Quem está "Sem confirmar e-mail" pediu acesso mas não clicou no link de confirmação; some sozinho depois de 7 dias.' : '';
@@ -2357,8 +2369,10 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     var lib = US.filter(function(u){ return u.status === 'ativo' && !u.admin; }), venc = US.filter(em7).sort(function(a, b){ return a.expira < b.expira ? -1 : 1; });
     var rec = MES ? MES.total : 0, nrec = MES ? MES.n : 0;
     var novos = US.filter(function(u){ return u.criado > new Date(Date.now() - 7 * 864e5).toISOString(); }).length;
-    var k = function(ir, rot, val, nota, alerta){ return '<button type="button" class="kpi' + (alerta ? ' alerta' : '') + '" data-ir="' + ir + '"><small>' + rot + '</small><strong>' + val + '</strong><em>' + nota + '</em></button>'; };
-    document.getElementById('kpis').innerHTML = k('pessoas:pendente', 'Pediram acesso', pend.length, 'ainda sem plano')
+    var k = function(ir, rot, val, nota, alerta){ return '<button type="button" class="kpi' + (alerta ? ' alerta' : '') + '" data-ir="' + ir + '"><small>' + rot + '</small><strong' + (String(val).length > 6 ? ' class="lg"' : '') + '>' + val + '</strong><em>' + nota + '</em></button>'; };
+    var onl = US.filter(function(u){ return online(u) && !u.admin; });
+    document.getElementById('kpis').innerHTML = k('pessoas:online', 'Online agora', onl.length, onl.length ? onl.slice(0, 2).map(function(u){ return esc(u.nome.split(' ')[0]); }).join(', ') + (onl.length > 2 ? ' e mais ' + (onl.length - 2) : '') : 'ninguém agora')
+      + k('pessoas:pendente', 'Pediram acesso', pend.length, 'ainda sem plano')
       + k('pagamentos', 'Pagamentos para conferir', env.length, env.length ? 'comprovantes novos' : 'tudo conferido', env.length)
       + k('pessoas:ativo', 'Com acesso liberado', lib.length, lib.filter(function(u){ return !u.expira; }).length + ' sem validade')
       + k('pessoas:vence', 'Vencem em 7 dias', venc.length, venc.length ? 'toque para ver' : 'nenhum')
@@ -2952,6 +2966,15 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   email();
   avisos();
   carregar();
+  // atualiza sozinho a cada minuto (quem está online), sem mexer se houver janela, menu ou busca em uso
+  setInterval(function(){
+    if (document.hidden || document.querySelector('dialog[open], details.mais[open]') || document.activeElement === document.getElementById('busca')) return;
+    fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      US = j.usuarios; ALERTA = j.alertaTrocas || 4;
+      US.forEach(function(u){ if (u.status === 'ativo' && !u.admin && u.expira && u.expira <= agora()) u.status = 'expirado'; });
+      pessoas(); geral();
+    }).catch(function(){});
+  }, 60000);
 })();
 </script></body></html>`;
 
