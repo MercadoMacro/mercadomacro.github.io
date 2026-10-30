@@ -40,7 +40,7 @@
   const hojeNY = () => new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
   const diasAte = (iso) => Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(hojeNY() + 'T12:00:00Z')) / 86400000);
 
-  let prefs = { sel: 0, graf: false };
+  let prefs = { sel: 0, graf: false, inf: '' };
   try { prefs = { ...prefs, ...(JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}) }; } catch (e) { /* padrão */ }
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* cheio */ } };
   let base = null;
@@ -278,9 +278,65 @@
       }).join('')}<td class="fw-ct" title="Contrato de Fed Funds usado na conta">${esc(tick(x.usado))}</td><td class="fw-pr">${num(px.agora[x.usado], 3)}</td><td class="fw-tx">${num(x.fim)}%</td></tr>`;
     }).join('')}</tbody></table>`;
 
+    // barra lateral (30/10/2026, layout do Severino): contrato em destaque, rosca, próximas reuniões e o que mexe com as chances
+    const u = R.usado, pA = px.agora[u], pO = px.ontem[u], pS = px.semana[u];
+    const contrato = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-file-contract" aria-hidden="true"></i></span><b>Contrato em destaque</b>
+        <a class="fw-lk" href="https://www.cmegroup.com/markets/interest-rates/stirs/30-day-federal-fund.quotes.html" target="_blank" rel="noopener">Ver na CME <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+      <div class="fw-ct-box">
+        <div class="fw-ct-t"><b>${esc(tick(u))}</b><span>${nomeMes(u)}</span></div>
+        <div class="fw-ct-p"><strong>${num(pA, 3)}</strong>${ok(pA) && ok(pO) ? `<em class="${pA - pO > 0.0005 ? 'fw-up' : pA - pO < -0.0005 ? 'fw-dn' : ''}">${varia(pA, pO)} (hoje)</em>` : ''}</div>
+        <div class="fw-ct-g">
+          <div><span>Taxa implícita</span><b>${ok(pA) ? num(100 - pA, 3) + '%' : '—'}</b></div>
+          <div><span>Fech. anterior</span><b>${num(pO, 3)}</b></div>
+          <div><span>1 semana</span><b>${num(pS, 3)}</b><small>${ok(pA) && ok(pS) ? `(${varia(pA, pS)})` : ''}</small></div>
+        </div>
+      </div>
+      <p class="fw-side-n">Contrato usado na conta da reunião de ${dmy(R.data)}.</p>
+    </div>`;
+    // rosca: a divisão das chances da reunião escolhida, com as mesmas faixas da tabela
+    const fx = cols.length ? cols : estados;
+    let ac = 0;
+    const C = 2 * Math.PI * 42;
+    const fatias = estados.filter((st) => R.dist[st] >= 0.05).map((st) => {
+      const p = R.dist[st] / 100, d = `<circle cx="60" cy="60" r="42" fill="none" stroke="${corEst(st)}" stroke-width="16" stroke-dasharray="${(p * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-ac * C).toFixed(2)}" transform="rotate(-90 60 60)"/>`;
+      ac += p; return d;
+    }).join('');
+    const rosca = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></span><b>Distribuição de probabilidades</b></div>
+      <div class="fw-rosca">
+        <div class="fw-rd"><svg viewBox="0 0 120 120" role="img" aria-label="${fx.map((st) => `${faixa(st)}: ${pct(R.dist[st] || 0)}`).join(', ')}"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--surface)" stroke-width="16"/>${fatias}</svg>
+          <div><b>${pct(R.dist[maisProv])}</b><span class="${tomMov(maisProv)}">${maisProv === 0 ? 'Manter' : nomeMov(maisProv).replace(/ bp$/, '&nbsp;bp')}</span></div></div>
+        <ul class="fw-rl">${fx.map((st) => `<li class="${st === maisProv ? 'top' : ''}"><i style="background:${corEst(st)}"></i><span>${faixa(st)}</span><b>${pct(R.dist[st] || 0)}</b></li>`).join('')}</ul>
+      </div>
+    </div>`;
+    const prox = agora.slice(0, 5).map((x, i) => {
+      const d = diasAte(x.data);
+      return `<li class="${i === sel ? 'on' : ''}"><button type="button" data-r="${i}"><span class="fw-tl-d">${curta(x.data)}</span><span class="fw-tl-b${d === 0 ? ' hoje' : ''}">${d === 0 ? 'Hoje' : d === 1 ? 'Amanhã' : `${d} dias`}</span><span class="fw-tl-x">${x.sep ? 'Juros + projeções' : 'Decisão de juros'}</span></button></li>`;
+    }).join('');
+    const reunioes = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></span><b>Próximas reuniões</b>
+        <a class="fw-lk" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">Calendário <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+      <ol class="fw-tl">${prox}</ol>
+    </div>`;
+    const INF = [
+      ['infl', 'fa-fire-flame-curved', 'Inflação', 'Inflação (CPI e PCE)', 'Inflação acima da meta de 2% empurra o Fed para manter ou subir os juros; inflação caindo abre espaço para cortes.'],
+      ['emp', 'fa-briefcase', 'Emprego', 'Mercado de trabalho', 'Relatório de emprego (payroll), taxa de desemprego e salários: emprego forte tende a segurar os juros altos.'],
+      ['pib', 'fa-chart-line', 'Atividade', 'Crescimento econômico', 'PIB, vendas no varejo e indústria: economia esfriando aumenta a chance de corte.'],
+      ['com', 'fa-comments', 'Fala do Fed', 'Comunicação do Fed', 'Discursos do presidente e dos diretores, a ata e as projeções (o gráfico de pontos) mudam as apostas na hora.'],
+      ['glob', 'fa-earth-americas', 'Exterior', 'Cenário global', 'Crises, guerras, petróleo e o mercado financeiro lá fora também pesam na decisão.'],
+    ];
+    const infAt = INF.find((x) => x[0] === prefs.inf);
+    const influencia = `<div class="fw-side-c">
+      <div class="fw-side-h"><span class="fw-si"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><b>O que influencia essas probabilidades?</b></div>
+      <div class="fw-inf">${INF.map(([k, ic, t, tt]) => `<button type="button" class="fw-inf-${k}${prefs.inf === k ? ' on' : ''}" data-inf="${k}" aria-pressed="${prefs.inf === k}" title="${tt}"><span><i class="fa-solid ${ic}" aria-hidden="true"></i></span>${t}</button>`).join('')}</div>
+      <p class="fw-inf-t">${infAt ? `<b>${infAt[3]}:</b> ${infAt[4]}` : 'Toque em um tema para ver como ele mexe com as chances.'}</p>
+    </div>`;
+    const lateral = `<aside class="fw-side" aria-label="Resumo da reunião">${contrato}${rosca}${reunioes}${influencia}</aside>`;
+
     const hora = px.hora ? new Date(px.hora * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
     const kpi = (ic, t, b, sm, cls = '') => `<div class="fw-kpi"><span class="fw-ki"><i class="fa-solid ${ic}" aria-hidden="true"></i></span><div><span>${t}</span><b class="${cls}">${b}</b><small>${sm}</small></div></div>`;
-    root.innerHTML = `<div class="fw-card">
+    root.innerHTML = `<div class="fw-lay"><div class="fw-card">
       <div class="fw-top">
         <button class="fw-nav" data-act="esq" aria-label="Reuniões anteriores"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="fw-chips" role="tablist" aria-label="Reuniões do Fed">${chips}</div>
@@ -297,13 +353,6 @@
       <div class="fw-blk">
         <div class="fw-sec fw-sec-b">Chance de cada faixa da taxa depois da reunião de ${dmy(R.data)}
           <button class="fw-tg" data-act="graf" aria-expanded="${prefs.graf ? 'true' : 'false'}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> ${prefs.graf ? 'Esconder gráfico' : 'Mostrar gráfico'}</button></div>
-        <div class="fw-ctr">
-          <span class="fw-chip"><i class="fa-solid fa-file-contract"></i>Contrato <b>${esc(tick(R.usado))}</b> ${nomeMes(R.usado)}</span>
-          <span class="fw-chip"><i class="fa-solid fa-tag"></i>Preço <b>${num(px.agora[R.usado], 3)}</b></span>
-          <span class="fw-chip"><i class="fa-solid fa-percent"></i>Taxa implícita <b>${num(100 - px.agora[R.usado], 3)}%</b></span>
-          <span class="fw-chip">Ontem <b>${num(px.ontem[R.usado], 3)}</b>${variaH(px.agora[R.usado], px.ontem[R.usado])}</span>
-          <span class="fw-chip">1 semana <b>${num(px.semana[R.usado], 3)}</b>${variaH(px.agora[R.usado], px.semana[R.usado])}</span>
-        </div>
         ${pilha}
         <div class="fw-bars">${barras}</div>
         ${prefs.graf ? `<div class="fw-sec">Como a chance mudou <small>(reunião de ${dmy(R.data)}, últimos pregões)</small></div><div class="fw-hleg"></div><div class="fw-hwrap"><div class="fw-hbox"></div></div>` : ''}
@@ -317,7 +366,7 @@
         <div><b><i class="fa-solid fa-gear"></i> Metodologia</b><p>Chances calculadas com o preço dos futuros de Fed Funds de 30 dias (CBOT), no mesmo método da ferramenta FedWatch da CME; os números podem diferir um pouco dos dela. O contrato usado é o do mês seguinte à reunião quando esse mês não tem reunião; senão, o do próprio mês. O gráfico refaz a conta com o fechamento de cada pregão. <i class="fa-solid fa-chart-simple fw-sep"></i> = reunião com projeções econômicas.</p></div>
         <div><b><i class="fa-solid fa-database"></i> Fontes</b><p>CME/CBOT via Yahoo, Federal Reserve (calendário do FOMC) e FRED (faixa e taxa efetiva). Preços de ${esc(hora)}${vivo ? '' : ' (do último registro do robô)'}.${erro ? ` <b>${esc(erro)}</b>` : ''}</p></div>
       </div>
-    </div>`;
+    </div>${lateral}</div>`;
     // a reunião escolhida fica à vista na barra de datas; as setas e o degradê mostram que dá para rolar
     const fc = root.querySelector('.fw-chips');
     const bordas = () => { fc.classList.toggle('esq', fc.scrollLeft > 4); fc.classList.toggle('dir', fc.scrollLeft + fc.clientWidth < fc.scrollWidth - 4); fc.parentElement.classList.toggle('cabe', fc.scrollWidth <= fc.clientWidth + 4); };
@@ -335,6 +384,8 @@
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-r]');
       if (b) { prefs.sel = +b.dataset.r; savePrefs(); draw(); return; }
+      const inf = e.target.closest('[data-inf]');
+      if (inf) { prefs.inf = prefs.inf === inf.dataset.inf ? '' : inf.dataset.inf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="graf"]')) { prefs.graf = !prefs.graf; savePrefs(); draw(); return; }
       if (e.target.closest('[data-act="reload"]') && !busy) load(true);
       const nv = e.target.closest('[data-act="esq"],[data-act="dir"]');
@@ -345,7 +396,8 @@
   const css = document.createElement('style');
   css.textContent = `
   #fed-root { min-width:0; max-width:100%; font-variant-numeric:tabular-nums; }
-  #fed-root .fw-card { min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
+  #fed-root .fw-lay { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+  #fed-root .fw-card { container-type:inline-size; min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px; }
   #fed-root .fw-msg { padding:28px; text-align:center; color:var(--text-3); font-size:13px; }
   #fed-root .fw-top { display:flex; align-items:center; gap:8px; min-width:0; }
   #fed-root .fw-nav { flex:none; width:32px; height:44px; border:1px solid var(--line); background:var(--surface-2); color:var(--text-2); border-radius:10px; cursor:pointer; font-size:12px; }
@@ -445,6 +497,70 @@
   #fed-root .fw-tip b { display:block; color:var(--text); margin-bottom:4px; }
   #fed-root .fw-tip div { display:flex; align-items:center; gap:7px; line-height:1.7; font-family:'JetBrains Mono', monospace; }
   #fed-root .fw-tip span { margin-left:auto; padding-left:10px; color:var(--text); font-weight:600; }
+  #fed-root .fw-side { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:14px; align-content:start; min-width:0; }
+  #fed-root .fw-side-c { border:1px solid var(--line); border-radius:14px; background:var(--surface-2); padding:14px 16px; min-width:0; display:flex; flex-direction:column; gap:12px; }
+  #fed-root .fw-side-h { display:flex; align-items:center; gap:10px; min-width:0; }
+  #fed-root .fw-side-h > b { font-size:14.5px; color:var(--text); font-weight:700; min-width:0; }
+  #fed-root .fw-si { flex:none; width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:13px; }
+  #fed-root .fw-lk { margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-2); text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:5px 9px; white-space:nowrap; }
+  #fed-root .fw-lk i { font-size:10px; color:var(--text-3); }
+  #fed-root .fw-lk:hover { color:var(--text); border-color:var(--line-2); }
+  #fed-root .fw-ct-box { border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+  #fed-root .fw-ct-t { display:flex; align-items:baseline; gap:8px; }
+  #fed-root .fw-ct-t b { font-size:19px; color:var(--text); }
+  #fed-root .fw-ct-t span { font-size:13px; color:var(--text-3); }
+  #fed-root .fw-ct-p { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  #fed-root .fw-ct-p strong { font-size:28px; font-weight:700; color:var(--accent-ink); letter-spacing:-.01em; }
+  #fed-root .fw-ct-p em { font-style:normal; font-size:12px; font-weight:600; padding:3px 8px; border-radius:7px; background:var(--surface-2); color:var(--text-2); }
+  #fed-root .fw-ct-p em.fw-up { color:var(--pos-ink); background:color-mix(in srgb, var(--pos-ink) 14%, transparent); }
+  #fed-root .fw-ct-p em.fw-dn { color:var(--neg); background:color-mix(in srgb, var(--neg) 14%, transparent); }
+  #fed-root .fw-ct-g { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); border-top:1px solid var(--line); padding-top:8px; margin-top:2px; }
+  #fed-root .fw-ct-g div { display:flex; flex-direction:column; gap:2px; padding:0 8px; border-left:1px solid var(--line); min-width:0; }
+  #fed-root .fw-ct-g div:first-child { padding-left:0; border-left:0; }
+  #fed-root .fw-ct-g span { font-size:11px; color:var(--text-3); }
+  #fed-root .fw-ct-g b { font-size:14px; color:var(--text); }
+  #fed-root .fw-ct-g small { font-size:11px; color:var(--text-3); }
+  #fed-root .fw-side-n { margin:0; font-size:11.5px; color:var(--text-3); }
+  #fed-root .fw-rosca { display:flex; align-items:center; gap:16px; }
+  #fed-root .fw-rd { position:relative; flex:none; width:128px; height:128px; }
+  #fed-root .fw-rd svg { width:100%; height:100%; display:block; }
+  #fed-root .fw-rd div { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #fed-root .fw-rd b { font-size:19px; color:var(--text); }
+  #fed-root .fw-rd span { font-size:11px; font-weight:600; max-width:58px; line-height:1.2; }
+  #fed-root .fw-rl { list-style:none; margin:0; padding:0; flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+  #fed-root .fw-rl li { white-space:nowrap; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2); }
+  #fed-root .fw-rl li i { flex:none; width:10px; height:10px; border-radius:50%; }
+  #fed-root .fw-rl li b { margin-left:auto; color:var(--text-2); font-weight:600; }
+  #fed-root .fw-rl li.top span, #fed-root .fw-rl li.top b { color:var(--text); font-weight:700; }
+  #fed-root .fw-tl { list-style:none; margin:0; padding:0; position:relative; }
+  #fed-root .fw-tl::before { content:''; position:absolute; left:6px; top:14px; bottom:14px; width:2px; background:var(--line); }
+  #fed-root .fw-tl li button { position:relative; width:100%; display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:8px; padding:8px 0 8px 22px; border:0; background:none; font:inherit; color:var(--text-2); cursor:pointer; text-align:left; }
+  #fed-root .fw-tl li button::before { content:''; position:absolute; left:1px; top:50%; width:8px; height:8px; margin-top:-6px; border-radius:50%; background:var(--surface-2); border:2px solid var(--text-3); }
+  #fed-root .fw-tl li.on button::before { background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+  #fed-root .fw-tl-d { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; }
+  #fed-root .fw-tl-b { font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--surface); border:1px solid var(--line); color:var(--text-2); white-space:nowrap; }
+  #fed-root .fw-tl-b.hoje { background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
+  #fed-root .fw-tl-x { font-size:11.5px; color:var(--text-3); text-align:right; line-height:1.3; }
+  #fed-root .fw-tl li.on .fw-tl-d { color:var(--accent-ink); }
+  #fed-root .fw-tl li button:hover .fw-tl-d { color:var(--accent-ink); }
+  #fed-root .fw-inf { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:6px; }
+  #fed-root .fw-inf button { display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 2px; border:1px solid transparent; border-radius:10px; background:none; font:inherit; font-size:10.5px; line-height:1.25; color:var(--text-2); text-align:center; cursor:pointer; }
+  #fed-root .fw-inf button span { width:40px; height:40px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; background:color-mix(in srgb, var(--c) 16%, transparent); color:var(--c); }
+  #fed-root .fw-inf button:hover, #fed-root .fw-inf button.on { border-color:var(--line); background:var(--surface); color:var(--text); }
+  #fed-root .fw-inf-infl { --c:#f87171; } #fed-root .fw-inf-emp { --c:#60a5fa; } #fed-root .fw-inf-pib { --c:#34d399; } #fed-root .fw-inf-com { --c:#a78bfa; } #fed-root .fw-inf-glob { --c:#fbbf24; }
+  #fed-root .fw-inf-t { margin:0; font-size:12.5px; line-height:1.5; color:var(--text-3); min-height:38px; }
+  #fed-root .fw-inf-t b { color:var(--text); }
+  @container (max-width: 520px) {
+    #fed-root .fw-rosca { flex-direction:column; align-items:stretch; }
+    #fed-root .fw-rd { align-self:center; width:140px; height:140px; }
+    #fed-root .fw-ct-p strong { font-size:24px; }
+  }
+  /* a barra lateral fica ao lado só quando sobra espaço; senão desce para baixo da tabela */
+  @container (min-width: 1120px) {
+    #fed-root .fw-lay { grid-template-columns:minmax(0,1fr) 330px; align-items:start; }
+    #fed-root .fw-side { grid-template-columns:minmax(0,1fr); }
+    #fed-root .fw-side-c:not(:last-child) .fw-side-h > b { white-space:nowrap; }
+  }
   @container (max-width: 900px) {
     #fed-root .fw-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
     #fed-root .fw-bar { grid-template-columns:minmax(0,1fr) 60px; grid-template-areas:"l v" "t t" "c c"; gap:4px 10px; }
