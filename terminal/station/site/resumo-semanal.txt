@@ -2,22 +2,22 @@
 
 📊 O resultado eleitoral mudou o preço do risco no Brasil, enquanto os balanços das gigantes de tecnologia mantiveram os mercados internacionais em alerta.
 
-Segundo o relatório semanal da XP Research de 30/10, o Ibovespa caiu 18,1% na semana, aos 167.922 pontos. A desvalorização cambial ampliou a perda medida em dólares para 24,3%. No exterior, a correção foi mais moderada, mas as dúvidas sobre os investimentos em inteligência artificial continuaram pesando sobre as bolsas americanas.
+O Ibovespa encerrou a semana com queda de 18,1% na semana, aos 167.922 pontos. A desvalorização cambial ampliou a perda medida em dólares para 24,3%. No exterior, a correção foi mais moderada, mas as dúvidas sobre os investimentos em inteligência artificial continuaram pesando sobre as bolsas americanas.
 
 
 
 🔴 **Ibovespa**
 
-A reação ao segundo turno marcou o início da semana. Conforme o relatório, o Ibovespa acionou o circuit breaker na segunda-feira, com queda de 13,9%, e continuou pressionado nos pregões seguintes.
+A reação ao segundo turno marcou o início da semana. O Ibovespa acionou o circuit breaker na segunda-feira, com queda de 13,9%, e continuou pressionado nos pregões seguintes.
 O movimento atingiu principalmente empresas dependentes da atividade doméstica, do crédito e de financiamento. Varejo, construção e locação de veículos ficaram entre os segmentos mais afetados.
 Exportadoras encontraram algum apoio no real mais fraco. Papel e celulose se destacou, enquanto Vale e Petrobras ajudaram a amortecer as perdas em alguns momentos.
-O fluxo também refletiu a cautela: os estrangeiros retiraram cerca de R$ 7,6 bilhões, com dados até quarta-feira (28/10). Mesmo assim, o saldo de outubro ainda era positivo em R$ 8,6 bilhões, e o acumulado de 2026 somava R$ 36 bilhões, segundo as tabelas do relatório.
+O fluxo também refletiu a cautela: os estrangeiros retiraram cerca de R$ 7,6 bilhões, com dados até quarta-feira (28/10). Mesmo assim, o saldo de outubro ainda era positivo em R$ 8,6 bilhões, e o acumulado de 2026 somava R$ 36 bilhões.
 
 
 
 🔴 **Juros e dólar**
 
-O dólar avançou 9,2% no período, de acordo com o material. Ao mesmo tempo, as taxas de juros futuros subiram, refletindo a revisão das expectativas para o cenário fiscal e o custo de capital.
+O dólar avançou 9,2% no período. Ao mesmo tempo, as taxas de juros futuros subiram, refletindo a revisão das expectativas para o cenário fiscal e o custo de capital.
 O Tesouro Nacional cancelou leilões no começo da semana em meio à volatilidade. Para as ações, juros mais altos significaram maior pressão sobre negócios alavancados e empresas cujo valor depende de resultados mais distantes.
 A combinação de Bolsa em queda, câmbio depreciado e juros em alta concentrou o ajuste nos ativos brasileiros.
 
@@ -25,9 +25,9 @@ A combinação de Bolsa em queda, câmbio depreciado e juros em alta concentrou 
 
 🔴 **Lá fora**
 
-Nos Estados Unidos, o S&P 500 recuou 0,6%, o Nasdaq-100 perdeu 2,0% e o Dow Jones caiu 0,9%, conforme os números apresentados no relatório.
+Nos Estados Unidos, o S&P 500 recuou 0,6%, o Nasdaq-100 perdeu 2,0% e o Dow Jones caiu 0,9%.
 A manutenção dos juros pelo Fed não foi suficiente para afastar as dúvidas sobre o retorno dos investimentos em inteligência artificial. Os balanços das grandes empresas voltaram a colocar em discussão o ritmo dos gastos e sua capacidade de gerar lucro.
-A busca por proteção também apareceu nos títulos americanos, com a taxa da Treasury de dez anos atingindo o menor nível em sete semanas, segundo a XP.
+A busca por proteção também apareceu nos títulos americanos, com a taxa da Treasury de dez anos atingindo o menor nível em sete semanas.
 O comportamento das demais bolsas foi misto. Em dólares, Hong Kong avançou 0,9%, o Euro Stoxx 50 ganhou 0,7% e o Nikkei subiu 0,6%, enquanto o CSI 300 chinês caiu 2,7%.
 No petróleo, o Brent recuou aproximadamente 3,8%, para US$ 112,3 por barril, ainda sujeito à volatilidade das notícias sobre o Oriente Médio.
 
@@ -37,7 +37,6 @@ No petróleo, o Brent recuou aproximadamente 3,8%, para US$ 112,3 por barril, ai
 
 Na ponta positiva, Suzano (SUZB3) subiu 16,4%, apoiada pelo câmbio e pelo anúncio de reajuste de US$ 50 por tonelada da celulose destinada à Europa e à América do Norte a partir de novembro. WEG (WEGE3, +13,2%) e Embraer (EMBJ3, +12,8%) também se destacaram.
 Entre as maiores perdas ficaram Vamos (VAMO3, -62,9%), Magazine Luiza (MGLU3, -57,8%) e Cosan (CSAN3, -55,2%). A abertura dos juros e o aumento da aversão ao risco pressionaram especialmente empresas domésticas mais sensíveis ao financiamento.
-As variações são as informadas pelo relatório para a semana.
 
 
 
@@ -50,10 +49,6 @@ No exterior, a atenção permaneceu nos balanços e na sustentabilidade dos inve
 
 **O que esperar (2 a 6 de novembro)**
 
-A agenda destacada pelo relatório inclui as eleições de meio de mandato nos Estados Unidos e o relatório de emprego americano, o Payroll de outubro. Indicadores de atividade e a decisão do Banco da Inglaterra também entram no radar.
-No Brasil, o material aponta a decisão do Copom, as expectativas do Focus, os dados de emprego formal e a produção industrial como os principais temas de acompanhamento.
-A temporada de balanços continua, com empresas como Itaú Unibanco, BB Seguridade, Axia Energia, PRIO, Suzano e Localiza entre os destaques previstos no documento. Datas e horários devem ser conferidos no calendário atualizado.
-
-
-
-Fonte: XP Research, relatório “Resumo semanal da Bolsa”, de 30/10/2026, páginas 1, 6 e 7. Texto editorial elaborado a partir do material fornecido; dados atribuídos ao relatório, sem verificação independente. Foram omitidos o vencimento inconsistente de juros e os dias divergentes de divulgação do Focus.
+A próxima semana traz as eleições de meio de mandato nos Estados Unidos e o relatório de emprego americano, o Payroll de outubro. Indicadores de atividade e a decisão do Banco da Inglaterra também entram no radar.
+No Brasil, as atenções se voltam para a decisão do Copom e para a evolução das expectativas de inflação. Os dados de emprego formal e de produção industrial ajudam a completar a leitura da atividade.
+A temporada de balanços continua, com empresas como Itaú Unibanco, BB Seguridade, Axia Energia, PRIO, Suzano e Localiza no radar dos investidores. Datas e horários devem ser conferidos no calendário atualizado.
