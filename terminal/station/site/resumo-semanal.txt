@@ -1,52 +1,59 @@
-**Semana de 19 a 23 de outubro de 2026, Bolsa de lado às vésperas do segundo turno e tecnologia sob pressão lá fora**
+**Semana de 26 a 30 de outubro de 2026, Reprecificação no Brasil e pressão sobre tecnologia no exterior**
 
-📊 Uma semana de vai e vem: eleição no radar aqui dentro, inteligência artificial e petróleo mexendo com o humor lá fora.
+📊 O resultado eleitoral mudou o preço do risco no Brasil, enquanto os balanços das gigantes de tecnologia mantiveram os mercados internacionais em alerta.
 
-O Ibovespa passou a semana alternando dias de recuperação e de realização de lucros e terminou praticamente no zero. Em reais, a queda foi de 0,2%, aos 205.082 pontos. Como o real se valorizou 1,6% no período, quem mede em dólar viu alta de 0,7%. Lá fora, a semana foi pior: as ações ligadas à inteligência artificial voltaram a balançar, e o Nasdaq teve o pior pregão desde junho.
-
-
-
-🟡 **Ibovespa**
-
-No começo da semana, novas pesquisas eleitorais fizeram a curva de juros fechar, e isso ajudou as empresas mais sensíveis aos juros, como construtoras e varejistas. Construção Civil foi o melhor setor da semana (+6,9%), seguida por TMT (+5,5%) e Varejo (+3,4%).
-Na outra ponta ficaram Bens de Capital (-6,1%) e Mineração & Siderurgia (-5,9%). O primeiro foi puxado pela WEG, e o segundo pela queda do minério de ferro. A Petrobras ajudou a segurar o índice com a alta do petróleo.
-O investidor estrangeiro tirou R$ 834 milhões da Bolsa na semana (dados até quarta-feira), um movimento de cautela antes do segundo turno. Mesmo assim, o saldo de 2026 segue positivo em cerca de R$ 47,6 bilhões.
+Segundo o relatório semanal da XP Research de 30/10, o Ibovespa caiu 18,1% na semana, aos 167.922 pontos. A desvalorização cambial ampliou a perda medida em dólares para 24,3%. No exterior, a correção foi mais moderada, mas as dúvidas sobre os investimentos em inteligência artificial continuaram pesando sobre as bolsas americanas.
 
 
 
-🟢 **Juros e dólar**
+🔴 **Ibovespa**
 
-O dólar caiu 1,6% na semana e fechou a R$ 4,99.
-A curva de juros oscilou: fechou no início da semana, voltou a abrir na quinta-feira e encontrou alívio na sexta. Nesse dia, o IPCA-15 de outubro subiu 0,32%, abaixo dos 0,43% esperados e bem abaixo dos 0,70% de setembro.
+A reação ao segundo turno marcou o início da semana. Conforme o relatório, o Ibovespa acionou o circuit breaker na segunda-feira, com queda de 13,9%, e continuou pressionado nos pregões seguintes.
+O movimento atingiu principalmente empresas dependentes da atividade doméstica, do crédito e de financiamento. Varejo, construção e locação de veículos ficaram entre os segmentos mais afetados.
+Exportadoras encontraram algum apoio no real mais fraco. Papel e celulose se destacou, enquanto Vale e Petrobras ajudaram a amortecer as perdas em alguns momentos.
+O fluxo também refletiu a cautela: os estrangeiros retiraram cerca de R$ 7,6 bilhões, com dados até quarta-feira (28/10). Mesmo assim, o saldo de outubro ainda era positivo em R$ 8,6 bilhões, e o acumulado de 2026 somava R$ 36 bilhões, segundo as tabelas do relatório.
+
+
+
+🔴 **Juros e dólar**
+
+O dólar avançou 9,2% no período, de acordo com o material. Ao mesmo tempo, as taxas de juros futuros subiram, refletindo a revisão das expectativas para o cenário fiscal e o custo de capital.
+O Tesouro Nacional cancelou leilões no começo da semana em meio à volatilidade. Para as ações, juros mais altos significaram maior pressão sobre negócios alavancados e empresas cujo valor depende de resultados mais distantes.
+A combinação de Bolsa em queda, câmbio depreciado e juros em alta concentrou o ajuste nos ativos brasileiros.
 
 
 
 🔴 **Lá fora**
 
-Nos EUA, o S&P 500 caiu 1,9% e o Nasdaq 5,5%, enquanto o Dow Jones subiu 0,7%. A semana começou com alívio após o resultado da SpaceX, que mostrou receita 161% maior e anunciou comitês para avaliar uma fusão com a Tesla. Na quinta-feira o clima virou: a Meta caiu 7%, mesmo com receita acima do esperado, e voltaram as dúvidas sobre quem vai pagar a conta dos investimentos em inteligência artificial.
-Na busca por segurança, a Treasury de 10 anos voltou para baixo de 5%. A Lockheed Martin foi na direção contrária ao mercado e elevou as projeções para 2026, com a forte demanda por mísseis.
-No petróleo, o Brent disparou cerca de 8,2%, para US$ 116,6 o barril. Pesaram as notícias de que EUA e Israel planejam uma nova ofensiva contra o Irã depois das eleições de meio de mandato, além dos ataques dos Houthis à Arábia Saudita.
-Em dólares, Europa (Euro Stoxx 50: -2,4%), Japão (Nikkei: -3,2%) e Hong Kong (HSI: -4,5%) também fecharam no vermelho.
+Nos Estados Unidos, o S&P 500 recuou 0,6%, o Nasdaq-100 perdeu 2,0% e o Dow Jones caiu 0,9%, conforme os números apresentados no relatório.
+A manutenção dos juros pelo Fed não foi suficiente para afastar as dúvidas sobre o retorno dos investimentos em inteligência artificial. Os balanços das grandes empresas voltaram a colocar em discussão o ritmo dos gastos e sua capacidade de gerar lucro.
+A busca por proteção também apareceu nos títulos americanos, com a taxa da Treasury de dez anos atingindo o menor nível em sete semanas, segundo a XP.
+O comportamento das demais bolsas foi misto. Em dólares, Hong Kong avançou 0,9%, o Euro Stoxx 50 ganhou 0,7% e o Nikkei subiu 0,6%, enquanto o CSI 300 chinês caiu 2,7%.
+No petróleo, o Brent recuou aproximadamente 3,8%, para US$ 112,3 por barril, ainda sujeito à volatilidade das notícias sobre o Oriente Médio.
 
 
 
 **Destaques do Ibovespa**
 
-Na ponta positiva ficaram Magazine Luiza (MGLU3, +14,2%), MRV (MRVE3, +14,0%), Vamos (VAMO3, +13,1%), Natura (NATU3, +12,1%) e Cyrela (CYRE3, +10,5%). Construtoras e varejistas foram as que mais ganharam com o fechamento dos juros.
-Na ponta negativa ficaram WEG (WEGE3, -11,0%), Vale (VALE3, -6,5%), Bradespar (BRAP4, -5,5%) e Embraer (EMBJ3, -3,6%). A WEG caiu porque o resultado do 3º trimestre ficou abaixo do que o mercado esperava para as margens. Vale e Bradespar acompanharam a queda do minério.
+Na ponta positiva, Suzano (SUZB3) subiu 16,4%, apoiada pelo câmbio e pelo anúncio de reajuste de US$ 50 por tonelada da celulose destinada à Europa e à América do Norte a partir de novembro. WEG (WEGE3, +13,2%) e Embraer (EMBJ3, +12,8%) também se destacaram.
+Entre as maiores perdas ficaram Vamos (VAMO3, -62,9%), Magazine Luiza (MGLU3, -57,8%) e Cosan (CSAN3, -55,2%). A abertura dos juros e o aumento da aversão ao risco pressionaram especialmente empresas domésticas mais sensíveis ao financiamento.
+As variações são as informadas pelo relatório para a semana.
 
 
 
 **Resumo da Semana**
 
-A semana terminou no zero a zero para a Bolsa, mas não foi tranquila. Aqui dentro, o mercado ficou dividido entre o alívio dos juros e a cautela com a eleição. Lá fora, a correção das gigantes de tecnologia e o petróleo acima de US$ 115 lembraram que o risco não sumiu.
-O real forte e a inflação mais baixa que o esperado foram as boas notícias do período.
+O Brasil atravessou uma reavaliação intensa de risco, com impactos simultâneos sobre ações, juros e câmbio. A diferença de desempenho entre exportadoras e empresas voltadas ao consumo doméstico mostrou como a mudança nas condições financeiras afetou cada negócio de maneira distinta.
+No exterior, a atenção permaneceu nos balanços e na sustentabilidade dos investimentos em tecnologia. Para a próxima semana, o foco se desloca para as decisões de política monetária, o emprego americano e os desdobramentos políticos.
 
 
 
-**O que esperar (26 a 30 de outubro)**
+**O que esperar (2 a 6 de novembro)**
 
-O segundo turno das eleições presidenciais foi no domingo (25/10), e a reação da Bolsa e dos juros na segunda-feira deve dar o tom da semana.
-Lá fora, saem as decisões de juros nos EUA, no Japão e na Zona do Euro, e o mercado espera manutenção nos três. Nos EUA ainda saem o PIB do 3º trimestre e o PCE de setembro.
-No Brasil, saem o Caged e a taxa de desemprego (PNAD) de setembro e o IGP-M de outubro.
-Na temporada de balanços, divulgam resultados Vale, Ambev, Santander, Klabin, Gerdau, Usiminas e Hypera, entre outras. Lá fora, apresentam resultados Alphabet, Microsoft, Amazon, Visa, Mastercard, Coca-Cola, ExxonMobil e Eli Lilly.
+A agenda destacada pelo relatório inclui as eleições de meio de mandato nos Estados Unidos e o relatório de emprego americano, o Payroll de outubro. Indicadores de atividade e a decisão do Banco da Inglaterra também entram no radar.
+No Brasil, o material aponta a decisão do Copom, as expectativas do Focus, os dados de emprego formal e a produção industrial como os principais temas de acompanhamento.
+A temporada de balanços continua, com empresas como Itaú Unibanco, BB Seguridade, Axia Energia, PRIO, Suzano e Localiza entre os destaques previstos no documento. Datas e horários devem ser conferidos no calendário atualizado.
+
+
+
+Fonte: XP Research, relatório “Resumo semanal da Bolsa”, de 30/10/2026, páginas 1, 6 e 7. Texto editorial elaborado a partir do material fornecido; dados atribuídos ao relatório, sem verificação independente. Foram omitidos o vencimento inconsistente de juros e os dias divergentes de divulgação do Focus.
