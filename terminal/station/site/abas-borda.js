@@ -2,10 +2,10 @@
    grudados na borda direita. O primeiro toque abre a aba com o nome; o segundo faz a ação.
    Tocar fora ou rolar a tela recolhe. No computador nada muda. */
 (() => {
-  const CEL = window.matchMedia('(max-width: 768px)');
+  const CEL = window.matchMedia('(max-width: 900px)');
   const css = document.createElement('style');
   css.textContent = `
-  @media (max-width:768px){
+  @media (max-width:900px){
     body .aba-borda{position:fixed !important;right:0 !important;left:auto !important;display:inline-flex !important;align-items:center;gap:9px;height:44px;width:auto !important;
       max-width:46px;padding:0 14px 0 15px !important;border-radius:22px 0 0 22px !important;overflow:hidden;white-space:nowrap;opacity:1 !important;
       transition:max-width .22s ease,box-shadow .22s ease;justify-content:flex-start !important}
