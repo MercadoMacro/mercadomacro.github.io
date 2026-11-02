@@ -177,7 +177,7 @@
     for (const u of HIST_CURVA) {
       try { const j = await getJSON(u); if (j && j.dias && Object.keys(j.dias).length) { histCurva = j.dias; break; } } catch (e) { /* tenta a próxima */ }
     }
-    if (histCurva && root) { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+    if (histCurva && root) { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); } }
   }
   // dias guardados no navegador + histórico do GitHub (o oficial vale quando os dois têm o mesmo dia)
   const allSnaps = () => ({ ...loadSnaps(), ...(histCurva || {}) });
@@ -189,7 +189,7 @@
     if (diCurvas || Date.now() - diTentou < 60000) return;
     diTentou = Date.now();
     try { const j = await getJSON(DI_URL); if (j && j.curvas && j.curvas.hoje) diCurvas = j.curvas; } catch (e) { /* fica sem */ }
-    if (diCurvas && root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+    if (diCurvas && root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); } }
   }
   // DI futuro ao vivo (26/10/2026): todos os vencimentos do DI1 pelo servidor de dados (/di), que lê o site de cotações
   // da B3 (atraso de cerca de 15 minutos). Taxa de hoje = último negócio; sem negócio hoje, fica o ajuste do pregão anterior.
@@ -198,7 +198,7 @@
     if (!forcar && Date.now() - diVivoTs < 60000) return;
     diVivoTs = Date.now();
     try { const j = await getJSON(`${PROXY}/di`); if (j && Array.isArray(j.c) && j.c.length) diVivo = j; } catch (e) { /* fica com o anterior ou com a curva da noite */ }
-    if (root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+    if (root && curveKind === 'di') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); } }
   }
   // juro real da B3 (28/10/2026): DAP, cupom de IPCA, pelo servidor de dados (/dap), mesma leitura do DI
   let dapVivo = null, dapTs = 0, dapCmp = 'ajuste', dapTentou = false;
@@ -207,7 +207,7 @@
     dapTs = Date.now();
     try { const j = await getJSON(`${PROXY}/dap`); if (j && Array.isArray(j.c) && j.c.length) dapVivo = j; } catch (e) { /* fica com o anterior */ }
     dapTentou = true;
-    if (root && curveKind === 'dap') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } }
+    if (root && curveKind === 'dap') { const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); } }
   }
   // taxa do ajuste do pregão anterior: o worker manda "ref" (meio dos limites da B3), que não muda à noite;
   // o "aj" da B3 vira o ajuste de hoje depois do fechamento
@@ -607,6 +607,34 @@
     root.classList.add('ms-qb');
   }
 
+  // Estado independente da organização da Mesa; recolher não oculta no desktop.
+  const foldKey = 'mm_mesa_folds_v1';
+  let folds = {};
+  try { const v = JSON.parse(localStorage.getItem(foldKey) || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) folds = v; } catch {}
+  function mobileGroups() {
+    root.querySelectorAll('.ms-box').forEach((section, index) => {
+      const head = section.querySelector('.ms-head'), title = head?.querySelector('h3');
+      if (!head || !title || section.querySelector(':scope > .ms-fold-body')) return;
+      const key = section.dataset.tb || (section.classList.contains('ms-curvebox') ? 'curve' : 'news');
+      const content = document.createElement('div'); content.className = 'ms-fold-body'; content.id = 'ms-fold-' + key;
+      [...section.children].filter(n => n !== head).forEach(n => content.append(n)); section.append(content);
+      const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'ms-fold-toggle';
+      toggle.setAttribute('aria-controls', content.id);
+      const paint = () => {
+        const open = typeof folds[key] === 'boolean' ? folds[key] : index === 0;
+        section.classList.toggle('ms-folded', !open); toggle.setAttribute('aria-expanded', String(open));
+        toggle.setAttribute('aria-label', (open ? 'Recolher ' : 'Expandir ') + title.textContent);
+        toggle.textContent = open ? '−' : '+';
+      };
+      paint(); head.append(toggle);
+      toggle.addEventListener('click', () => {
+        folds[key] = toggle.getAttribute('aria-expanded') !== 'true'; paint();
+        try { localStorage.setItem(foldKey, JSON.stringify(folds)); } catch {}
+        if (folds[key]) requestAnimationFrame(drawCurve);
+      });
+    });
+  }
+
   function render() {
     carimbo();
     const col = (n) => TABLES.filter((t) => t.col === n).map(tableHTML).join('');
@@ -633,6 +661,7 @@
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
     window.MMDeskLayout?.apply(root, layout);
+    mobileGroups();
     paintCrypto();
     paintForex();
     const w = root.querySelector('.ms-wrap'); if (w) w.scrollTop = sc;
@@ -686,7 +715,7 @@
     const cb = e.target.closest('.ms-car-btn');
     if (cb) { const car = root.querySelector('.ms-car'); car?.scrollBy({ left: Math.sign(+cb.dataset.car) * car.clientWidth * 0.8, behavior: 'smooth' }); return; }
     const cv = e.target.closest('[data-curve]');
-    if (cv) { curveKind = cv.dataset.curve; const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); } return; }
+    if (cv) { curveKind = cv.dataset.curve; const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); } return; }
     const go = e.target.closest('[data-go]');
     if (go) { switchTab(go.dataset.go); return; }
     const tr = e.target.closest('tr[data-sym]');
@@ -705,7 +734,7 @@
   root.addEventListener('change', (e) => {
     if (e.target.classList.contains('ms-cmp')) {
       if (curveKind === 'di') diCmp = e.target.value || ''; else if (curveKind === 'dap') dapCmp = e.target.value || ''; else curveCmp = e.target.value || '';
-      const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); drawCurve(); }
+      const b = root.querySelector('.ms-curvebox'); if (b) { b.innerHTML = curveHTML(); mobileGroups(); drawCurve(); }
     }
   });
   let rt = null;
@@ -745,7 +774,7 @@
     .observe(panel, { attributes: true, attributeFilter: ['class'] });
   setInterval(() => { if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); }, 20 * 1000);
   setInterval(() => { if (active() && curveKind === 'di') loadDIvivo(); if (active() && curveKind === 'dap') loadDAP(); }, 60 * 1000);
-  const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); };
+  const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) { const content = b.querySelector('.ms-fold-body'); if (content) content.innerHTML = newsHTML(); else { b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); mobileGroups(); } } };
   setInterval(() => { if (active()) redrawNews(); }, 60 * 1000);
   window.addEventListener('mm-news-erro', redrawNews);
   document.addEventListener('visibilitychange', () => { syncCrypto(); syncForex(); if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); });
