@@ -11,8 +11,8 @@ const out=process.env.MM_BROWSER_OUTPUT||'/tmp/mm-responsive-review';mkdirSync(o
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp'};
 const server=createServer((req,res)=>{
  if(req.url==='/api/noticias'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify([
-    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],impactScore:8,finalScore:20},
-    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],impactScore:5,finalScore:10}
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
    ]));return;}
  if(req.url==='/api/assistente'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ligado:false,assinante:true}));return;}
  const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(site,'.'+(name==='/'?'/index.html':name));
@@ -30,8 +30,8 @@ try{
    await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
    const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
    await page.addInitScript(()=>localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
-    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],impactScore:8,finalScore:20},
-    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],impactScore:5,finalScore:10}
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
    ]})));
    // Séries demonstrativas só nesta prévia: não representam preços atuais.
    const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
