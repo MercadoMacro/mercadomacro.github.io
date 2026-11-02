@@ -319,7 +319,8 @@
       }).finally(() => clearTimeout(timeout));
       return;
     }
-    const actionTargets = { backup: 'backup-btn', summary: 'summary-btn', refresh: 'refresh-ticker' };
+    if (act === 'backup') { close(); setTimeout(() => document.getElementById('backup-btn')?.click(), 230); return; }
+    const actionTargets = { summary: 'summary-btn', refresh: 'refresh-ticker' };
     if (Object.prototype.hasOwnProperty.call(actionTargets, act)) {
       close();
       setTimeout(() => document.getElementById(actionTargets[act])?.click(), 230);
