@@ -33,6 +33,11 @@ try{
     {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
     {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
    ]})));
+   let liveWorkerCalls=0;
+   await page.route('https://news.cota-cotacao10.workers.dev/**',route=>{
+    liveWorkerCalls++;
+    return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify([{titulo:'Prévia: manchete do Worker ao vivo',link:'https://example.test/live',fonte:'InfoMoney',data:Date.now(),nivel:'ALTO',impactScore:7,finalScore:70,tags:[]}])});
+   });
    // Séries demonstrativas só nesta prévia: não representam preços atuais.
    const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
    const fixture=(symbol)=>sample[symbol]||[100+(symbol.length*7),1.25];
@@ -91,6 +96,16 @@ try{
       await page.locator('#news-view .nc-card').first().scrollIntoViewIfNeeded();
       await page.waitForTimeout(4500);
       await page.screenshot({path:join(out,theme+'-'+orientation+'-news-cards.png')});
+      await page.locator('#nm-toggle [data-mode="live"]').click();
+      await page.waitForFunction(()=>document.querySelector('#live-container')?.textContent.includes('manchete do Worker ao vivo'));
+      if(!liveWorkerCalls)throw Error('Ao vivo não consultou Worker direto');
+      if(theme==='dark'&&orientation==='portrait') {
+       const calls=liveWorkerCalls;await page.waitForTimeout(18000);
+       if(liveWorkerCalls<=calls)throw Error('Ao vivo não atualizou automaticamente');
+      }
+      await page.screenshot({path:join(out,theme+'-'+orientation+'-live-news.png')});
+      results.push({liveNews:true,theme,orientation,directWorker:true,calls:liveWorkerCalls});
+      await page.locator('#nm-toggle [data-mode="news"]').click();
      }
     }catch(e){record.error=e.message;}
     results.push(record);console.log(JSON.stringify(record));
