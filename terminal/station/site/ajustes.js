@@ -79,7 +79,9 @@
   const curMode = () => (P.mode === 'manual' ? (document.body.classList.contains('light') ? 'light' : 'dark') : P.mode);
 
   /* ---------------- painel ---------------- */
-  let box = null, lastFocus = null, mesaDragging = null;
+  let box = null, lastFocus = null, mesaDragging = null, selectedGroup = 'appearance';
+  const desktopSettings = matchMedia('(min-width:901px)');
+  desktopSettings.addEventListener('change', () => { if (box && !box.hidden) render(); });
   function tabsList() {
     return [...document.querySelectorAll('.tab-btn[data-tab]')].map((b) => [b.dataset.tab, [...b.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim()]);
   }
@@ -196,8 +198,9 @@
     ];
     for (const [id, name, titles] of groups) {
       const group = document.createElement('details'); group.className = 'aj-group'; group.dataset.group = id;
-      group.open = groupState[id] ?? id === 'appearance';
-      const summary = document.createElement('summary'); summary.textContent = name; group.append(summary);
+      group.open = desktopSettings.matches || (groupState[id] ?? id === 'appearance');
+      group.classList.toggle('aj-selected', id === selectedGroup);
+      const summary = document.createElement('summary'); summary.textContent = name; if (desktopSettings.matches) summary.tabIndex = -1; group.append(summary);
       for (const section of sections) if (titles.includes(section.querySelector('h3')?.textContent)) group.append(section);
       if (id === 'account' && !C?.logado) {
         const links = document.createElement('p'); links.className = 'aj-btns aj-account-links';
@@ -206,6 +209,9 @@
       }
       body.append(group);
     }
+    box.querySelectorAll('[data-aj-category]').forEach(b => {
+      if (b.dataset.ajCategory === selectedGroup) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
     box.querySelector('.aj-body').scrollTop = scroll;
@@ -219,7 +225,12 @@
       <aside class="aj-panel" role="dialog" aria-modal="true" aria-labelledby="aj-title">
         <header class="aj-head"><span class="aj-ic"><i class="fas fa-cog"></i></span><div><h2 id="aj-title">Ajustes</h2><p>Mudanças aplicadas na hora e salvas neste navegador</p></div>
           <button type="button" class="aj-x" data-act="close" aria-label="Fechar"><i class="fas fa-times"></i></button></header>
-        <div class="aj-body"></div>
+        <div class="aj-content"><nav class="aj-categories" aria-label="Categorias de configurações">
+          <button type="button" data-aj-category="appearance"><i class="fas fa-palette" aria-hidden="true"></i> Aparência</button>
+          <button type="button" data-aj-category="panel"><i class="fas fa-columns" aria-hidden="true"></i> Meu painel</button>
+          <button type="button" data-aj-category="data"><i class="fas fa-database" aria-hidden="true"></i> Dados</button>
+          <button type="button" data-aj-category="account"><i class="fas fa-user-circle" aria-hidden="true"></i> Conta</button>
+        </nav><div class="aj-body"></div></div>
       </aside>`;
     document.body.appendChild(box);
     box.addEventListener('click', onClick);
@@ -270,6 +281,9 @@
 
   /* ---------------- interação ---------------- */
   function onClick(e) {
+    const category = e.target.closest('[data-aj-category]');
+    if (category) { selectedGroup = category.dataset.ajCategory; render(); box.querySelector('.aj-body').scrollTop = 0; return; }
+    if (desktopSettings.matches && e.target.closest('.aj-group > summary')) { e.preventDefault(); return; }
     const b = e.target.closest('[data-act], [data-set], [data-toggle]');
     if (!b) return;
     const act = b.dataset.act;
