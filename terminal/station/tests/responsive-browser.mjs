@@ -25,6 +25,21 @@ try{
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
    await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
    const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+   // Séries demonstrativas só nesta prévia: não representam preços atuais.
+   const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
+   const fixture=(symbol)=>sample[symbol]||[100+(symbol.length*7),1.25];
+   await page.route('**/quotes?*',async route=>{
+    const symbols=(new URL(route.request().url()).searchParams.get('symbols')||'').split(',');
+    const payload=Object.fromEntries(symbols.map(symbol=>{const [price,change]=fixture(symbol);return [symbol,{chart:{result:[{meta:{regularMarketPrice:price,chartPreviousClose:price/(1+change/100),regularMarketTime:Date.now()/1000},indicators:{quote:[{close:[price*.98,price*.99,price],volume:[1,1,1]}]}}]}}];}));
+    await route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(payload)});
+   });
+   await page.route('**/history?*',async route=>{
+    const symbols=(new URL(route.request().url()).searchParams.get('symbols')||'').split(',');
+    const payload=Object.fromEntries(symbols.map(symbol=>{const [v]=fixture(symbol);return [symbol,{t:Array.from({length:32},(_,i)=>Math.floor(Date.now()/1000)-(31-i)*3600),c:Array.from({length:32},(_,i)=>v*(.98+i*.0006+Math.sin(i)*.001))}];}));
+    await route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(payload)});
+   });
+   await page.addInitScript(()=>localStorage.setItem('mercado_novo_v1',JSON.stringify({as:{s:'^KS11',f:'1d'}})));
+
    await page.goto(base,{waitUntil:'domcontentloaded'});
    await page.locator('#mobile-navigation').waitFor({state:'visible'});
    for(const id of tabs){
@@ -64,7 +79,7 @@ try{
   }
  }
 }finally{
- writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local do código, sem sessão de usuário. Fontes externas podem estar indisponíveis; não valida a exatidão dos dados.',results},null,2));
+ writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações e séries de /quotes e /history são demonstrativas para avaliação visual, não preços atuais. Outras fontes podem estar indisponíveis.',results},null,2));
  await browser.close();await new Promise(r=>server.close(r));
 }
 const panels=results.filter(x=>x.tab),headers=results.filter(x=>x.header);
