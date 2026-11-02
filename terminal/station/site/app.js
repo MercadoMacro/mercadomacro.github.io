@@ -204,6 +204,7 @@ function switchTab(tabId) {
   if (tabId === 'calendar-panel') setTimeout(fitCalendarIframe, 100);
   if (tabId === 'heatmap-panel') setTimeout(() => initHeatmapIfNeeded(), 150);
   if (window.__onTabSwitch) window.__onTabSwitch(tabId);
+  if (tabId === 'news-panel') document.dispatchEvent(new Event('mm-news-visible'));
 }
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 const savedTab = localStorage.getItem(STORAGE.activeTab);
@@ -961,6 +962,7 @@ function setLiveMode(on, silent = false) {
   if (toggle) { toggle.classList.toggle('on', on); toggle.setAttribute('aria-checked', String(on)); }
   if (on) {
     startAutoRefresh();
+    newsLiveTick();
     updateTicker(true);
     updateMarketPanel(true);
     if (!silent) toast('Atualização automática ligada · a cada 5 min no pregão (15 min fora dele)', 'success');
@@ -1591,7 +1593,7 @@ function setNewsMode(mode) {
   document.getElementById('news-view').style.display = mode === 'news' ? 'block' : 'none';
   document.getElementById('live-view').style.display = mode === 'live' ? 'block' : 'none';
   if (mode === 'news') renderNewsView();
-  else renderLiveView();
+  else { renderLiveView(); fetchNewsFromWorker(true); }
 }
 document.getElementById('nm-toggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
@@ -1609,20 +1611,58 @@ function showNewsSkeleton() {
   if (view) view.innerHTML = sk;
 }
 
+// NEWS_LIVE_START: atualização independente das cotações, com uma busca por vez.
+const NEWS_LIVE_MS = 15000;
+let newsFetchInFlight = null, newsLastAttempt = 0;
+function newsLiveActive() {
+  return liveMode && !document.hidden && newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
+}
+function newsLiveTick() {
+  if (newsLiveActive() && !newsFetchInFlight && Date.now() - newsLastAttempt >= NEWS_LIVE_MS) return fetchNewsFromWorker(true);
+}
+async function newsFetchPayload(preferLive) {
+  const urls = preferLive ? [NEWS_WORKER_URL, '/api/noticias'] : ['/api/noticias', NEWS_WORKER_URL];
+  let error;
+  for (const url of urls) {
+    try {
+      const res = await fetchT(url, { cache: 'no-store' }, url === NEWS_WORKER_URL ? 12000 : 25000);
+      if (!res.ok) throw Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length || data.some(n => !n || typeof n.titulo !== 'string' || !Number.isFinite(n.data) || typeof n.nivel !== 'string')) throw Error('Lista de notícias inválida');
+      return { res, data };
+    } catch (e) { error = e; }
+  }
+  throw error || Error('Notícias indisponíveis');
+}
+function newsMergeLive(previous, incoming) {
+  const unique = new Map();
+  for (const n of [...previous, ...incoming]) if (n.link) unique.set(n.link, n);
+  const counts = {};
+  return [...unique.values()].filter(n => Date.now() - n.data < NEWS_MAX_IDADE)
+    .sort((a,b) => b.data - a.data).filter(n => (counts[n.fonte] = (counts[n.fonte] || 0) + 1) <= 30).slice(0,1200);
+}
+function fetchNewsFromWorker(silent = false) {
+  if (newsFetchInFlight) return newsFetchInFlight;
+  newsLastAttempt = Date.now();
+  newsFetchInFlight = fetchNewsOnce(silent).finally(() => { newsFetchInFlight = null; });
+  return newsFetchInFlight;
+}
+// NEWS_LIVE_END
+setInterval(newsLiveTick, 1000);
+document.addEventListener('visibilitychange', newsLiveTick);
+document.addEventListener('mm-news-visible', newsLiveTick);
 let newsFetchSeq = 0;
-async function fetchNewsFromWorker(silent = false) {
+async function fetchNewsOnce(silent = false) {
   const info = document.getElementById('news-info');
   if (info && !silent) info.classList.add('loading');
   const seq = ++newsFetchSeq; // se outra busca começar depois, esta é descartada
 
   try {
-    // lista do próprio site (lê os feeds aqui); se falhar, a do worker de notícias antigo
-    let res = await fetchT('/api/noticias', {}, 25000).catch(() => null);
-    if (!res || !res.ok) res = await fetchT(NEWS_WORKER_URL, {}, 25000);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const preferLive = newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
+    const payload = await newsFetchPayload(preferLive);
+    const res = payload.res;
+    const data = preferLive ? newsMergeLive(newsBruto, payload.data) : payload.data;
     if (seq !== newsFetchSeq) return;
-    if (!Array.isArray(data)) throw new Error('Formato inválido');
 
     newsAll = newsPrepara(data);
     window.__newsErro = false; // a Mesa usa para trocar "Carregando" pelo aviso de falha
