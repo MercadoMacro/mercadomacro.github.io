@@ -59,7 +59,7 @@
   document.addEventListener('click', (e) => {
     const b = gratis && e.target.closest?.(RESUMO);
     // no celular o primeiro toque só abre a aba da borda (abas-borda.js)
-    if (!b || (b.classList.contains('aba-borda') && !b.classList.contains('aba-aberta') && matchMedia('(max-width: 640px)').matches)) return;
+    if (!b || (b.classList.contains('aba-borda') && !b.classList.contains('aba-aberta') && matchMedia('(max-width: 900px)').matches)) return;
     e.preventDefault(); e.stopImmediatePropagation(); avisoResumo();
   }, true);
   document.addEventListener('keydown', (e) => {
