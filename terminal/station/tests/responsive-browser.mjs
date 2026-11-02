@@ -118,6 +118,34 @@ try{
    await ctx.close();
   }
  }
+ // Ajustes no computador: categorias, persistência de controles e retorno ao mobile.
+ for(const width of [1280,1920])for(const theme of ['dark','light']) {
+  const ctx=await browser.newContext({viewport:{width,height:900},locale:'pt-BR',serviceWorkers:'block'});
+  await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
+  const page=await ctx.newPage();await page.goto(base,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>typeof window.openSettings==='function');await page.evaluate(()=>window.openSettings());
+  const settings=page.locator('.aj:not([hidden])');
+  for(const id of ['appearance','panel','data','account']) {
+   await settings.locator('[data-aj-category="'+id+'"]').click();
+   if(await settings.locator('.aj-group:visible').count()!==1)throw Error('Desktop: mais de uma categoria visível');
+   if(!(await settings.locator('[data-group="'+id+'"]').isVisible()))throw Error('Desktop: categoria errada');
+   if(id==='panel') {
+    await settings.locator('[data-toggle="cardSource"]').click();
+    if(await settings.locator('[data-aj-category="panel"]').getAttribute('aria-current')!=='true')throw Error('Desktop: perdeu categoria após alterar controle');
+    if(!(await page.evaluate(()=>JSON.parse(localStorage.getItem('trader_prefs_v1')).cardSource)))throw Error('Desktop: controle não foi salvo');
+    await settings.locator('[data-toggle="cardSource"]').click();
+   }
+   const bounds=await settings.locator('.aj-body').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth}));
+   if(bounds.scroll>bounds.width+2)throw Error('Desktop: conteúdo saiu da largura em '+id);
+   await page.screenshot({path:join(out,theme+'-desktop-'+width+'-settings-'+id+'.png')});
+  }
+  await page.setViewportSize({width:390,height:844});
+  if(await settings.locator('.aj-categories').isVisible())throw Error('Mobile: categorias desktop visíveis');
+  if(await settings.locator('.aj-group > summary:visible').count()!==4)throw Error('Mobile: grupos sumiram após redimensionar');
+  await settings.locator('button[data-act="close"]').click();
+  results.push({desktopSettings:true,width,theme,categories:4,controlsSaved:true,mobileReturn:true});
+  await ctx.close();
+ }
 }finally{
  writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações, séries e notícias são demonstrativas para avaliação visual, não preços ou notícias atuais. Outras fontes podem estar indisponíveis.',results},null,2));
  await browser.close();await new Promise(r=>server.close(r));
