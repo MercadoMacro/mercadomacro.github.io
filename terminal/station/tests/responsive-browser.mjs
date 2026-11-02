@@ -10,6 +10,10 @@ const site=fileURLToPath(new URL('../site/',import.meta.url));
 const out=process.env.MM_BROWSER_OUTPUT||'/tmp/mm-responsive-review';mkdirSync(out,{recursive:true});
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp'};
 const server=createServer((req,res)=>{
+ if(req.url==='/api/noticias'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify([
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
+   ]));return;}
  if(req.url==='/api/assistente'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ligado:false,assinante:true}));return;}
  const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(site,'.'+(name==='/'?'/index.html':name));
  if(!file.startsWith(site)||!existsSync(file)||!statSync(file).isFile()){res.writeHead(404);return res.end();}
@@ -24,7 +28,11 @@ try{
   for(const theme of ['dark','light']){
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
    await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
-   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
+   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
+   await page.addInitScript(()=>localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
+   ]})));
    // Séries demonstrativas só nesta prévia: não representam preços atuais.
    const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
    const fixture=(symbol)=>sample[symbol]||[100+(symbol.length*7),1.25];
@@ -60,10 +68,42 @@ try{
       }
       return {bodyLight:document.body.classList.contains('light'),pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,panelTop:Math.round(p.getBoundingClientRect().top),panelWidth:p.clientWidth,panelScrollWidth:p.scrollWidth,navVisible:visible(nav),summaryVisible:visible(document.getElementById('fab-summary')),assistantVisible:visible(document.getElementById('ia-fab')),outside:outside.slice(0,12),previewText:p.innerText.slice(0,240)};
      },id));
+     if(id==='mesa-panel') {
+      const first=page.locator('.ms-fold-toggle').first();
+      const before=await first.getAttribute('aria-expanded');
+      await first.click();
+      if(await first.getAttribute('aria-expanded')===before)throw Error('Mesa não recolheu/expandiu');
+      const after=await first.getAttribute('aria-expanded');
+      await page.evaluate(()=>window.dispatchEvent(new Event('mesa-layout-changed')));
+      if(await page.locator('.ms-fold-toggle').first().getAttribute('aria-expanded')!==after)throw Error('Mesa perdeu estado ao atualizar');
+      await page.locator('.ms-fold-toggle').first().click();
+     }
      record.screenshot=theme+'-'+orientation+'-'+id+'.png';await page.screenshot({path:join(out,record.screenshot)});
+     if(id==='mesa-panel') {
+      const first=page.locator('.ms-fold-toggle').first();
+      if(await first.getAttribute('aria-expanded')==='true')await first.click();
+      await page.locator('.ms-tb').first().evaluate(e=>e.scrollIntoView({block:'start'}));
+      await page.waitForTimeout(4500);
+      await page.screenshot({path:join(out,theme+'-'+orientation+'-mesa-groups.png')});
+      await first.click();
+     }
+     if(id==='news-panel') {
+      await page.locator('#news-view .nc-card').first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(4500);
+      await page.screenshot({path:join(out,theme+'-'+orientation+'-news-cards.png')});
+     }
     }catch(e){record.error=e.message;}
     results.push(record);console.log(JSON.stringify(record));
    }
+   await page.locator('#settings-btn').click();
+   const settings=page.locator('.aj:not([hidden])');await settings.waitFor({state:'visible'});
+   const names=await settings.locator('.aj-group > summary').allTextContents();
+   if(names.join('|')!=='Aparência|Meu painel|Dados|Conta')throw Error('Grupos de ajustes incompletos');
+   await settings.locator('[data-group="appearance"] > summary').click();
+   await page.screenshot({path:join(out,theme+'-'+orientation+'-settings-overview.png')});
+   await settings.locator('[data-group="panel"] > summary').click();
+   await page.screenshot({path:join(out,theme+'-'+orientation+'-settings.png')});
+   await settings.locator('button[data-act="close"]').click();
    // Tema e engrenagem devem continuar acessíveis sem sobreposição entre si.
    results.push({orientation,theme,header:await page.locator('.topbar-right').evaluate(e=>Array.from(e.querySelectorAll('button')).filter(x=>x.getBoundingClientRect().width>0&&getComputedStyle(x).display!=='none').map(x=>({id:x.id,rect:{x:x.getBoundingClientRect().x,y:x.getBoundingClientRect().y,w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height}}))),errors});
    // Exercita as abas recolhíveis com o assistente local de respostas prontas.
@@ -79,7 +119,7 @@ try{
   }
  }
 }finally{
- writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações e séries de /quotes e /history são demonstrativas para avaliação visual, não preços atuais. Outras fontes podem estar indisponíveis.',results},null,2));
+ writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações, séries e notícias são demonstrativas para avaliação visual, não preços ou notícias atuais. Outras fontes podem estar indisponíveis.',results},null,2));
  await browser.close();await new Promise(r=>server.close(r));
 }
 const panels=results.filter(x=>x.tab),headers=results.filter(x=>x.header);

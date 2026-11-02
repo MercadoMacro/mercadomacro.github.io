@@ -96,6 +96,7 @@
     const live = document.getElementById('live-toggle');
     const liveOn = live ? live.classList.contains('on') : null;
     const scroll = box.querySelector('.aj-body')?.scrollTop || 0;
+    const groupState = Object.fromEntries([...box.querySelectorAll('.aj-group')].map(g => [g.dataset.group, g.open]));
     const C = window.__conta;
     box.querySelector('.aj-body').innerHTML = `
       ${C && C.logado ? `<section class="aj-sec">
@@ -185,6 +186,26 @@
         <div class="site-foot">${document.getElementById('site-foot')?.innerHTML || ''}</div>
         <p class="aj-note"><b>Aba Mercado:</b> cotações do Yahoo Finance pelo servidor do painel. Ponto verde: preço em tempo real (câmbio pela Deriv; dólar, VIX e futuros pela Capital.com em CFD; cripto pela Binance em USDT), com a Atualização automática ligada. Horários em Brasília. A situação do pregão considera os feriados da B3, da bolsa de Nova York, da Xetra (cartão Europa) e da bolsa de Tóquio (cartão Ásia); os futuros da CME fecham no Natal, no Ano-Novo e na Sexta-feira Santa e param às 13h de Nova York nos outros feriados americanos. O cartão Moedas segue o câmbio à vista, que negocia sem pausa de domingo a sexta, das 17h às 17h de Nova York.</p>
       </section>`;
+    const body = box.querySelector('.aj-body');
+    const sections = [...body.querySelectorAll(':scope > .aj-sec')];
+    const groups = [
+      ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
+      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa', 'Atalhos de teclado']],
+      ['data', 'Dados', ['Dados']],
+      ['account', 'Conta', ['Conta', 'Sobre']]
+    ];
+    for (const [id, name, titles] of groups) {
+      const group = document.createElement('details'); group.className = 'aj-group'; group.dataset.group = id;
+      group.open = groupState[id] ?? id === 'appearance';
+      const summary = document.createElement('summary'); summary.textContent = name; group.append(summary);
+      for (const section of sections) if (titles.includes(section.querySelector('h3')?.textContent)) group.append(section);
+      if (id === 'account' && !C?.logado) {
+        const links = document.createElement('p'); links.className = 'aj-btns aj-account-links';
+        links.innerHTML = '<a class="btn-sm" href="/conta">Minha conta</a><a class="btn-sm" href="/assinar">Assinatura</a>';
+        summary.after(links);
+      }
+      body.append(group);
+    }
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
     box.querySelector('.aj-body').scrollTop = scroll;
