@@ -82,7 +82,7 @@ try{
      if(id==='mesa-panel') {
       const first=page.locator('.ms-fold-toggle').first();
       if(await first.getAttribute('aria-expanded')==='true')await first.click();
-      await page.locator('.ms-tb').first().scrollIntoViewIfNeeded();
+      await page.locator('.ms-tb').first().evaluate(e=>e.scrollIntoView({block:'start'}));
       await page.waitForTimeout(4500);
       await page.screenshot({path:join(out,theme+'-'+orientation+'-mesa-groups.png')});
       await first.click();
