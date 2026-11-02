@@ -10,6 +10,10 @@ const site=fileURLToPath(new URL('../site/',import.meta.url));
 const out=process.env.MM_BROWSER_OUTPUT||'/tmp/mm-responsive-review';mkdirSync(out,{recursive:true});
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp'};
 const server=createServer((req,res)=>{
+ if(req.url==='/api/noticias'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify([
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],impactScore:5,finalScore:10}
+   ]));return;}
  if(req.url==='/api/assistente'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ligado:false,assinante:true}));return;}
  const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(site,'.'+(name==='/'?'/index.html':name));
  if(!file.startsWith(site)||!existsSync(file)||!statSync(file).isFile()){res.writeHead(404);return res.end();}
@@ -24,11 +28,11 @@ try{
   for(const theme of ['dark','light']){
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
    await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
-   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
-   await page.route('**/api/noticias', route=>route.fulfill({contentType:'application/json',body:JSON.stringify([
-    {id:'preview-1',titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['juros'],impactScore:8},
-    {id:'preview-2',titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['bolsas'],impactScore:5}
-   ])}));
+   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
+   await page.addInitScript(()=>localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
+    {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],impactScore:8,finalScore:20},
+    {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],impactScore:5,finalScore:10}
+   ]})));
    // Séries demonstrativas só nesta prévia: não representam preços atuais.
    const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
    const fixture=(symbol)=>sample[symbol]||[100+(symbol.length*7),1.25];
