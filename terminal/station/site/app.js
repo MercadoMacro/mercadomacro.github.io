@@ -173,7 +173,11 @@ $('#current-date').textContent = new Date().toLocaleDateString('pt-BR', { weekda
 
 function applyTheme(t) {
   document.body.classList.toggle('light', t === 'light');
-  $('#theme-toggle').innerHTML = t === 'light' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  const themeButton = $('#theme-toggle');
+  themeButton.innerHTML = t === 'light' ? '<i class="fas fa-moon" aria-hidden="true"></i>' : '<i class="fas fa-sun" aria-hidden="true"></i>';
+  const themeAction = t === 'light' ? 'Ativar tema escuro (Alt+L)' : 'Ativar tema claro (Alt+L)';
+  themeButton.setAttribute('aria-label', themeAction);
+  themeButton.title = themeAction;
   localStorage.setItem(STORAGE.theme, t);
   if ($('#heatmap-panel')?.classList.contains('active')) {
     renderHeatmap(heatmapSource);
