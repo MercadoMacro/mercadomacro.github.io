@@ -3209,3 +3209,6 @@ html body .quotes-warning {
   border-left:3px solid var(--accent); border-radius:8px;
   background:var(--accent-soft); color:var(--text); font-size:12px; line-height:1.45;
 }
+
+/* Sol/lua substitui o menu de três pontos; demais ações ficam em Ajustes. */
+html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; align-items:center; justify-content:center; }

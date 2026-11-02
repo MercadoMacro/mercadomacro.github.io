@@ -162,7 +162,9 @@
         <p class="aj-note">Este navegador guarda ${storageKB()} KB do painel: cotações, histórico, indicadores, notícias, suas notas e estratégias.</p>
         <div class="aj-btns">
           <button type="button" class="btn-sm" data-act="cache"><i class="fas fa-broom"></i> Limpar cache de dados</button>
-          <button type="button" class="btn-sm" data-act="backup"><i class="fas fa-database"></i> Backup</button>
+          <button type="button" class="btn-sm" data-act="backup"><i class="fas fa-database"></i> Backup e restauração</button>
+          <button type="button" class="btn-sm" data-act="summary"><i class="fas fa-clipboard-list"></i> Resumo para cliente</button>
+          <button type="button" class="btn-sm" data-act="refresh"><i class="fas fa-sync-alt"></i> Atualizar cotações</button>
           <button type="button" class="btn-sm" data-act="reset"><i class="fas fa-undo"></i> Restaurar ajustes</button>
         </div>
         <p class="aj-note">Limpar o cache baixa tudo de novo, sem apagar notas, compromissos, estratégias salvas nem estes ajustes.</p>
@@ -317,7 +319,12 @@
       }).finally(() => clearTimeout(timeout));
       return;
     }
-    if (act === 'backup') { close(); setTimeout(() => document.getElementById('backup-btn')?.click(), 230); return; }
+    const actionTargets = { backup: 'backup-btn', summary: 'summary-btn', refresh: 'refresh-ticker' };
+    if (Object.prototype.hasOwnProperty.call(actionTargets, act)) {
+      close();
+      setTimeout(() => document.getElementById(actionTargets[act])?.click(), 230);
+      return;
+    }
     if (act === 'cache') {
       if (!confirm('Limpar o cache de dados? As cotações, indicadores e notícias serão baixados de novo. Notas, compromissos, estratégias e ajustes ficam.')) return;
       const keep = new Set([KEY, IMG_KEY, 'trader_theme', 'trader_active_tab', 'trader_live_mode', 'trader_calendar_notes_v1', 'trader_heatmap_source',
