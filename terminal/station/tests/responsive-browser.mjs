@@ -60,10 +60,29 @@ try{
       }
       return {bodyLight:document.body.classList.contains('light'),pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,panelTop:Math.round(p.getBoundingClientRect().top),panelWidth:p.clientWidth,panelScrollWidth:p.scrollWidth,navVisible:visible(nav),summaryVisible:visible(document.getElementById('fab-summary')),assistantVisible:visible(document.getElementById('ia-fab')),outside:outside.slice(0,12),previewText:p.innerText.slice(0,240)};
      },id));
+     if(id==='mesa-panel') {
+      const first=page.locator('.ms-fold-toggle').first();
+      const before=await first.getAttribute('aria-expanded');
+      await first.click();
+      if(await first.getAttribute('aria-expanded')===before)throw Error('Mesa não recolheu/expandiu');
+      const after=await first.getAttribute('aria-expanded');
+      await page.evaluate(()=>window.dispatchEvent(new Event('mesa-layout-changed')));
+      if(await page.locator('.ms-fold-toggle').first().getAttribute('aria-expanded')!==after)throw Error('Mesa perdeu estado ao atualizar');
+      await page.locator('.ms-fold-toggle').first().click();
+     }
      record.screenshot=theme+'-'+orientation+'-'+id+'.png';await page.screenshot({path:join(out,record.screenshot)});
     }catch(e){record.error=e.message;}
     results.push(record);console.log(JSON.stringify(record));
    }
+   await page.locator('#settings-btn').click();
+   const settings=page.locator('.aj:not([hidden])');await settings.waitFor({state:'visible'});
+   const names=await settings.locator('.aj-group > summary').allTextContents();
+   if(names.join('|')!=='Aparência|Meu painel|Dados|Conta')throw Error('Grupos de ajustes incompletos');
+   await settings.locator('[data-group="appearance"] > summary').click();
+   await settings.locator('[data-group="panel"] > summary').click();
+   await settings.locator('[data-set="startTab"]').count();
+   await page.screenshot({path:join(out,theme+'-'+orientation+'-settings.png')});
+   await settings.locator('[data-act="close"]').click();
    // Tema e engrenagem devem continuar acessíveis sem sobreposição entre si.
    results.push({orientation,theme,header:await page.locator('.topbar-right').evaluate(e=>Array.from(e.querySelectorAll('button')).filter(x=>x.getBoundingClientRect().width>0&&getComputedStyle(x).display!=='none').map(x=>({id:x.id,rect:{x:x.getBoundingClientRect().x,y:x.getBoundingClientRect().y,w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height}}))),errors});
    // Exercita as abas recolhíveis com o assistente local de respostas prontas.
