@@ -344,7 +344,7 @@
       </div>
       <div class="mn-chart" data-r="${r.id}">${grafico(r)}</div>
       ${fr ? `<p class="mn-frase">${esc(fr)}</p>` : ''}
-      <div class="mn-rows"><div class="mn-table-head" aria-hidden="true"><span>Índice</span><span>${r.juros ? 'Taxa' : r.fx ? 'Cotação' : 'Pontos'}</span><span>${r.juros ? 'Var. pb' : 'Var. %'}</span></div>${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
+      <div class="mn-rows"><div class="mn-table-head" aria-hidden="true"><span>${r.juros ? 'Título' : ['as', 'eu', 'us'].includes(r.id) ? 'Índice' : 'Ativo'}</span><span>${r.juros ? 'Taxa' : ['as', 'eu', 'us'].includes(r.id) ? 'Pontos' : 'Cotação'}</span><span>${r.juros ? 'Var. pb' : 'Var. %'}</span></div>${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
     </article>`;
   }
   /* ---------------- fora do horário (26/10/2026, pedido do Severino) ----------------
@@ -480,6 +480,7 @@
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
         <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
       </div>
+      ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="mn-grid">${ordem().map(cartao).join('')}${cartaoCmc()}${cartaoPerp()}</div>
     </div>`;
     carimbo(hora);
@@ -528,8 +529,8 @@
     const f = faixa(r);
     if (f !== '3mo' || !G[`3mo|${escolha(r)}`]) { await loadHist([escolha(r)], f); render(); }
   });
-  // valor e horário sob o mouse
-  root.addEventListener('mousemove', (e) => {
+  // Mouse, caneta e toque compartilham a consulta, sem bloquear a rolagem.
+  function mostraPonto(e) {
     const box = e.target.closest('.mn-chart');
     if (!box) return;
     const r = REGIOES.find((x) => x.id === box.dataset.r), g = G[`${faixa(r)}|${escolha(r)}`], tip = box.querySelector('.mn-tip');
@@ -540,8 +541,14 @@
     tip.hidden = false;
     tip.textContent = `${i.pre}${nf(g.c[k], i.d)}${i.juros ? '%' : ''} · ${quandoTxt}`;
     tip.style.left = `${Math.min(rc.width - 120, Math.max(0, e.clientX - rc.left - 60))}px`;
-  });
-  root.addEventListener('mouseout', (e) => { const box = e.target.closest('.mn-chart'); if (box && !box.contains(e.relatedTarget)) box.querySelector('.mn-tip')?.setAttribute('hidden', ''); });
+  }
+  const escondePontos = () => root.querySelectorAll('.mn-tip').forEach((tip) => tip.setAttribute('hidden', ''));
+  root.addEventListener('pointerdown', mostraPonto, { passive: true });
+  root.addEventListener('pointermove', mostraPonto, { passive: true });
+  root.addEventListener('pointerout', (e) => { const box = e.target.closest('.mn-chart'); if (box && !box.contains(e.relatedTarget)) box.querySelector('.mn-tip')?.setAttribute('hidden', ''); });
+  root.addEventListener('pointercancel', escondePontos);
+  root.addEventListener('scroll', escondePontos, { passive: true });
+  document.addEventListener('pointerdown', (e) => { if (!root.contains(e.target) || !e.target.closest('.mn-chart')) escondePontos(); }, { passive: true });
 
   /* ---------------- estilos ---------------- */
   const css = document.createElement('style');
