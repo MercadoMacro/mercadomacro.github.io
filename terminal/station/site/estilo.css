@@ -3109,3 +3109,34 @@ html body .mj-n { font-size:9.5px; }
 /* coluna estreita: Fed e Copom cuidam do seu layout (fed.js / copom.js) */
 .pj-col { container-type:inline-size; }
 .pj-flag { width:21px; height:14px; flex:none; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
+
+/* Mobile: uma única margem externa; mantém o desenho e a densidade do desktop. */
+@media (max-width: 768px) {
+  html body { padding-inline:max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right)); }
+  html body .topbar.topbar { padding-top:4px; row-gap:8px; margin-bottom:10px; }
+  html body .topbar.topbar > .topbar-right { gap:0; }
+  html body .topbar.topbar > .topbar-right :is(.icon-btn, .cmdk-hint, .topbar-more > summary) { width:44px; min-width:44px; height:44px; flex-basis:44px; }
+  html body .topbar.topbar > .ticker { width:100%; max-width:100%; box-sizing:border-box; }
+  #mobile-navigation { width:100%; box-sizing:border-box; margin-inline:0; margin-bottom:10px; }
+  #mobile-navigation > .mn-bar { gap:4px; padding:4px; }
+  #mobile-navigation > .mn-bar button { min-height:44px; padding:5px 2px; }
+  #mobile-navigation > .mn-bar button span { white-space:normal; line-height:1.2; text-align:center; }
+  html body #market-panel > .market-wrap { padding:0 0 16px; min-width:0; }
+  html body .mn-root .mn { gap:12px; }
+  html body .mn-root .mn-grid { grid-template-columns:minmax(0,1fr); gap:14px; }
+  html body .mn-root .mn-card { width:100%; margin-inline:0; padding:14px 12px 8px; border-radius:16px; box-sizing:border-box; }
+  html body .mn-root :is(.mn-chart, .mn-svg, .mn-chart-vazio) { width:100%; min-width:0; height:150px; }
+  html body .mn-root .mn-row { grid-template-columns:minmax(0,1fr) auto minmax(58px,auto); gap:6px; padding:8px 2px; min-height:44px; }
+  html body .mn-root .mn-n { white-space:normal; overflow-wrap:anywhere; font-size:12px; line-height:1.3; letter-spacing:0; }
+  html body .mn-root :is(.mn-v, .mn-c) { white-space:nowrap; font-size:12px; }
+  html body .mn-root .mn-mais { width:44px; height:44px; }
+  html body .mn-root .mn-faixas button { min-width:44px; min-height:44px; padding:4px; }
+  html body .mn-root .mn-chart-top { flex-wrap:wrap; }
+  html body .mn-root .mn-btn { min-height:44px; }
+  html body .fab-summary { position:static; align-self:flex-end; min-height:44px; margin:0 0 max(10px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 359px) {
+  html body .mm-mini { gap:6px; }
+  html body .mm-mini b { font-size:14px; }
+}
