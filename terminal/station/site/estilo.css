@@ -3158,3 +3158,6 @@ html body .mj-n { font-size:9.5px; }
   html body .mn-root .mn-faixas button { min-width:40px; }
 }
 
+
+/* A faixa de frases tem o mesmo conteúdo em todas as abas. */
+html body .qbanner :is(.qb-mn, .qb-ms) { display:none !important; }
