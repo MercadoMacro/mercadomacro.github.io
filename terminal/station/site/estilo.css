@@ -3161,3 +3161,44 @@ html body .mj-n { font-size:9.5px; }
 
 /* A faixa de frases tem o mesmo conteúdo em todas as abas. */
 html body .qbanner :is(.qb-mn, .qb-ms) { display:none !important; }
+
+/* Mercado: seleção azul e variações com contraste, conforme a referência. */
+html body .mn-root {
+  --mn-selected: linear-gradient(100deg, rgba(0,125,245,.23), rgba(17,76,132,.12));
+  --mn-selected-line: rgba(47,157,255,.55);
+  --mn-selected-mark: #249cff;
+  --mn-period: linear-gradient(145deg, #0789f5, #0061ce);
+  --mn-period-text: #fff;
+  --pos: #28e99a;
+  --pos-ink: #28e99a;
+  --neg: #ff6476;
+}
+html body.light .mn-root {
+  --mn-selected: linear-gradient(100deg, rgba(0,102,214,.13), rgba(0,102,214,.04));
+  --mn-selected-line: rgba(0,102,214,.45);
+  --mn-selected-mark: #0066d6;
+  --mn-period: linear-gradient(145deg, #0877dc, #0053b5);
+  --pos: #007a48;
+  --pos-ink: #007a48;
+  --neg: #bb263f;
+}
+html body .mn-root .mn-row.on {
+  background:var(--mn-selected);
+  border-radius:8px;
+  box-shadow:inset 3px 0 0 var(--mn-selected-mark), inset 0 0 0 1px var(--mn-selected-line);
+}
+html body .mn-root .mn-row.on :is(.mn-n, .mn-v) { font-weight:600; }
+html body .mn-root .mn-c,
+html body .mn-root .mn-sel b { font-weight:700; }
+html body .mn-root .mn .up { color:var(--pos-ink); }
+html body .mn-root .mn .dn { color:var(--neg); }
+html body .mn-root .mn-faixas button.on {
+  background:var(--mn-period);
+  color:var(--mn-period-text);
+  box-shadow:inset 0 0 0 1px rgba(130,202,255,.5), 0 1px 5px rgba(0,100,220,.22);
+}
+html body .mn-root .mn-row:focus-visible,
+html body .mn-root .mn-faixas button:focus-visible {
+  outline:2px solid var(--mn-selected-mark);
+  outline-offset:2px;
+}
