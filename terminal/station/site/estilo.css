@@ -3158,11 +3158,3 @@ html body .mj-n { font-size:9.5px; }
   html body .mn-root .mn-faixas button { min-width:40px; }
 }
 
-.mobile-actions { display:none; }
-@media (max-width:768px) {
-  .mobile-actions { display:flex; flex:0 0 auto; flex-wrap:wrap; gap:8px; padding:8px 0 max(8px, env(safe-area-inset-bottom)); }
-  html body .mobile-actions :is(#fab-summary, #ia-fab) { position:static; display:inline-flex; flex:1 1 130px; align-items:center; justify-content:center; gap:8px; min-height:44px; width:auto; height:auto; max-width:none; margin:0; padding:6px 10px; border-radius:10px; transform:none; box-shadow:none; }
-  html body .mobile-actions #fab-summary .fab-txt { display:inline; }
-  html body .mobile-actions .ia-fab-txt small { display:none; }
-  body.ia-aberto .mobile-actions #ia-fab { display:none; }
-}
