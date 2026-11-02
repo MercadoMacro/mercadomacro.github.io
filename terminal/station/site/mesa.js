@@ -616,6 +616,7 @@
         <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
         <button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button>
       </div>
+      ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       <div class="ms-grid">
