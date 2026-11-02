@@ -331,7 +331,7 @@
   function cartao(r) {
     const st = situacao(r), s = escolha(r), f = faixa(r), fr = frase(r), aberto = abertos.has(r.id);
     const vf = varFaixa(r);
-    return `<article class="mn-card" data-r="${r.id}">
+    return `<article class="mn-card mn-regional" data-r="${r.id}">
       <header class="mn-head">
         <span class="mn-flag">${ICON[r.id]}</span>
         <h3>${esc(r.t)}</h3>
@@ -344,7 +344,7 @@
       </div>
       <div class="mn-chart" data-r="${r.id}">${grafico(r)}</div>
       ${fr ? `<p class="mn-frase">${esc(fr)}</p>` : ''}
-      <div class="mn-rows">${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
+      <div class="mn-rows"><div class="mn-table-head" aria-hidden="true"><span>Índice</span><span>${r.juros ? 'Taxa' : r.fx ? 'Cotação' : 'Pontos'}</span><span>${r.juros ? 'Var. pb' : 'Var. %'}</span></div>${r.linhas.map((l) => linha(r, l)).join('')}${aberto ? r.mais.map((l) => linha(r, l)).join('') : ''}</div>
     </article>`;
   }
   /* ---------------- fora do horário (26/10/2026, pedido do Severino) ----------------
@@ -580,6 +580,7 @@
   .mn-root .mn-chart-vazio { height:96px; display:grid; place-items:center; font-size:12px; color:var(--text-3); border:1px dashed var(--line); border-radius:10px; }
   .mn-root .mn-tip { position:absolute; top:-4px; width:120px; text-align:center; font-size:11px; color:var(--text); background:var(--surface-2, var(--surface)); border:1px solid var(--line); border-radius:6px; padding:2px 4px; pointer-events:none; white-space:nowrap; }
   .mn-root .mn-frase { margin:0; font-size:12.5px; color:var(--text-2); line-height:1.4; border-left:2px solid var(--accent); padding-left:8px; }
+  .mn-root .mn-table-head { display:none; }
   .mn-root .mn-rows { display:flex; flex-direction:column; }
   .mn-root .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
   .mn-root .mn-row-esp { cursor:default; }
