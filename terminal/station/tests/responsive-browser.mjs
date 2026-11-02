@@ -25,6 +25,10 @@ try{
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
    await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
    const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
+   await page.route('**/api/noticias', route=>route.fulfill({contentType:'application/json',body:JSON.stringify([
+    {id:'preview-1',titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['juros'],impactScore:8},
+    {id:'preview-2',titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['bolsas'],impactScore:5}
+   ])}));
    // Séries demonstrativas só nesta prévia: não representam preços atuais.
    const sample={'^N225':[63081.86,-.33],'^HSI':[23393.32,.42],'000001.SS':[3638.03,1.08],'^KS11':[5859.08,2.24]};
    const fixture=(symbol)=>sample[symbol]||[100+(symbol.length*7),1.25];
@@ -71,6 +75,19 @@ try{
       await page.locator('.ms-fold-toggle').first().click();
      }
      record.screenshot=theme+'-'+orientation+'-'+id+'.png';await page.screenshot({path:join(out,record.screenshot)});
+     if(id==='mesa-panel') {
+      const first=page.locator('.ms-fold-toggle').first();
+      if(await first.getAttribute('aria-expanded')==='true')await first.click();
+      await page.locator('.ms-tb').first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(4500);
+      await page.screenshot({path:join(out,theme+'-'+orientation+'-mesa-groups.png')});
+      await first.click();
+     }
+     if(id==='news-panel') {
+      await page.locator('#news-view .nc-card').first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(4500);
+      await page.screenshot({path:join(out,theme+'-'+orientation+'-news-cards.png')});
+     }
     }catch(e){record.error=e.message;}
     results.push(record);console.log(JSON.stringify(record));
    }
@@ -79,10 +96,10 @@ try{
    const names=await settings.locator('.aj-group > summary').allTextContents();
    if(names.join('|')!=='Aparência|Meu painel|Dados|Conta')throw Error('Grupos de ajustes incompletos');
    await settings.locator('[data-group="appearance"] > summary').click();
+   await page.screenshot({path:join(out,theme+'-'+orientation+'-settings-overview.png')});
    await settings.locator('[data-group="panel"] > summary').click();
-   await settings.locator('[data-set="startTab"]').count();
    await page.screenshot({path:join(out,theme+'-'+orientation+'-settings.png')});
-   await settings.locator('[data-act="close"]').click();
+   await settings.locator('button[data-act="close"]').click();
    // Tema e engrenagem devem continuar acessíveis sem sobreposição entre si.
    results.push({orientation,theme,header:await page.locator('.topbar-right').evaluate(e=>Array.from(e.querySelectorAll('button')).filter(x=>x.getBoundingClientRect().width>0&&getComputedStyle(x).display!=='none').map(x=>({id:x.id,rect:{x:x.getBoundingClientRect().x,y:x.getBoundingClientRect().y,w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height}}))),errors});
    // Exercita as abas recolhíveis com o assistente local de respostas prontas.
@@ -98,7 +115,7 @@ try{
   }
  }
 }finally{
- writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações e séries de /quotes e /history são demonstrativas para avaliação visual, não preços atuais. Outras fontes podem estar indisponíveis.',results},null,2));
+ writeFileSync(join(out,'review.json'),JSON.stringify({note:'Prévia local sem sessão. Cotações, séries e notícias são demonstrativas para avaliação visual, não preços ou notícias atuais. Outras fontes podem estar indisponíveis.',results},null,2));
  await browser.close();await new Promise(r=>server.close(r));
 }
 const panels=results.filter(x=>x.tab),headers=results.filter(x=>x.header);
