@@ -148,6 +148,20 @@ try{
   const ctx=await browser.newContext({viewport:{width,height:900},locale:'pt-BR',serviceWorkers:'block'});
   await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
   const page=await ctx.newPage();await page.goto(base,{waitUntil:'domcontentloaded'});
+  await page.locator('.mn-root .mn-regional .mn-row.on').first().waitFor({state:'visible'});
+  for(const checkWidth of [900,901,width]) {
+   await page.setViewportSize({width:checkWidth,height:900});
+   // O card pode ser renderizado novamente durante o resize; lê sempre o nó atual.
+   await page.waitForFunction(mobile=>{
+    const e=document.querySelector('.mn-root .mn-regional .mn-row.on');if(!e?.isConnected)return false;
+    const style=getComputedStyle(e);
+    return mobile?style.borderRadius==='8px'&&style.backgroundImage.includes('linear-gradient'):style.borderRadius==='0px'&&style.backgroundImage==='none';
+   },checkWidth<=900);
+  }
+  const region=page.locator('.mn-root .mn-regional').first(),other=region.locator('.mn-row').nth(1);
+  await other.click();
+  if(!(await other.getAttribute('class')).split(' ').includes('on'))throw Error('Desktop: seleção do ativo deixou de funcionar');
+  await page.screenshot({path:join(out,theme+'-desktop-'+width+'-market-selection.png')});
   await page.waitForFunction(()=>typeof window.openSettings==='function');await page.evaluate(()=>window.openSettings());
   const settings=page.locator('.aj:not([hidden])');
   for(const id of ['appearance','panel','data','account']) {
