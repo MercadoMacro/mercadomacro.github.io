@@ -1927,6 +1927,7 @@ document.getElementById('news-refresh-btn')?.addEventListener('click', function 
 });
 
 function refreshNews(silent = true) {
+  if (newsStreamClient?.healthy()) return;
   fetchNewsFromWorker(silent);
 }
 
