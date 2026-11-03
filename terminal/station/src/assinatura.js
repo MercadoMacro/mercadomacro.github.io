@@ -67,6 +67,8 @@ export async function garantirAssinatura(env) {
   // última vez que o site aberto renovou o passe (a cada ~8 min): mostra quem está online no /admin (30/10/2026)
   if (!cols.includes('visto')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN visto TEXT'));
   if (!cols.includes('stripe_assinatura')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_assinatura TEXT'));
+  // data em que a renovação no cartão para (a pessoa cancelou no Stripe; vale até o fim do período pago)
+  if (!cols.includes('stripe_cancela')) q.push(env.DB.prepare('ALTER TABLE usuarios ADD COLUMN stripe_cancela TEXT'));
   // histórico do que o administrador fez em cada conta
   q.push(env.DB.prepare('CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, quando TEXT NOT NULL, texto TEXT NOT NULL)'));
   q.push(env.DB.prepare(`CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL,
@@ -196,7 +198,7 @@ export async function rotinaAssinaturas(env) {
     for (const u of venceram) await emailVenceu(env, u).catch(() => {});
   }
   const vencendo = (await env.DB.prepare(`SELECT id, nome, email, expira FROM usuarios WHERE status = 'ativo' AND admin = 0 AND expira > ? AND expira <= ?
-    AND (aviso_venc IS NULL OR aviso_venc != expira) AND COALESCE(plano, '') != 'gratis' AND stripe_assinatura IS NULL`).bind(agora, limite).all()).results;
+    AND (aviso_venc IS NULL OR aviso_venc != expira) AND COALESCE(plano, '') != 'gratis' AND (stripe_assinatura IS NULL OR stripe_cancela IS NOT NULL)`).bind(agora, limite).all()).results;
   let avisados = 0;
   for (const u of vencendo) {
     const r = await emailVencendo(env, u, Math.max(1, Math.ceil((Date.parse(u.expira) - Date.now()) / 864e5))).catch(() => ({ ok: false }));
@@ -554,7 +556,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     document.getElementById('volta').innerHTML = j.liberado ? '<a href="/">Voltar ao site</a>' : '';
     var h = situacao(j);
     if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento no cartão recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
-    if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e a validade é renovada sozinha. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
+    if (j.renovaCartao && j.cancelaEm) h += '<div class="sit">Renovação automática no cartão <b>cancelada</b>: não haverá nova cobrança e o acesso continua até o fim do período já pago. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Reativar ou ver faturas</button></div>';
+    else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e a validade é renovada sozinha. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
     if (enviado) h += '<div class="sit">Recebemos seu comprovante do plano <b>' + esc(nomePlano(enviado.plano)) + '</b> (' + reais(enviado.valor) + '). Você recebe um e-mail quando o pagamento for conferido.</div>';
     if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
