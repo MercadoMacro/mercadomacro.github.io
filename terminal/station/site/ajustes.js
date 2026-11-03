@@ -106,10 +106,38 @@
         <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</p>
         <div class="aj-btns">
           ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
-          <a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a>
           ${C.admin ? '' : `<a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a>`}
         </div>
       </section>` : `<section class="aj-sec aj-conta-topo"><h3>Conta</h3><div class="aj-btns"><a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a><a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a></div></section>`}
+      ${C && C.logado ? `<section class="aj-sec">
+        <h3>Celular</h3>
+        <form class="aj-form" data-form="celular" novalidate>
+          <label for="aj-cel">Celular com DDD, para avisos sobre seu acesso pelo WhatsApp (opcional)</label>
+          <div class="aj-url"><input id="aj-cel" name="cel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="20" value="${esc(celularFmt(celular))}"><button type="submit" class="btn-sm">Salvar</button></div>
+          <p class="aj-msg" role="status" aria-live="polite"></p>
+          <p class="aj-note">Usado só para avisar sobre o vencimento e a renovação do acesso. Deixe em branco e salve para apagar.</p>
+        </form>
+      </section>
+      <section class="aj-sec">
+        <h3>Trocar senha</h3>
+        <form class="aj-form" data-form="senha" novalidate>
+          <label for="aj-s1">Senha atual</label><input id="aj-s1" name="atual" type="password" autocomplete="current-password">
+          <label for="aj-s2">Senha nova (mínimo 8 caracteres)</label><input id="aj-s2" name="nova" type="password" autocomplete="new-password" minlength="8">
+          <label for="aj-s3">Repita a senha nova</label><input id="aj-s3" name="nova2" type="password" autocomplete="new-password" minlength="8">
+          <button type="submit" class="btn-sm aj-form-bt">Salvar senha nova</button>
+          <p class="aj-msg" role="status" aria-live="polite"></p>
+          <p class="aj-note">Ao trocar, os outros aparelhos onde você estava conectado saem da conta. Este continua conectado.</p>
+        </form>
+      </section>
+      <section class="aj-sec">
+        <h3>Excluir minha conta</h3>
+        <form class="aj-form" data-form="excluir" novalidate>
+          <p class="aj-note">Apaga de vez seu nome, e-mail e senha do Mercado Macro e desconecta todos os aparelhos. Não dá para desfazer. Veja a <a href="/privacidade">política de privacidade</a>.</p>
+          <label for="aj-sx">Digite sua senha para confirmar</label><input id="aj-sx" name="senha" type="password" autocomplete="current-password">
+          <button type="submit" class="btn-sm aj-form-bt aj-del">Excluir minha conta</button>
+          <p class="aj-msg" role="status" aria-live="polite"></p>
+        </form>
+      </section>` : ''}
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
@@ -190,6 +218,7 @@
     const body = box.querySelector('.aj-body');
     const sections = [...body.querySelectorAll(':scope > .aj-sec')];
     const groups = [
+      ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Excluir minha conta']]] : []),
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
       ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa', 'Atalhos de teclado']],
       ['data', 'Dados', ['Dados']],
@@ -206,9 +235,46 @@
     // Sair fica por último (no computador ele está no pé da barra de categorias)
     if (C && C.logado) { const fim = document.createElement('div'); fim.className = 'aj-sair-fim'; fim.innerHTML = '<button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>'; body.append(fim); }
     renderNav(C);
+    lerCelular();
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
     box.querySelector('.aj-body').scrollTop = scroll;
+  }
+
+  // Minha conta dentro dos Ajustes (03/11/2026): mesmas rotas da página /conta, que continua para quem está com o acesso vencido
+  let celular = null, celularLido = false;
+  function celularFmt(c) { const d = String(c || '').slice(2); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d.length === 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` : ''; }
+  function postConta(url, corpo) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+      .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) throw j; return j; }));
+  }
+  function lerCelular() {
+    if (celularLido || !(window.__conta && window.__conta.logado)) return;
+    celularLido = true;
+    postConta('/api/auth/celular', { ler: 1 }).then(j => { celular = j.celular || null; const i = box && box.querySelector('#aj-cel'); if (i && !i.value) i.value = celularFmt(celular); }).catch(() => { celularLido = false; });
+  }
+  function onSubmit(e) {
+    const f = e.target.closest('form[data-form]'); if (!f) return;
+    e.preventDefault();
+    const m = f.querySelector('.aj-msg'), b = f.querySelector('button[type=submit]');
+    const diz = (ok, t) => { m.className = 'aj-msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; };
+    const erro = (j) => diz(false, (j && j.erro) || 'Não foi possível. Tente de novo.');
+    const tipo = f.dataset.form;
+    if (tipo === 'celular') {
+      b.disabled = true; diz(true, '');
+      postConta('/api/auth/celular', { celular: f.cel.value }).then(j => { celular = j.celular || null; f.cel.value = celularFmt(celular); diz(true, celular ? 'Celular salvo.' : 'Celular apagado.'); }, erro).then(() => { b.disabled = false; });
+    } else if (tipo === 'senha') {
+      if (!f.atual.value) return diz(false, 'Digite a senha atual.');
+      if (f.nova.value.length < 8) return diz(false, 'A senha nova precisa ter pelo menos 8 caracteres.');
+      if (f.nova.value !== f.nova2.value) return diz(false, 'As duas senhas novas não são iguais.');
+      b.disabled = true; diz(true, '');
+      postConta('/api/auth/senha', { atual: f.atual.value, nova: f.nova.value }).then(() => { f.reset(); diz(true, 'Senha trocada. Use a nova senha da próxima vez que entrar.'); }, erro).then(() => { b.disabled = false; });
+    } else if (tipo === 'excluir') {
+      if (!f.senha.value) return diz(false, 'Digite sua senha.');
+      if (!confirm('Excluir sua conta de vez? Não dá para desfazer.')) return;
+      b.disabled = true; diz(true, '');
+      postConta('/api/auth/excluir', { senha: f.senha.value }).then(() => { location.href = '/'; }, (j) => { erro(j); b.disabled = false; });
+    }
   }
 
   // barra de categorias do computador: a conta no topo (Minha conta, Assinatura), depois as categorias e o Sair no pé
@@ -217,7 +283,7 @@
     const logado = !!(C && C.logado);
     const cat = (id, ic, nome) => `<button type="button" data-aj-category="${id}"${id === selectedGroup ? ' aria-current="true"' : ''}><i class="fas fa-${ic}" aria-hidden="true"></i> ${nome}</button>`;
     nav.innerHTML = (logado ? `<div class="aj-user"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</div>` : '')
-      + `<a class="aj-nav-link" href="/conta"><i class="fas fa-user-cog" aria-hidden="true"></i> Minha conta</a>`
+      + (logado ? cat('account', 'user-cog', 'Minha conta') : `<a class="aj-nav-link" href="/conta"><i class="fas fa-user-cog" aria-hidden="true"></i> Minha conta</a>`)
       + (logado && C.admin ? `<a class="aj-nav-link" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a>`
         : `<a class="aj-nav-link" href="/assinar"><i class="fas fa-receipt" aria-hidden="true"></i> Assinatura</a>`)
       + '<hr class="aj-nav-sep">'
@@ -237,6 +303,7 @@
       </aside>`;
     document.body.appendChild(box);
     box.addEventListener('click', onClick);
+    box.addEventListener('submit', onSubmit);
     box.addEventListener('input', onInput);
     box.addEventListener('change', onChange);
     box.addEventListener('dragstart', e => {
