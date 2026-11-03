@@ -3311,6 +3311,8 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
   .aj-group .aj-btns .btn-sm { min-height:44px; display:inline-flex; align-items:center; }
 }
 
+.aj-sair-fim { padding:14px 16px 22px; }
+.aj-sair-fim .btn-sm { width:100%; justify-content:center; min-height:44px; display:inline-flex; align-items:center; gap:8px; }
 /* Ajustes no computador: navegação fixa e uma categoria por vez. */
 .aj-content { display:contents; }
 .aj-categories { display:none; }
@@ -3333,5 +3335,15 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
   html body .aj-wps { grid-template-columns:repeat(5,minmax(0,1fr)); }
   html body .aj-swatches { grid-template-columns:repeat(4,minmax(0,1fr)); }
   html body .aj-account-links { padding:0; }
+  /* conta no topo da barra, Sair no pé (03/11/2026) */
+  html body .aj-body > .aj-conta-topo, html body .aj-body > .aj-sair-fim { display:none; }
+  .aj-user { display:flex; flex-direction:column; gap:2px; padding:4px 12px 12px; font-size:12px; color:var(--text-3); line-height:1.4; overflow-wrap:anywhere; }
+  .aj-user b { color:var(--text); font-size:14px; }
+  .aj-nav-link, .aj-nav-sair { display:flex; align-items:center; gap:10px; min-height:42px; padding:10px 12px; border-radius:10px; color:var(--text-2); font-size:13px; font-weight:500; text-decoration:none; background:transparent; border:1px solid transparent; font-family:inherit; cursor:pointer; text-align:left; }
+  .aj-nav-link i, .aj-nav-sair i { width:18px; text-align:center; }
+  .aj-nav-link:hover, .aj-nav-sair:hover, .aj-categories button:hover { background:var(--surface); color:var(--text); }
+  .aj-nav-link .aj-pend { margin-left:auto; }
+  .aj-nav-sep { border:0; border-top:1px solid var(--line); margin:8px 4px; width:auto; }
+  .aj-nav-sair { margin-top:auto; }
   html body .aj-x { width:40px; height:40px; flex-shrink:0; }
 }

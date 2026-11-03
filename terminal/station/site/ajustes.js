@@ -101,16 +101,15 @@
     const groupState = Object.fromEntries([...box.querySelectorAll('.aj-group')].map(g => [g.dataset.group, g.open]));
     const C = window.__conta;
     box.querySelector('.aj-body').innerHTML = `
-      ${C && C.logado ? `<section class="aj-sec">
+      ${C && C.logado ? `<section class="aj-sec aj-conta-topo">
         <h3>Conta</h3>
         <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</p>
         <div class="aj-btns">
           ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
           <a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a>
           ${C.admin ? '' : `<a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a>`}
-          <button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>
         </div>
-      </section>` : ''}
+      </section>` : `<section class="aj-sec aj-conta-topo"><h3>Conta</h3><div class="aj-btns"><a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a><a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a></div></section>`}
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
@@ -194,7 +193,7 @@
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
       ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa', 'Atalhos de teclado']],
       ['data', 'Dados', ['Dados']],
-      ['account', 'Conta', ['Conta', 'Sobre']]
+      ['about', 'Sobre', ['Sobre']]
     ];
     for (const [id, name, titles] of groups) {
       const group = document.createElement('details'); group.className = 'aj-group'; group.dataset.group = id;
@@ -202,19 +201,28 @@
       group.classList.toggle('aj-selected', id === selectedGroup);
       const summary = document.createElement('summary'); summary.textContent = name; if (desktopSettings.matches) summary.tabIndex = -1; group.append(summary);
       for (const section of sections) if (titles.includes(section.querySelector('h3')?.textContent)) group.append(section);
-      if (id === 'account' && !C?.logado) {
-        const links = document.createElement('p'); links.className = 'aj-btns aj-account-links';
-        links.innerHTML = '<a class="btn-sm" href="/conta">Minha conta</a><a class="btn-sm" href="/assinar">Assinatura</a>';
-        summary.after(links);
-      }
       body.append(group);
     }
-    box.querySelectorAll('[data-aj-category]').forEach(b => {
-      if (b.dataset.ajCategory === selectedGroup) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
-    });
+    // Sair fica por último (no computador ele está no pé da barra de categorias)
+    if (C && C.logado) { const fim = document.createElement('div'); fim.className = 'aj-sair-fim'; fim.innerHTML = '<button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>'; body.append(fim); }
+    renderNav(C);
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
     box.querySelector('.aj-body').scrollTop = scroll;
+  }
+
+  // barra de categorias do computador: a conta no topo (Minha conta, Assinatura), depois as categorias e o Sair no pé
+  function renderNav(C) {
+    const nav = box.querySelector('.aj-categories'); if (!nav) return;
+    const logado = !!(C && C.logado);
+    const cat = (id, ic, nome) => `<button type="button" data-aj-category="${id}"${id === selectedGroup ? ' aria-current="true"' : ''}><i class="fas fa-${ic}" aria-hidden="true"></i> ${nome}</button>`;
+    nav.innerHTML = (logado ? `<div class="aj-user"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</div>` : '')
+      + `<a class="aj-nav-link" href="/conta"><i class="fas fa-user-cog" aria-hidden="true"></i> Minha conta</a>`
+      + (logado && C.admin ? `<a class="aj-nav-link" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a>`
+        : `<a class="aj-nav-link" href="/assinar"><i class="fas fa-receipt" aria-hidden="true"></i> Assinatura</a>`)
+      + '<hr class="aj-nav-sep">'
+      + cat('appearance', 'palette', 'Aparência') + cat('panel', 'columns', 'Meu painel') + cat('data', 'database', 'Dados') + cat('about', 'info-circle', 'Sobre')
+      + (logado ? '<button type="button" class="aj-nav-sair" data-act="sair"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair</button>' : '');
   }
 
   function build() {
@@ -225,12 +233,7 @@
       <aside class="aj-panel" role="dialog" aria-modal="true" aria-labelledby="aj-title">
         <header class="aj-head"><span class="aj-ic"><i class="fas fa-cog"></i></span><div><h2 id="aj-title">Ajustes</h2><p>Mudanças aplicadas na hora e salvas neste navegador</p></div>
           <button type="button" class="aj-x" data-act="close" aria-label="Fechar"><i class="fas fa-times"></i></button></header>
-        <div class="aj-content"><nav class="aj-categories" aria-label="Categorias de configurações">
-          <button type="button" data-aj-category="appearance"><i class="fas fa-palette" aria-hidden="true"></i> Aparência</button>
-          <button type="button" data-aj-category="panel"><i class="fas fa-columns" aria-hidden="true"></i> Meu painel</button>
-          <button type="button" data-aj-category="data"><i class="fas fa-database" aria-hidden="true"></i> Dados</button>
-          <button type="button" data-aj-category="account"><i class="fas fa-user-circle" aria-hidden="true"></i> Conta</button>
-        </nav><div class="aj-body"></div></div>
+        <div class="aj-content"><nav class="aj-categories" aria-label="Categorias de configurações"></nav><div class="aj-body"></div></div>
       </aside>`;
     document.body.appendChild(box);
     box.addEventListener('click', onClick);
