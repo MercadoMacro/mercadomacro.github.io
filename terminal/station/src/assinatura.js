@@ -647,7 +647,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       + '<details><summary>Quais cartões são aceitos?</summary><p>Visa, Mastercard e os demais cartões de crédito aceitos pelo Stripe. No iPhone e no Mac, o Apple Pay também aparece na hora de pagar. Os dados do cartão ficam com o Stripe; o Mercado Macro não vê nem guarda o número do cartão.</p></details>'
       + '<details><summary>Posso parcelar?</summary><p>Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar o Pix: o banco parcela no seu cartão.</p></details>'
       + '</div>';
-    if (j.pagamentos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + j.pagamentos.map(function(p){
+    // só o que teve pagamento de fato: pedidos de Pix que só geraram o QR Code (aguardando ou vencido) ficam de fora
+    var feitos = j.pagamentos.filter(function(p){ return p.status !== 'aguardando' && p.status !== 'vencido'; });
+    if (feitos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + feitos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
     h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante do Pix é usado só para conferir o pagamento e é apagado 30 dias depois. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
