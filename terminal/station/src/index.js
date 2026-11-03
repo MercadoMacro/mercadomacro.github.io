@@ -1,5 +1,6 @@
 import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
+export { NewsRelay } from './news-relay.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
@@ -167,6 +168,12 @@ export default {
         const h = new Headers(req.headers);
         h.set('X-MM-Sessao', await sha256hex(lerCookie(req)));
         return env.CAPITAL.get(env.CAPITAL.idFromName('main')).fetch(new Request(req, { headers: h }));
+      }
+      if (p === '/api/noticias/ws') {
+        if (req.method !== 'GET' || req.headers.get('Upgrade')?.toLowerCase() !== 'websocket' || req.headers.get('Origin') !== url.origin) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
+        if (!env.NEWS) return json({ erro: 'Fluxo indisponível.' }, 503);
+        const h = new Headers(req.headers); h.set('X-MM-Sessao', await sha256hex(lerCookie(req)));
+        return env.NEWS.get(env.NEWS.idFromName('main')).fetch(new Request(req, { headers: h }));
       }
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);

@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: publicar-site-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validar:
@@ -56,6 +56,8 @@ jobs:
           name: lightweight-charts-preview
           path: ${{ runner.temp }}/mm-browser-images
           if-no-files-found: ignore
+      - name: Conferir relay de notícias no runtime local
+        run: node terminal/station/tests/news-relay-runtime.mjs
       - name: Montar Worker sem publicar
         working-directory: terminal/station
         run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/site-validado"
