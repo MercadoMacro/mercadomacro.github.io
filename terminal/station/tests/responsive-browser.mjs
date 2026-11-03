@@ -151,8 +151,12 @@ try{
   await page.locator('.mn-root .mn-regional .mn-row.on').first().waitFor({state:'visible'});
   for(const checkWidth of [900,901,width]) {
    await page.setViewportSize({width:checkWidth,height:900});
-   const style=await page.locator('.mn-root .mn-regional .mn-row.on').first().evaluate(e=>({radius:getComputedStyle(e).borderRadius,image:getComputedStyle(e).backgroundImage}));
-   if(checkWidth<=900 ? style.radius!=='8px'||!style.image.includes('linear-gradient') : style.radius!=='0px'||style.image!=='none')throw Error('Seleção do Mercado incorreta em '+checkWidth+'px: '+JSON.stringify(style));
+   // O card pode ser renderizado novamente durante o resize; lê sempre o nó atual.
+   await page.waitForFunction(mobile=>{
+    const e=document.querySelector('.mn-root .mn-regional .mn-row.on');if(!e?.isConnected)return false;
+    const style=getComputedStyle(e);
+    return mobile?style.borderRadius==='8px'&&style.backgroundImage.includes('linear-gradient'):style.borderRadius==='0px'&&style.backgroundImage==='none';
+   },checkWidth<=900);
   }
   const region=page.locator('.mn-root .mn-regional').first(),other=region.locator('.mn-row').nth(1);
   await other.click();
