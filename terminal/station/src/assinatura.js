@@ -5,6 +5,7 @@
    Um robô diário (cron em wrangler.jsonc) avisa por e-mail 3 dias antes de vencer e desativa quem venceu (os dados ficam). */
 import qrcode from './qrcode.js';
 import { boasVindasNoPagamento } from './boasvindas.js';
+import { MARCAS } from './marcas.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
 let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao;
 export function ligarAssinatura(u) {
@@ -489,55 +490,97 @@ export function paginaAssinar() {
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${BASE_CSS}
-main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+main{max-width:820px;margin:0 auto;padding:24px 16px 56px}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 header h1{font-size:20px;margin:0;flex:1}
 @media (max-width:480px){header h1{flex-basis:100%}}
 header a,header button{color:var(--accent-text);font-size:13px;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
-.sit{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 18px;color:var(--text-2)}
+.sit{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 14px;color:var(--text-2);line-height:1.5}
 .sit b{color:var(--text)}
 .sit.alerta{border-color:var(--accent)}
-h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
-.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.pl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;min-height:120px;padding:14px 12px}
-.pl:hover,.pl[aria-pressed=true]{border-color:var(--accent)}
-.pl .n{font-weight:700}.pl .v{font-size:20px;font-weight:700;white-space:nowrap}.pl .p{color:var(--text-3);font-size:12.5px}
-.pl .m{color:var(--text-2);font-size:12px;margin-top:auto}
-.pl .cc2{font-size:12.5px;color:var(--text-2);border-top:1px dashed var(--line-2);padding-top:6px;margin-top:4px}.pl .cc2 b{color:var(--accent-text)}
-.pix{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:16px;display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
+h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:26px 0 10px;font-weight:700}
+.marcas{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}
+.mc{display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #d9dee7;border-radius:5px;height:24px;width:38px;padding:2px 5px}
+.mc svg{height:100%;width:100%;display:block}.mc.ap{padding:3px 4px}
+.forma{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fm{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:6px}
+.fm:hover{border-color:var(--line-2)}
+.fm[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.fm .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px}
+.fm .t .px{width:20px;height:20px;display:inline-flex}.fm .t .px svg{width:100%;height:100%}
+.fm .s{color:var(--text-2);font-size:13px;line-height:1.45}
+.fm .a{color:var(--text-3);font-size:12.5px}
+.selo{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;border-radius:999px;padding:2px 8px;background:var(--accent);color:var(--on-accent)}
+.selo.leve{background:transparent;color:var(--accent-text);border:1px solid var(--accent)}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.pl{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:3px;font:inherit}
+.pl:hover{border-color:var(--line-2)}
+.pl[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.pl .n{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pl .v{font-size:26px;font-weight:700;white-space:nowrap;margin-top:6px}
+.pl .u{color:var(--text-2);font-size:13px}
+.pl .e{color:var(--text-3);font-size:12.5px;min-height:18px}
+.pl .r{color:var(--text-2);font-size:12.5px;line-height:1.45;border-top:1px dashed var(--line-2);padding-top:8px;margin-top:8px}
+.dica{margin-top:10px;color:var(--text-2);font-size:13px;line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.dica button{background:none;border:0;color:var(--accent-text);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;padding:0}
+.caixa{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
+.caixa h3{margin:0 0 4px;font-size:17px}
+.caixa .sub{margin:0 0 12px;color:var(--text-2);font-size:14px;line-height:1.5}
+.lista{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:7px}
+.lista li{display:flex;gap:8px;align-items:flex-start;color:var(--text-2);font-size:13.5px;line-height:1.45}
+.lista svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--pos)}
+.pagar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{color:var(--text-3);font-size:12px;display:flex;align-items:center;gap:6px}
+.seg svg{width:14px;height:14px}
+.pix{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
 .qr{background:#fff;border-radius:10px;padding:8px;width:220px}.qr svg{display:block;width:100%;height:auto}
 .pix h3{margin:0 0 6px;font-size:16px}
 .pix p{margin:0 0 10px;color:var(--text-2);font-size:13.5px;line-height:1.5}
 .cc{display:flex;gap:6px}.cc input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 10px;font:12px ui-monospace,Menlo,Consolas,monospace}
-.bt{background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;min-height:42px}
+.bt{background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;min-height:46px;font-size:15px}
 .bt2{background:var(--surface-2);color:var(--text);border:1px solid var(--line-2);border-radius:8px;padding:9px 12px;font-weight:600;cursor:pointer;min-height:40px}
 .bt:disabled,.bt2:disabled{opacity:.6;cursor:default}
 .arq{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .arq label{display:block;font-size:13px;color:var(--text-2);margin-bottom:6px}
 .arq input[type=file]{color:var(--text-2);font-size:13px;max-width:100%;margin-bottom:10px;display:block}
+.faq details{border-top:1px solid var(--line);padding:12px 2px}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:10px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';color:var(--text-3);font-weight:400;font-size:18px;line-height:1}
+.faq details[open] summary::after{content:'−'}
+.faq p{margin:8px 0 0;color:var(--text-2);font-size:13.5px;line-height:1.55}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}th{color:var(--text-3);font-weight:600;border-top:0}
 .nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
-@media (max-width:600px){.planos .pl:last-child:nth-child(odd){grid-column:1/-1}.pix{grid-template-columns:1fr}.qr{margin:0 auto}}
+.msg{font-size:13px;color:var(--text-2);margin:8px 0 0}.msg.erro{color:var(--neg)}.msg:empty{display:none}
+@media (max-width:600px){.forma{grid-template-columns:1fr}.pix{grid-template-columns:1fr}.qr{margin:0 auto}.pagar .bt{width:100%}}
 </style></head><body><main>
 <header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
 </main>
 <script>
 (function(){
-  var raiz = document.getElementById('raiz'), dados = null, escolhido = null;
+  var MARCAS = ${JSON.stringify(MARCAS)};
+  var CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l3 3 7-7"/></svg>';
+  var CADEADO = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 7V5a3 3 0 0 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13.5v-5A1.5 1.5 0 0 1 4.5 7H5zm1.5 0h3V5a1.5 1.5 0 0 0-3 0v2z"/></svg>';
+  var raiz = document.getElementById('raiz'), dados = null, escolhido = null, forma = null;
   // volta do Stripe (?cartao=ok): o aviso do pagamento chega em segundos; confere de novo algumas vezes
   var voltouCartao = new URLSearchParams(location.search).get('cartao') === 'ok', tentativas = 0;
   if (voltouCartao) history.replaceState(null, '', '/assinar');
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
-  function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
+  function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
   function data(s){ return s ? new Date(s).toLocaleDateString('pt-BR') : '—'; }
   function api(u, o){ return fetch(u, Object.assign({ credentials: 'same-origin' }, o || {})).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw j; return j; }); }); }
+  function marca(k){ return '<span class="mc' + (k === 'applepay' ? ' ap' : '') + '">' + MARCAS[k] + '</span>'; }
   var ST = { aguardando: 'aguardando comprovante', enviado: 'comprovante enviado, em conferência', aprovado: 'aprovado', recusado: 'não confirmado', vencido: 'pedido vencido (sem comprovante)' };
+  // nomes: no cartão é assinatura (Mensal, Semestral, Anual); no Pix é tempo de acesso (1 mês, 6 meses)
+  var NOME_CARTAO = { 1: 'Mensal', 6: 'Semestral', 12: 'Anual' };
+  var CADA = { 1: 'por mês', 6: 'a cada 6 meses', 12: 'por ano' };
   document.getElementById('sair').onclick = function(){ fetch('/api/auth/sair', { method: 'POST', credentials: 'same-origin' }).then(function(){ location.href = '/entrar'; }); };
   function carregar(){
     api('/api/assinatura').then(function(j){
       dados = j;
-      // /assinar?plano=mensal (vindo do aviso no site) já abre o Pix daquele plano
+      // /assinar?plano=mensal (vindo do aviso no site) já abre aquele plano
       var q = new URLSearchParams(location.search).get('plano');
       if (q && !escolhido && j.planos.some(function(p){ return p.id === q; })) escolhido = q;
       if (q) history.replaceState(null, '', '/assinar');
@@ -547,9 +590,26 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   }
   function situacao(j){
     if (j.admin) return '<div class="sit">Conta de administrador: sem validade.</div>';
-    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Para começar a usar, escolha um plano abaixo' + (j.planos.some(function(p){ return p.id === 'gratis'; }) ? ', ou comece com 48 horas grátis' : '') + '. Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia; o valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</div>';
+    if (j.status === 'pendente') return '<div class="sit alerta">Olá, <b>' + esc(j.nome.split(' ')[0]) + '</b>. Para começar a usar, escolha um plano abaixo' + (temGratis() ? ', ou comece com 48 horas grátis' : '') + '. Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia; o valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</div>';
     if (!j.liberado) return '<div class="sit alerta">Seu acesso terminou' + (j.expira ? ' em <b>' + data(j.expira) + '</b>' : '') + '. Seus dados e listas continuam guardados. Escolha um plano para voltar.</div>';
     return '<div class="sit">Seu acesso vale ' + (j.expira ? 'até <b>' + data(j.expira) + '</b>. Se renovar antes, o novo período começa depois dessa data.' : '<b>sem data para terminar</b>.') + '</div>';
+  }
+  function temGratis(){ return dados.planos.some(function(p){ return p.id === 'gratis'; }); }
+  // o que dá para pagar agora em cada forma
+  function podeCartao(){ return !!dados.cartao && !dados.renovaCartao; }
+  function planosDe(f){
+    return dados.planos.filter(function(p){
+      if (!p.meses || p.unico) return false; // grátis tem caixa própria; a degustação saiu da página em 03/11/2026
+      return f === 'cartao' ? !!p.valorCartao : !p.soCartao;
+    }).sort(function(a, b){ return a.meses - b.meses; });
+  }
+  function preco(p, f){ return f === 'cartao' ? p.valorCartao : p.valor; }
+  function porMes(p, f){ return Math.round(preco(p, f) / p.meses); }
+  function menorPorMes(f){ return Math.min.apply(null, planosDe(f).map(function(p){ return porMes(p, f); })); }
+  function desconto(p, f){
+    var base = planosDe(f).filter(function(x){ return x.meses === 1; })[0];
+    if (!base || p.meses === 1) return 0;
+    return Math.round((1 - porMes(p, f) / preco(base, f)) * 100);
   }
   function desenhar(){
     var j = dados;
@@ -560,58 +620,120 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e a validade é renovada sozinha. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
     if (enviado) h += '<div class="sit">Recebemos seu comprovante do plano <b>' + esc(nomePlano(enviado.plano)) + '</b> (' + reais(enviado.valor) + '). Você recebe um e-mail quando o pagamento for conferido.</div>';
-    if (!j.pix) h += '<div class="sit">O pagamento por Pix ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
-    else {
-      h += '<h2>Planos</h2><div class="planos">' + j.planos.map(function(p){
-        if (p.soCartao) return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + reais(p.valorCartao) + '</span><span class="p">só no cartão, renova sozinho</span><span class="m">' + reais(Math.round(p.valorCartao / p.meses)) + ' por mês</span></button>';
-        return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(p.nome) + '</span><span class="v">' + (p.valor ? reais(p.valor) : 'R$ 0') + '</span><span class="p">' + (p.meses && !p.unico ? 'pagamento único no Pix' : esc(p.periodo) + ' de acesso') + '</span>'
-          + '<span class="m">' + (p.id === 'gratis' ? 'Sem pagar nada, uma vez só' : p.unico ? 'Para conhecer, uma vez só' : p.id === 'mensal' ? '' : reais(Math.round(p.valor / (p.meses || 1))) + ' por mês') + '</span>'
-          + (j.cartao && p.valorCartao ? '<span class="cc2">No cartão: <b>' + reais(p.valorCartao) + '</b></span>' : '') + '</button>';
-      }).join('') + '</div><div id="pix"></div>';
-      h += '<p class="nota">' + (j.cartao ? 'No cartão o plano renova sozinho todo período e você cancela quando quiser; no Pix o pagamento é único, sem renovação. ' : 'Pagamento único pelo Pix, sem renovação automática. ') + 'Quer parcelar? Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar: o banco parcela no seu cartão.</p>';
+    if (temGratis()) h += '<div class="sit alerta"><b>Ainda não conhece?</b> Comece com 48 horas grátis, sem pagar nada e sem cadastrar cartão. <button type="button" class="bt2" id="gratis-abrir" style="margin-left:6px">Começar grátis</button><div id="gratis-box"></div></div>';
+    var formas = [];
+    if (podeCartao() && planosDe('cartao').length) formas.push('cartao');
+    if (j.pix && planosDe('pix').length) formas.push('pix');
+    if (escolhido) { var pe = j.planos.filter(function(p){ return p.id === escolhido; })[0]; if (pe && pe.soCartao) forma = 'cartao'; }
+    if (formas.indexOf(forma) < 0) forma = formas[0] || null;
+    if (!formas.length) {
+      if (!j.renovaCartao) h += '<div class="sit">O pagamento ainda não está disponível. Escreva para <a href="mailto:contato@mercadomacro.com.br" style="color:var(--accent-text)">contato@mercadomacro.com.br</a>.</div>';
+    } else {
+      if (formas.length > 1) {
+        h += '<h2>1. Como você quer pagar</h2><div class="forma">'
+          + '<button type="button" class="fm" data-f="cartao" aria-pressed="' + (forma === 'cartao') + '"><span class="t">Cartão de crédito <span class="selo">Mais barato</span></span>'
+          + '<span class="marcas">' + marca('visa') + marca('mastercard') + marca('applepay') + '</span>'
+          + '<span class="s">Assinatura que renova sozinha. Cancele quando quiser.</span><span class="a">a partir de ' + reais(menorPorMes('cartao')) + ' por mês</span></button>'
+          + '<button type="button" class="fm" data-f="pix" aria-pressed="' + (forma === 'pix') + '"><span class="t"><span class="px">' + MARCAS.pix + '</span>Pix</span>'
+          + '<span class="s">Pagamento único, sem renovação automática. Quando acabar, você renova se quiser.</span><span class="a">a partir de ' + reais(menorPorMes('pix')) + ' por mês</span></button>'
+          + '</div>';
+      }
+      h += '<h2>' + (formas.length > 1 ? '2. Escolha o plano' : 'Escolha o plano') + (formas.length === 1 ? (forma === 'pix' ? ' no Pix' : ' no cartão') : '') + '</h2><div id="planos"></div><div id="acao"></div>';
     }
+    h += '<h2>Dúvidas frequentes</h2><div class="faq">'
+      + '<details><summary>O que acontece no fim do período?</summary><p><b>No cartão</b>, o Stripe cobra o mesmo valor e o acesso é renovado sozinho, até você cancelar. <b>No Pix</b>, o acesso termina na data marcada; avisamos por e-mail 3 dias antes e você renova só se quiser.</p></details>'
+      + '<details><summary>Como cancelo a assinatura no cartão?</summary><p>Aqui nesta página, no botão "Trocar cartão ou cancelar". Não tem multa, e o acesso continua até o fim do período já pago.</p></details>'
+      + '<details><summary>Tem reembolso?</summary><p>Na primeira assinatura, você pode pedir o reembolso integral em até 7 dias depois do pagamento. Depois desse prazo, e nas renovações, não há reembolso do período em curso, mas você pode cancelar para não ser cobrado de novo. Detalhes em <a href="/planos" style="color:var(--accent-text)">Planos e termos</a>.</p></details>'
+      + '<details><summary>Quais cartões são aceitos?</summary><p>Visa, Mastercard e os demais cartões de crédito aceitos pelo Stripe. No iPhone e no Mac, o Apple Pay também aparece na hora de pagar. Os dados do cartão ficam com o Stripe; o Mercado Macro não vê nem guarda o número do cartão.</p></details>'
+      + '<details><summary>Posso parcelar?</summary><p>Muitos bancos oferecem "Pix no crédito" (ou "Pix parcelado") na hora de pagar o Pix: o banco parcela no seu cartão.</p></details>'
+      + '</div>';
     if (j.pagamentos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + j.pagamentos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
-    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante é usado só para conferir o pagamento e é apagado 30 dias depois. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
+    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante do Pix é usado só para conferir o pagamento e é apagado 30 dias depois. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
     raiz.innerHTML = h;
     var g = document.getElementById('gerenciar');
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
-    if (escolhido) pedir(escolhido);
+    var ga = document.getElementById('gratis-abrir');
+    if (ga) ga.onclick = function(){ abrirGratis(); };
+    if (forma) desenharPlanos();
+    if (escolhido === 'gratis') abrirGratis();
+  }
+  function desenharPlanos(){
+    var box = document.getElementById('planos'); if (!box) return;
+    var lista = planosDe(forma);
+    if (escolhido && !lista.some(function(p){ return p.id === escolhido; })) escolhido = null;
+    var maisBarato = menorPorMes(forma);
+    var h = '<div class="planos">' + lista.map(function(p){
+      var v = preco(p, forma), d = desconto(p, forma), cartao = forma === 'cartao';
+      var nome = cartao ? (NOME_CARTAO[p.meses] || p.nome) : p.nome;
+      var selo = p.meses > 1 && porMes(p, forma) === maisBarato ? '<span class="selo">Melhor preço</span>' : d > 0 ? '<span class="selo leve">' + d + '% mais barato</span>' : '';
+      return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(nome) + selo + '</span>'
+        + '<span class="v">' + reais(v) + '</span>'
+        + '<span class="u">' + (cartao ? CADA[p.meses] || ('a cada ' + p.meses + ' meses') : 'pagamento único') + '</span>'
+        + '<span class="e">' + (p.meses > 1 ? 'equivale a ' + reais(porMes(p, forma)) + ' por mês' : '') + '</span>'
+        + '<span class="r">' + (cartao
+          ? 'Renova sozinho ' + (p.meses === 1 ? 'todo mês' : p.meses === 12 ? 'todo ano' : 'a cada ' + p.meses + ' meses') + ' por ' + reais(v) + '. Cancele quando quiser.'
+          : esc(p.periodo) + ' de acesso. Não renova sozinho: quando acabar, você paga de novo se quiser.') + '</span></button>';
+    }).join('') + '</div>';
+    // no Pix, lembra que no cartão sai mais barato
+    if (forma === 'pix' && podeCartao()) {
+      var m = planosDe('cartao').filter(function(p){ return p.meses === 1; })[0];
+      if (m) h += '<p class="dica">No cartão o plano mensal sai por <b>' + reais(m.valorCartao) + ' por mês</b> (no Pix, ' + reais(m.valor) + '). <button type="button" id="ver-cartao">Ver planos no cartão</button></p>';
+    }
+    box.innerHTML = h;
+    var vc = document.getElementById('ver-cartao');
+    if (vc) vc.onclick = function(){ trocarForma('cartao'); };
+    if (escolhido) pedir(escolhido); else document.getElementById('acao').innerHTML = '';
+  }
+  function trocarForma(f){
+    forma = f;
+    raiz.querySelectorAll('.fm').forEach(function(x){ x.setAttribute('aria-pressed', x.dataset.f === f); });
+    desenharPlanos();
   }
   function nomePlano(id){ return { gratis: 'Grátis', degustacao: 'Degustação', mensal: '1 mês', trimestral: '3 meses', semestral: '6 meses', anual: '12 meses' }[id] || id; }
   raiz.addEventListener('click', function(e){
+    var f = e.target.closest('.fm');
+    if (f) { trocarForma(f.dataset.f); return; }
     var b = e.target.closest('.pl'); if (!b) return;
     escolhido = b.dataset.p;
     raiz.querySelectorAll('.pl').forEach(function(x){ x.setAttribute('aria-pressed', x === b); });
     pedir(escolhido);
+    var a = document.getElementById('acao'); if (a && a.scrollIntoView && a.getBoundingClientRect().top > innerHeight - 120) a.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+  function abrirGratis(){
+    var box = document.getElementById('gratis-box'); if (!box) return;
+    box.innerHTML = '<p style="margin:10px 0">Você ganha 48 horas de acesso, sem pagar nada e sem cadastrar cartão. Depois, se gostar, é só escolher um plano.</p>'
+      + '<button type="button" class="bt" id="gratis">Começar agora</button><p class="msg" id="msg-gratis" role="status" aria-live="polite"></p>';
+    document.getElementById('gratis').onclick = function(){
+      var b = this, m = document.getElementById('msg-gratis'); b.disabled = true; m.className = 'msg'; m.textContent = 'Liberando…';
+      api('/api/assinatura/gratis', { method: 'POST' }).then(function(){ m.textContent = 'Pronto! Abrindo o Mercado Macro…'; location.href = '/'; })
+        .catch(function(j){ b.disabled = false; m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível liberar agora. Tente de novo.'; });
+    };
+  }
   function pedir(plano){
-    var box = document.getElementById('pix'); if (!box) return;
-    if (plano === 'gratis') {
-      box.innerHTML = '<div class="pix" style="display:block"><h3>48 horas grátis</h3><p>Você ganha 48 horas de acesso completo, sem pagar nada e sem cadastrar cartão. Depois, se gostar, é só escolher um plano.</p>'
-        + '<button type="button" class="bt" id="gratis">Começar agora</button><p class="msg" id="msg" role="status" aria-live="polite"></p></div>';
-      document.getElementById('gratis').onclick = function(){
-        var b = this, m = document.getElementById('msg'); b.disabled = true; m.className = 'msg'; m.textContent = 'Liberando…';
-        api('/api/assinatura/gratis', { method: 'POST' }).then(function(){ m.textContent = 'Pronto! Abrindo o Mercado Macro…'; location.href = '/'; })
-          .catch(function(j){ b.disabled = false; m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível liberar agora. Tente de novo.'; });
-      };
+    var box = document.getElementById('acao'); if (!box) return;
+    var pl = dados.planos.filter(function(x){ return x.id === plano; })[0]; if (!pl) return;
+    if (forma === 'cartao') {
+      var v = pl.valorCartao, nome = NOME_CARTAO[pl.meses] || pl.nome, cada = pl.meses === 1 ? 'todo mês' : pl.meses === 12 ? 'todo ano' : 'a cada ' + pl.meses + ' meses';
+      box.innerHTML = '<div class="caixa"><h3>' + esc(nome) + ' no cartão: ' + reais(v) + ' ' + (CADA[pl.meses] || '') + '</h3>'
+        + '<p class="sub">Você paga ' + reais(v) + ' agora e depois ' + reais(v) + ' ' + cada + ', até cancelar.' + (pl.valor && !pl.soCartao ? ' No Pix, o mesmo período custa ' + reais(pl.valor) + '.' : '') + '</p>'
+        + '<ul class="lista"><li>' + CHECK + 'Acesso liberado assim que o pagamento é aprovado.</li>'
+        + '<li>' + CHECK + 'Cancele aqui mesmo quando quiser, sem multa. O acesso continua até o fim do período pago.</li>'
+        + '<li>' + CHECK + 'Pagamento na página segura do Stripe. O Mercado Macro não vê os dados do cartão.</li></ul>'
+        + '<div class="pagar"><button type="button" class="bt" id="pagar-cartao">Assinar ' + esc(nome) + ' com cartão</button>'
+        + '<span class="seg">' + CADEADO + 'Pagamento seguro pelo Stripe</span></div>'
+        + '<p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div>';
+      document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };
       return;
     }
-    var pl = dados.planos.filter(function(x){ return x.id === plano; })[0] || {};
-    var cartao = dados.cartao && !dados.renovaCartao && !!pl.valorCartao;
-    if (pl.soCartao && !cartao) { box.innerHTML = '<div class="pix" style="display:block"><h3>12 meses só no cartão</h3><p>' + (dados.renovaCartao ? 'Você já tem a renovação automática no cartão ligada. Para trocar de plano, cancele a atual em "Trocar cartão ou cancelar" e assine de novo.' : 'O pagamento com cartão não está disponível agora. Escolha outro plano.') + '</p></div>'; return; }
-    box.innerHTML = (cartao ? '<div class="pix" style="display:block"><h3>Cartão de crédito: ' + reais(pl.valorCartao) + (pl.meses > 1 ? ' a cada ' + pl.meses + ' meses' : ' por mês') + '</h3><p>' + (pl.soCartao ? '' : '<b>Mais barato que no Pix</b> (' + reais(pl.valor) + '). ') + 'Você paga na página segura do Stripe e o plano renova sozinho, pelo mesmo valor, a cada período. Cancele quando quiser, sem multa. O acesso é liberado assim que o pagamento é aprovado.</p>'
-      + '<button type="button" class="bt" id="pagar-cartao">Pagar com cartão</button><p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div>' + (pl.soCartao ? '' : '<h2>Ou pague com Pix</h2>') : '') + (pl.soCartao ? '' : '<div id="pixq"><p class="nota">Gerando o Pix…</p></div>');
-    if (cartao) document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };
-    if (pl.soCartao) return;
-    box = document.getElementById('pixq');
+    box.innerHTML = '<div class="caixa"><p class="nota">Gerando o Pix…</p></div>';
     api('/api/assinatura/pedido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano }) }).then(function(p){
-      box.innerHTML = '<div class="pix"><div class="qr">' + p.svg + '</div><div><h3>' + esc(nomePlano(p.plano)) + ': ' + reais(p.valor) + '</h3>'
-        + '<p>Abra o app do seu banco, escolha pagar com Pix e leia o QR Code, ou use o Pix copia e cola:</p>'
+      box.innerHTML = '<div class="caixa"><div class="pix"><div class="qr">' + p.svg + '</div><div><h3>' + esc(nomePlano(p.plano)) + ' no Pix: ' + reais(p.valor) + '</h3>'
+        + '<p>Pagamento único, sem renovação. Abra o app do seu banco, escolha pagar com Pix e leia o QR Code, ou use o Pix copia e cola:</p>'
         + '<div class="cc"><input id="cc" readonly value="' + esc(p.copia) + '" aria-label="Pix copia e cola"><button type="button" class="bt2" id="copiar">Copiar</button></div>'
         + '<div class="arq"><label for="arq">Depois de pagar, envie o comprovante (foto, captura de tela ou PDF):</label><input type="file" id="arq" accept="image/*,application/pdf">'
-        + '<button type="button" class="bt" id="enviar">Enviar comprovante</button><p class="msg" id="msg" role="status" aria-live="polite"></p></div></div></div>';
+        + '<button type="button" class="bt" id="enviar">Enviar comprovante</button><p class="msg" id="msg" role="status" aria-live="polite"></p></div></div></div></div>';
       document.getElementById('copiar').onclick = function(){ var t = this, i = document.getElementById('cc'); i.select();
         (navigator.clipboard ? navigator.clipboard.writeText(p.copia) : Promise.reject()).then(function(){ t.textContent = 'Copiado'; }, function(){ try { document.execCommand('copy'); t.textContent = 'Copiado'; } catch (_) { t.textContent = 'Selecione e copie'; } }); };
       document.getElementById('enviar').onclick = function(){ enviar(p, this); };
