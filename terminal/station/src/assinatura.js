@@ -421,7 +421,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'pagamentos' && req.method === 'GET') {
-    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq,
+    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
       WHERE p.status = 'enviado' OR (p.status IN ('aprovado', 'recusado') AND p.decidido > ?) ORDER BY p.status = 'enviado' DESC, p.id DESC LIMIT 60`)
       .bind(new Date(Date.now() - 60 * 864e5).toISOString()).all();

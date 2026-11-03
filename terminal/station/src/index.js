@@ -2867,7 +2867,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
-          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
+          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.cartao ? ' · pago no cartão (Stripe)' : p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
           + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
           + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
       };
