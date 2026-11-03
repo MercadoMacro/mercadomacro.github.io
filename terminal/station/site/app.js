@@ -1613,7 +1613,8 @@ function showNewsSkeleton() {
 }
 
 // NEWS_LIVE_START: atualização independente das cotações, com uma busca por vez.
-const NEWS_LIVE_MS = 15000;
+// busca por HTTP só quando a conexão ao vivo (WebSocket) falha: 60 s poupa o worker de notícias da outra conta
+const NEWS_LIVE_MS = 60000;
 let newsFetchInFlight = null, newsLastAttempt = 0, newsStreamClient = null, newsStreamRevision = 0;
 function newsLiveActive() {
   return liveMode && !document.hidden && newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
