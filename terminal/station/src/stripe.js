@@ -11,7 +11,7 @@ export function ligarStripe(u) {
 
 const SITE = 'https://mercadomacro.com.br';
 const API = 'https://api.stripe.com/v1/';
-const EVENTOS = ['checkout.session.completed', 'invoice.paid', 'invoice.payment_failed', 'customer.subscription.deleted'];
+const EVENTOS = ['checkout.session.completed', 'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated', 'customer.subscription.deleted'];
 const reais = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
 const dataBR = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
 // planos que renovam no cartão: os de meses que estão à venda (mensal, semestral, anual)
@@ -41,14 +41,34 @@ async function stripe(chave, metodo, caminho, corpo) {
 }
 const modoDaChave = (k) => (/^(sk|rk)_live_/.test(k) ? 'real' : 'teste');
 
-const preparar = (env) => garantirAssinatura(env); // cria as colunas stripe_cliente, stripe_assinatura e pagamentos.ref
+const preparar = (env) => garantirAssinatura(env); // cria as colunas stripe_cliente, stripe_assinatura, stripe_cancela e pagamentos.ref
 
 /* ---------------- quem assina: /api/assinatura/cartao e /api/assinatura/cartao-gerenciar ---------------- */
 export async function stripeLigado(env) { const c = await config(env); return !!(c.stripe_key && c.stripe_whsec); }
 export async function situacaoCartao(env, uid) {
   await preparar(env);
-  const u = await env.DB.prepare('SELECT stripe_cliente, stripe_assinatura FROM usuarios WHERE id = ?').bind(uid).first();
-  return { cartao: await stripeLigado(env), renovaCartao: !!(u && u.stripe_assinatura), temCliente: !!(u && u.stripe_cliente) };
+  const u = await env.DB.prepare('SELECT stripe_cliente, stripe_assinatura, stripe_cancela FROM usuarios WHERE id = ?').bind(uid).first();
+  let cancela = (u && u.stripe_cancela) || null;
+  // confere no Stripe se a pessoa cancelou (cancelar no portal só marca o fim do período; o aviso do webhook pode não ter chegado)
+  if (u && u.stripe_assinatura) {
+    const c = await config(env);
+    if (c.stripe_key) {
+      try { cancela = await gravarCancela(env, uid, await stripe(c.stripe_key, 'GET', 'subscriptions/' + encodeURIComponent(u.stripe_assinatura))); } catch (e) {}
+    }
+  }
+  return { cartao: await stripeLigado(env), renovaCartao: !!(u && u.stripe_assinatura), cancelaEm: u && u.stripe_assinatura ? cancela : null, temCliente: !!(u && u.stripe_cliente) };
+}
+// data em que a renovação para (cancelou no portal, vale até o fim do período pago) ou null se continua renovando
+function fimDaAssinatura(sub) {
+  if (!sub || !(sub.cancel_at_period_end || sub.cancel_at)) return null;
+  const item = sub.items && sub.items.data && sub.items.data[0];
+  const fim = sub.cancel_at || sub.current_period_end || (item && item.current_period_end);
+  return fim ? new Date(fim * 1000).toISOString() : new Date().toISOString();
+}
+async function gravarCancela(env, uid, sub) {
+  const cancela = fimDaAssinatura(sub);
+  await env.DB.prepare('UPDATE usuarios SET stripe_cancela = ? WHERE id = ? AND stripe_assinatura = ?').bind(cancela, uid, sub.id || '').run();
+  return cancela;
 }
 export async function apiCartao(req, env, conta, acao) {
   await preparar(env);
@@ -161,11 +181,24 @@ export async function webhookStripe(req, env) {
     return json({ ok: true });
   }
 
+  if (ev.type === 'customer.subscription.updated') {
+    const u = await usuarioDoStripe(env, o.metadata, o.customer);
+    if (u) {
+      const antes = (await env.DB.prepare('SELECT stripe_cancela FROM usuarios WHERE id = ?').bind(u.id).first() || {}).stripe_cancela || null;
+      const cancela = await gravarCancela(env, u.id, o);
+      if (!antes && cancela) {
+        await registrar(env, u.id, `Cancelou a renovação no cartão; o acesso vale até ${dataBR(u.expira)}`);
+        await avisar(env, 'Cancelou a renovação no cartão', `${u.nome} (${u.email}) cancelou. Não haverá nova cobrança; o acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
+      } else if (antes && !cancela) await registrar(env, u.id, 'Reativou a renovação automática no cartão');
+    }
+    return json({ ok: true });
+  }
+
   if (ev.type === 'customer.subscription.deleted') {
     const u = await usuarioDoStripe(env, o.metadata, o.customer);
     if (u) {
       // o acesso continua até a validade que já foi paga; só deixa de renovar
-      await env.DB.prepare('UPDATE usuarios SET stripe_assinatura = NULL WHERE id = ? AND (stripe_assinatura = ? OR stripe_assinatura IS NULL)').bind(u.id, o.id || '').run();
+      await env.DB.prepare('UPDATE usuarios SET stripe_assinatura = NULL, stripe_cancela = NULL WHERE id = ? AND (stripe_assinatura = ? OR stripe_assinatura IS NULL)').bind(u.id, o.id || '').run();
       await registrar(env, u.id, 'Renovação automática no cartão encerrada');
       await avisar(env, 'Assinatura no cartão encerrada', `${u.nome} (${u.email}) não renova mais no cartão. O acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
     }
@@ -179,7 +212,11 @@ export async function apiAdminStripe(req, env) {
   const c = await config(env);
   if (req.method === 'GET') {
     let assinantes = 0;
-    try { await preparar(env); assinantes = (await env.DB.prepare('SELECT COUNT(*) n FROM usuarios WHERE stripe_assinatura IS NOT NULL').first()).n; } catch (e) {}
+    try { await preparar(env); assinantes = (await env.DB.prepare('SELECT COUNT(*) n FROM usuarios WHERE stripe_assinatura IS NOT NULL AND stripe_cancela IS NULL').first()).n; } catch (e) {}
+    // webhook criado antes de um evento novo entrar na lista: atualiza a lista no Stripe uma vez
+    if (c.stripe_key && c.stripe_webhook_id && c.stripe_eventos !== EVENTOS.join(',')) {
+      try { await stripe(c.stripe_key, 'POST', 'webhook_endpoints/' + c.stripe_webhook_id, { enabled_events: EVENTOS }); await salvarConfig(env, { stripe_eventos: EVENTOS.join(',') }); } catch (e) {}
+    }
     return json({ ligado: !!(c.stripe_key && c.stripe_whsec), modo: c.stripe_key ? modoDaChave(c.stripe_key) : null, desde: c.stripe_desde || null, assinantes });
   }
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
@@ -199,12 +236,12 @@ export async function apiAdminStripe(req, env) {
       business_profile: { headline: 'Mercado Macro: sua assinatura' },
       features: { payment_method_update: { enabled: true }, invoice_history: { enabled: true }, subscription_cancel: { enabled: true, mode: 'at_period_end' } },
     }).catch(() => null);
-    await salvarConfig(env, { stripe_key: chave, stripe_whsec: w.secret, stripe_webhook_id: w.id, stripe_portal: portal ? portal.id : null, stripe_desde: new Date().toISOString() });
+    await salvarConfig(env, { stripe_eventos: EVENTOS.join(','), stripe_key: chave, stripe_whsec: w.secret, stripe_webhook_id: w.id, stripe_portal: portal ? portal.id : null, stripe_desde: new Date().toISOString() });
     return json({ ok: true, modo: modoDaChave(chave) });
   }
   if (b.acao === 'desligar') {
     if (c.stripe_webhook_id && c.stripe_key) await stripe(c.stripe_key, 'DELETE', 'webhook_endpoints/' + c.stripe_webhook_id).catch(() => null);
-    await salvarConfig(env, { stripe_key: null, stripe_whsec: null, stripe_webhook_id: null, stripe_portal: null, stripe_desde: null });
+    await salvarConfig(env, { stripe_eventos: null, stripe_key: null, stripe_whsec: null, stripe_webhook_id: null, stripe_portal: null, stripe_desde: null });
     return json({ ok: true });
   }
   return json({ erro: 'Ação inválida.' }, 400);
