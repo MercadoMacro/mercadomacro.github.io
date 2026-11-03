@@ -13,55 +13,38 @@ const MAIL_DE = 'Mercado Macro <acesso@mercadomacro.com.br>'; // o mesmo remeten
 const MAIL_RESPONDER = 'contato@mercadomacro.com.br';
 const POR_VEZ = 40; // envios por clique (o Resend aceita poucos por segundo)
 
+// comunicado anterior (2026-10-novidades, para todos) está no histórico do git
+// 03/11/2026: convite para quem testou (cortesia ou 48 horas grátis), o acesso acabou e nunca pagou
 export const COMUNICADO = {
-  id: '2026-10-novidades',
-  assunto: 'O dólar mexeu. Agora você vê na hora.',
-  previa: 'Cotações ao vivo, fundamentos com o balanço da CVM e as assinaturas chegaram ao Mercado Macro.',
-  abertura: 'Sabe aquele F5 nervoso para ver se o dólar mexeu? Pode aposentar.',
-  // foto do painel: tirada a pedido do Severino (o teste com foto caiu no spam); para voltar: foto: ['/vitrine/fotos/mesa.jpg', 'texto alternativo']
-  foto: null,
-  // o que é novo, com destaque
+  id: '2026-11-volte',
+  tipo: 'oferta',
+  // só quem está com o acesso vencido e nunca teve um pagamento aprovado
+  publico: "status = 'expirado' AND NOT EXISTS (SELECT 1 FROM pagamentos p WHERE p.usuario_id = usuarios.id AND p.status = 'aprovado' AND p.valor > 0)",
+  assunto: 'O Mercado Macro cresceu desde o seu teste',
+  previa: 'Notícias ao vivo, aulas, probabilidades do Copom e do Fed. E agora a partir de R$ 14,99 por mês no cartão.',
+  abertura: 'Você testou o Mercado Macro um tempo atrás. Desde então, muita coisa chegou.',
   itens: [
-    ['Cotações ao vivo', 'Dólar, euro, libra, petróleo, ouro, prata, café, VIX e as principais criptomoedas se atualizam sozinhos na tela, sem apertar nada.'],
-    ['Fundamentos com a fonte na mão', 'Abra o gráfico de uma ação da B3 e veja lucro, ROE, margem e endividamento logo acima. Cada balanço tem link para o documento original na CVM.'],
-    ['Vai cortar ou subir os juros?', 'A chance de cada decisão do Copom, calculada pelas opções de Copom negociadas na B3, e a do Fed, no estilo do FedWatch da CME. Atualizado várias vezes por dia.'],
+    ['Notícias ao vivo', 'Mais de 25 veículos numa tela só, com as de maior impacto em destaque. As novas aparecem sozinhas, sem atualizar a página.'],
+    ['Copom e Fed em probabilidades', 'A chance de cada decisão de juros, calculada com as opções de Copom da B3 e no estilo do FedWatch para o Fed.'],
+    ['Aba Educação', '42 lições curtas, com exemplos e perguntas para fixar: de como funciona a B3 a como ler os indicadores da economia.'],
+    ['Cotações e fundamentos', 'Dólar, juros, bolsa, commodities e cripto ao vivo, e os balanços de mais de 300 empresas com link para a CVM.'],
   ],
-  // o resto do site, em grupos curtos
-  secoes: [
-    ['Mercado em tempo real', [
-      ['Mesa', 'índices, moedas, juros, commodities e cripto numa tela só.'],
-      ['Mapa de calor', 'quem subiu e quem caiu na bolsa, num olhar.'],
-      ['Suas listas', 'monte listas de ativos favoritos; elas aparecem iguais no celular e no computador.'],
-      ['Fluxo na B3', 'quanto estrangeiros e institucionais compraram ou venderam, dia a dia.'],
-    ]],
-    ['Juros e economia', [
-      ['Curva de juros DI', 'o que o mercado projeta para os juros nos próximos anos.'],
-      ['Boletim Focus', 'as projeções do mercado para Selic, inflação, dólar e PIB, direto do Banco Central, assim que saem.'],
-      ['Indicadores com história', 'gráficos longos com os governos e os fatos que mexeram nos juros e no mercado marcados; um clique mostra o que aconteceu.'],
-      ['Calendário econômico', 'a agenda da semana e os balanços das empresas do Brasil e dos EUA.'],
-    ]],
-    ['Notícias', [
-      ['Mais de 25 veículos', 'Bloomberg, Valor, InfoMoney, CNBC, Money Times e outros num lugar só, com tradução para o português e as de maior impacto em destaque.'],
-      ['Leitura Rápida', 'destaca o começo de cada palavra para o olho correr mais rápido. Pensada para quem tem TDAH ou só quer ler mais em menos tempo.'],
-    ]],
-    ['Empresas e grandes investidores', [
-      ['Fundamentos de mais de 300 empresas', 'balanços da CVM, ranking por setor e também as empresas americanas.'],
-      ['Onde estão os grandes', 'a posição dos especuladores nos futuros (CFTC) e as carteiras das grandes gestoras americanas (13F).'],
-    ]],
-    ['Ferramentas', [
-      ['Calculadoras', 'planejamento financeiro, renda fixa, aposentadoria, inflação, moedas e preço médio, essencial para quem opera.'],
-      ['Opções', 'montador de estratégias com gráfico de resultado, volatilidade e probabilidades, e uma trilha para quem está começando, com um resumo preparado com banqueiros e tesoureiros que vivem o mercado.'],
-      ['Fechamento do mercado', 'todo dia útil às 18h, o resumo do dia em mercadomacro.com.br/fechamento-do-mercado.'],
-    ]],
+  planos: [
+    ['Mensal no cartão', 'renova sozinho, cancele quando quiser', 'R$ 19,90 por mês'],
+    ['Semestral no cartão', 'equivale a R$ 16,65 por mês', 'R$ 99,90'],
+    ['Anual no cartão', 'equivale a R$ 14,99 por mês', 'R$ 179,90'],
+    ['1 mês no Pix', 'pagamento único, sem renovação', 'R$ 24,90'],
   ],
-  planos: [['Grátis', '48 horas', 'R$ 0,00'], ['Degustação', '7 dias', 'R$ 4,99'], ['1 mês', 'pagamento único no Pix', 'R$ 24,90'], ['6 meses', 'pagamento único no Pix', 'R$ 124,90']],
-  ps: 'O café continua por sua conta. A cotação dele, não.',
+  lancamento: 'Preço de lançamento: quem assina no cartão agora continua pagando este valor nas renovações, mesmo se o preço subir depois.',
+  botao: ['Ver os planos', SITE + '/entrar?volta=/assinar'],
+  ps: 'Por trás do Mercado Macro tem gente de verdade atualizando o painel todo dia. Se algo não funcionou no seu teste, é só responder este e-mail.',
 };
 
 const esc = (x) => String(x).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const primeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || 'olá';
 
 export function montarEmail(c, nome, linkSair) {
+  if (c.tipo === 'oferta') return montarOferta(c, nome, linkSair);
   const p = primeiroNome(nome);
   const texto = [`Olá, ${p}.`, '', c.abertura, '', 'O que chegou:', '',
     ...c.itens.map(([t, d]) => `- ${t}: ${d}`), '',
@@ -110,6 +93,46 @@ Conteúdo informativo, não é recomendação de investimento. · <a href="${SIT
   return { texto, html: htmlEmail };
 }
 
+// convite para assinar: o que chegou, os planos e um botão para a página de assinatura
+function montarOferta(c, nome, linkSair) {
+  const p = primeiroNome(nome);
+  const texto = [`Olá, ${p}.`, '', c.abertura, '',
+    ...c.itens.map(([t, d]) => `- ${t}: ${d}`), '',
+    'Os planos:', ...c.planos.map(([n, d, v]) => `- ${n}: ${v} (${d})`), '', c.lancamento, '',
+    `${c.botao[0]}: ${c.botao[1]}`, '', `PS: ${c.ps}`, '',
+    'Você recebe este e-mail porque tem cadastro no Mercado Macro. Para não receber mais novidades: ' + linkSair,
+    'Conteúdo informativo, não é recomendação de investimento.'].join('\n');
+  const td = 'font-family:Arial,Helvetica,sans-serif;color:#1f2937';
+  const linha = (i) => (i ? 'border-top:1px solid #dfe5ee;' : '');
+  const htmlEmail = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(c.assunto)}</title></head>
+<body style="margin:0;padding:0;background:#eef1f6">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(c.previa)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden">
+<tr><td style="background:#0b1220;padding:20px 28px"><img src="${SITE}/logo-mercado-macro.png" alt="Mercado Macro" height="34" style="display:block;height:34px;border:0"></td></tr>
+<tr><td style="${td};padding:28px 28px 8px;font-size:15px;line-height:1.6">
+<p style="margin:0 0 14px">Olá, ${esc(p)}.</p>
+<p style="margin:0 0 20px;font-size:18px;line-height:1.45;font-weight:700;color:#0b1220">${esc(c.abertura)}</p>
+</td></tr>
+${c.itens.map(([t, d]) => `<tr><td style="${td};padding:0 28px 14px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
+<td width="4" style="background:#f0b90b;border-radius:2px"></td>
+<td style="${td};padding:2px 0 2px 14px;font-size:14.5px;line-height:1.55"><b style="color:#0b1220">${esc(t)}</b><br><span style="color:#4a5568">${esc(d)}</span></td></tr></table></td></tr>`).join('\n')}
+<tr><td style="${td};padding:14px 28px 6px;font-size:15px;line-height:1.6">
+<p style="margin:0 0 12px;font-weight:700;color:#0b1220">Os planos</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #dfe5ee;border-radius:8px;border-collapse:separate">
+${c.planos.map(([n, d, v], i) => `<tr><td style="${td};padding:9px 14px;font-size:14px;${linha(i)}"><b>${esc(n)}</b><br><span style="color:#6b7280;font-size:13px">${esc(d)}</span></td><td align="right" style="${td};padding:9px 14px;font-size:14px;font-weight:700;white-space:nowrap;${linha(i)}">${esc(v)}</td></tr>`).join('\n')}
+</table>
+<p style="margin:12px 0 0;color:#4a5568;font-size:13.5px;line-height:1.5">${esc(c.lancamento)}</p>
+</td></tr>
+<tr><td align="left" style="padding:22px 28px 6px"><a href="${esc(c.botao[1])}" style="background:#f0b90b;color:#111111;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:15px;padding:12px 22px;border-radius:8px;display:inline-block">${esc(c.botao[0])}</a></td></tr>
+<tr><td style="${td};padding:18px 28px 26px;font-size:14px;color:#4a5568"><b>PS:</b> ${esc(c.ps)}</td></tr>
+<tr><td style="${td};padding:16px 28px 22px;background:#f5f7fb;font-size:12px;line-height:1.5;color:#6b7280">
+Você recebe este e-mail porque tem cadastro no Mercado Macro. <a href="${esc(linkSair)}" style="color:#6b7280">Não quero receber novidades</a>.<br>
+Conteúdo informativo, não é recomendação de investimento. · <a href="${SITE}/" style="color:#6b7280">mercadomacro.com.br</a></td></tr>
+</table></td></tr></table></body></html>`;
+  return { texto, html: htmlEmail };
+}
+
 /* ---------------- banco ---------------- */
 let pronto = false;
 async function garantir(env) {
@@ -133,7 +156,8 @@ async function linkSair(env, u) {
   }
   return SITE + '/sair-da-lista?t=' + t;
 }
-const DESTINO = `status IN ('ativo', 'pendente', 'expirado') AND admin = 0 AND sem_novidades = 0`;
+// quem recebe: cadastro confirmado, não admin, não saiu da lista; o comunicado pode restringir mais (publico)
+const DESTINO = `status IN ('ativo', 'pendente', 'expirado') AND admin = 0 AND sem_novidades = 0` + (COMUNICADO.publico ? ` AND (${COMUNICADO.publico})` : '');
 
 async function enviar(env, para, assunto, corpo, sair) {
   const c = await config(env);
