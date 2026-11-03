@@ -667,7 +667,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     var h = '<div class="planos">' + lista.map(function(p){
       var v = preco(p, forma), d = desconto(p, forma), cartao = forma === 'cartao';
       var nome = cartao ? (NOME_CARTAO[p.meses] || p.nome) : p.nome;
-      var selo = p.meses > 1 && porMes(p, forma) === maisBarato ? '<span class="selo">Melhor preço</span>' : d > 0 ? '<span class="selo leve">' + d + '% mais barato</span>' : '';
+      var selo = p.meses > 1 && porMes(p, forma) === maisBarato ? '<span class="selo">Melhor preço</span>' : d > 0 ? '<span class="selo leve">' + d + '% de desconto</span>' : '';
       return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(nome) + selo + '</span>'
         + '<span class="v">' + reais(v) + '</span>'
         + '<span class="u">' + (cartao ? CADA[p.meses] || ('a cada ' + p.meses + ' meses') : 'pagamento único') + '</span>'
