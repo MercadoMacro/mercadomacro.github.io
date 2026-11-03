@@ -204,7 +204,7 @@ function switchTab(tabId) {
   if (tabId === 'calendar-panel') setTimeout(fitCalendarIframe, 100);
   if (tabId === 'heatmap-panel') setTimeout(() => initHeatmapIfNeeded(), 150);
   if (window.__onTabSwitch) window.__onTabSwitch(tabId);
-  if (tabId === 'news-panel') document.dispatchEvent(new Event('mm-news-visible'));
+  document.dispatchEvent(new Event('mm-news-visible'));
 }
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 const savedTab = localStorage.getItem(STORAGE.activeTab);
@@ -968,6 +968,7 @@ function setLiveMode(on, silent = false) {
     if (!silent) toast('Atualização automática ligada · a cada 5 min no pregão (15 min fora dele)', 'success');
   } else {
     stopAutoRefresh();
+    syncNewsStream();
     saveMarketCache();
     saveTickerCache(window.__lastTickerResults || []);
     if (!silent) toast('Atualização automática desligada · usando o último snapshot', 'info');
@@ -1592,8 +1593,8 @@ function setNewsMode(mode) {
   }
   document.getElementById('news-view').style.display = mode === 'news' ? 'block' : 'none';
   document.getElementById('live-view').style.display = mode === 'live' ? 'block' : 'none';
-  if (mode === 'news') renderNewsView();
-  else { renderLiveView(); fetchNewsFromWorker(true); }
+  if (mode === 'news') { renderNewsView(); syncNewsStream(); }
+  else { renderLiveView(); syncNewsStream(); if (!liveMode) fetchNewsFromWorker(true); }
 }
 document.getElementById('nm-toggle')?.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
@@ -1613,12 +1614,30 @@ function showNewsSkeleton() {
 
 // NEWS_LIVE_START: atualização independente das cotações, com uma busca por vez.
 const NEWS_LIVE_MS = 15000;
-let newsFetchInFlight = null, newsLastAttempt = 0;
+let newsFetchInFlight = null, newsLastAttempt = 0, newsStreamClient = null, newsStreamRevision = 0;
 function newsLiveActive() {
   return liveMode && !document.hidden && newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
 }
 function newsLiveTick() {
+  syncNewsStream();
+  if (newsStreamClient?.healthy() || newsStreamClient?.denied) return;
   if (newsLiveActive() && !newsFetchInFlight && Date.now() - newsLastAttempt >= NEWS_LIVE_MS) return fetchNewsFromWorker(true);
+}
+function syncNewsStream() {
+  if (!globalThis.MMNewsStream) return;
+  if (!newsStreamClient) {
+    const url = new URL('/api/noticias/ws', location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    newsStreamClient = new MMNewsStream.Client({url:url.href,
+      onData:items=>{ newsStreamRevision++; newsLastAttempt=Date.now(); newsApplyUpdate(newsMergeLive(newsBruto,items)); },
+      onState:state=>{
+        const el=document.getElementById('news-stream-status');
+        const text=state==='live'?'Conectado · atualização automática':state==='connecting'?'Conectando às notícias…':state==='paused'?'Atualização automática pausada':state==='auth'?'Sessão encerrada':'Atualização periódica ativa · tentando reconectar';
+        if(el&&el.textContent!==text)el.textContent=text;
+      },
+      onAuth:()=>location.reload()
+    });
+  }
+  newsStreamClient.setActive(newsLiveActive());
 }
 async function newsFetchPayload(preferLive) {
   const urls = preferLive ? [NEWS_WORKER_URL, '/api/noticias'] : ['/api/noticias', NEWS_WORKER_URL];
@@ -1651,11 +1670,13 @@ function fetchNewsFromWorker(silent = false) {
 setInterval(newsLiveTick, 1000);
 document.addEventListener('visibilitychange', newsLiveTick);
 document.addEventListener('mm-news-visible', newsLiveTick);
+window.addEventListener('pagehide', () => newsStreamClient?.setActive(false));
+window.addEventListener('pageshow', newsLiveTick);
 let newsFetchSeq = 0;
 async function fetchNewsOnce(silent = false) {
   const info = document.getElementById('news-info');
   if (info && !silent) info.classList.add('loading');
-  const seq = ++newsFetchSeq; // se outra busca começar depois, esta é descartada
+  const seq = ++newsFetchSeq, streamRevision = newsStreamRevision; // se outra busca começar depois, esta é descartada
 
   try {
     const preferLive = newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
@@ -1664,24 +1685,8 @@ async function fetchNewsOnce(silent = false) {
     const data = preferLive ? newsMergeLive(newsBruto, payload.data) : payload.data;
     if (seq !== newsFetchSeq) return;
 
-    newsAll = newsPrepara(data);
-    window.__newsErro = false; // a Mesa usa para trocar "Carregando" pelo aviso de falha
-    checkNewsAlerts(newsAll);
-    try {
-      localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-    } catch (e) { /* silencioso */ }
-
-    const cacheHeader = res.headers.get('X-Cache') || '';
-    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
-    if (info) {
-      info.innerHTML = `<span class="dot"></span>Última atualização: <span id="news-last-update">${now}</span> · ${newsAll.length} notícias${cacheHeader === 'HIT' ? ' (cache)' : ''}`;
-      info.classList.remove('loading');
-    }
-
-    renderNewsView();
-    if (newsCurrentMode === 'live') renderLiveView();
-    newsTraduzir();
-    if (!silent) toast('Notícias atualizadas', 'success');
+    if (preferLive && streamRevision !== newsStreamRevision) return;
+    newsApplyUpdate(data,silent,res.headers.get('X-Cache') || '');
   } catch (e) {
     if (seq !== newsFetchSeq) return;
     console.warn('[News] Erro ao buscar:', e.message);
@@ -1702,6 +1707,27 @@ async function fetchNewsOnce(silent = false) {
     window.__newsErro = !newsAll.length;
     window.dispatchEvent(new Event('mm-news-erro'));
   }
+}
+
+function newsApplyUpdate(data,silent=true,cacheHeader='') {
+    const info=document.getElementById('news-info');
+    newsAll = newsPrepara(data);
+    window.__newsErro = false; // a Mesa usa para trocar "Carregando" pelo aviso de falha
+    checkNewsAlerts(newsAll);
+    try {
+      localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+    } catch (e) { /* silencioso */ }
+
+    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
+    if (info) {
+      info.innerHTML = `<span class="dot"></span>Última atualização: <span id="news-last-update">${now}</span> · ${newsAll.length} notícias${cacheHeader === 'HIT' ? ' (cache)' : ''}`;
+      info.classList.remove('loading');
+    }
+
+    renderNewsView();
+    if (newsCurrentMode === 'live') renderLiveView();
+    newsTraduzir();
+    if (!silent) toast('Notícias atualizadas', 'success');
 }
 
 function loadNewsFromCache() {
