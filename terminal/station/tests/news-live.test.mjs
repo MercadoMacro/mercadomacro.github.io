@@ -32,12 +32,12 @@ test('consultas concorrentes compartilham a mesma busca e liberam após falha',a
  const a=s.run('fetchNewsFromWorker(true)'),b=s.run('fetchNewsFromWorker(false)');assert.equal(a,b);assert.equal(calls,1);
  reject(Error('falha'));await assert.rejects(a);assert.equal(s.run('newsFetchInFlight'),null);
 });
-test('polling respeita 15 segundos e pausa fora do Ao vivo, oculto ou desligado',async()=>{
+test('polling respeita 60 segundos e pausa fora do Ao vivo, oculto ou desligado',async()=>{
  let calls=0;const s=setup({fetchNewsOnce:async()=>{calls++;}});
  await s.run('newsLiveTick()');assert.equal(calls,1);
- s.time(114999);await s.run('newsLiveTick()');assert.equal(calls,1);
- s.time(115000);await s.run('newsLiveTick()');assert.equal(calls,2);
- s.time(130000);
+ s.time(159999);await s.run('newsLiveTick()');assert.equal(calls,1);
+ s.time(160000);await s.run('newsLiveTick()');assert.equal(calls,2);
+ s.time(220000);
  for(const expression of ["document.hidden=true","document.hidden=false;liveMode=false","liveMode=true;newsCurrentMode='news'"]) {s.run(expression);await s.run('newsLiveTick()');assert.equal(calls,2);}
  s.run("newsCurrentMode='live'");s.active(false);await s.run('newsLiveTick()');assert.equal(calls,2);
  s.active(true);await s.run('newsLiveTick()');assert.equal(calls,3);
