@@ -33,7 +33,14 @@ try{
     {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
     {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
    ]})));
-   let liveWorkerCalls=0;
+   let liveWorkerCalls=0,stream=null,streamConnections=0,streamClosures=0;
+   const pushed=(title='Prévia: manchete enviada pelo WebSocket')=>({titulo:title,link:'https://example.test/push',fonte:'InfoMoney',data:Date.now(),nivel:'ALTO',impactScore:7,finalScore:70,tags:[]});
+   await page.routeWebSocket('**/api/noticias/ws',ws=>{
+    stream=ws;streamConnections++;
+    ws.onMessage(message=>{if(message==='ping')ws.send('pong');});
+    ws.onClose(()=>{streamClosures++;});
+    ws.send(JSON.stringify({type:'snapshot',items:[pushed()],at:Date.now()}));
+   });
    await page.route('https://news.cota-cotacao10.workers.dev/**',route=>{
     liveWorkerCalls++;
     return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify([{titulo:'Prévia: manchete do Worker ao vivo',link:'https://example.test/live',fonte:'InfoMoney',data:Date.now(),nivel:'ALTO',impactScore:7,finalScore:70,tags:[]}])});
@@ -97,15 +104,18 @@ try{
       await page.waitForTimeout(4500);
       await page.screenshot({path:join(out,theme+'-'+orientation+'-news-cards.png')});
       await page.locator('#nm-toggle [data-mode="live"]').click();
-      await page.waitForFunction(()=>document.querySelector('#live-container')?.textContent.includes('manchete do Worker ao vivo'));
-      if(!liveWorkerCalls)throw Error('Ao vivo não consultou Worker direto');
+      await page.waitForFunction(()=>document.querySelector('#live-container')?.textContent.includes('enviada pelo WebSocket'));
+      if(!streamConnections)throw Error('Ao vivo não abriu WebSocket');
+      stream.send(JSON.stringify({type:'delta',items:[pushed('Prévia: novidade recebida sem atualizar a página')],at:Date.now()}));
+      await page.waitForFunction(()=>document.querySelector('#live-container')?.textContent.includes('novidade recebida sem atualizar'));
       if(theme==='dark'&&orientation==='portrait') {
        const calls=liveWorkerCalls;await page.waitForTimeout(18000);
-       if(liveWorkerCalls<=calls)throw Error('Ao vivo não atualizou automaticamente');
+       if(liveWorkerCalls!==calls)throw Error('Polling continuou apesar de WebSocket saudável');
       }
       await page.screenshot({path:join(out,theme+'-'+orientation+'-live-news.png')});
-      results.push({liveNews:true,theme,orientation,directWorker:true,calls:liveWorkerCalls});
+      results.push({liveNews:true,theme,orientation,websocket:true,connections:streamConnections,httpCalls:liveWorkerCalls});
       await page.locator('#nm-toggle [data-mode="news"]').click();
+      await page.waitForTimeout(200);if(!streamClosures)throw Error('WebSocket não pausou ao sair do Ao vivo');
      }
     }catch(e){record.error=e.message;}
     results.push(record);console.log(JSON.stringify(record));
