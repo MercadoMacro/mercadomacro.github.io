@@ -228,7 +228,6 @@
      O preço ao vivo vale por 60 s; a variação do dia usa o fechamento anterior do Yahoo. */
   const LV = {};
   const vivo = (s) => { const l = LV[s]; return l && Date.now() - l.em < 60000 ? l : null; };
-  const dicaVivo = (src) => (src === 'calculado' ? 'Tempo real, calculado pela fórmula oficial do índice com o câmbio ao vivo das 6 moedas da cesta; pode diferir um pouco do oficial' : src === 'CFD' ? 'Tempo real, preço de CFD, contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : src ? `Tempo real pela ${src}` : 'Tempo real') + '; variação sobre o fechamento anterior do Yahoo';
   function atual(s) {
     const q = Q[s], l = vivo(s);
     if (!q || !ok(q.v)) return l ? { v: l.v, c: null, src: l.src } : null;
@@ -243,7 +242,7 @@
     root.querySelectorAll(`.mn-row[data-s="${CSS.escape(s)}"]`).forEach((row) => {
       row.querySelector('.mn-v').textContent = valor(s);
       const c = row.querySelector('.mn-c'); c.textContent = pct(a?.c); c.className = `mn-c ${cls(a?.c)}`;
-      row.classList.add('rt'); row.classList.toggle('cfd', l.src === 'CFD'); row.classList.toggle('calc', l.src === 'calculado'); row.title = dicaVivo(l.src);
+      row.classList.add('rt');
       if (dir) { row.classList.remove('fl-up', 'fl-dn'); void row.offsetWidth; row.classList.add(dir > 0 ? 'fl-up' : 'fl-dn'); }
     });
   };
@@ -324,7 +323,7 @@
   const linha = (r, l) => {
     if (l[0].startsWith('@')) return linhaEsp(r, l);
     const s = l[0], q = atual(s), j = INFO[s].juros, ch = j ? bp(s) : q?.c;
-    const rt = q && 'src' in q ? ` rt${q.src === 'CFD' ? ' cfd' : q.src === 'calculado' ? ' calc' : ''}" title="${esc(dicaVivo(q.src))}` : `" title="${esc(DICA[s] || `Ver ${l[1]} no gráfico`)}`;
+    const rt = `${q && 'src' in q ? ' rt' : ''}" title="${esc(DICA[s] || `Ver ${l[1]} no gráfico`)}`;
     return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}${rt}" data-r="${r.id}" data-s="${esc(s)}">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
   };
@@ -592,8 +591,6 @@
   .mn-root .mn-row { display:grid; grid-template-columns:minmax(0,1fr) auto 76px; gap:10px; align-items:center; font:inherit; font-size:13px; text-align:left; background:none; border:0; border-top:1px solid var(--line); padding:8px 4px; color:var(--text-2); cursor:pointer; border-radius:0; }
   .mn-root .mn-row-esp { cursor:default; }
   .mn-root .mn-row.rt .mn-n::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--pos); margin-left:6px; vertical-align:middle; }
-  .mn-root .mn-row.rt.calc .mn-n::before { content:'calculado'; float:right; margin:2px 6px 0 0; padding:0 4px; border:1px solid var(--line-2); border-radius:4px; font-size:9px; font-weight:600; letter-spacing:.02em; color:var(--text-3); line-height:14px; }
-  .mn-root .mn-row.rt.cfd .mn-n::before { content:'CFD'; float:right; margin:2px 6px 0 0; padding:0 4px; border:1px solid var(--line-2); border-radius:4px; font-size:9px; font-weight:600; letter-spacing:.04em; color:var(--text-3); line-height:14px; }
   .mn-root .mn-row.fl-up .mn-v { animation:mn-fl-up .8s; } .mn-root .mn-row.fl-dn .mn-v { animation:mn-fl-dn .8s; }
   @keyframes mn-fl-up { from { background:color-mix(in srgb, var(--pos) 25%, transparent); } }
   @keyframes mn-fl-dn { from { background:color-mix(in srgb, var(--neg) 25%, transparent); } }
