@@ -210,7 +210,7 @@
         <div class="aj-ajuda">
           <a class="aj-ajuda-it" href="mailto:contato@mercadomacro.com.br"><i class="fas fa-envelope" aria-hidden="true"></i><span><b>Fale com a gente</b><em>contato@mercadomacro.com.br</em></span></a>
           <a class="aj-ajuda-it" href="/privacidade"><i class="fas fa-shield-alt" aria-hidden="true"></i><span><b>Privacidade</b><em>Como seus dados são usados</em></span></a>
-          <a class="aj-ajuda-it" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhls" target="_blank" rel="noopener"><i class="fab fa-spotify" aria-hidden="true"></i><span><b>Podcast Radar Macro</b><em>Ouça no Spotify</em></span></a>
+          <a class="aj-ajuda-it" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs" target="_blank" rel="noopener"><i class="fab fa-spotify" aria-hidden="true"></i><span><b>Podcast Radar Macro</b><em>Ouça no Spotify</em></span></a>
         </div>
       </section>
       <section class="aj-sec">

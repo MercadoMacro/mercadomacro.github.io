@@ -128,9 +128,9 @@
         <div class="edu-pod-txt">
           <h4>Radar Macro</h4>
           <p>O podcast do Mercado Macro. Ouça os episódios aqui mesmo ou no Spotify.</p>
-          <a class="edu-btn" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhls" target="_blank" rel="noopener">Abrir no Spotify ${ICO.seta}</a>
+          <a class="edu-btn" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs" target="_blank" rel="noopener">Abrir no Spotify ${ICO.seta}</a>
         </div>
-        <iframe class="edu-pod-player" title="Podcast Radar Macro no Spotify" src="https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhls?utm_source=generator&amp;theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+        <iframe class="edu-pod-player" title="Podcast Radar Macro no Spotify" src="https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhIs?utm_source=generator&amp;theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
       </section>
       <p class="edu-nota">Conteúdo educativo, não é recomendação de investimento. Regras de impostos e garantias mudam; confira sempre a regra vigente.</p>`;
   }
