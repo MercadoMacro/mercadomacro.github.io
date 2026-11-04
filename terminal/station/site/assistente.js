@@ -39,15 +39,30 @@
   .ia-ele{align-self:flex-start;background:var(--surface-2,#f3f3f3)}
   .ia-erro{align-self:flex-start;color:var(--down,#c0392b);font-size:13px}
   .ia-erro a{color:var(--accent,#2563eb);font-weight:600}
-  .ia-vazio{color:var(--muted,#777);font-size:14px;line-height:1.5}
-  .ia-vazio button{display:block;width:100%;text-align:left;margin-top:8px;border:1px solid var(--line-2,#ddd);background:transparent;color:var(--text);border-radius:9px;padding:9px 11px;cursor:pointer;font-size:13px}
-  .ia-vazio button:hover{background:var(--surface-2)}
+  .ia-vazio{color:var(--text-2,#555);font-size:13.5px;line-height:1.5;display:flex;flex-direction:column;gap:14px}
+  .ia-ola{margin:4px 0 0;font-size:19px;font-weight:700;color:var(--text);line-height:1.3}
+  .ia-ola small{display:block;font-size:13px;font-weight:400;color:var(--text-3,#777);margin-top:4px}
+  .ia-modos{display:grid;gap:8px}
+  .ia-modo{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line,#e5e5e5);border-radius:12px;background:var(--surface-2,#f7f7f7)}
+  .ia-modo b{display:block;color:var(--text);font-size:13.5px}
+  .ia-modo span{font-size:12.5px;color:var(--text-3,#777)}
+  .ia-ic{flex:0 0 28px;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent-soft,#fff3dc);color:var(--accent,#d4920f)}
+  .ia-ic svg{width:15px;height:15px;fill:none !important;stroke:currentColor !important;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:inherit !important}
+  .ia-modo .ia-ic,.ia-vazio .ia-sug.gem .ia-ic{color:var(--accent,#d4920f) !important}
+  .ia-sug-t{margin:2px 0 -6px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3,#777)}
+  .ia-vazio .ia-sug{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line,#e5e5e5);background:transparent;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;font-size:13.5px;transition:border-color .15s,background .15s}
+  .ia-vazio .ia-sug:hover{border-color:var(--accent-line,var(--accent));background:var(--surface-2)}
+  .ia-vazio .ia-sug .ia-ic{flex-basis:26px;width:26px;height:26px;background:var(--surface-3,#eee);color:var(--text-2,#555)}
+  .ia-vazio .ia-sug.gem .ia-ic{background:var(--accent-soft,#fff3dc);color:var(--accent,#d4920f)}
   .ia-pe{border-top:1px solid var(--line-2,#ddd);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
-  .ia-form{display:flex;gap:8px;align-items:flex-end}
-  .ia-form textarea{flex:1;resize:none;min-height:42px;max-height:140px;font:inherit;font-size:14px;padding:10px;border-radius:9px;border:1px solid var(--line-2,#ddd);background:var(--surface-2);color:var(--text)}
-  .ia-form button{min-height:42px;padding:0 14px;border:0;border-radius:9px;background:var(--accent,#2563eb);color:#fff;font-weight:600;cursor:pointer}
-  .ia-form button:disabled{opacity:.55;cursor:default}
-  .ia-aviso{margin:8px 0 0;font-size:11.5px;color:var(--muted,#777);line-height:1.4}
+  .ia-form{display:flex;gap:6px;align-items:flex-end;padding:5px 5px 5px 14px;border:1px solid var(--line-2,#ddd);border-radius:22px;background:var(--surface-2);transition:border-color .15s}
+  .ia-form:focus-within{border-color:var(--accent,#d4920f)}
+  .ia-form textarea{flex:1;resize:none;min-height:34px;max-height:140px;font:inherit;font-size:14px;padding:7px 0;border:0 !important;outline:0 !important;background:transparent !important;color:var(--text);box-shadow:none !important}
+  .ia-form button{flex:0 0 34px;width:34px;height:34px;padding:0;border:0;border-radius:50%;background:var(--accent,#f0b90b);color:#111;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .15s,opacity .15s}
+  .ia-form button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .ia-form button:hover:not(:disabled){transform:scale(1.06)}
+  .ia-form button:disabled{opacity:.45;cursor:default}
+  .ia-aviso{margin:7px 4px 0;font-size:10.5px;color:var(--text-3,#888);line-height:1.4;text-align:center;opacity:.85}
   .ia-rot{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#777);margin-bottom:6px}
   .ia-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .ia-acoes button,.ia-acoes a{border:1px solid var(--line-2,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
@@ -65,13 +80,25 @@
   @media (max-width:640px){.ia-fab{right:10px;bottom:calc(60px + env(safe-area-inset-bottom));padding:5px 12px 5px 5px;gap:8px}.ia-fab .ia-marca{width:30px;height:30px;flex-basis:30px}.ia-fab .ia-marca svg{width:15px;height:15px}.ia-fab-txt small{display:none}.ia-fab-txt b{font-size:12.5px}}
   @media (max-width:560px){.ia-painel{width:100%;border-left:0}}`;
 
+  const IC = {
+    raio: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+    brilho: '<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
+    balao: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    enviar: '<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
+  };
   const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
   let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
     if (!conversa.length) {
-      msgs.innerHTML = `<div class="ia-vazio">Pergunte sobre conceitos, indicadores e como usar o painel. ${gemini && assinante ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora; as outras vão para o Google Gemini, que não vê as cotações de agora.' : gemini ? 'Dúvidas comuns e assuntos das lições da Educação têm resposta pronta na hora. As perguntas livres ao Google Gemini são para assinantes.' : 'Respostas prontas para as dúvidas mais comuns.'}${SUGESTOES.filter((x) => (gemini && assinante) || prontaPara(x) || licaoPara(x)).map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>`;
-      msgs.querySelectorAll('.ia-vazio button').forEach((b) => (b.onclick = () => { campo.value = b.textContent; perguntar(); }));
+      // layout e textos de 04/11/2026 (proposta do Severino): saudação, os dois modos de resposta e sugestões com ícone
+      const modo = (ic, t, d) => `<div class="ia-modo"><span class="ia-ic" aria-hidden="true">${IC[ic]}</span><div><b>${t}</b><span>${d}</span></div></div>`;
+      const sug = SUGESTOES.filter((x) => (gemini && assinante) || prontaPara(x) || licaoPara(x))
+        .map((s) => { const pronta = prontaPara(s) || licaoPara(s); return `<button type="button" class="ia-sug${pronta ? '' : ' gem'}"><span class="ia-ic" aria-hidden="true">${IC[pronta ? 'balao' : 'brilho']}</span><span class="ia-sug-x">${esc(s)}</span></button>`; }).join('');
+      msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso te ajudar hoje?<small>Tire dúvidas sobre conceitos, indicadores e como usar o painel.</small></p>
+        <div class="ia-modos">${modo('raio', 'Respostas na hora', 'Dúvidas comuns e assuntos das lições da aba Educação.')}${gemini ? modo('brilho', 'Google Gemini', assinante ? 'Para outras perguntas sobre mercado e investimentos. Não vê as cotações em tempo real.' : 'Perguntas livres sobre mercado, exclusivas para assinantes. Não vê as cotações em tempo real.') : ''}</div>
+        ${sug ? `<p class="ia-sug-t">Sugestões</p>${sug}` : ''}</div>`;
+      msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
       return;
     }
     msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
@@ -154,8 +181,8 @@
     painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><h2>Assistente IA<small>${gemini && assinante ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
         <button type="button" data-ia="limpar" title="Apagar a conversa">Limpar</button><button type="button" data-ia="fechar" aria-label="Fechar">Fechar</button></div>
       <div class="ia-msgs" aria-live="polite"></div>
-      <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit">Enviar</button></form>
-        <p class="ia-aviso">${gemini ? 'As respostas que não são prontas são geradas por IA (Google Gemini): podem conter erros e não são recomendação de investimento. Não escreva dados pessoais: essas perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
+      <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit" aria-label="Enviar" title="Enviar">${IC.enviar}</button></form>
+        <p class="ia-aviso">${gemini ? 'Respostas do Gemini são geradas por IA, podem conter erros e não são recomendação de investimento. Não escreva dados pessoais: as perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
     document.body.appendChild(painel);
     msgs = painel.querySelector('.ia-msgs'); campo = painel.querySelector('textarea'); enviar = painel.querySelector('.ia-form button');
     painel.querySelector('form').onsubmit = (e) => { e.preventDefault(); perguntar(); };
