@@ -4942,7 +4942,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=27';
+  sc.src = 'mercado-novo.js?v=28';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -4957,7 +4957,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=34';
+    sc.src = 'mesa.js?v=35';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -5195,7 +5195,7 @@ function newsReadMins(n) {
 /* =========================================================
    ABA MERCADO AO VIVO
    Os cards que têm fonte ao vivo trocam o preço sem esperar a próxima consulta ao Yahoo:
-   câmbio (Deriv), USD/BRL, VIX e futuros (Capital.com, pelo servidor do site) e cripto (Binance).
+   câmbio e metais, USD/BRL, VIX, futuros e índices (CFD, pelo servidor do site) e cripto (Binance). Os nomes dos fornecedores ficam em Ajustes > Sobre.
    A variação do dia usa o fechamento anterior do Yahoo que o card já tem; o mini gráfico continua o do Yahoo.
    ========================================================= */
 (function mercadoAoVivo() {
@@ -5211,7 +5211,7 @@ function newsReadMins(n) {
   const cards = (s) => [...document.querySelectorAll('#market-panel .quote-card[data-symbol]')].filter((c) => c.dataset.symbol === s);
   function vivo(s) {
     const q = fx?.covers(s) ? fx.quote(s) : null;
-    if (q && q.source !== 'Yahoo') return { v: q.value, src: q.source === 'Deriv' ? 'Deriv' : 'Capital.com', ts: q.ts };
+    if (q && q.source !== 'Yahoo') return { v: q.value, src: q.source === 'Deriv' ? '' : 'CFD', ts: q.ts };
     const c = cr?.quote(s);
     if (c && Number.isFinite(c.value)) return { v: c.value, src: 'Binance (USDT)', ts: c.ts };
     return null;
@@ -5237,9 +5237,9 @@ function newsReadMins(n) {
         if (badgeEl) { badgeEl.textContent = chg > 0 ? '▲' : chg < 0 ? '▼' : '▲'; badgeEl.className = `qc-badge ${tone}`; }
         card.classList.remove('up', 'dn'); card.classList.add(tone);
       }
-      if (timeEl) timeEl.textContent = 'tempo real · ' + l.src + ' ' + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (timeEl) timeEl.textContent = 'tempo real · ' + (l.src ? l.src + ' ' : '') + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       card.classList.add('qc-rt');
-      card.title = 'Preço em tempo real pela ' + l.src + (l.src === 'Capital.com' ? ' (CFD)' : '') + '; o gráfico e o fechamento anterior vêm do Yahoo.';
+      card.title = (l.src === 'CFD' ? 'Preço em tempo real de CFD: contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : l.src ? 'Preço em tempo real pela ' + l.src : 'Preço em tempo real') + '. O gráfico e o fechamento anterior vêm do Yahoo.';
       if (dir) flashCard(card, dir > 0 ? 'up' : 'dn');
     }
   }

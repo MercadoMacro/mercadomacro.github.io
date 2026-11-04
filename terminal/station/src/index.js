@@ -1433,7 +1433,7 @@ async function apiAdmin(req, env, acao, eu) {
 /* ---------------- Capital.com (teste de cotações) ----------------
    Chave, login e senha da API ficam só no banco D1, colados em /admin, e nunca vão para o navegador:
    com eles dá para operar a conta. Por isso o recomendado é usar a conta demo. */
-const BUSCA_CAPITAL = ['USD/BRL', 'EUR/BRL', 'Brazil', 'US500', 'US Tech 100', 'Germany 40', 'Brent', 'Crude', 'Natural Gas', 'Gold', 'Silver', 'Copper', 'Iron', 'Soybean', 'Coffee', 'VIX'];
+const BUSCA_CAPITAL = ['USD/BRL', 'EUR/BRL', 'Brazil', 'US500', 'US 30', 'US Tech 100', 'Germany 40', 'UK 100', 'France 40', 'EU Stocks 50', 'Japan 225', 'Hong Kong 50', 'Australia 200', 'Brent', 'Crude', 'Natural Gas', 'Gold', 'Silver', 'Copper', 'Iron', 'Soybean', 'Coffee', 'VIX'];
 const mascarar = (x) => { const t = String(x || ''); const [a, d] = t.split('@'); return d ? a.slice(0, 2) + '***@' + d : t.slice(0, 2) + '***'; };
 async function sessaoCapital(c) {
   const base = c.cap_amb === 'real' ? 'https://api-capital.backend-capital.com' : 'https://demo-api-capital.backend-capital.com';

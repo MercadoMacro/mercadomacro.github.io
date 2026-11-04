@@ -52,10 +52,12 @@
   let cr = null;
   try { cr = window.MMCryptoLive?.hostAllowed(location.hostname) ? new window.MMCryptoLive.Client({ enabled: true, onChange: (e) => { if (e?.type === 'quote') vivoMudou(e.symbol); } }) : null; } catch { cr = null; }
   const liveOn = () => typeof liveMode === 'undefined' || !!liveMode;
+  // nomes dos fornecedores ao vivo ficam em Ajustes > Sobre (04/11/2026)
+  const rotuloVivo = (src) => (src === 'CFD' ? 'Tempo real, preço de CFD (pode diferir um pouco do oficial)' : src === 'ao vivo' ? 'Tempo real' : `Tempo real pela ${src}`);
   function vivo(s) {
     if (!liveOn() || !panel.classList.contains('active')) return null;
     const q = fx?.covers(s) ? fx.quote(s) : null;
-    if (q && q.source !== 'Yahoo' && core.number(q.value)) return { v: q.value, src: q.source === 'Deriv' ? 'Deriv' : 'Capital.com (CFD)' };
+    if (q && q.source !== 'Yahoo' && core.number(q.value)) return { v: q.value, src: q.source === 'Deriv' ? 'ao vivo' : 'CFD' };
     const c = cr?.quote?.(s);
     if (c && core.number(c.value)) return { v: c.value, src: 'Binance (USDT)' };
     return null;
@@ -112,7 +114,7 @@
       tr.dataset.s = r.symbol; if (r.symbol === sel && !side.hidden) tr.classList.add('on');
       const open = text('button', nice(r.symbol), 'wt-symbol'); open.type = 'button';
       open.setAttribute('aria-label', 'Ver ' + nice(r.symbol) + ' no painel');
-      if (q?.src) { open.classList.add('rt'); open.title = `Tempo real pela ${q.src}; variação sobre o fechamento anterior do Yahoo`; }
+      if (q?.src) { open.classList.add('rt'); open.title = `${rotuloVivo(q.src)}; variação sobre o fechamento anterior do Yahoo`; }
       if (r.name && r.name !== nice(r.symbol)) { const nm = text('span', r.name, 'wt-name'); if (!open.title) open.title = r.name; open.append(nm); }
       name.append(open);
       if (!r.fresh && r.quote) name.append(text('span', 'Salvo', 'wt-saved'));
@@ -194,7 +196,7 @@
     const pg = pregao(r.symbol), pe = side.querySelector('.wn-pregao');
     pe.hidden = !pg && !q?.src;
     pe.classList.toggle('on', !!pg?.on);
-    pe.querySelector('span').textContent = [pg?.t, q?.src ? `tempo real pela ${q.src}` : ''].filter(Boolean).join(' · ');
+    pe.querySelector('span').textContent = [pg?.t, q?.src ? rotuloVivo(q.src).toLowerCase() : ''].filter(Boolean).join(' · ');
     const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant]];
     side.querySelector(':scope > .wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
     side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = core.number(v) ? fmt(v, r.quote) : '—'; });
