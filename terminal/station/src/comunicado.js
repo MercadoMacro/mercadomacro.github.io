@@ -21,13 +21,15 @@ export const COMUNICADO = {
   // só quem está com o acesso vencido e nunca teve um pagamento aprovado
   publico: "status = 'expirado' AND NOT EXISTS (SELECT 1 FROM pagamentos p WHERE p.usuario_id = usuarios.id AND p.status = 'aprovado' AND p.valor > 0)",
   assunto: 'O Mercado Macro cresceu desde o seu teste',
-  previa: 'Notícias ao vivo, aulas, probabilidades do Copom e do Fed. E agora a partir de R$ 14,99 por mês no cartão.',
+  previa: 'Assistente com inteligência artificial, notícias ao vivo, aulas e o novo tema Terminal. A partir de R$ 14,99 por mês no cartão.',
   abertura: 'Você testou o Mercado Macro um tempo atrás. Desde então, muita coisa chegou.',
   itens: [
+    ['Assistente com inteligência artificial', 'Tire dúvidas sobre mercado e sobre o painel a qualquer hora. As dúvidas comuns têm resposta na hora e, para assinantes, o Google Gemini apoia a sua análise nas outras perguntas.'],
     ['Notícias ao vivo', 'Mais de 25 veículos numa tela só, com as de maior impacto em destaque. As novas aparecem sozinhas, sem atualizar a página.'],
     ['Copom e Fed em probabilidades', 'A chance de cada decisão de juros, calculada com as opções de Copom da B3 e no estilo do FedWatch para o Fed.'],
-    ['Aba Educação', '42 lições curtas, com exemplos e perguntas para fixar: de como funciona a B3 a como ler os indicadores da economia.'],
+    ['Aba Educação e podcast', '42 lições curtas, com exemplos e perguntas para fixar, e os episódios do podcast Radar Macro para ouvir ali mesmo.'],
     ['Cotações e fundamentos', 'Dólar, juros, bolsa, commodities e cripto ao vivo, e os balanços de mais de 300 empresas com link para a CVM.'],
+    ['Novos temas', 'Escuro, claro ou o novo tema Terminal: fundo preto, números em destaque e fonte de terminal profissional.'],
   ],
   planos: [
     ['Mensal no cartão', 'renova sozinho, cancele quando quiser', 'R$ 19,90 por mês'],
