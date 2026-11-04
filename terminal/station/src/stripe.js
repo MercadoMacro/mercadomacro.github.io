@@ -155,22 +155,32 @@ export async function webhookStripe(req, env) {
     const plano = PLANOS[id];
     // soma o período na validade; e nunca deixa vencer antes do fim do período pago no Stripe (mais 1 dia de folga para a próxima cobrança)
     const fimStripe = o.lines && o.lines.data && o.lines.data[0] && o.lines.data[0].period ? new Date((o.lines.data[0].period.end + 86400) * 1000).toISOString() : null;
-    let validade = somarPeriodo(baseValidade(['ativo'].includes(u.status) ? u.expira : null), plano);
-    if (fimStripe && fimStripe > validade) validade = fimStripe;
     // pagamento e acesso na mesma transação (batch do D1): se algo falhar, nada fica gravado, o webhook responde erro
     // e o Stripe reenvia; no reenvio a fatura ainda não consta e a liberação é feita inteira.
-    // O acesso só muda se a fatura foi gravada agora, por este pedido (mesma ref e mesmo horário).
+    // Duas faturas ao mesmo tempo (04/11/2026): a validade é calculada sobre a conta lida agora, e a gravação só vale
+    // se a conta ainda estiver igual (mesmo status e mesma validade); se outra fatura mudou a conta no meio, lê de novo e refaz a conta.
     const ref = 'stripe:' + o.id;
-    const [ins] = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref)
-        SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)`)
-        .bind(u.id, id, o.amount_paid, agora, agora, validade, ref, ref),
-      env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, stripe_cliente = COALESCE(?, stripe_cliente),
-        stripe_assinatura = COALESCE(?, stripe_assinatura), decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END
-        WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE ref = ? AND criado = ? AND usuario_id = ?)`)
-        .bind(validade, id, o.customer || null, assinaturaDaFatura(o), agora, u.id, ref, agora, u.id),
-    ]);
-    if (!ins.meta.changes) return json({ ok: true, repetido: true });
+    let validade = null, gravou = false;
+    for (let tentativa = 0; tentativa < 5 && !gravou; tentativa++) {
+      const atual = await env.DB.prepare('SELECT status, expira FROM usuarios WHERE id = ?').bind(u.id).first();
+      if (!atual) break;
+      validade = somarPeriodo(baseValidade(atual.status === 'ativo' ? atual.expira : null), plano);
+      if (fimStripe && fimStripe > validade) validade = fimStripe;
+      const [ins] = await env.DB.batch([
+        env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref)
+          SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)
+          AND EXISTS (SELECT 1 FROM usuarios WHERE id = ? AND status IS ? AND expira IS ?)`)
+          .bind(u.id, id, o.amount_paid, agora, agora, validade, ref, ref, u.id, atual.status, atual.expira),
+        env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, stripe_cliente = COALESCE(?, stripe_cliente),
+          stripe_assinatura = COALESCE(?, stripe_assinatura), decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END
+          WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE ref = ? AND criado = ? AND usuario_id = ?)`)
+          .bind(validade, id, o.customer || null, assinaturaDaFatura(o), agora, u.id, ref, agora, u.id),
+      ]);
+      if (ins.meta.changes) { gravou = true; break; }
+      if (await env.DB.prepare('SELECT 1 FROM pagamentos WHERE ref = ?').bind(ref).first()) return json({ ok: true, repetido: true });
+    }
+    // não conseguiu gravar (a conta mudou em todas as tentativas): responde erro e o Stripe reenvia depois
+    if (!gravou) return json({ erro: 'Conta mudou durante a gravação; tente de novo.' }, 503);
     limparCacheSessao();
     const primeira = o.billing_reason === 'subscription_create';
     await registrar(env, u.id, `${primeira ? 'Assinou' : 'Renovou'} no cartão (Stripe): ${plano.nome} (${reais(o.amount_paid)}), acesso até ${dataBR(validade)}`);

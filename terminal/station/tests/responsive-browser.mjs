@@ -123,7 +123,8 @@ try{
    await page.locator('#settings-btn').click();
    const settings=page.locator('.aj:not([hidden])');await settings.waitFor({state:'visible'});
    const names=await settings.locator('.aj-group > summary').allTextContents();
-   if(names.join('|')!=='Aparência|Meu painel|Dados|Conta')throw Error('Grupos de ajustes incompletos');
+   // grupos de 04/11/2026: "Minha conta" só aparece com login
+   if(!['Aparência|Meu painel|Dados|Ajuda|Sobre','Minha conta|Aparência|Meu painel|Dados|Ajuda|Sobre'].includes(names.join('|')))throw Error('Grupos de ajustes incompletos: '+names.join('|'));
    await settings.locator('[data-group="appearance"] > summary').click();
    await page.screenshot({path:join(out,theme+'-'+orientation+'-settings-overview.png')});
    await settings.locator('[data-group="panel"] > summary').click();
@@ -164,7 +165,8 @@ try{
   await page.screenshot({path:join(out,theme+'-desktop-'+width+'-market-selection.png')});
   await page.waitForFunction(()=>typeof window.openSettings==='function');await page.evaluate(()=>window.openSettings());
   const settings=page.locator('.aj:not([hidden])');
-  for(const id of ['appearance','panel','data','account']) {
+  // sem login, "Minha conta" é um link para /conta, não uma categoria (04/11/2026)
+  for(const id of ['appearance','panel','data','help','about']) {
    await settings.locator('[data-aj-category="'+id+'"]').click();
    if(await settings.locator('.aj-group:visible').count()!==1)throw Error('Desktop: mais de uma categoria visível');
    if(!(await settings.locator('[data-group="'+id+'"]').isVisible()))throw Error('Desktop: categoria errada');
@@ -180,7 +182,7 @@ try{
   }
   await page.setViewportSize({width:390,height:844});
   if(await settings.locator('.aj-categories').isVisible())throw Error('Mobile: categorias desktop visíveis');
-  if(await settings.locator('.aj-group > summary:visible').count()!==4)throw Error('Mobile: grupos sumiram após redimensionar');
+  if(await settings.locator('.aj-group > summary:visible').count()!==5)throw Error('Mobile: grupos sumiram após redimensionar');
   await settings.locator('button[data-act="close"]').click();
   results.push({desktopSettings:true,width,theme,categories:4,controlsSaved:true,mobileReturn:true});
   await ctx.close();

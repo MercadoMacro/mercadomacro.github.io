@@ -453,11 +453,16 @@ export async function apiAdminAssinatura(req, env, acao) {
       // Pagamento e acesso na mesma transação (batch do D1): se uma parte falhar, nada é gravado e dá para aprovar de novo.
       // O acesso só muda se o pagamento foi aprovado agora, por este pedido (mesmo id e mesmo horário de decisão).
       const [r1] = await env.DB.batch([
-        env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, validade, p.id),
+        // e só se a conta ainda estiver como foi lida (outro pagamento aprovado no mesmo instante não se perde; 04/11/2026)
+        env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')
+          AND EXISTS (SELECT 1 FROM usuarios WHERE id = ? AND status IS ? AND expira IS ?)`).bind(agora, validade, p.id, p.uid, p.ustatus, p.expira),
         env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE id = ? AND status = 'aprovado' AND decidido = ?)`)
           .bind(validade, agora, p.plano, p.uid, p.id, agora),
       ]);
-      if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
+      if (!r1.meta.changes) {
+        const ainda = await env.DB.prepare(`SELECT 1 FROM pagamentos WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(p.id).first();
+        return json({ erro: ainda ? 'A validade dessa conta mudou agora (outro pagamento). Clique em Aprovar de novo.' : 'Esse pagamento já foi decidido.' }, ainda ? 409 : 400);
+      }
       await registrar(env, p.uid, `Pagamento aprovado: ${plano.nome} (${reais(plano.valor)}), acesso até ${dataBR(validade)}`);
       limparCacheSessao();
       const r = await emailAprovado(env, req, p, plano, validade).catch(() => ({ ok: false }));
