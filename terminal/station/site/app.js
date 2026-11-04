@@ -1981,9 +1981,59 @@ function getStopWords() {
     'numa','pelos','elas','havia','seja','qual','será','nós','tenho','lhe','deles','essas','esses','pelas','este',
     'fosse','dele','tu','te','vocês','vos','lhes','meus','minhas','teu','tua','teus','tuas','nosso','nossa','nossos',
     'nossas','dela','delas','esta','estes','aquele','aquela','aqueles','aquelas','isto','aquilo',
-    'the','a','an','to','in','for','of','on','with','at','by','is','and','it','that','as','from','be',
-    'says','said','will','new','after','over','amid','about','into','has','have','was','were','are'
+    // palavras de ligação e de manchete que não dizem o assunto (04/11/2026)
+    'após','apos','enquanto','sobre','medida','contra','diz','dizem','afirma','segundo','ainda','antes','durante',
+    'novo','nova','novos','novas','hoje','ontem','amanhã','agora','pode','podem','deve','devem','vai','vão','fica',
+    'ficam','sobe','sobem','cai','caem','alta','altas','queda','quedas','dia','dias','semana','mês','ano','anos',
+    'veja','saiba','entenda','quer','faz','fazer','após','sob','desde','cerca','mais','menos','maior','menor',
+    'primeiro','primeira','outro','outra','outros','outras','todo','toda','todos','todas','cada','sendo','pois',
+    'onde','porque','então','assim','aqui','lá','bem','pode','tudo','nada','parte','vez','vezes','meio','mil','milhões','bilhões',
+    'the','a','an','to','in','for','of','on','with','at','by','is','and','it','that','as','from','be','its','this',
+    'says','said','will','new','after','over','amid','about','into','has','have','was','were','are','what','how',
+    'more','than','could','would','may','first','year','week','report','reports','update','live'
   ]);
+}
+
+// termos das manchetes (04/11/2026): conta uma vez por manchete, junta singular e plural (ação/ações, eleição/eleições),
+// usa duplas de palavras que andam juntas (banco central) e mostra a grafia mais usada (Trump, Copom)
+function termosDasManchetes(lista, n = 10) {
+  const stop = getStopWords();
+  const limpa = (t) => String(t || '').replace(/[“”"'‘’«»()\[\]:;,.!?|–—]/g, ' ').split(/\s+/).filter(Boolean);
+  const raiz = (w) => w.replace(/(ões|ães)$/, 'ão').replace(/ais$/, 'al').replace(/eis$/, 'el').replace(/(?<=[aeiou])s$/, '');
+  const um = new Map(), dois = new Map(), forma = new Map(), inicio = new Map();
+  const conta = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+  for (const it of lista) {
+    const ws = limpa(it.titulo).map((o) => ({ o, l: o.toLowerCase() }));
+    const vistos = new Set(), vistos2 = new Set();
+    ws.forEach((w, i) => {
+      const ok = (x) => x && x.l.length > 2 && !stop.has(x.l) && isNaN(x.l.replace(',', '.'));
+      if (!ok(w)) return;
+      const r = raiz(w.l);
+      if (!vistos.has(r)) { vistos.add(r); conta(um, r); }
+      // a primeira palavra da manchete vem em maiúscula de qualquer jeito: só conta a grafia no meio do título (ou sigla)
+      { const meio = i > 0 || (w.o.length > 1 && w.o === w.o.toUpperCase()); const m = meio ? forma : inicio; const f = m.get(r) || new Map(); const g = meio ? w.o : w.l; f.set(g, (f.get(g) || 0) + 1); m.set(r, f); }
+      const prox = ws[i + 1];
+      if (ok(prox)) { const k = r + ' ' + raiz(prox.l); if (!vistos2.has(k)) { vistos2.add(k); conta(dois, k); } { const m2 = i > 0 ? forma : inicio; const f2 = m2.get(k) || new Map(); const o2 = (i > 0 ? w.o : w.l) + ' ' + prox.o; f2.set(o2, (f2.get(o2) || 0) + 1); m2.set(k, f2); } }
+    });
+  }
+  // a dupla entra no lugar das duas palavras quando aparece em boa parte das vezes de cada uma
+  const res = new Map(um);
+  for (const [k, c] of dois) {
+    if (c < 3) continue;
+    const [x, y] = k.split(' ');
+    if (c >= 0.6 * (um.get(x) || 0) && c >= 0.6 * (um.get(y) || 0)) { res.set(k, c); res.delete(x); res.delete(y); }
+  }
+  const grafia = (k) => {
+    let f = [...(forma.get(k) || new Map()).entries()].sort((a, b) => b[1] - a[1]);
+    if (!f.length) f = [...(inicio.get(k) || new Map()).entries()].sort((a, b) => b[1] - a[1]);
+    // prefere a forma que não está toda em minúsculas só se for a mais comum fora do começo da frase; senão, minúsculas
+    if (!f.length) return k;
+    const top = f[0][0];
+    const temMaiuscula = f.filter(([o]) => o !== o.toLowerCase()).reduce((a, [, c]) => a + c, 0);
+    const total = f.reduce((a, [, c]) => a + c, 0);
+    return temMaiuscula > total * 0.7 ? top : top.toLowerCase();
+  };
+  return [...res.entries()].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, c]) => [grafia(k), c]);
 }
 
 function generateWordFrequencyChart() {
@@ -1993,50 +2043,53 @@ function generateWordFrequencyChart() {
     return;
   }
 
-  const stopWords = getStopWords();
-  const wordCounts = {};
-
-  newsAll.forEach(item => {
-    const words = (item.titulo || '').toLowerCase()
-      .replace(/[^a-z0-9áéíóúâêîôûãõçü\s-]/g, '')
-      .split(/\s+/);
-    words.forEach(w => {
-      if (w.length > 3 && !stopWords.has(w) && isNaN(w)) {
-        wordCounts[w] = (wordCounts[w] || 0) + 1;
-      }
-    });
-  });
-
-  const sorted = Object.entries(wordCounts).sort(([,a], [,b]) => b - a).slice(0, 10);
+  const sorted = termosDasManchetes(newsAll, 10);
   if (sorted.length < 3) {
     chartContainer.style.display = 'none';
     return;
   }
   chartContainer.style.display = 'block';
+  const sub = document.getElementById('word-frequency-sub');
+  if (sub) sub.textContent = `Em quantas das ${newsAll.length} manchetes carregadas cada termo aparece`;
 
-  const ctx = document.getElementById('word-frequency-chart').getContext('2d');
+  const canvas = document.getElementById('word-frequency-chart');
+  const ctx = canvas.getContext('2d');
   if (wordFrequencyChart) wordFrequencyChart.destroy();
 
   const isLight = document.body.classList.contains('light');
-  const gridColor = isLight ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.08)';
   const textColor = isLight ? '#0b1220' : '#e6ecf5';
+  const max = sorted[0][1];
+  // o mais citado em âmbar cheio, os outros mais claros conforme a frequência
+  const cores = sorted.map(([, n]) => `rgba(240,185,11,${(0.35 + 0.6 * (n / max)).toFixed(2)})`);
+  const rotulo = {
+    id: 'mmRotulo',
+    afterDatasetsDraw(ch) {
+      const c = ch.ctx, meta = ch.getDatasetMeta(0);
+      c.save(); c.font = '600 11px JetBrains Mono, monospace'; c.fillStyle = textColor; c.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => c.fillText(String(ch.data.datasets[0].data[i]), bar.x + 6, bar.y));
+      c.restore();
+    }
+  };
 
   wordFrequencyChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: sorted.map(([w]) => w),
       datasets: [{
-        label: 'Ocorrências',
+        label: 'Manchetes',
         data: sorted.map(([, n]) => n),
-        backgroundColor: 'rgba(240,185,11,.7)',
-        borderColor: 'rgba(240,185,11,1)',
-        borderWidth: 1,
-        borderRadius: 4
+        backgroundColor: cores,
+        borderWidth: 0,
+        borderRadius: 4,
+        barPercentage: 0.75,
+        categoryPercentage: 0.9
       }]
     },
+    plugins: [rotulo],
     options: {
       responsive: true,
       indexAxis: 'y',
+      layout: { padding: { right: 28 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -2044,18 +2097,16 @@ function generateWordFrequencyChart() {
           titleColor: '#f0b90b',
           bodyColor: '#e6ecf5',
           padding: 10,
-          cornerRadius: 6
+          cornerRadius: 6,
+          callbacks: { label: (t) => `em ${t.raw} de ${newsAll.length} manchetes` }
         }
       },
       scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { color: textColor, stepSize: 1, font: { family: 'JetBrains Mono', size: 10 } },
-          grid: { color: gridColor }
-        },
+        x: { beginAtZero: true, display: false, suggestedMax: max * 1.08 },
         y: {
-          ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 11 } },
-          grid: { color: 'transparent' }
+          ticks: { color: textColor, font: { family: 'Inter, system-ui, sans-serif', size: 12, weight: '600' } },
+          grid: { display: false },
+          border: { display: false }
         }
       }
     }
