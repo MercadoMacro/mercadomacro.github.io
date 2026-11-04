@@ -165,6 +165,14 @@ export default {
         return await emitirPasse(env, u);
       }
       if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u));
+      // uso das abas (04/11/2026): soma 1 por aba aberta no total e por assinante (o /admin mostra quem está em qual aba); o administrador não conta
+      if (p === '/api/uso' && req.method === 'POST') {
+        if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+        const b = await req.json().catch(() => ({}));
+        const aba = String(b.aba || '');
+        if (!u.admin && ABAS_USO[aba]) contarUso(env, ctx, aba, b.nova === 1, u.id);
+        return json({ ok: true });
+      }
       // preços ao vivo da Capital.com: uma conexão só no servidor, repassada a quem está logado
       if (p === '/api/capital/ws') {
         if (req.headers.get('Upgrade') !== 'websocket' || !mesmaOrigem(req)) return json({ erro: 'Use WebSocket a partir do site.' }, 400);
@@ -255,6 +263,27 @@ function origemDe(ref, utm) {
   if (h === 'mercadomacro.com.br' || h.endsWith('.mercadomacro.com.br') || h.endsWith('.workers.dev') || h === 'localhost') return null; // andou dentro do site
   return nome(h) || h.slice(0, 60);
 }
+// abas do terminal contadas no /admin (nome mostrado na tabela)
+const ABAS_USO = { 'market-panel': 'Mercado', 'mesa-panel': 'Mesa', 'watch-panel': 'Watchlist', 'heatmap-panel': 'Mapa de Calor', 'news-panel': 'Notícias',
+  'weekly-panel': 'Resumo semanal', 'calendar-panel': 'Calendário', 'analysis-panel': 'Análises', 'fund-panel': 'Fundamentos', 'indicators-panel': 'Indicadores',
+  'calculator-panel': 'Calculadora', 'options-panel': 'Opções', 'edu-panel': 'Educação' };
+let tabelaUso = false;
+async function garantirUso(env) {
+  if (tabelaUso) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS uso_abas (dia TEXT NOT NULL, aba TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, pessoas INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (dia, aba))').run();
+  // por assinante: guardado 90 dias e apagado junto com a conta (como diz a /privacidade)
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS uso_pessoa (usuario_id INTEGER NOT NULL, dia TEXT NOT NULL, aba TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, ultimo TEXT NOT NULL, PRIMARY KEY (usuario_id, dia, aba))').run();
+  tabelaUso = true;
+}
+// nova = primeira vez que este navegador abre a aba no dia (o navegador decide; o servidor não sabe quem é)
+function contarUso(env, ctx, aba, nova, uid) {
+  const dia = diaBrasilia(), agora = new Date().toISOString();
+  ctx.waitUntil(garantirUso(env).then(() => env.DB.batch([
+    env.DB.prepare('INSERT INTO uso_abas (dia, aba, n, pessoas) VALUES (?, ?, 1, ?) ON CONFLICT(dia, aba) DO UPDATE SET n = n + 1, pessoas = pessoas + excluded.pessoas').bind(dia, aba, nova ? 1 : 0),
+    env.DB.prepare('INSERT INTO uso_pessoa (usuario_id, dia, aba, n, ultimo) VALUES (?, ?, ?, 1, ?) ON CONFLICT(usuario_id, dia, aba) DO UPDATE SET n = n + 1, ultimo = excluded.ultimo').bind(uid, dia, aba, agora),
+    env.DB.prepare('UPDATE usuarios SET visto = ? WHERE id = ?').bind(agora, uid),
+  ])).catch(() => {}));
+}
 let tabelaOrigens = false;
 function contarOrigem(env, ctx, origem, tipo) {
   if (!origem) return;
@@ -337,6 +366,8 @@ async function resumoSemanal(env) {
   const enviado = await avisar(env, 'Resumo semanal do Mercado Macro', txt);
   await env.DB.prepare('DELETE FROM visitas WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run();
   await env.DB.prepare('DELETE FROM origens WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM uso_abas WHERE dia < ?').bind(new Date(hoje.getTime() - 400 * 86400000).toISOString().slice(0, 10)).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM uso_pessoa WHERE dia < ?').bind(new Date(hoje.getTime() - 90 * 86400000).toISOString().slice(0, 10)).run().catch(() => {});
   return enviado;
 }
 
@@ -1063,6 +1094,7 @@ async function apiAuth(req, env, acao, ctx) {
       env.DB.prepare('DELETE FROM historico WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM usuarios WHERE id = ? AND admin = 0').bind(eu.id),
     ]);
+    await env.DB.prepare('DELETE FROM uso_pessoa WHERE usuario_id = ?').bind(eu.id).run().catch(() => {});
     cacheSessao.clear();
     ctx.waitUntil(avisar(env, 'Conta excluída', `${eu.nome} excluiu a própria conta no Mercado Macro.`).catch(() => {}));
     return json({ ok: true }, 200, { 'Set-Cookie': cookieSessao('', 0) });
@@ -1186,6 +1218,19 @@ async function apiAdmin(req, env, acao, eu) {
       return json({ hoje: diaBrasilia(), linhas: [] }); // a tabela nasce na primeira visita contada
     }
   }
+  if (acao === 'uso' && req.method === 'GET') {
+    const desde = new Date(Date.now() - 3 * 3600000 - 29 * 864e5).toISOString().slice(0, 10);
+    try {
+      await garantirUso(env);
+      const r = await env.DB.prepare('SELECT dia, aba, n, pessoas FROM uso_abas WHERE dia >= ?').bind(desde).all();
+      // por assinante: hoje e ontem (a aba atual pode ter sido aberta antes da meia-noite)
+      const ontem = new Date(Date.parse(diaBrasilia() + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
+      const pp = await env.DB.prepare('SELECT p.usuario_id id, u.nome, u.visto, p.dia, p.aba, p.n, p.ultimo FROM uso_pessoa p JOIN usuarios u ON u.id = p.usuario_id WHERE p.dia >= ?').bind(ontem).all();
+      return json({ hoje: diaBrasilia(), nomes: ABAS_USO, linhas: r.results, pessoas: pp.results });
+    } catch (e) {
+      return json({ hoje: diaBrasilia(), nomes: ABAS_USO, linhas: [], pessoas: [] });
+    }
+  }
   if (acao === 'passe' && req.method === 'GET') {
     const desde = new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10);
     try {
@@ -1234,7 +1279,7 @@ async function apiAdmin(req, env, acao, eu) {
       await garantirLinks(env);
       await env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(id).run();
       // registros de envio (só o número da conta): as tabelas podem ainda não existir
-      for (const t of ['comunicados_envios', 'boasvindas_envios']) await env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(id).run().catch(() => {});
+      for (const t of ['comunicados_envios', 'boasvindas_envios', 'uso_pessoa']) await env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(id).run().catch(() => {});
     } else if (novo) {
       await garantirAssinatura(env);
       const antes = await env.DB.prepare('SELECT nome, email, status, expira FROM usuarios WHERE id = ? AND admin = 0').bind(id).first();
@@ -2256,6 +2301,12 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <h2>De onde vêm os visitantes</h2>
   <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p>
   <div id="origens"><p class="vazio">Carregando…</p></div>
+  <h2>Abas mais usadas pelos assinantes</h2>
+  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p>
+  <h3 style="margin:18px 0 8px;font-size:15px">Por assinante hoje</h3>
+  <div id="uso-pessoas"><p class="vazio">Carregando…</p></div>
+  <h3 style="margin:18px 0 8px;font-size:15px">Todas as abas</h3>
+  <div id="uso"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="pessoas" hidden>
   <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore readonly aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
@@ -2462,8 +2513,49 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
       }
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar as origens.</p>'; });
   }
+  function uso(){
+    var raiz = document.getElementById('uso');
+    fetch('/api/admin/uso', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var hoje = j.hoje, d7 = new Date(Date.parse(hoje + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10), T = {};
+      Object.keys(j.nomes || {}).forEach(function(k){ T[k] = { o: j.nomes[k], h: 0, s: 0, m: 0, p7: 0, p: 0 }; });
+      (j.linhas || []).forEach(function(l){
+        var o = T[l.aba]; if (!o) return;
+        o.m += l.n; o.p += l.pessoas; if (l.dia >= d7) { o.s += l.n; o.p7 += l.pessoas; } if (l.dia === hoje) o.h += l.n;
+      });
+      var L = Object.keys(T).map(function(k){ return T[k]; }).sort(function(a, b){ return b.s - a.s || b.m - a.m; });
+      var tot = L.reduce(function(a, o){ return a + o.s; }, 0);
+      var max = Math.max.apply(null, L.map(function(o){ return o.s; }).concat([1])), f = function(v){ return v ? v.toLocaleString('pt-BR') : '<span style="color:var(--text-3)">0</span>'; };
+      raiz.innerHTML = !(j.linhas || []).length ? '<p class="vazio">Ainda nenhuma aba contada. Os números aparecem conforme os assinantes usam o terminal.</p>'
+        : '<div class="mmw"><table class="mm"><thead><tr><th>Aba</th><th>Hoje</th><th>7 dias</th><th title="Parte de todas as aberturas dos últimos 7 dias">% 7d</th><th class="x30">30 dias</th><th title="Aparelhos por dia, somados nos últimos 7 dias">Pessoas 7d</th><th class="x30">Pessoas 30d</th></tr></thead><tbody>'
+        + L.map(function(o){ return '<tr><td>' + esc(o.o) + '</td><td>' + f(o.h) + '</td><td class="rc"><span class="bar" style="width:' + Math.round(50 * o.s / max) + '%"></span>' + f(o.s) + '</td><td>' + (tot ? Math.round(100 * o.s / tot) + '%' : '—') + '</td><td class="x30">' + f(o.m) + '</td><td>' + f(o.p7) + '</td><td class="x30">' + f(o.p) + '</td></tr>'; }).join('')
+        + '</tbody></table></div>';
+      pessoasUso(j);
+    }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar o uso das abas.</p>'; document.getElementById('uso-pessoas').innerHTML = ''; });
+  }
+  setInterval(function(){ if (!document.hidden) uso(); }, 60000);
+  // quem está no site agora e em qual aba, e quantas vezes cada um abriu cada aba hoje
+  function pessoasUso(j){
+    var raiz = document.getElementById('uso-pessoas'), P = {}, nomes = j.nomes || {};
+    (j.pessoas || []).forEach(function(l){
+      var p = P[l.id] || (P[l.id] = { nome: l.nome, visto: l.visto, aba: null, ult: '', abas: {}, tot: 0 });
+      if (l.ultimo > p.ult) { p.ult = l.ultimo; p.aba = l.aba; }
+      if (l.dia === j.hoje) { p.abas[l.aba] = (p.abas[l.aba] || 0) + l.n; p.tot += l.n; }
+    });
+    var L = Object.keys(P).map(function(k){ return P[k]; }).filter(function(p){ return p.tot || online(p); });
+    L.sort(function(a, b){ return (online(b) - online(a)) || (b.ult > a.ult ? 1 : -1); });
+    var quando = function(iso){ var m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'agora' : m < 60 ? 'há ' + m + ' min' : 'às ' + new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); };
+    var no = L.filter(online).length;
+    raiz.innerHTML = !L.length ? '<p class="vazio">Ninguém abriu o terminal hoje ainda.</p>'
+      : '<p class="vazio" style="text-align:left;margin:0 0 8px;font-size:13px"><b>' + no + '</b> ' + (no === 1 ? 'pessoa no site agora' : 'pessoas no site agora') + ' · ' + L.length + ' usaram hoje</p>'
+      + '<div class="mmw"><table class="mm"><thead><tr><th>Assinante</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
+      + L.map(function(p){
+          var on = online(p), ab = Object.keys(p.abas).sort(function(a, b){ return p.abas[b] - p.abas[a]; });
+          return '<tr><td>' + esc(p.nome) + '</td><td>' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td>' + (p.tot || 0) + '</td><td>'
+            + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+  }
   function carregar(){
-    funil(); origens();
+    funil(); origens(); uso();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       eu = j.eu; US = j.usuarios; ALERTA = j.alertaTrocas || 4;
       // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)

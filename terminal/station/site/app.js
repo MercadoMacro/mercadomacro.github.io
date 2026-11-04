@@ -205,10 +205,21 @@ function switchTab(tabId) {
   if (tabId === 'heatmap-panel') setTimeout(() => initHeatmapIfNeeded(), 150);
   if (window.__onTabSwitch) window.__onTabSwitch(tabId);
   document.dispatchEvent(new Event('mm-news-visible'));
+  contarAba(tabId);
+}
+// uso das abas no /admin (04/11/2026): manda só o nome da aba; 'nova' = primeira vez no dia neste navegador
+let abaContada = null;
+function contarAba(tabId) {
+  if (tabId === abaContada || !/^[a-z-]+-panel$/.test(tabId)) return;
+  abaContada = tabId;
+  let nova = 0;
+  try { const k = 'mm_uso_' + tabId, d = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); if (localStorage.getItem(k) !== d) { localStorage.setItem(k, d); nova = 1; } } catch (e) { /* nada */ }
+  fetch('/api/uso', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aba: tabId, nova }) }).catch(() => {});
 }
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 const savedTab = localStorage.getItem(STORAGE.activeTab);
 if (savedTab && $(`#${savedTab}`)) switchTab(savedTab);
+else contarAba(document.querySelector('.tab-btn.active')?.dataset.tab || '');
 
 /* =========================================================
    TICKER
