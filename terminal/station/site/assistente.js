@@ -27,10 +27,14 @@
   .ia-painel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:1200;display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--text);border-left:1px solid var(--line-2,#ddd);box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(102%);transition:transform .2s ease;visibility:hidden}
   .ia-painel.aberto{transform:none;visibility:visible}
   .ia-cab{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line-2,#ddd)}
-  .ia-cab h2{margin:0;font-size:16px;flex:1}
-  .ia-cab small{display:block;font-weight:400;color:var(--muted,#777);font-size:12px;margin-top:2px}
-  .ia-cab button{border:0;background:transparent;color:var(--muted,#777);cursor:pointer;font-size:13px;padding:8px;border-radius:7px;min-height:36px}
-  .ia-cab button:hover{background:var(--surface-2);color:var(--text)}
+  .ia-tit{flex:1;min-width:0}
+  .ia-selo{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent,#d4920f);padding:2px 7px;border:1px solid var(--accent-line,rgba(240,185,11,.45));border-radius:999px;background:var(--accent-soft,#fff3dc);box-shadow:0 0 12px rgba(240,185,11,.18);margin-bottom:4px}
+  .ia-cab h2{margin:0;font-size:16px;line-height:1.2}
+  .ia-cab small{display:block;font-weight:400;color:var(--text-3,#777);font-size:12px;margin-top:2px}
+  .ia-cab button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2,#ddd);background:var(--surface-2,#f3f3f3);color:var(--text);cursor:pointer;font:inherit;font-size:13px;font-weight:600;padding:0 12px;border-radius:10px;min-height:40px}
+  .ia-cab button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ia-cab button:hover{border-color:var(--accent,#d4920f)}
+  @media (max-width:420px){.ia-cab button span{display:none}.ia-cab button{padding:0;width:40px;justify-content:center}}
   .ia-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
   .ia-msg{max-width:92%;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
   .ia-msg p{margin:0 0 8px}.ia-msg p:last-child{margin:0}.ia-msg ul,.ia-msg ol{margin:0 0 8px;padding-left:20px}
@@ -42,13 +46,9 @@
   .ia-vazio{color:var(--text-2,#555);font-size:13.5px;line-height:1.5;display:flex;flex-direction:column;gap:14px}
   .ia-ola{margin:4px 0 0;font-size:19px;font-weight:700;color:var(--text);line-height:1.3}
   .ia-ola small{display:block;font-size:13px;font-weight:400;color:var(--text-3,#777);margin-top:4px}
-  .ia-modos{display:grid;gap:8px}
-  .ia-modo{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line,#e5e5e5);border-radius:12px;background:var(--surface-2,#f7f7f7)}
-  .ia-modo b{display:block;color:var(--text);font-size:13.5px}
-  .ia-modo span{font-size:12.5px;color:var(--text-3,#777)}
   .ia-ic{flex:0 0 28px;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent-soft,#fff3dc);color:var(--accent,#d4920f)}
   .ia-ic svg{width:15px;height:15px;fill:none !important;stroke:currentColor !important;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:inherit !important}
-  .ia-modo .ia-ic,.ia-vazio .ia-sug.gem .ia-ic{color:var(--accent,#d4920f) !important}
+  .ia-vazio .ia-sug.gem .ia-ic{color:var(--accent,#d4920f) !important}
   .ia-sug-t{margin:2px 0 -6px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3,#777)}
   .ia-vazio .ia-sug{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line,#e5e5e5);background:transparent;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;font-size:13.5px;transition:border-color .15s,background .15s}
   .ia-vazio .ia-sug:hover{border-color:var(--accent-line,var(--accent));background:var(--surface-2)}
@@ -67,9 +67,15 @@
   .ia-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .ia-acoes button,.ia-acoes a{border:1px solid var(--line-2,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
   .ia-acoes button:hover,.ia-acoes a:hover{border-color:var(--accent,#2563eb)}
-  .ia-pensando{align-self:flex-start;color:var(--muted,#777);font-size:13px}
+  .ia-pensando{align-self:flex-start;color:var(--text-3,#777);font-size:13px;display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:12px;background:var(--surface-2,#f3f3f3)}
+  .ia-pontos{display:inline-flex;gap:3px}.ia-pontos i{width:5px;height:5px;border-radius:50%;background:var(--accent,#d4920f);animation:ia-pt 1s infinite ease-in-out}
+  .ia-pontos i:nth-child(2){animation-delay:.15s}.ia-pontos i:nth-child(3){animation-delay:.3s}
+  @keyframes ia-pt{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+  @media (prefers-reduced-motion:reduce){.ia-pontos i{animation:none;opacity:.7}}
   .ia-marca{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--accent-soft,#fff3dc)}
-  .ia-marca svg{width:18px;height:18px;fill:var(--accent,#d4920f)}
+  .ia-marca svg{width:20px;height:20px}
+  .ia-cab .ia-marca{width:42px;height:42px;flex-basis:42px;border-radius:12px;background:#111827;border:1px solid rgba(240,185,11,.35)}
+  .ia-cab .ia-marca svg{width:24px;height:24px}
   .ia-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:60;display:inline-flex;align-items:center;gap:10px;padding:7px 16px 7px 7px;border:1px solid var(--line-2,#ddd);border-radius:999px;background:var(--surface,#fff);color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.28);cursor:pointer;font:inherit;text-align:left;transition:transform .15s ease,border-color .15s ease}
   .ia-fab:hover{transform:translateY(-2px);border-color:var(--accent,#2563eb)}
   .ia-fab-txt{display:flex;flex-direction:column;line-height:1.15}
@@ -84,25 +90,35 @@
     raio: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
     brilho: '<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
     balao: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    lixo: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     enviar: '<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
   };
+  // marca do assistente (04/11/2026): as três barras do Mercado Macro com o brilho de IA, em degradê dourado
+  let marcaN = 0;
+  function marca() {
+    const g = 'ia-ouro-' + (++marcaN);
+    return `<svg viewBox="0 0 32 32"><defs><linearGradient id="${g}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#b8860b"/><stop offset=".55" stop-color="#f0b90b"/><stop offset="1" stop-color="#ffe08a"/></linearGradient></defs>`
+      + `<g fill="url(#${g})"><rect x="4" y="20" width="6" height="10" rx="1.5"/><rect x="13" y="13" width="6" height="17" rx="1.5"/><rect x="22" y="7" width="6" height="23" rx="1.5"/>`
+      + `<path d="M8 2.5l1.1 3 3 1.1-3 1.1L8 10.7l-1.1-3-3-1.1 3-1.1z"/></g></svg>`;
+  }
   const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
   let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
     if (!conversa.length) {
-      // layout e textos de 04/11/2026 (proposta do Severino): saudação, os dois modos de resposta e sugestões com ícone
-      const modo = (ic, t, d) => `<div class="ia-modo"><span class="ia-ic" aria-hidden="true">${IC[ic]}</span><div><b>${t}</b><span>${d}</span></div></div>`;
+      // layout e textos de 04/11/2026 (propostas do Severino): saudação, um texto curto sobre como responde e sugestões com ícone
       const sug = SUGESTOES.filter((x) => (gemini && assinante) || prontaPara(x) || licaoPara(x))
         .map((s) => { const pronta = prontaPara(s) || licaoPara(s); return `<button type="button" class="ia-sug${pronta ? '' : ' gem'}"><span class="ia-ic" aria-hidden="true">${IC[pronta ? 'balao' : 'brilho']}</span><span class="ia-sug-x">${esc(s)}</span></button>`; }).join('');
-      msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso te ajudar hoje?<small>Tire dúvidas sobre conceitos, indicadores e como usar o painel.</small></p>
-        <div class="ia-modos">${modo('raio', 'Respostas na hora', 'Dúvidas comuns e assuntos das lições da aba Educação.')}${gemini ? modo('brilho', 'Google Gemini', assinante ? 'Para outras perguntas sobre mercado e investimentos. Não vê as cotações em tempo real.' : 'Perguntas livres sobre mercado, exclusivas para assinantes. Não vê as cotações em tempo real.') : ''}</div>
+      const como = 'Dúvidas comuns e assuntos das lições da aba Educação têm resposta na hora, da nossa base.'
+        + (gemini ? (assinante ? ` Para o resto, o Google Gemini apoia a sua análise${limite ? ` (até ${limite} perguntas por dia)` : ''}. Ele não vê as cotações em tempo real.` : ' Perguntas livres vão ao Google Gemini, exclusivo para assinantes.') : '');
+      msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso ajudar na sua análise hoje?<small>${como}</small></p>
         ${sug ? `<p class="ia-sug-t">Sugestões</p>${sug}` : ''}</div>`;
       msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
       return;
     }
     msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
-      + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando">Pensando…</div>' : '');
+      + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando" role="status">Analisando<span class="ia-pontos" aria-hidden="true"><i></i><i></i><i></i></span></div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
     msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
     msgs.querySelectorAll('[data-ia-gemini]').forEach((b) => (b.onclick = () => { const x = conversa[+b.dataset.iaGemini]; if (x) { campo.value = x.p; perguntar(true); } }));
@@ -178,11 +194,11 @@
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
     painel.setAttribute('aria-label', 'Assistente'); painel.setAttribute('aria-hidden', 'true');
-    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><h2>Assistente IA<small>${gemini && assinante ? 'Respostas prontas e Google Gemini' : 'Respostas prontas'}${limite ? ` · ${limite} perguntas ao Gemini por dia` : ''}</small></h2>
-        <button type="button" data-ia="limpar" title="Apagar a conversa">Limpar</button><button type="button" data-ia="fechar" aria-label="Fechar">Fechar</button></div>
+    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true">${marca()}</span><div class="ia-tit"><span class="ia-selo">Mercado Macro</span><h2>Assistente IA</h2><small>Inteligência de Mercado &amp; Análise Macro</small></div>
+        <button type="button" data-ia="limpar" title="Apagar a conversa">${IC.lixo}<span>Limpar</span></button><button type="button" data-ia="fechar" aria-label="Fechar o assistente">${IC.x}<span>Fechar</span></button></div>
       <div class="ia-msgs" aria-live="polite"></div>
       <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit" aria-label="Enviar" title="Enviar">${IC.enviar}</button></form>
-        <p class="ia-aviso">${gemini ? 'Respostas do Gemini são geradas por IA, podem conter erros e não são recomendação de investimento. Não escreva dados pessoais: as perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
+        <p class="ia-aviso">${gemini ? 'Conteúdo analítico e informativo gerado por IA. Não constitui recomendação de investimento. Não escreva dados pessoais: as perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
     document.body.appendChild(painel);
     msgs = painel.querySelector('.ia-msgs'); campo = painel.querySelector('textarea'); enviar = painel.querySelector('.ia-form button');
     painel.querySelector('form').onsubmit = (e) => { e.preventDefault(); perguntar(); };
@@ -202,7 +218,7 @@
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'ia-fab'; b.className = 'ia-fab';
     b.setAttribute('aria-label', 'Abrir o Assistente IA do Mercado Macro');
-    b.innerHTML = '<span class="ia-marca" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="21" width="6" height="9" rx="1.5"/><rect x="13" y="12" width="6" height="18" rx="1.5"/><rect x="23" y="2" width="6" height="28" rx="1.5"/></svg></span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
+    b.innerHTML = '<span class="ia-marca" aria-hidden="true">' + marca() + '</span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
     b.onclick = abrir;
     document.body.appendChild(b);
     if (window.MMAbaBorda) window.MMAbaBorda.marcar(b);
