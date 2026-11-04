@@ -4425,12 +4425,20 @@ window.__onTabSwitch = (tabId) => {
     ['ouro', 'GC=F', v => fmtNumber(v, { min: 2, max: 2 })],
     ['brent', 'BZ=F', v => fmtNumber(v, { min: 2, max: 2 })],
     ['eurusd', 'EURUSD=X', v => fmtNumber(v, { min: 4, max: 4 })],
-    ['gbpusd', 'GBPUSD=X', v => fmtNumber(v, { min: 4, max: 4 })]
+    ['gbpusd', 'GBPUSD=X', v => fmtNumber(v, { min: 4, max: 4 })],
+    ['dxy', 'DX-Y.NYB', v => fmtNumber(v, { min: 2, max: 2 })]
   ];
-  const TITLES = { us10y: 'Treasury de 10 anos (yield)', ouro: 'Ouro (futuro, US$ por onça-troy)', brent: 'Petróleo Brent (US$ por barril)', eurusd: 'Euro contra dólar', gbpusd: 'Libra contra dólar' };
+  const TITLES = { us10y: 'Treasury de 10 anos (yield)', ouro: 'Ouro (futuro, US$ por onça-troy)', brent: 'Petróleo Brent (US$ por barril)', eurusd: 'Euro contra dólar', gbpusd: 'Libra contra dólar', dxy: 'Índice do dólar (DXY)' };
+  // DXY ao vivo: quando a Mesa ou o Mercado ligam o câmbio em tempo real, a faixa usa o DXY calculado (não abre conexão própria)
+  const fxTopo = window.MMForexLive?.entrar ? window.MMForexLive.entrar('topo', {
+    onChange: (e) => { if (e.type === 'quote' && e.symbol === 'DX-Y.NYB') renderStrip(); },
+    ref: (s) => { const d = yahooMemo[s] || marketDataCache[s]; return d && Number.isFinite(d.value) ? { v: d.value, c: d.change } : null; },
+  }) : null;
+  const dxyVivo = () => { const q = fxTopo?.quote('DX-Y.NYB'); return q && Number.isFinite(q.value) && Date.now() - (q.ts || 0) < 60000 ? q : null; };
   function renderStrip() {
     STRIP.forEach(([k, sym, fmt]) => {
-      const d = yahooMemo[sym] || marketDataCache[sym];
+      const lv = k === 'dxy' ? dxyVivo() : null;
+      const d = lv ? { value: lv.value, change: lv.change } : (yahooMemo[sym] || marketDataCache[sym]);
       const valEl = $(`#t2-${k}`), chgEl = $(`#t2-${k}-chg`);
       if (!valEl) return;
       if (d && d.value != null && !isNaN(d.value)) {
@@ -4449,7 +4457,8 @@ window.__onTabSwitch = (tabId) => {
         chgEl.textContent = '';
       }
       const item = valEl.closest('.item');
-      if (item && TITLES[k]) item.title = TITLES[k];
+      if (item && TITLES[k]) item.title = TITLES[k] + (lv ? ' · tempo real, calculado pela fórmula oficial com o câmbio ao vivo das 6 moedas da cesta' : '');
+      if (item && k === 'dxy') item.classList.toggle('calc', !!lv);
     });
   }
   const tk = $('#ticker');
@@ -4942,7 +4951,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=28';
+  sc.src = 'mercado-novo.js?v=29';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -4957,7 +4966,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=35';
+    sc.src = 'mesa.js?v=36';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -5211,7 +5220,7 @@ function newsReadMins(n) {
   const cards = (s) => [...document.querySelectorAll('#market-panel .quote-card[data-symbol]')].filter((c) => c.dataset.symbol === s);
   function vivo(s) {
     const q = fx?.covers(s) ? fx.quote(s) : null;
-    if (q && q.source !== 'Yahoo') return { v: q.value, src: q.source === 'Deriv' ? '' : 'CFD', ts: q.ts };
+    if (q && q.source !== 'Yahoo') return { v: q.value, src: q.source === 'Deriv' ? '' : q.source === 'Calculado' ? 'calculado' : 'CFD', ts: q.ts };
     const c = cr?.quote(s);
     if (c && Number.isFinite(c.value)) return { v: c.value, src: 'Binance (USDT)', ts: c.ts };
     return null;
@@ -5239,7 +5248,7 @@ function newsReadMins(n) {
       }
       if (timeEl) timeEl.textContent = 'tempo real · ' + (l.src ? l.src + ' ' : '') + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       card.classList.add('qc-rt');
-      card.title = (l.src === 'CFD' ? 'Preço em tempo real de CFD: contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : l.src ? 'Preço em tempo real pela ' + l.src : 'Preço em tempo real') + '. O gráfico e o fechamento anterior vêm do Yahoo.';
+      card.title = (l.src === 'calculado' ? 'Valor em tempo real calculado pela fórmula oficial do índice com o câmbio ao vivo das 6 moedas da cesta; pode diferir um pouco do oficial' : l.src === 'CFD' ? 'Preço em tempo real de CFD: contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : l.src ? 'Preço em tempo real pela ' + l.src : 'Preço em tempo real') + '. O gráfico e o fechamento anterior vêm do Yahoo.';
       if (dir) flashCard(card, dir > 0 ? 'up' : 'dn');
     }
   }
