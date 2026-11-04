@@ -3414,3 +3414,6 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
 }
 html body .aj-busca-in input, html body .aj-busca-in input:focus { border:0 !important; box-shadow:none !important; background:transparent !important; min-height:0; padding:8px 0; margin:0; border-radius:0 !important; outline:none; }
 @media (min-width:901px) { html body .aj.aj-em-aparencia .aj-rapido { display:none; } }
+
+/* DXY calculado ao vivo na faixa do topo (04/11/2026) */
+.ticker .item.calc .label::after { content:'calculado'; margin-left:5px; padding:0 3px; border:1px solid var(--line-2); border-radius:3px; font-size:8.5px; font-weight:600; letter-spacing:.02em; color:var(--text-3); vertical-align:1px; }

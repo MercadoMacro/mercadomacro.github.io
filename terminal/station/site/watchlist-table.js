@@ -53,11 +53,11 @@
   try { cr = window.MMCryptoLive?.hostAllowed(location.hostname) ? new window.MMCryptoLive.Client({ enabled: true, onChange: (e) => { if (e?.type === 'quote') vivoMudou(e.symbol); } }) : null; } catch { cr = null; }
   const liveOn = () => typeof liveMode === 'undefined' || !!liveMode;
   // nomes dos fornecedores ao vivo ficam em Ajustes > Sobre (04/11/2026)
-  const rotuloVivo = (src) => (src === 'CFD' ? 'Tempo real, preço de CFD (pode diferir um pouco do oficial)' : src === 'ao vivo' ? 'Tempo real' : `Tempo real pela ${src}`);
+  const rotuloVivo = (src) => (src === 'calculado' ? 'Tempo real, calculado pela fórmula oficial do índice (pode diferir um pouco do oficial)' : src === 'CFD' ? 'Tempo real, preço de CFD (pode diferir um pouco do oficial)' : src === 'ao vivo' ? 'Tempo real' : `Tempo real pela ${src}`);
   function vivo(s) {
     if (!liveOn() || !panel.classList.contains('active')) return null;
     const q = fx?.covers(s) ? fx.quote(s) : null;
-    if (q && q.source !== 'Yahoo' && core.number(q.value)) return { v: q.value, src: q.source === 'Deriv' ? 'ao vivo' : 'CFD' };
+    if (q && q.source !== 'Yahoo' && core.number(q.value)) return { v: q.value, src: q.source === 'Deriv' ? 'ao vivo' : q.source === 'Calculado' ? 'calculado' : 'CFD' };
     const c = cr?.quote?.(s);
     if (c && core.number(c.value)) return { v: c.value, src: 'Binance (USDT)' };
     return null;

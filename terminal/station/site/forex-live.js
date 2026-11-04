@@ -26,6 +26,11 @@ globalThis.MMForexLive = (() => {
   // par da Deriv -> símbolos da Mesa/Mercado que usam esse par (EUR/USD vale para EUR=X invertido e EURUSD=X direto)
   const DE_DERIV = {};
   for (const [k, v] of Object.entries(DERIV)) (DE_DERIV[v.s] ||= []).push(k);
+  // DXY calculado (04/11/2026, Severino): fórmula oficial da ICE com as 5 moedas ao vivo e a coroa sueca do Yahoo (peso 4,2%)
+  // DXY = 50,14348112 × EURUSD^-0,576 × USDJPY^0,136 × GBPUSD^-0,119 × USDCAD^0,091 × USDSEK^0,042 × USDCHF^0,036
+  // (EUR=X e GBP=X aqui já são o inverso: USD/EUR e USD/GBP, por isso os expoentes ficam positivos)
+  const DXY = 'DX-Y.NYB';
+  const DXY_PESOS = Object.freeze({ 'EUR=X': 0.576, 'JPY=X': 0.136, 'GBP=X': 0.119, 'CAD=X': 0.091, 'CHF=X': 0.036 });
   const WS_URL = 'wss://api.derivws.com/trading/v1/options/ws/public';
   const VELHO = 20000; // preço da Deriv sem atualizar há 20 s deixa de valer (mercado fechado ou conexão parada)
 
@@ -63,7 +68,24 @@ globalThis.MMForexLive = (() => {
       return q && Date.now() - q.received <= VELHO ? q : null;
     }
 
-    covers(symbol) { return symbol in DERIV || YAHOO.includes(symbol) || CAPITAL.includes(symbol); }
+    covers(symbol) { return symbol === DXY || symbol in DERIV || YAHOO.includes(symbol) || CAPITAL.includes(symbol); }
+
+    // DXY só sai quando as 5 moedas estão ao vivo e há coroa sueca recente; senão a tela fica com o DXY do Yahoo
+    dxyQuote() {
+      let v = 50.14348112, ts = 0;
+      for (const [s, w] of Object.entries(DXY_PESOS)) {
+        const l = this.liveQuote(s);
+        if (!l) return null;
+        v *= l.value ** w; ts = Math.max(ts, l.ts);
+      }
+      const sek = this.pollFresco('SEK=X')?.value ?? this.ref('SEK=X')?.v;
+      if (!(sek > 0)) return null;
+      v *= sek ** 0.042;
+      const ant = this.dxyAnt;
+      if (!ant || ant.v !== v) this.dxyAnt = { v, dir: ant ? Math.sign(v - ant.v) : 0 };
+      const b = this.base(DXY), dir = this.dxyAnt.dir;
+      return { symbol: DXY, value: v, change: b ? (v / b - 1) * 100 : null, ts, source: 'Calculado', direction: dir };
+    }
 
     // contrato da Capital para o símbolo: aberto, recente e com preço até 3% do Yahoo (o mesmo contrato que o Yahoo mostra).
     // A escolha fica fixa enquanto o contrato continuar valendo; numa escolha nova, o vencimento mais próximo ganha
@@ -100,6 +122,7 @@ globalThis.MMForexLive = (() => {
 
     // o que a Mesa mostra: Deriv ao vivo, senão Capital ao vivo, senão o Yahoo
     quote(symbol) {
+      if (symbol === DXY) return this.dxyQuote();
       const l = this.liveQuote(symbol), p = this.pollFresco(symbol);
       const c = !l && this.capQuote(symbol);
       if (c) {
@@ -223,6 +246,7 @@ globalThis.MMForexLive = (() => {
           this.live.set(sym, { value, ts: (Number(m.tick.epoch) || Date.now() / 1000) * 1000, received: Date.now(), direction });
           this.emit({ type: 'quote', symbol: sym, quote: this.quote(sym) });
         }
+        if (syms.some((s) => s in DXY_PESOS)) { const d = this.dxyQuote(); if (d) this.emit({ type: 'quote', symbol: DXY, quote: d }); }
       };
       ws.onerror = ws.onclose = () => { if (this.socket === ws) this.reconnect(); };
     }
