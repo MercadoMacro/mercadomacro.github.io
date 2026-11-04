@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ligarStripe, webhookStripe, situacaoCartao } from '../src/stripe.js';
+import { ligarStripe, webhookStripe, situacaoCartao, apiAdminStripe } from '../src/stripe.js';
 
 // D1 de mentira em cima do SQLite do Node
 function d1() {
@@ -96,4 +96,23 @@ test('duas faturas ao mesmo tempo somam dois períodos', async () => {
   assert.deepEqual(rs.map((r) => r.status), [200, 200]);
   assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref IN ('stripe:in_C', 'stripe:in_D')`).get().n, 2);
   assert.equal(db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e.slice(0, 10), '2027-04-05');
+});
+
+test('fatura paga sem conta fica na lista do /admin e libera ao ligar pelo e-mail', async () => {
+  db.exec(`INSERT INTO usuarios (id, nome, email, status, expira) VALUES (8, 'Outra', 'outra@x.com', 'pendente', NULL)`);
+  const f = { id: 'in_ORF', customer: 'cus_9', customer_email: 'Outra@x.com', amount_paid: 1990, billing_reason: 'subscription_create', parent: { subscription_details: { subscription: 'sub_9', metadata: { usuario_id: '999', plano: 'mensal' } } }, lines: { data: [] } };
+  const r = await (await evento('invoice.paid', f)).json();
+  assert.equal(r.semConta, true);
+  await evento('invoice.paid', f); // reenvio não duplica
+  const adm = (corpo) => apiAdminStripe(new Request('https://x/api/admin/stripe', corpo ? { method: 'POST', body: JSON.stringify(corpo) } : {}), env).then((x) => x.json());
+  globalThis.fetch = async () => new Response('{}');
+  const lista = (await adm()).orfas;
+  assert.equal(lista.length, 1);
+  assert.equal((await adm({ acao: 'ligar', id: lista[0].id, email: 'ninguem@x.com' })).erro, 'Não achei conta com esse e-mail.');
+  const ok = await adm({ acao: 'ligar', id: lista[0].id, email: 'OUTRA@x.com' });
+  assert.equal(ok.ok, true); assert.ok(ok.validade);
+  const u = db.prepare('SELECT status, expira, stripe_cliente FROM usuarios WHERE id = 8').get();
+  assert.equal(u.status, 'ativo'); assert.equal(u.stripe_cliente, 'cus_9');
+  assert.equal((await adm()).orfas.length, 0);
+  assert.equal((await adm({ acao: 'ligar', id: lista[0].id, email: 'outra@x.com' })).erro, 'Essa fatura já foi resolvida.');
 });
