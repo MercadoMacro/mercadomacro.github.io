@@ -123,6 +123,15 @@
           : `<button type="button" class="edu-trilha" data-trilha="${t.id}"><span class="edu-nivel">${esc(t.nivel)}</span><h4>${esc(t.titulo)}</h4><p>${esc(t.resumo)}</p>
               <div class="edu-barra"><i style="width:${pct(t)}%"></i></div><span class="edu-meta">${t.licoes.length} lições · ${t.licoes.reduce((a, l) => a + l.minutos, 0)} min · ${pct(t)}% concluído</span></button>`).join('')}
       </div>
+      <h3 class="edu-sec" style="margin-top:28px">Podcast</h3>
+      <section class="edu-pod">
+        <div class="edu-pod-txt">
+          <h4>Radar Macro</h4>
+          <p>O podcast do Mercado Macro. Ouça os episódios aqui mesmo ou no Spotify.</p>
+          <a class="edu-btn" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhls" target="_blank" rel="noopener">Abrir no Spotify ${ICO.seta}</a>
+        </div>
+        <iframe class="edu-pod-player" title="Podcast Radar Macro no Spotify" src="https://open.spotify.com/embed/show/4qRUZmmORVnr9dSowJXhls?utm_source=generator&amp;theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+      </section>
       <p class="edu-nota">Conteúdo educativo, não é recomendação de investimento. Regras de impostos e garantias mudam; confira sempre a regra vigente.</p>`;
   }
 
@@ -242,6 +251,11 @@
   .edu-prim:hover{filter:brightness(1.05)}
   .edu-cheio{width:100%;justify-content:space-between}
   .edu-sec{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:0 0 12px}
+  .edu-pod{display:grid;grid-template-columns:minmax(200px,280px) 1fr;gap:16px;align-items:start;margin:0 0 24px;padding:16px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface)}
+  .edu-pod h4{margin:0 0 6px;font-size:17px}.edu-pod p{margin:0 0 12px;color:var(--text-2);font-size:13.5px;line-height:1.5}
+  .edu-pod .edu-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+  .edu-pod-player{width:100%;height:352px;border:0;border-radius:12px;background:transparent}
+  @media (max-width:700px){.edu-pod{grid-template-columns:1fr}}
   .edu-trilhas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
   .edu-trilha{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer;min-height:170px}
   button.edu-trilha:hover{border-color:var(--accent);transform:translateY(-1px)}
