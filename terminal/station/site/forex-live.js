@@ -78,7 +78,8 @@ globalThis.MMForexLive = (() => {
         if (!l) return null;
         v *= l.value ** w; ts = Math.max(ts, l.ts);
       }
-      const sek = this.pollFresco('SEK=X')?.value ?? this.ref('SEK=X')?.v;
+      // coroa sueca só da consulta recente ao Yahoo (até 3 min); sem ela o DXY volta ao do Yahoo (04/11/2026)
+      const sek = this.pollFresco('SEK=X')?.value;
       if (!(sek > 0)) return null;
       v *= sek ** 0.042;
       const ant = this.dxyAnt;

@@ -57,7 +57,18 @@ const ALLOWED_HOSTS = [
 // =========================================================
 const CHAVE_PASSE_URL = 'https://mercadomacro.com.br/api/publico/passe-chave';
 const VITRINE_ROTAS = ['/bcb', '/quotes'];
-let chavePasse = null, chavePasseEm = 0;
+let chavePasse = null, chavePasseEm = 0, chaveFixa = null, chaveFixaLida = false;
+// chave pública fixa (vars.PASSE_CHAVE_JWK, 04/11/2026): os pedidos da própria station chegavam como "sem-chave"
+// porque este worker nem sempre consegue baixar a chave do site. A baixada continua valendo se a station trocar de chave.
+async function pegaChaveFixa(env) {
+  if (chaveFixaLida) return chaveFixa;
+  chaveFixaLida = true;
+  try {
+    const jwk = typeof env.PASSE_CHAVE_JWK === 'string' ? JSON.parse(env.PASSE_CHAVE_JWK) : env.PASSE_CHAVE_JWK;
+    if (jwk && jwk.x && jwk.y) chaveFixa = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: jwk.x, y: jwk.y }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+  } catch (e) { /* sem chave fixa */ }
+  return chaveFixa;
+}
 const passeDoPedido = new WeakMap(); // pedido -> motivo, devolvido no cabeçalho X-Passe
 async function pegaChavePasse(env) {
   if (chavePasse && Date.now() - chavePasseEm < 3600000) return chavePasse;
@@ -80,11 +91,13 @@ async function conferePasse(url, env) {
   if (p === 'vitrine') return 'vitrine';
   const [corpo, ass] = p.split('.');
   if (!corpo || !ass || p.length > 400) return 'invalido';
-  const chave = await pegaChavePasse(env);
-  if (!chave) return 'sem-chave';
+  const fixa = await pegaChaveFixa(env);
+  const chaves = [fixa];
   try {
-    const okAss = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, chave, deB64u(ass), new TextEncoder().encode(corpo));
-    if (!okAss) return 'invalido';
+    const conf = (k) => k ? crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, k, deB64u(ass), new TextEncoder().encode(corpo)) : false;
+    let okAss = await conf(fixa);
+    if (!okAss) { const baixada = await pegaChavePasse(env); chaves.push(baixada); okAss = await conf(baixada); }
+    if (!okAss) return chaves.some(Boolean) ? 'invalido' : 'sem-chave';
     const dados = JSON.parse(new TextDecoder().decode(deB64u(corpo)));
     return dados.exp * 1000 > Date.now() ? 'ok' : 'vencido';
   } catch (e) {
@@ -931,14 +944,16 @@ const rotas = async (request, env, ctx) => {
     if (limitado) return limitado;
 
     // ---- Passe de quem está logado (ver conferePasse): por enquanto só registra quem chega sem
-    if (request.method === 'GET') {
+    // GET e HEAD passam pela mesma conferência (04/11/2026: HEAD chegava às rotas sem passe)
+    {
       const motivo = await conferePasse(url, env);
       passeDoPedido.set(request, motivo);
       if (motivo !== 'ok') {
         registraPasse(env, ctx, request, url, motivo);
         // a vitrine pública (sem login) só usa /bcb e /quotes como reserva; mmp=vitrine não abre as outras rotas
         const vitrineOk = motivo === 'vitrine' && VITRINE_ROTAS.includes(path);
-        if (env.PASSE_MODO === 'bloquear' && !vitrineOk && motivo !== 'sem-chave') {
+        // sem chave nenhuma (nem a fixa nem a baixada) também recusa: não abre as rotas por falha de configuração
+        if (env.PASSE_MODO === 'bloquear' && !vitrineOk) {
           return json({ error: 'Faça login no Mercado Macro para usar estes dados.' }, 401, cors);
         }
       }

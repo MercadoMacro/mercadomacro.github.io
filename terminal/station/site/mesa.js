@@ -919,9 +919,12 @@
   .ms-tb tr.ms-fx-live.ms-cfd-off td.tm::before { background:#f59e0b; }
   .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
 
-  @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
+  /* quando a coluna da hora some, a bolinha (verde ao vivo, laranja CFD com mercado fechado) vai para antes do preço (04/11/2026) */
+  .ms-tb tr.ms-fx-live td.px::before { content:''; display:none; width:5px; height:5px; margin-right:5px; border-radius:50%; background:var(--pos); vertical-align:2px; }
+  .ms-tb tr.ms-fx-live.ms-cfd-off td.px::before { background:#f59e0b; }
+  @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } .ms-tb tr.ms-fx-live td.px::before { display:inline-block; } }
   /* barra lateral aberta tira ~190px da mesa: a coluna da hora some até 2040px para o nome do ativo caber */
-  @media (min-width: 1851px) and (max-width: 2040px) { body.has-side:not(.side-collapsed) .ms-tb td.tm { display:none; } }
+  @media (min-width: 1851px) and (max-width: 2040px) { body.has-side:not(.side-collapsed) .ms-tb td.tm { display:none; } body.has-side:not(.side-collapsed) .ms-tb tr.ms-fx-live td.px::before { display:inline-block; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
   @media (max-width: 1250px) { .ms-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-width: 860px) { .ms-grid, .ms-c4 { grid-template-columns:minmax(0,1fr); display:flex; flex-direction:column; } .ms-c4 { align-items:stretch; } }
@@ -930,6 +933,7 @@
     .ms-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
     .ms-cv { font-size:17px; }
     .ms-tb td.tm { display:none; }
+    .ms-tb tr.ms-fx-live td.px::before { display:inline-block; }
   }
   `;
   document.head.appendChild(css);

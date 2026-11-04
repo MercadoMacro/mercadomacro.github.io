@@ -12,7 +12,7 @@ function d1() {
     all: async () => ({ results: db.prepare(sql).all(...a) }),
     run: async () => { const r = db.prepare(sql).run(...a); return { meta: { changes: r.changes } }; },
   }; return o; };
-  return { db, DB: { prepare: prep, batch: async (qs) => { for (const q of qs) await q.run(); } } };
+  return { db, DB: { prepare: prep, batch: async (qs) => { db.exec('BEGIN'); try { const r = []; for (const q of qs) r.push(await q.run()); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } } } };
 }
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s });
 const avisos = [];
@@ -59,4 +59,31 @@ test('assinatura encerrada limpa a renovação e a data de cancelamento', async 
   globalThis.fetch = async () => { throw new Error('não deveria chamar o Stripe'); };
   const s = await situacaoCartao(env, 7);
   assert.equal(s.renovaCartao, false); assert.equal(s.cancelaEm, null);
+});
+
+// 04/11/2026: pagamento e acesso gravados juntos (batch = transação)
+test('fatura paga grava pagamento e acesso juntos; repetida não soma de novo; falha no meio não deixa pagamento sem acesso', async () => {
+  db.exec(`CREATE TABLE IF NOT EXISTS pagamentos (id INTEGER PRIMARY KEY, usuario_id INTEGER, plano TEXT, valor INTEGER, status TEXT, criado TEXT, enviado TEXT, decidido TEXT, validade TEXT, ref TEXT, arquivo BLOB, tipo_arq TEXT);
+    CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY, usuario_id INTEGER, quando TEXT, texto TEXT);`);
+  for (const c of ['plano TEXT', 'aviso_venc TEXT']) { try { db.exec(`ALTER TABLE usuarios ADD COLUMN ${c}`); } catch (e) { /* já existe */ } }
+  db.exec(`UPDATE usuarios SET expira = '2026-12-05T22:22:04.499Z', status = 'ativo' WHERE id = 7`);
+  const fatura = (id) => ({ id, customer: 'cus_1', amount_paid: 1990, billing_reason: 'subscription_cycle', parent: { subscription_details: { subscription: 'sub_1', metadata: { usuario_id: '7', plano: 'mensal' } } }, lines: { data: [] } });
+  globalThis.fetch = async () => new Response('{}');
+  const r1 = await evento('invoice.paid', fatura('in_A'));
+  assert.equal(r1.status, 200);
+  const exp1 = db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e;
+  assert.ok(exp1 > '2027-01-01', exp1);
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_A'`).get().n, 1);
+  // reenvio da mesma fatura: não soma outro mês
+  await evento('invoice.paid', fatura('in_A'));
+  assert.equal(db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e, exp1);
+  // falha ao liberar o acesso: o pagamento também não fica gravado, e o reenvio libera tudo
+  db.exec(`CREATE TRIGGER falha BEFORE UPDATE OF expira ON usuarios BEGIN SELECT RAISE(ABORT, 'falha simulada'); END;`);
+  const r3 = await evento('invoice.paid', fatura('in_B')).catch(() => ({ status: 500 }));
+  assert.notEqual(r3.status, 200);
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_B'`).get().n, 0);
+  db.exec('DROP TRIGGER falha');
+  await evento('invoice.paid', fatura('in_B'));
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_B'`).get().n, 1);
+  assert.ok(db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e > exp1);
 });
