@@ -3362,3 +3362,55 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
   .aj-nav-sair { margin-top:auto; }
   html body .aj-x { width:40px; height:40px; flex-shrink:0; }
 }
+
+/* AJUSTES: cartão do plano, busca, atalhos rápidos, aparelhos e ajuda (04/11/2026) */
+.aj-plano { display:flex; flex-direction:column; gap:8px; padding:14px; border:1px solid var(--line-2); border-radius:12px; background:var(--surface); margin-bottom:12px; }
+.aj-plano.perto { border-color:color-mix(in srgb, var(--accent) 55%, var(--line-2)); }
+.aj-plano-quem { display:flex; align-items:center; gap:10px; min-width:0; }
+.aj-plano-quem > span:last-child { display:flex; flex-direction:column; min-width:0; }
+.aj-plano-av { flex:0 0 34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:15px; color:var(--accent-ink, var(--accent)); background:color-mix(in srgb, var(--accent) 16%, transparent); }
+.aj-plano-nome { color:var(--text); font-size:14px; line-height:1.3; }
+.aj-plano-mail { color:var(--text-3); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aj-plano-linha { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.aj-selo { display:inline-flex; align-items:center; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:600; color:var(--accent-ink, var(--accent)); background:color-mix(in srgb, var(--accent) 14%, transparent); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); align-self:flex-start; }
+.aj-plano-falta { font-size:12px; color:var(--text-2); font-weight:600; }
+.aj-plano-barra { height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden; }
+.aj-plano-barra i { display:block; height:100%; border-radius:inherit; background:var(--accent); }
+.aj-plano-ate { font-size:11.5px; color:var(--text-3); }
+.aj-plano-bt { display:flex; align-items:center; justify-content:center; min-height:36px; border-radius:9px; border:1px solid var(--line-2); color:var(--text); font-size:13px; font-weight:600; text-decoration:none; background:var(--surface-2); }
+.aj-plano-bt:hover { border-color:var(--accent); }
+.aj-plano-bt.forte { background:var(--accent); border-color:var(--accent); color:#111; }
+.aj-busca { margin-bottom:12px; }
+.aj-busca-in { display:flex; align-items:center; gap:8px; padding:0 11px; min-height:38px; border:1px solid var(--line-2); border-radius:9px; background:var(--surface-2); color:var(--text-3); cursor:text; }
+.aj-busca-in:focus-within { border-color:var(--accent); }
+.aj-busca-in input { flex:1; min-width:0; border:0; background:transparent; color:var(--text); font:inherit; font-size:13px; outline:none; padding:8px 0; }
+.aj-busca-vazio { color:var(--text-2); font-size:13px; padding:8px 2px; }
+.aj-rapido { display:grid; gap:10px; margin-bottom:14px; }
+.aj-rapido > div { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+.aj-rapido > div > span { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:600; }
+.aj-rapido .aj-seg { width:100%; }
+.aj-rapido .aj-sw { padding:4px 0; }
+.aj-buscando .aj-rapido { display:none; }
+.aj-ap { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); max-width:520px; }
+.aj-ap > i { width:20px; text-align:center; color:var(--text-2); }
+.aj-ap > span:nth-child(2) { display:flex; flex-direction:column; flex:1; min-width:0; }
+.aj-ap b { color:var(--text); font-size:13px; } .aj-ap em { font-style:normal; color:var(--text-3); font-size:12px; }
+.aj-ap-on { font-size:11.5px; color:var(--pos, #16c784); font-weight:600; }
+.aj-ajuda { display:grid; gap:8px; max-width:520px; }
+.aj-ajuda-it { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); color:var(--text); text-decoration:none; font:inherit; text-align:left; cursor:pointer; }
+.aj-ajuda-it:hover { border-color:var(--accent); }
+.aj-ajuda-it > i { width:20px; text-align:center; color:var(--accent); }
+.aj-ajuda-it > span { display:flex; flex-direction:column; }
+.aj-ajuda-it b { font-size:13px; } .aj-ajuda-it em { font-style:normal; color:var(--text-3); font-size:12px; }
+.aj-body > .aj-conta-topo .aj-plano { margin-bottom:12px; }
+@media (min-width:901px) {
+  html body .aj-content { grid-template-columns:240px minmax(0,1fr); }
+  html body .aj-categories .aj-plano { margin:0 0 6px; }
+  html body .aj-categories .aj-busca { margin:0 0 6px; }
+  html body .aj-busca-cel { display:none; }
+  html body .aj-rapido { grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:20px; }
+  html body .aj-buscando .aj-body > .aj-group:not([hidden]) { display:block; margin-bottom:12px; }
+  html body .aj-body .aj-group[hidden], html body .aj-body .aj-sec[hidden] { display:none; }
+}
+html body .aj-busca-in input, html body .aj-busca-in input:focus { border:0 !important; box-shadow:none !important; background:transparent !important; min-height:0; padding:8px 0; margin:0; border-radius:0 !important; outline:none; }
+@media (min-width:901px) { html body .aj.aj-em-aparencia .aj-rapido { display:none; } }
