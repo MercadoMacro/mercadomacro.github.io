@@ -2367,7 +2367,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     bloqueado: [['liberar','Liberar de novo','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']],
     confirmar: [['liberar','Liberar mesmo assim','lib'],['acesso','Liberar com plano',''],['excluir','Excluir','del']]
   };
-  var US = [], PG = [], MES = null, filtro = 'todos', ALERTA = 4;
+  var US = [], PG = [], ORF = [], MES = null, filtro = 'todos', ALERTA = 4;
   var SIT = { pendente: 'Sem plano', ativo: 'Liberado', expirado: 'Vencido', confirmar: 'Sem confirmar e-mail', recusado: 'Recusado', bloqueado: 'Bloqueado' };
   var semAc = function(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
   var agora = function(){ return new Date().toISOString(); };
@@ -2453,7 +2453,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     var onl = US.filter(function(u){ return online(u) && !u.admin; });
     document.getElementById('kpis').innerHTML = k('pessoas:online', 'Online agora', onl.length, onl.length ? onl.slice(0, 2).map(function(u){ return esc(u.nome.split(' ')[0]); }).join(', ') + (onl.length > 2 ? ' e mais ' + (onl.length - 2) : '') : 'ninguém agora')
       + k('pessoas:pendente', 'Pediram acesso', pend.length, 'ainda sem plano')
-      + k('pagamentos', 'Pagamentos para conferir', env.length, env.length ? 'comprovantes novos' : 'tudo conferido', env.length)
+      + k('pagamentos', 'Pagamentos para conferir', env.length + ORF.length, ORF.length ? ORF.length + ' no cartão sem conta' : env.length ? 'comprovantes novos' : 'tudo conferido', env.length + ORF.length)
       + k('pessoas:ativo', 'Com acesso liberado', lib.length, lib.filter(function(u){ return !u.expira; }).length + ' sem validade')
       + k('pessoas:vence', 'Vencem em 7 dias', venc.length, venc.length ? 'toque para ver' : 'nenhum')
       + k('pagamentos', 'Recebido no mês', MES ? reais(rec) : '—', nrec + ' aprovado(s)')
@@ -2461,7 +2461,8 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     // desde 26/10/2026 não há liberação grátis: quem pede acesso escolhe um plano, e aqui fica só o Pix para conferir
     // contas que trocam muito de aparelho (o 3º login derruba o mais antigo): possível senha dividida
     var dividem = US.filter(function(u){ return (u.trocas || 0) >= ALERTA; }).sort(function(a, b){ return b.trocas - a.trocas; });
-    document.getElementById('acao').innerHTML = env.length || dividem.length ? '<div class="lista">'
+    document.getElementById('acao').innerHTML = env.length || dividem.length || ORF.length ? '<div class="lista">'
+      + ORF.map(function(x){ return '<div class="u"><div class="q"><div class="n">Pago no cartão, sem conta</div><div class="d">' + esc(x.email || 'sem e-mail') + ' · ' + esc(x.nome_plano) + ' ' + reais(x.valor) + ' · ' + data(x.criado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Resolver</button></div></div>'; }).join('')
       + env.map(function(p){ return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + '</div><div class="d">Comprovante · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + ' · ' + data(p.enviado) + '</div></div><div class="bts"><button type="button" class="lib" data-ir="pagamentos">Conferir</button></div></div>'; }).join('')
       + dividem.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Possível senha dividida · ' + u.trocas + ' trocas de aparelho em 7 dias</div></div><div class="bts"><button type="button" class="lib" data-h="' + u.id + '">Ver histórico</button></div></div>'; }).join('')
       + '</div>'
@@ -2962,7 +2963,9 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   }
   var pg = document.getElementById('pags');
   function pagamentos(){
-    fetch('/api/admin/pagamentos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+    // faturas pagas no cartão que não acharam a conta (04/11/2026): vêm do /api/admin/stripe
+    var orf = fetch('/api/admin/stripe', { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : {}; }).then(function(x){ return x.orfas || []; }, function(){ return []; });
+    fetch('/api/admin/pagamentos', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){ return orf.then(function(o){ ORF = o; return j; }); }).then(function(j){
       PG = j.pagamentos; MES = j.mes || null; geral();
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
@@ -2971,11 +2974,27 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
           + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
           + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
       };
-      pg.innerHTML = '<h2>Pagamentos para conferir<b>' + abertos.length + '</b></h2><div class="lista">' + (abertos.length ? abertos.map(linha).join('') : '<p class="vazio">Nenhum comprovante novo. Confira no extrato do banco antes de aprovar.</p>') + '</div>'
+      var inpO = 'flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:7px 10px;min-height:36px';
+      var orfasH = ORF.length ? '<h2>Pagos no cartão sem conta<b>' + ORF.length + '</b></h2><p class="d" style="margin:0 0 8px">O Stripe recebeu, mas o site não achou a conta. Escreva o e-mail da conta certa e clique em Ligar: o acesso é liberado na hora e as próximas renovações já caem na conta.</p><div class="lista">'
+        + ORF.map(function(x){ return '<div class="u"><div class="q"><div class="n">' + esc(x.nome_plano) + ' ' + reais(x.valor) + ' · ' + data(x.criado) + '</div><div class="e">E-mail no Stripe: ' + esc(x.email || '—') + '</div>'
+          + '<div class="linha" style="margin-top:6px"><input data-orf-email="' + x.id + '" type="email" aria-label="E-mail da conta" placeholder="e-mail da conta no site" value="' + esc(x.email || '') + '" style="' + inpO + '"></div></div>'
+          + '<div class="bts"><button type="button" class="lib" data-orf="ligar" data-id="' + x.id + '">Ligar e liberar</button><button type="button" data-orf="ignorar" data-id="' + x.id + '">Ignorar</button></div></div>'; }).join('') + '</div>' : '';
+      pg.innerHTML = orfasH + '<h2>Pagamentos para conferir<b>' + abertos.length + '</b></h2><div class="lista">' + (abertos.length ? abertos.map(linha).join('') : '<p class="vazio">Nenhum comprovante novo. Confira no extrato do banco antes de aprovar.</p>') + '</div>'
         + (feitos.length ? '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--text-3);font-size:12.5px">Decididos nos últimos 60 dias (' + feitos.length + ')</summary><div class="lista" style="margin-top:8px">' + feitos.map(linha).join('') + '</div></details>' : '');
     }).catch(function(){ pg.innerHTML = '<p class="vazio">Não foi possível carregar os pagamentos.</p>'; });
   }
   pg.addEventListener('click', function(ev){
+    var o = ev.target.closest('button[data-orf]');
+    if (o) {
+      var ac = o.dataset.orf, em = (pg.querySelector('[data-orf-email="' + o.dataset.id + '"]') || {}).value || '';
+      if (!confirm(ac === 'ligar' ? 'Ligar este pagamento à conta ' + em + ' e liberar o acesso?' : 'Ignorar este pagamento? Use só se ele já foi resolvido de outro jeito (por exemplo, reembolsado no Stripe).')) return;
+      o.disabled = true;
+      post('/api/admin/stripe', { acao: ac, id: +o.dataset.id, email: em }).then(function(j){
+        msg.className = 'msg ok'; msg.textContent = ac === 'ligar' ? (j.repetido ? 'Esse pagamento já estava na conta de ' + j.nome + '.' : 'Pronto: ' + j.nome + ' tem acesso até ' + dia(j.validade) + '.') : 'Pagamento ignorado.';
+        pagamentos(); carregar();
+      }).catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; o.disabled = false; });
+      return;
+    }
     var b = ev.target.closest('button[data-pg]'); if (!b) return;
     var a = b.dataset.pg;
     if (!confirm((a === 'aprovar' ? 'Aprovar o pagamento de ' : 'Recusar o pagamento de ') + b.dataset.n + '?' + (a === 'aprovar' ? ' Confira antes se o valor entrou na sua conta.' : ''))) return;
