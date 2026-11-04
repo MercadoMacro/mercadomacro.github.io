@@ -245,7 +245,7 @@
         return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
           + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(a, 3)}</td></tr>`;
       }).join('')}</tbody></table></div>` : ''}
-      `;  // 04/11/2026 (Severino): sem nota de rodapé no juro real, para sobrar espaço
+      ${dapVivo ? `<div class="ms-foot">Juro real: DAP (cupom de IPCA) da B3, taxa ao ano acima da inflação. ${negociou ? `Taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}` : 'Sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
   }
   const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   // pontos da curva ao vivo: contratos com pelo menos 10 mil em aberto, até 10 anos; campo = 't' (hoje) ou 'aj' (ajuste anterior)
@@ -373,7 +373,8 @@
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${diTentou && !diCurvas ? 'Curva DI indisponível agora.' : 'Carregando curva…'}</div>`}</div>
       ${diListaHTML()}
-      ${!vivo && C.hoje ? `<div class="ms-foot">Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.</div>` : ''}`;  // 04/11/2026: sem nota com o DI ao vivo
+      ${vivo ? `<div class="ms-foot">DI futuro da B3, ${negociou ? `taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}` : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}
+      ${!vivo && C.hoje ? `<div class="ms-foot">Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
   }
   function drawCurve() {
     const box = root.querySelector('.ms-curve');
