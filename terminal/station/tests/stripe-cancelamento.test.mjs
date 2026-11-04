@@ -8,11 +8,12 @@ function d1() {
   const db = new DatabaseSync(':memory:');
   const prep = (sql) => { let a = []; const o = {
     bind: (...x) => { a = x; return o; },
-    first: async () => db.prepare(sql).get(...a) ?? null,
+    // espera um ciclo, como a rede do D1 de verdade: deixa dois pedidos ao mesmo tempo se intercalarem
+    first: async () => { await new Promise((r) => setImmediate(r)); return db.prepare(sql).get(...a) ?? null; },
     all: async () => ({ results: db.prepare(sql).all(...a) }),
     run: async () => { const r = db.prepare(sql).run(...a); return { meta: { changes: r.changes } }; },
   }; return o; };
-  return { db, DB: { prepare: prep, batch: async (qs) => { db.exec('BEGIN'); try { const r = []; for (const q of qs) r.push(await q.run()); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } } } };
+  return { db, DB: { prepare: prep, batch: async (qs) => { await new Promise((r) => setTimeout(r, 5)); db.exec('BEGIN'); try { const r = []; for (const q of qs) r.push(await q.run()); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } } } };
 }
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s });
 const avisos = [];
@@ -86,4 +87,13 @@ test('fatura paga grava pagamento e acesso juntos; repetida não soma de novo; f
   await evento('invoice.paid', fatura('in_B'));
   assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_B'`).get().n, 1);
   assert.ok(db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e > exp1);
+});
+
+test('duas faturas ao mesmo tempo somam dois períodos', async () => {
+  db.exec(`UPDATE usuarios SET expira = '2027-02-05T12:00:00.000Z', status = 'ativo' WHERE id = 7`);
+  const fatura = (id) => ({ id, customer: 'cus_1', amount_paid: 1990, billing_reason: 'subscription_cycle', parent: { subscription_details: { subscription: 'sub_1', metadata: { usuario_id: '7', plano: 'mensal' } } }, lines: { data: [] } });
+  const rs = await Promise.all([evento('invoice.paid', fatura('in_C')), evento('invoice.paid', fatura('in_D'))]);
+  assert.deepEqual(rs.map((r) => r.status), [200, 200]);
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref IN ('stripe:in_C', 'stripe:in_D')`).get().n, 2);
+  assert.equal(db.prepare('SELECT expira e FROM usuarios WHERE id = 7').get().e.slice(0, 10), '2027-04-05');
 });
