@@ -25,6 +25,16 @@ const ATIVOS = {
   'NQ=F': { futuro: 'NQ', busca: 'US Tech 100' },
   'YM=F': { futuro: 'YM', busca: 'Wall Street' },
   'RTY=F': { futuro: 'RTY', busca: 'US 2000' },
+  // índices à vista em CFD (04/11/2026, Severino): negociam quase 24 h; o navegador só usa se ficar a até 3% do Yahoo
+  '^N225': { indice: ['J225', 'JP225'], busca: 'Japan 225' },
+  '^HSI': { indice: ['HK50', 'HK33'], busca: 'Hong Kong 50' },
+  '^AXJO': { indice: ['AU200', 'AUS200'], busca: 'Australia 200' },
+  '^GDAXI': { indice: ['DE40', 'DE30', 'GER40'], busca: 'Germany 40' },
+  '^FTSE': { indice: ['UK100'], busca: 'UK 100' },
+  '^FCHI': { indice: ['FR40'], busca: 'France 40' },
+  '^STOXX50E': { indice: ['EU50', 'EU Stocks 50'], busca: 'EU Stocks 50' },
+  '^GSPC': { indice: ['US500'], busca: 'US 500' },
+  '^DJI': { indice: ['US30'], busca: 'US 30' },
 };
 const MESES = 'FGHJKMNQUVXZ';
 const vencimento = (epic, pre) => {
@@ -159,6 +169,14 @@ export class CapitalRelay {
     for (const [sym, a] of Object.entries(ATIVOS)) {
       if (a.fixo) { mapa[sym] = [a.fixo]; continue; }
       const j = await this.rest('/api/v1/markets?searchTerm=' + encodeURIComponent(a.busca)).catch(() => ({}));
+      if (a.indice) {
+        // índice: o código conhecido; se a Capital trocar o código, o mercado de índice com o mesmo nome
+        const ms = j.markets || [];
+        const m = ms.find((x) => a.indice.includes(x.epic)) || ms.find((x) => x.instrumentType === 'INDICES' && String(x.instrumentName || '').toLowerCase() === a.busca.toLowerCase());
+        if (m) mapa[sym] = [m.epic];
+        await new Promise((ok) => setTimeout(ok, 120));
+        continue;
+      }
       const eps = (j.markets || []).map((m) => m.epic).filter((e) => { const v = vencimento(e, a.futuro); return v != null && v >= hoje; });
       eps.sort((x, y) => vencimento(x, a.futuro) - vencimento(y, a.futuro));
       if (eps.length) mapa[sym] = eps.slice(0, 2);

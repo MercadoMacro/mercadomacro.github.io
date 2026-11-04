@@ -29,8 +29,9 @@ globalThis.MMForexLive = (() => {
   const WS_URL = 'wss://api.derivws.com/trading/v1/options/ws/public';
   const VELHO = 20000; // preço da Deriv sem atualizar há 20 s deixa de valer (mercado fechado ou conexão parada)
 
-  // Capital.com (repasse do servidor do site em /api/capital/ws): USD/BRL, VIX e futuros
-  const CAPITAL = Object.freeze(['BRL=X', '^VIX', 'GC=F', 'SI=F', 'HG=F', 'BZ=F', 'CL=F', 'NG=F', 'KC=F', 'ES=F', 'NQ=F', 'YM=F', 'RTY=F']);
+  // Capital.com (repasse do servidor do site em /api/capital/ws): USD/BRL, VIX, futuros e, desde 04/11/2026, índices à vista (CFD)
+  const CAPITAL = Object.freeze(['BRL=X', '^VIX', 'GC=F', 'SI=F', 'HG=F', 'BZ=F', 'CL=F', 'NG=F', 'KC=F', 'ES=F', 'NQ=F', 'YM=F', 'RTY=F',
+    '^N225', '^HSI', '^AXJO', '^GDAXI', '^FTSE', '^FCHI', '^STOXX50E', '^GSPC', '^DJI']);
   const CAP_VELHO = 10 * 60000; // preço da Capital parado há 10 min deixa de valer
   const POLL_VELHO = 3 * 60000; // lote do Yahoo não renovado há 3 min (aba parada): a Mesa volta aos dados dela
 

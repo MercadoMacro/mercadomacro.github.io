@@ -447,8 +447,8 @@
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
     const fonte = fq ? ` · ${fonteFx(fq)}` : q?.b3 ? ' · fonte: B3, atraso de cerca de 15 min' : '';
-    const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo pela Deriv · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
-    return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
+    const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
+    return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}${fq && fq.source === 'Capital.com' ? ' ms-cfd' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
@@ -550,8 +550,9 @@
         if (tmEl) tmEl.innerHTML = hhmm(fq.ts);
         if (chEl && fq.change != null && isFinite(fq.change)) { chEl.textContent = pct(fq.change); chEl.className = 'ch ' + cls(fq.change); }
         tr.classList.remove('old');
-        tr.title = s.startsWith('__x') ? n + ' · ao vivo pela Deriv · variação desde 00h GMT' : 'Abrir o gráfico de ' + n + ' · ' + fonteFx(fq);
+        tr.title = s.startsWith('__x') ? n + ' · ao vivo · variação desde 00h GMT' : 'Abrir o gráfico de ' + n + ' · ' + fonteFx(fq);
         tr.classList.toggle('ms-fx-live', fq.source !== 'Yahoo');
+        tr.classList.toggle('ms-cfd', fq.source === 'Capital.com');
         if (event?.type === 'quote' && event.quote?.direction) {
           tr.classList.remove('ms-tick-up', 'ms-tick-down');
           void tr.offsetWidth;
@@ -572,7 +573,8 @@
     }
   }
   function fonteFx(fq) {
-    return fq.source === 'Deriv' ? 'ao vivo pela Deriv' : fq.source === 'Capital.com' ? 'ao vivo pela Capital.com (CFD ' + fq.epic + ')' : 'Yahoo Finance';
+    // nomes dos fornecedores ao vivo ficam só em Ajustes > Sobre (04/11/2026, Severino)
+    return fq.source === 'Deriv' ? 'ao vivo' : fq.source === 'Capital.com' ? 'ao vivo · preço de CFD, contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : 'Yahoo Finance';
   }
 
   function newsHTML() {
@@ -657,7 +659,7 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo (câmbio e metais à vista pela Deriv; dólar, VIX e futuros pela Capital.com, preço de CFD); Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
+      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo; <b>CFD</b> = preço de contrato que acompanha o índice ou futuro e negocia quase 24 horas, por isso pode diferir um pouco do valor oficial e se mexer com a bolsa fechada; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
@@ -909,6 +911,7 @@
   .ms-link { border:0; background:none; color:var(--accent-ink); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
   .ms-note { margin:14px 2px 0; font-size:11px; color:var(--text-3); }
   .ms-tb tr.ms-fx-live td.tm { position:relative; }
+  .ms-tb tr.ms-cfd td.nm::after { content:'CFD'; margin-left:6px; padding:0 4px; border:1px solid var(--line-2); border-radius:4px; font-size:9px; font-weight:600; letter-spacing:.04em; color:var(--text-3); vertical-align:1px; }
   .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
 
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
