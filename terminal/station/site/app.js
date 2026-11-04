@@ -363,7 +363,7 @@ let yahooLastError = null;
 let yahooErrorTs = 0;
 
 /* ---- B3: Ibovespa e ações brasileiras pelo site de cotações da B3 (/b3 do worker, atraso de cerca de 15 min).
-   Troca preço, variação, hora e gráfico do dia do Yahoo; se a B3 falhar, fica o Yahoo. ---- */
+   Desde 04/11/2026 (Severino) o Yahoo volta a ser a fonte; a B3 só entra se o Yahoo não trouxer o ativo. ---- */
 const b3Ticker = (sym) => (sym === '^BVSP' ? 'IBOV' : /^[A-Z0-9]{4,6}\.SA$/.test(sym) ? sym.slice(0, -3) : null);
 async function b3Cotacoes(syms) {
   const pares = syms.map((s) => [s, b3Ticker(s)]).filter(([, t]) => t);
@@ -404,8 +404,13 @@ function ensureYahooBatch(force = false) {
   // após uma falha, não tenta de novo por 10 s (evita esperar vários timeouts seguidos)
   if (!force && yahooLastError && Date.now() - yahooErrorTs < 10000) return Promise.reject(yahooLastError);
   yahooInflight = (async () => {
-    const b3 = b3Cotacoes(B3_SYMBOLS());
-    const aplicaB3 = async () => { const q = await b3; Object.entries(q).forEach(([sym, b]) => { yahooMemo[sym] = b3Junta(b, yahooMemo[sym]); }); };
+    // só os ativos que o Yahoo não trouxe (todos, se o Yahoo falhou) vão buscar na B3
+    const aplicaB3 = async (todos) => {
+      const faltam = B3_SYMBOLS().filter((sym) => todos || !yahooMemo[sym] || !isFinite(yahooMemo[sym].value));
+      if (!faltam.length) return;
+      const q = await b3Cotacoes(faltam);
+      Object.entries(q).forEach(([sym, b]) => { yahooMemo[sym] = b3Junta(b, yahooMemo[sym]); });
+    };
     try {
       const res = await fetchT(`${CORS_PROXY}/quotes?symbols=${encodeURIComponent(YAHOO_SYMBOLS.join(','))}`, {}, 20000);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -419,7 +424,7 @@ function ensureYahooBatch(force = false) {
       yahooLastError = null;
     } catch (e) {
       yahooBatchTs = 0;            // invalida: os cards passam a mostrar "dado antigo" em vez de fingir sucesso
-      try { await aplicaB3(); } catch (e2) { /* sem a B3 também */ }  // sem o Yahoo, o Ibovespa e as ações ainda vêm da B3
+      try { await aplicaB3(true); } catch (e2) { /* sem a B3 também */ }  // sem o Yahoo, o Ibovespa e as ações ainda vêm da B3
       yahooLastError = e;
       yahooErrorTs = Date.now();
       throw e;
@@ -4952,7 +4957,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=33';
+    sc.src = 'mesa.js?v=34';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
