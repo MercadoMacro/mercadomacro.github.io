@@ -17,13 +17,13 @@ export const PLANOS = {
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
   // 03/11/2026: Pix baixou (1 mês 29,90 -> 24,90; 6 meses 149,90 -> 124,90); cartão igual, chamado de preço de lançamento
-  // 04/11/2026 (Severino): Pix 6 meses = 6 x 24,90 = 149,40, sem desconto (o desconto fica só no cartão)
+  // 04/11/2026 (Severino): Pix 6 meses 149,40 e logo depois 139,00
   // valor = Pix (pagamento único); valorCartao = cartão pelo Stripe, com renovação automática (mais barato de propósito, 30/10/2026)
   // no Pix o pagamento é único: o nome é o tempo de acesso (1 mês, 6 meses, 12 meses), não 'mensal' (30/10/2026)
   mensal: { nome: '1 mês', periodo: '1 mês', meses: 1, valor: 2490, valorCartao: 1990 },
   // trimestral saiu da lista em 30/10/2026 (oculto): pedidos antigos ainda podem ser pagos e aprovados
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990, oculto: true },
-  semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 14940, valorCartao: 9990 },
+  semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 13900, valorCartao: 9990 },
   // 12 meses só no cartão (30/10/2026): no Pix o desconto ficava grande demais; valor fica para 'pagamento por fora' no /admin
   anual: { nome: '12 meses', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990, soCartao: true },
 };

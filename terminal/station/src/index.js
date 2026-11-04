@@ -2636,7 +2636,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     ['cortesia', 'Cortesia', '1 dia grátis', 0, { dias: 1 }],
     ['degustacao', 'Degustação', '7 dias', 499, { dias: 7 }],
     ['mensal', 'Mensal', '1 mês', 2490, { meses: 1 }],
-    ['semestral', 'Semestral', '6 meses', 14940, { meses: 6 }],
+    ['semestral', 'Semestral', '6 meses', 13900, { meses: 6 }],
     ['anual', 'Anual', '12 meses', 24990, { meses: 12 }],
     ['sem', 'Sem validade', 'não vence', 0, null],
     ['data', 'Até uma data', 'você escolhe o dia', 0, null]
@@ -2990,7 +2990,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), 1 mês R$ 24,90 e 6 meses R$ 149,40 (no cartão: R$ 19,90 e R$ 99,90; 12 meses só no cartão, R$ 179,90).</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), 1 mês R$ 24,90 e 6 meses R$ 139,00 (no cartão: R$ 19,90 e R$ 99,90; 12 meses só no cartão, R$ 179,90).</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
