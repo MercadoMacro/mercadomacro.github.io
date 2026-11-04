@@ -17,12 +17,13 @@ export const PLANOS = {
   gratis: { nome: 'Grátis', periodo: '48 horas', horas: 48, valor: 0, unico: true, gratis: true },
   degustacao: { nome: 'Degustação', periodo: '7 dias', dias: 7, valor: 499, unico: true },
   // 03/11/2026: Pix baixou (1 mês 29,90 -> 24,90; 6 meses 149,90 -> 124,90); cartão igual, chamado de preço de lançamento
+  // 04/11/2026 (Severino): Pix 6 meses = 6 x 24,90 = 149,40, sem desconto (o desconto fica só no cartão)
   // valor = Pix (pagamento único); valorCartao = cartão pelo Stripe, com renovação automática (mais barato de propósito, 30/10/2026)
   // no Pix o pagamento é único: o nome é o tempo de acesso (1 mês, 6 meses, 12 meses), não 'mensal' (30/10/2026)
   mensal: { nome: '1 mês', periodo: '1 mês', meses: 1, valor: 2490, valorCartao: 1990 },
   // trimestral saiu da lista em 30/10/2026 (oculto): pedidos antigos ainda podem ser pagos e aprovados
   trimestral: { nome: 'Trimestral', periodo: '3 meses', meses: 3, valor: 7990, oculto: true },
-  semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 12490, valorCartao: 9990 },
+  semestral: { nome: '6 meses', periodo: '6 meses', meses: 6, valor: 14940, valorCartao: 9990 },
   // 12 meses só no cartão (30/10/2026): no Pix o desconto ficava grande demais; valor fica para 'pagamento por fora' no /admin
   anual: { nome: '12 meses', periodo: '12 meses', meses: 12, valor: 24990, valorCartao: 17990, soCartao: true },
 };
@@ -670,11 +671,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     var h = '<div class="planos">' + lista.map(function(p){
       var v = preco(p, forma), d = desconto(p, forma), cartao = forma === 'cartao';
       var nome = cartao ? (NOME_CARTAO[p.meses] || p.nome) : p.nome;
-      var selo = p.meses > 1 && porMes(p, forma) === maisBarato ? '<span class="selo">Melhor preço</span>' : d > 0 ? '<span class="selo leve">' + d + '% de desconto</span>' : '';
+      var selo = p.meses > 1 && d > 0 && porMes(p, forma) === maisBarato ? '<span class="selo">Melhor preço</span>' : d > 0 ? '<span class="selo leve">' + d + '% de desconto</span>' : '';
       return '<button type="button" class="pl" data-p="' + p.id + '" aria-pressed="' + (escolhido === p.id) + '"><span class="n">' + esc(nome) + selo + '</span>'
         + '<span class="v">' + reais(v) + '</span>'
         + '<span class="u">' + (cartao ? CADA[p.meses] || ('a cada ' + p.meses + ' meses') : 'pagamento único') + '</span>'
-        + '<span class="e">' + (p.meses > 1 ? 'equivale a ' + reais(porMes(p, forma)) + ' por mês' : '') + '</span>'
+        + '<span class="e">' + (p.meses > 1 ? (cartao ? 'equivale a ' + reais(porMes(p, forma)) + ' por mês' : 'equivale a ' + p.meses + ' × ' + reais(porMes(p, forma))) : '') + '</span>'
         + '<span class="r">' + (cartao
           ? 'Renova sozinho ' + (p.meses === 1 ? 'todo mês' : p.meses === 12 ? 'todo ano' : 'a cada ' + p.meses + ' meses') + ' por ' + reais(v) + '. Cancele quando quiser.'
           : esc(p.periodo) + ' de acesso. Não renova sozinho: quando acabar, você paga de novo se quiser.') + '</span></button>';
