@@ -157,13 +157,20 @@ export async function webhookStripe(req, env) {
     const fimStripe = o.lines && o.lines.data && o.lines.data[0] && o.lines.data[0].period ? new Date((o.lines.data[0].period.end + 86400) * 1000).toISOString() : null;
     let validade = somarPeriodo(baseValidade(['ativo'].includes(u.status) ? u.expira : null), plano);
     if (fimStripe && fimStripe > validade) validade = fimStripe;
-    const ins = await env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref)
-      SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)`)
-      .bind(u.id, id, o.amount_paid, agora, agora, validade, 'stripe:' + o.id, 'stripe:' + o.id).run();
+    // pagamento e acesso na mesma transação (batch do D1): se algo falhar, nada fica gravado, o webhook responde erro
+    // e o Stripe reenvia; no reenvio a fatura ainda não consta e a liberação é feita inteira.
+    // O acesso só muda se a fatura foi gravada agora, por este pedido (mesma ref e mesmo horário).
+    const ref = 'stripe:' + o.id;
+    const [ins] = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref)
+        SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)`)
+        .bind(u.id, id, o.amount_paid, agora, agora, validade, ref, ref),
+      env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, stripe_cliente = COALESCE(?, stripe_cliente),
+        stripe_assinatura = COALESCE(?, stripe_assinatura), decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END
+        WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE ref = ? AND criado = ? AND usuario_id = ?)`)
+        .bind(validade, id, o.customer || null, assinaturaDaFatura(o), agora, u.id, ref, agora, u.id),
+    ]);
     if (!ins.meta.changes) return json({ ok: true, repetido: true });
-    await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, stripe_cliente = COALESCE(?, stripe_cliente),
-      stripe_assinatura = COALESCE(?, stripe_assinatura), decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END WHERE id = ?`)
-      .bind(validade, id, o.customer || null, assinaturaDaFatura(o), agora, u.id).run();
     limparCacheSessao();
     const primeira = o.billing_reason === 'subscription_create';
     await registrar(env, u.id, `${primeira ? 'Assinou' : 'Renovou'} no cartão (Stripe): ${plano.nome} (${reais(o.amount_paid)}), acesso até ${dataBR(validade)}`);

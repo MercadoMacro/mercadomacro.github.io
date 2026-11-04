@@ -449,10 +449,15 @@ export async function apiAdminAssinatura(req, env, acao) {
     const agora = new Date().toISOString();
     if (b.acao === 'aprovar') {
       const validade = somarPeriodo(baseValidade(p.ustatus === 'pendente' ? null : p.expira), plano);
-      // só aprova uma vez, mesmo com dois cliques ou duas abas ao mesmo tempo
-      const r1 = await env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, validade, p.id).run();
+      // só aprova uma vez, mesmo com dois cliques ou duas abas ao mesmo tempo.
+      // Pagamento e acesso na mesma transação (batch do D1): se uma parte falhar, nada é gravado e dá para aprovar de novo.
+      // O acesso só muda se o pagamento foi aprovado agora, por este pedido (mesmo id e mesmo horário de decisão).
+      const [r1] = await env.DB.batch([
+        env.DB.prepare(`UPDATE pagamentos SET status = 'aprovado', decidido = ?, validade = ? WHERE id = ? AND status IN ('enviado', 'aguardando', 'vencido')`).bind(agora, validade, p.id),
+        env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE id = ? AND status = 'aprovado' AND decidido = ?)`)
+          .bind(validade, agora, p.plano, p.uid, p.id, agora),
+      ]);
       if (!r1.meta.changes) return json({ erro: 'Esse pagamento já foi decidido.' }, 400);
-      await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, decidido = ?, plano = ? WHERE id = ?`).bind(validade, agora, p.plano, p.uid).run();
       await registrar(env, p.uid, `Pagamento aprovado: ${plano.nome} (${reais(plano.valor)}), acesso até ${dataBR(validade)}`);
       limparCacheSessao();
       const r = await emailAprovado(env, req, p, plano, validade).catch(() => ({ ok: false }));

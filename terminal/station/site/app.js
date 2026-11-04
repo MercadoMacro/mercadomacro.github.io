@@ -4965,7 +4965,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=38';
+    sc.src = 'mesa.js?v=39';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -5030,7 +5030,7 @@ function newsReadMins(n) {
   const sec = document.getElementById('ana-sec-fed');
   if (!sec) return;
   const LADOS = {
-    eua: { root: 'fed-root', js: 'fed.js?v=8', fn: '__fedRender' },
+    eua: { root: 'fed-root', js: 'fed.js?v=9', fn: '__fedRender' },
     br: { root: 'copom-root', js: 'copom.js?v=5', fn: '__copomRender' },
   };
   const pedidos = {};

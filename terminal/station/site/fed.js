@@ -37,7 +37,8 @@
     return `${y}-${String(mm).padStart(2, '0')}`;
   };
   // data de hoje em Nova York (a reunião vale até o fim do dia dela)
-  const hojeNY = () => new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
+  // fuso de Nova York de verdade (UTC-4 no verão, UTC-5 no inverno; 04/11/2026)
+  const hojeNY = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const diasAte = (iso) => Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(hojeNY() + 'T12:00:00Z')) / 86400000);
 
   let prefs = { sel: 0, graf: false, inf: '' };
