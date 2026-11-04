@@ -135,3 +135,13 @@ test('fatura da lista já creditada para outra conta não é ligada a uma segund
   assert.equal(ok.ok, true); assert.equal(ok.repetido, true);
   assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_DUP'`).get().n, 1);
 });
+
+test('se o Stripe recusar a marcação da conta, o admin é avisado', async () => {
+  db.exec(`INSERT INTO stripe_orfas (fatura, cliente, assinatura, email, valor, plano, primeira, criado, status) VALUES ('in_SF', 'cus_s', 'sub_s', 'b@x.com', 1990, 'mensal', 1, '2026-11-04', 'aberta')`);
+  globalThis.fetch = async (url) => String(url).includes('subscriptions/') ? new Response('{"error":{"message":"fora do ar"}}', { status: 500 }) : new Response('{}');
+  const adm = (corpo) => apiAdminStripe(new Request('https://x/api/admin/stripe', corpo ? { method: 'POST', body: JSON.stringify(corpo) } : {}), env).then((x) => x.json());
+  const id = (await adm()).orfas.find((o) => o.fatura === 'in_SF').id;
+  const r = await adm({ acao: 'ligar', id, email: 'b@x.com' });
+  assert.equal(r.ok, true); assert.equal(r.stripeFalhou, true);
+  assert.equal(db.prepare('SELECT status FROM usuarios WHERE id = 9').get().status, 'ativo');
+});

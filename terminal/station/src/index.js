@@ -2991,6 +2991,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
       o.disabled = true;
       post('/api/admin/stripe', { acao: ac, id: +o.dataset.id, email: em }).then(function(j){
         msg.className = 'msg ok'; msg.textContent = ac === 'ligar' ? (j.repetido ? 'Esse pagamento já estava na conta de ' + j.nome + '.' : 'Pronto: ' + j.nome + ' tem acesso até ' + dia(j.validade) + '.') : 'Pagamento ignorado.';
+        if (j.stripeFalhou) { msg.className = 'msg erro'; msg.textContent += ' Mas o Stripe não aceitou a marcação da conta na assinatura: as próximas renovações podem voltar para esta lista, e aí é só ligar de novo.'; }
         pagamentos(); carregar();
       }).catch(function(j){ msg.className = 'msg erro'; msg.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; o.disabled = false; });
       return;
