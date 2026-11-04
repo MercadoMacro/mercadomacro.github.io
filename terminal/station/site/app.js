@@ -4950,7 +4950,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=30';
+  sc.src = 'mercado-novo.js?v=32';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -4965,7 +4965,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=37';
+    sc.src = 'mesa.js?v=38';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');

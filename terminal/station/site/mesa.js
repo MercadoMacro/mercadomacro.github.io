@@ -448,7 +448,8 @@
     const stale = has && !q.live;
     const fonte = fq ? '' : q?.b3 ? ' · fonte: B3, atraso de cerca de 15 min' : '';
     const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
-    return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${tag}>
+    const fora = cfdFora(s, fq);
+    return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}${fora ? ' ms-cfd-off' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${fora ? tag.replace(/ title="[^"]*"/, ` title="${esc(window.MMDicaCfd)}"`) : tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
@@ -552,6 +553,9 @@
         tr.classList.remove('old');
         tr.title = s.startsWith('__x') ? n + ' · ao vivo · variação desde 00h GMT' : 'Abrir o gráfico de ' + n;
         tr.classList.toggle('ms-fx-live', fq.source !== 'Yahoo');
+        const fora = cfdFora(s, fq);
+        tr.classList.toggle('ms-cfd-off', fora);
+        if (fora) tr.title = window.MMDicaCfd;
         if (event?.type === 'quote' && event.quote?.direction) {
           tr.classList.remove('ms-tick-up', 'ms-tick-down');
           void tr.offsetWidth;
@@ -570,6 +574,12 @@
       if (ch && fq.change != null && isFinite(fq.change)) { ch.textContent = pct(fq.change); ch.className = cls(fq.change); }
       el.title = 'Abrir o gráfico de ' + c.n;
     }
+  }
+
+  // bolinha laranja (04/11/2026, Severino): preço de CFD com o mercado do ativo fechado (regra da aba Mercado)
+  function cfdFora(s, fq) {
+    if (!fq || fq.source !== 'Capital.com' || !window.MMDicaCfd) return false;
+    try { return window.MMMercadoAberto?.(s) === false; } catch (e) { return false; }
   }
 
   function newsHTML() {
@@ -906,6 +916,7 @@
   .ms-link { border:0; background:none; color:var(--accent-ink); font:inherit; font-size:11.5px; cursor:pointer; padding:0; }
   .ms-note { margin:14px 2px 0; font-size:11px; color:var(--text-3); }
   .ms-tb tr.ms-fx-live td.tm { position:relative; }
+  .ms-tb tr.ms-fx-live.ms-cfd-off td.tm::before { background:#f59e0b; }
   .ms-tb tr.ms-fx-live td.tm::before { content:''; position:absolute; left:3px; top:50%; width:5px; height:5px; margin-top:-2.5px; border-radius:50%; background:var(--pos); }
 
   @media (min-width: 1501px) and (max-width: 1850px) { .ms-tb td.tm { display:none; } }
