@@ -3314,10 +3314,14 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
 .aj-sair-fim { padding:14px 16px 22px; }
 .aj-form label { display:block; font-size:12.5px; color:var(--text-2); margin:10px 0 5px; }
 .aj-form label:first-child { margin-top:0; }
-.aj-form input { width:100%; box-sizing:border-box; background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px; color:var(--text); padding:9px 11px; min-height:40px; font:inherit; font-size:13px; }
+.aj-form { max-width:420px; }
+.aj-form input { width:100%; box-sizing:border-box; background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px; color:var(--text); padding:7px 11px; min-height:36px; font:inherit; font-size:13px; }
+.aj-form input:focus { outline:none; border-color:var(--accent); }
+.aj-form .aj-form-bt, .aj-form .aj-url button { min-height:36px; }
+.aj-note a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
 .aj-form .aj-url { display:flex; gap:8px; align-items:center; }
 .aj-form .aj-url input { flex:1; min-width:0; }
-.aj-form .aj-form-bt { margin-top:12px; min-height:40px; }
+.aj-form .aj-form-bt { margin-top:12px; }
 .aj-form .aj-del { color:var(--neg, #ff6b73); border-color:currentColor; }
 .aj-msg { font-size:12.5px; margin:8px 0 0; color:var(--text-2); }
 .aj-msg:empty { display:none; }
