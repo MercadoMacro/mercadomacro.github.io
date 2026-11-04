@@ -34,6 +34,14 @@
     av.textContent = 'Sua conta foi aberta em outro aparelho. Cada conta pode ficar conectada em até 2 aparelhos ao mesmo tempo. Entre de novo para continuar aqui.';
     setTimeout(function () { $('acesso').scrollIntoView({ block: 'center' }); }, 50);
   }
+  // veio de um link que pede login (ex.: Ver os planos do e-mail): abre o Entrar já visível, com o motivo
+  if (/[?&]volta=/.test(location.search) && !/[?&]aparelho=1/.test(location.search) && location.hash !== '#cadastrar') {
+    aba(false);
+    var vv = new URLSearchParams(location.search).get('volta') || '';
+    var avv = fE.querySelector('.vt-msg');
+    if (avv && /^\/assinar/.test(vv)) { avv.className = 'vt-msg'; avv.textContent = 'Entre na sua conta para ver os planos.'; }
+    setTimeout(function () { $('acesso').scrollIntoView({ block: 'center' }); }, 50);
+  }
   if (location.hash === '#cadastrar') { aba(true); setTimeout(function () { $('acesso').scrollIntoView({ block: 'start' }); }, 50); }
   document.querySelectorAll('[data-ir]').forEach(function (b) {
     b.addEventListener('click', function () {
