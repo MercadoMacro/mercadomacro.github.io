@@ -235,6 +235,9 @@
     const base = ok(q.c) ? q.v / (1 + q.c / 100) : null;
     return { v: l.v, c: base ? (l.v / base - 1) * 100 : null, src: l.src };
   }
+  // bolinha laranja (04/11/2026, Severino): preço ao vivo de CFD com o mercado do card fechado
+  const DICA_CFD = 'Mercado fechado: cotação CFD (contrato que negocia quase 24 horas; pode diferir do valor oficial)';
+  const cfdFora = (r, src) => src === 'CFD' && !!r && !situacao(r).aberto;
   window.__onMercadoVivo = (s, l, dir) => {
     if (!INFO[s] || !l || !ok(l.v)) return;
     LV[s] = { v: l.v, src: l.src, em: Date.now() };
@@ -243,6 +246,8 @@
       row.querySelector('.mn-v').textContent = valor(s);
       const c = row.querySelector('.mn-c'); c.textContent = pct(a?.c); c.className = `mn-c ${cls(a?.c)}`;
       row.classList.add('rt');
+      const fora = cfdFora(REGIOES.find((x) => x.id === row.dataset.r), l.src);
+      if (fora !== row.classList.contains('cfd-off')) { row.classList.toggle('cfd-off', fora); row.title = fora ? DICA_CFD : (DICA[s] || `Ver ${row.querySelector('.mn-n').textContent} no gráfico`); }
       if (dir) { row.classList.remove('fl-up', 'fl-dn'); void row.offsetWidth; row.classList.add(dir > 0 ? 'fl-up' : 'fl-dn'); }
     });
   };
@@ -323,7 +328,8 @@
   const linha = (r, l) => {
     if (l[0].startsWith('@')) return linhaEsp(r, l);
     const s = l[0], q = atual(s), j = INFO[s].juros, ch = j ? bp(s) : q?.c;
-    const rt = `${q && 'src' in q ? ' rt' : ''}" title="${esc(DICA[s] || `Ver ${l[1]} no gráfico`)}`;
+    const fora = q && 'src' in q && cfdFora(r, q.src);
+    const rt = `${q && 'src' in q ? ' rt' : ''}${fora ? ' cfd-off' : ''}" title="${esc(fora ? DICA_CFD : DICA[s] || `Ver ${l[1]} no gráfico`)}`;
     return `<button type="button" class="mn-row${escolha(r) === s ? ' on' : ''}${rt}" data-r="${r.id}" data-s="${esc(s)}">
       <span class="mn-n">${esc(l[1])}</span><span class="mn-v">${valor(s)}</span><span class="mn-c ${cls(ch)}">${j ? pb(ch) : pct(ch)}</span></button>`;
   };
@@ -610,6 +616,7 @@
   .mn-root .mn-perp-nota { margin:0; font-size:12px; color:var(--text-3); line-height:1.4; }
   .mn-root .mn-perp .mn-n { display:flex; flex-direction:column; gap:1px; }
   .mn-root .mn-perp .mn-n { white-space:normal; }
+  .mn-root .mn-row.rt.cfd-off .mn-n::after { background:#f59e0b; }
   .mn-root .mn-perp.rt .mn-n::after { display:none; }
   .mn-root .mn-perp.rt .mn-pn::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--pos); margin-left:6px; vertical-align:middle; }
   .mn-root .mn-perp small { text-transform:none; letter-spacing:0; font-size:11px; color:var(--text-3); line-height:1.35; }
