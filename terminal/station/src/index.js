@@ -1982,7 +1982,13 @@ async function serieCincoDias(req, ctx) {
 }
 
 async function paginaEntrar(req, env, jaSemLogin) {
-  if (!jaSemLogin && (await usuarioDaSessao(req, env))) return redirect('/');
+  if (!jaSemLogin) {
+    // já logado (ativo ou com o acesso vencido): vai direto para onde o link pedia (ex.: botão Ver os planos do e-mail)
+    const v = new URL(req.url).searchParams.get('volta') || '';
+    const destino = /^\/(?![\/\\])/.test(v) ? v : '/';
+    if (await usuarioDaSessao(req, env)) return redirect(destino);
+    if (destino !== '/' && (await contaDaSessao(req, env))) return redirect(destino);
+  }
   const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/', req.url)));
   let corpo = await r.text();
   // o estilo vai dentro da página: o navegador desenha sem esperar outro arquivo
