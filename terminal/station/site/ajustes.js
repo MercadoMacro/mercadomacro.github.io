@@ -101,14 +101,14 @@
     const groupState = Object.fromEntries([...box.querySelectorAll('.aj-group')].map(g => [g.dataset.group, g.open]));
     const C = window.__conta;
     box.querySelector('.aj-body').innerHTML = `
-      ${C && C.logado ? `<section class="aj-sec aj-conta-topo">
-        <h3>Conta</h3>
-        <p class="aj-conta"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</p>
-        <div class="aj-btns">
-          ${C.admin ? `<a class="btn-sm" href="/admin"><i class="fas fa-user-check"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes} aguardando</span>` : ''}</a>` : ''}
-          ${C.admin ? '' : `<a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a>`}
-        </div>
-      </section>` : `<section class="aj-sec aj-conta-topo"><h3>Conta</h3><div class="aj-btns"><a class="btn-sm" href="/conta"><i class="fas fa-user-cog"></i> Minha conta</a><a class="btn-sm" href="/assinar"><i class="fas fa-receipt"></i> Assinatura</a></div></section>`}
+      <div class="aj-conta-topo">${planoCard(C)}</div>
+      <div class="aj-busca aj-busca-cel">${buscaInput('aj-q-cel')}</div>
+      <div class="aj-rapido" aria-label="Atalhos rápidos">
+        <div><span>Tema</span>${seg('mode', MODES.slice(0, 2), curMode())}</div>
+        <div><span>Tamanho da letra</span>${seg('scale', [[0.9, 'A−'], [1, 'A'], [1.1, 'A+'], [1.2, 'A++']], P.scale)}</div>
+        ${liveOn != null ? `<div><span>Cotações</span>${sw('live', liveOn, 'Auto-atualizar')}</div>` : ''}
+      </div>
+      <p class="aj-busca-vazio" hidden>Nada encontrado. Tente outra palavra, como tema, senha ou cache.</p>
       ${C && C.logado ? `<section class="aj-sec">
         <h3>Celular</h3>
         <form class="aj-form" data-form="celular" novalidate>
@@ -128,6 +128,11 @@
           <p class="aj-msg" role="status" aria-live="polite"></p>
           <p class="aj-note">Ao trocar, os outros aparelhos onde você estava conectado saem da conta. Este continua conectado.</p>
         </form>
+      </section>
+      <section class="aj-sec">
+        <h3>Aparelhos conectados</h3>
+        <div class="aj-aparelhos">${aparelhosHtml()}</div>
+        <p class="aj-note">A conta fica aberta em até 2 aparelhos. Ao entrar num terceiro, o mais antigo sai sozinho.</p>
       </section>
       <section class="aj-sec">
         <h3>Excluir minha conta</h3>
@@ -200,6 +205,13 @@
         <p class="aj-note">Limpar o cache baixa tudo de novo, sem apagar notas, compromissos, estratégias salvas nem estes ajustes.</p>
       </section>
       <section class="aj-sec">
+        <h3>Contato</h3>
+        <div class="aj-ajuda">
+          <a class="aj-ajuda-it" href="mailto:contato@mercadomacro.com.br"><i class="fas fa-envelope" aria-hidden="true"></i><span><b>Fale com a gente</b><em>contato@mercadomacro.com.br</em></span></a>
+          <a class="aj-ajuda-it" href="/privacidade"><i class="fas fa-shield-alt" aria-hidden="true"></i><span><b>Privacidade</b><em>Como seus dados são usados</em></span></a>
+        </div>
+      </section>
+      <section class="aj-sec">
         <h3>Atalhos de teclado</h3>
         <dl class="aj-keys">
           <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Buscar ativo, aba ou ação</dd>
@@ -218,10 +230,11 @@
     const body = box.querySelector('.aj-body');
     const sections = [...body.querySelectorAll(':scope > .aj-sec')];
     const groups = [
-      ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Excluir minha conta']]] : []),
+      ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Aparelhos conectados', 'Excluir minha conta']]] : []),
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
-      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa', 'Atalhos de teclado']],
+      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa']],
       ['data', 'Dados', ['Dados']],
+      ['help', 'Ajuda', ['Contato', 'Atalhos de teclado']],
       ['about', 'Sobre', ['Sobre']]
     ];
     for (const [id, name, titles] of groups) {
@@ -234,8 +247,11 @@
     }
     // Sair fica por último (no computador ele está no pé da barra de categorias)
     if (C && C.logado) { const fim = document.createElement('div'); fim.className = 'aj-sair-fim'; fim.innerHTML = '<button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>'; body.append(fim); }
+    box.classList.toggle('aj-em-aparencia', selectedGroup === 'appearance');
     renderNav(C);
     lerCelular();
+    lerAparelhos();
+    aplicarBusca();
     const img = P.wpUrl || localStorage.getItem(IMG_KEY);
     if (img) box.style.setProperty('--wp-img-prev', `url("${String(img).replace(/"/g, '%22')}")`);
     box.querySelector('.aj-body').scrollTop = scroll;
@@ -281,14 +297,75 @@
   function renderNav(C) {
     const nav = box.querySelector('.aj-categories'); if (!nav) return;
     const logado = !!(C && C.logado);
-    const cat = (id, ic, nome) => `<button type="button" data-aj-category="${id}"${id === selectedGroup ? ' aria-current="true"' : ''}><i class="fas fa-${ic}" aria-hidden="true"></i> ${nome}</button>`;
-    nav.innerHTML = (logado ? `<div class="aj-user"><b>${esc(C.nome)}</b><span>${esc(C.email)}</span>${C.expira ? `<span>Acesso até ${new Date(C.expira).toLocaleDateString('pt-BR')}</span>` : ''}</div>` : '')
+    const cat = (id, ic, nome) => `<button type="button" data-aj-category="${id}"${id === selectedGroup && !busca ? ' aria-current="true"' : ''}><i class="fas fa-${ic}" aria-hidden="true"></i> ${nome}</button>`;
+    const q = nav.querySelector('#aj-q-pc'), foco = q && document.activeElement === q;
+    nav.innerHTML = planoCard(C)
+      + `<div class="aj-busca">${buscaInput('aj-q-pc')}</div>`
       + (logado ? cat('account', 'user-cog', 'Minha conta') : `<a class="aj-nav-link" href="/conta"><i class="fas fa-user-cog" aria-hidden="true"></i> Minha conta</a>`)
       + (logado && C.admin ? `<a class="aj-nav-link" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a>`
         : `<a class="aj-nav-link" href="/assinar"><i class="fas fa-receipt" aria-hidden="true"></i> Assinatura</a>`)
       + '<hr class="aj-nav-sep">'
-      + cat('appearance', 'palette', 'Aparência') + cat('panel', 'columns', 'Meu painel') + cat('data', 'database', 'Dados') + cat('about', 'info-circle', 'Sobre')
+      + cat('appearance', 'palette', 'Aparência') + cat('panel', 'columns', 'Meu painel') + cat('data', 'database', 'Dados') + cat('help', 'life-ring', 'Ajuda') + cat('about', 'info-circle', 'Sobre')
       + (logado ? '<button type="button" class="aj-nav-sair" data-act="sair"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair</button>' : '');
+    if (foco) { const n = nav.querySelector('#aj-q-pc'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+  }
+
+  // cartão do plano no topo (04/11/2026): plano, dias que faltam com barra, botão para renovar ou assinar
+  function planoCard(C) {
+    if (!C || !C.logado) return `<div class="aj-plano"><b class="aj-plano-nome">Você não está conectado</b><a class="aj-plano-bt" href="/entrar">Entrar</a></div>`;
+    const topo = `<div class="aj-plano-quem"><span class="aj-plano-av" aria-hidden="true">${esc((C.nome || '?').trim().charAt(0).toUpperCase())}</span><span><b class="aj-plano-nome">${esc(C.nome)}</b><span class="aj-plano-mail">${esc(C.email)}</span></span></div>`;
+    if (C.admin) return `<div class="aj-plano">${topo}<span class="aj-selo">Administrador</span></div>`;
+    const fim = C.expira ? Date.parse(C.expira) : NaN, falta = (fim - Date.now()) / 864e5;
+    const ok = Number.isFinite(falta), dias = ok ? Math.max(0, Math.ceil(falta)) : 0;
+    const pct = ok && C.planoDias ? Math.max(3, Math.min(100, falta / C.planoDias * 100)) : null;
+    const perto = ok && falta <= 3;
+    const quando = !ok ? '—' : falta <= 0 ? 'Acesso terminou' : falta < 1 ? `Falta${Math.ceil(falta * 24) > 1 ? 'm' : ''} ${Math.ceil(falta * 24)} h` : `Falta${dias > 1 ? 'm' : ''} ${dias} ${dias > 1 ? 'dias' : 'dia'}`;
+    const data = ok ? new Date(fim).toLocaleDateString('pt-BR') : '';
+    const bt = C.renova ? ['Gerenciar assinatura', ''] : C.gratis ? ['Assinar', ' forte'] : perto ? ['Renovar agora', ' forte'] : ['Renovar', ''];
+    return `<div class="aj-plano${perto ? ' perto' : ''}">${topo}
+      <div class="aj-plano-linha"><span class="aj-selo">${esc(C.plano || '—')}</span><span class="aj-plano-falta">${quando}</span></div>
+      ${pct != null ? `<div class="aj-plano-barra" role="progressbar" aria-label="Tempo de acesso restante" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ''}
+      <span class="aj-plano-ate">${C.renova ? `Renova sozinho no cartão em ${data}` : data ? `Acesso até ${data}` : ''}</span>
+      <a class="aj-plano-bt${bt[1]}" href="/assinar">${bt[0]}</a></div>`;
+  }
+
+  // busca dentro dos Ajustes: filtra as seções sem redesenhar (o campo não perde o foco)
+  let busca = '';
+  const buscaInput = (id) => `<label class="aj-busca-in" for="${id}"><i class="fas fa-search" aria-hidden="true"></i><input id="${id}" type="search" data-busca placeholder="Buscar nos ajustes" autocomplete="off" value="${esc(busca)}" aria-label="Buscar nos ajustes"></label>`;
+  const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function aplicarBusca() {
+    if (!box) return;
+    const q = norm(busca.trim());
+    box.classList.toggle('aj-buscando', !!q);
+    let algum = false;
+    box.querySelectorAll('.aj-body > .aj-group').forEach((g) => {
+      const nomeBate = q && norm(g.querySelector('summary')?.textContent).includes(q);
+      let tem = false;
+      g.querySelectorAll(':scope > .aj-sec').forEach((sec) => { const hit = !q || nomeBate || norm(sec.textContent).includes(q); sec.hidden = !hit; tem = tem || hit; });
+      g.hidden = !!q && !tem;
+      if (q && tem && !desktopSettings.matches) g.open = true;
+      algum = algum || tem;
+    });
+    const vazio = box.querySelector('.aj-busca-vazio'); if (vazio) vazio.hidden = !q || algum;
+    box.querySelectorAll('.aj-categories [data-aj-category]').forEach((b) => { if (q) b.removeAttribute('aria-current'); else if (b.dataset.ajCategory === selectedGroup) b.setAttribute('aria-current', 'true'); });
+  }
+
+  // aparelhos conectados: usa a rota que já existe (conta os outros e encerra todos menos este)
+  let aparelhos = null, aparelhosLido = false;
+  const esteAparelho = () => /iPhone|Android.*Mobile|Mobile/i.test(navigator.userAgent) ? ['mobile-alt', 'Este celular'] : /iPad|Tablet|Android/i.test(navigator.userAgent) ? ['tablet-alt', 'Este tablet'] : ['desktop', 'Este computador'];
+  function aparelhosHtml() {
+    const [ic, nome] = esteAparelho();
+    const este = `<div class="aj-ap"><i class="fas fa-${ic}" aria-hidden="true"></i><span><b>${nome}</b><em>Você está aqui</em></span><span class="aj-ap-on">Conectado</span></div>`;
+    if (aparelhos == null) return este + '<p class="aj-note">Verificando outros aparelhos…</p>';
+    if (aparelhos === 'erro') return este + '<p class="aj-note">Não foi possível ver os outros aparelhos agora.</p>';
+    if (!aparelhos) return este + '<p class="aj-note">Nenhum outro aparelho conectado.</p>';
+    return este + `<div class="aj-ap"><i class="fas fa-laptop" aria-hidden="true"></i><span><b>${aparelhos === 1 ? 'Outro aparelho' : aparelhos + ' outros aparelhos'}</b><em>Conectado${aparelhos > 1 ? 's' : ''} com a sua conta</em></span><button type="button" class="btn-sm" data-act="ap-sair">Desconectar</button></div>`;
+  }
+  function lerAparelhos() {
+    if (aparelhosLido || !(window.__conta && window.__conta.logado)) return;
+    aparelhosLido = true;
+    postConta('/api/auth/aparelhos', { ler: 1 }).then((j) => { aparelhos = +j.outros || 0; }, () => { aparelhos = 'erro'; aparelhosLido = false; })
+      .then(() => { const el = box && box.querySelector('.aj-aparelhos'); if (el) el.innerHTML = aparelhosHtml(); });
   }
 
   function build() {
@@ -335,6 +412,7 @@
   function open() {
     if (!box) build();
     lastFocus = document.activeElement;
+    aparelhosLido = false; busca = '';
     render();
     box.hidden = false;
     requestAnimationFrame(() => box.classList.add('on'));
@@ -424,6 +502,13 @@
       }).finally(() => clearTimeout(timeout));
       return;
     }
+    if (act === 'ap-sair') {
+      if (!confirm('Desconectar os outros aparelhos? Eles vão precisar entrar de novo com a senha.')) return;
+      b.disabled = true;
+      postConta('/api/auth/aparelhos', { sair: 1 }).then(() => { aparelhos = 0; toast('Os outros aparelhos foram desconectados.'); }, () => { toast('Não foi possível desconectar agora. Tente de novo.'); })
+        .then(() => { const el = box.querySelector('.aj-aparelhos'); if (el) el.innerHTML = aparelhosHtml(); });
+      return;
+    }
     if (act === 'backup') { close(); setTimeout(() => document.getElementById('backup-btn')?.click(), 230); return; }
     const actionTargets = { summary: 'summary-btn', refresh: 'refresh-ticker' };
     if (Object.prototype.hasOwnProperty.call(actionTargets, act)) {
@@ -452,6 +537,7 @@
   }
   function onInput(e) {
     const t = e.target;
+    if (t.matches('[data-busca]')) { busca = t.value; box.querySelectorAll('[data-busca]').forEach((n) => { if (n !== t) n.value = t.value; }); aplicarBusca(); return; }
     if (t.dataset.num && t.type === 'range') {
       P[t.dataset.num] = +t.value;
       save(); applyAll();

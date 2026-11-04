@@ -933,6 +933,14 @@ async function apiAuth(req, env, acao, ctx) {
     if (!u) return json({ logado: false }, 401);
     const out = { logado: true, nome: u.nome, email: u.email, admin: !!u.admin, expira: u.admin ? null : u.expira || null, gratis: soGratis(u) };
     if (u.admin) out.pendentes = (await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`).first()).n;
+    else {
+      // cartão do plano no topo dos Ajustes (04/11/2026): nome do plano e se o cartão renova sozinho
+      const pl = PLANOS[u.plano] || {};
+      out.plano = pl.nome || null;
+      out.planoDias = pl.horas ? pl.horas / 24 : pl.dias || (pl.meses ? Math.round(pl.meses * 30.4) : null);
+      const st = await env.DB.prepare('SELECT stripe_assinatura a, stripe_cancela c FROM usuarios WHERE id = ?').bind(u.id).first();
+      out.renova = !!(st && st.a && !st.c);
+    }
     return json(out);
   }
   if (req.method !== 'POST') return json({ erro: 'Método não permitido.' }, 405);
