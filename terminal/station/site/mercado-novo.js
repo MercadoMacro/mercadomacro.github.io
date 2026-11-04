@@ -238,6 +238,12 @@
   // bolinha laranja (04/11/2026, Severino): preço ao vivo de CFD com o mercado do card fechado
   const DICA_CFD = 'Mercado fechado: cotação CFD (contrato que negocia quase 24 horas; pode diferir do valor oficial)';
   const cfdFora = (r, src) => src === 'CFD' && !!r && !situacao(r).aberto;
+  // a Mesa usa a mesma regra: mercado do ativo aberto? (null = ativo fora dos cartões; futuros seguem a CME)
+  window.MMMercadoAberto = (s) => {
+    const r = REGIOES.find((x) => [...x.linhas, ...x.mais].some((l) => l[0] === s)) || (/=F$/.test(s) ? REGIOES.find((x) => x.id === 'co') : null);
+    return r ? situacao(r).aberto : null;
+  };
+  window.MMDicaCfd = DICA_CFD;
   window.__onMercadoVivo = (s, l, dir) => {
     if (!INFO[s] || !l || !ok(l.v)) return;
     LV[s] = { v: l.v, src: l.src, em: Date.now() };
