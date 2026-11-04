@@ -91,8 +91,6 @@
     const parts = [];
     for (let i = 0; i < SYMS.length; i += 45) parts.push(SYMS.slice(i, i + 45));
     let ok = 0;
-    // Ibovespa e ações brasileiras: B3 (site de cotações, atraso ~15 min) no lugar do Yahoo; se a B3 falhar, fica o Yahoo
-    const b3 = window.mmB3 ? window.mmB3.cotacoes(SYMS.filter(window.mmB3.ticker)).catch(() => ({})) : Promise.resolve({});
     const res = await Promise.allSettled(parts.map((p) => getJSON(`${PROXY}/quotes?symbols=${encodeURIComponent(p.join(','))}`)));
     res.forEach((r) => {
       if (r.status !== 'fulfilled') return;
@@ -105,7 +103,10 @@
         } catch (e) { /* sem dados desse ativo: fica o último valor salvo, marcado como antigo */ }
       });
     });
-    Object.entries(await b3).forEach(([sym, b]) => {
+    // Ibovespa e ações brasileiras: Yahoo de novo desde 04/11/2026 (Severino); a B3 (atraso ~15 min) só cobre o que o Yahoo não trouxe
+    const faltam = window.mmB3 ? SYMS.filter((sym) => window.mmB3.ticker(sym) && !Q[sym]?.live) : [];
+    const b3 = faltam.length ? await window.mmB3.cotacoes(faltam).catch(() => ({})) : {};
+    Object.entries(b3).forEach(([sym, b]) => {
       const v = window.mmB3.junta(b, null);
       if (!Q[sym]?.live) ok++;
       Q[sym] = { v: v.value, c: v.change, ts: v.ts || Q[sym]?.ts || null, sp: v.sparkline.length > 1 ? v.sparkline : (Q[sym]?.sp || []), live: true, b3: true };
