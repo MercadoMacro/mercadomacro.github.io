@@ -16,7 +16,7 @@ html[data-term="on"] body {
   --line-2: #3a3a3a;
   --text: #f2f2f2;
   --text-2: #ffa028;
-  --text-3: #b5852f;
+  --text-3: #b59b70;
   --accent: #ffa028;
   --accent-soft: rgba(255,160,40,.14);
   --accent-line: rgba(255,160,40,.5);
@@ -72,7 +72,8 @@ html[data-term="on"] body .ms-head h3::before { background: var(--accent) !impor
 html[data-term="on"] body :is(.ms-tb td.nm, .mn-n, .wt-name, .label) { color: var(--text-2) !important; }
 html[data-term="on"] body :is(.ms-tb td.px, .mn-v, .ms-cv, .val, .qc-price) { color: #fff !important; font-variant-numeric: tabular-nums; }
 html[data-term="on"] body :is(.ms-tb tr, .mn-row) { border-color: #1a1a1a !important; }
-html[data-term="on"] body :is(.ms-tb tr:hover, .mn-row:hover, .mn-row.on) { background: #1f1608 !important; }
+html[data-term="on"] body :is(.ms-tb tr:hover, .mn-row:hover) { background: #181818 !important; }
+html[data-term="on"] body .mn-row.on { background: #2b200b !important; }
 html[data-term="on"] body .mn-row.on { box-shadow: inset 2px 0 0 var(--accent) !important; }
 html[data-term="on"] body .cc { background: #1c1c1c !important; color: #9a9a9a !important; border: 0 !important; }
 
@@ -101,7 +102,7 @@ html[data-term="on"] body :is(input, select, textarea) {
   border: 1px solid var(--line-2) !important;
   caret-color: var(--tt-key);
 }
-html[data-term="on"] body :is(input, textarea)::placeholder { color: #6b5a33 !important; }
+html[data-term="on"] body :is(input, textarea)::placeholder { color: #a99570 !important; }
 html[data-term="on"] body :is(input, select, textarea):focus { border-color: var(--accent) !important; outline: none !important; }
 
 /* botões: retos, cinza com texto âmbar; o ativo em amarelo */
@@ -129,4 +130,44 @@ html[data-term="on"] body :is(.dn, .down, .neg, .ch.dn, .mn-c.dn) { color: var(-
 html[data-term="on"] body * { scrollbar-color: #3a3a3a #000; }
 
 /* status dos cartões do Mercado: a fonte monoespaçada é mais larga */
-html[data-term="on"] body .mn-root .mn-st { font-size: 10.5px !important; }
+html[data-term="on"] body .mn-root .mn-st { font-size: 11.5px !important; }
+
+
+/* Mesa: hierarquia compacta com números alinhados e leitura confortável. */
+html[data-term="on"] body .ms-grid { gap: 8px; }
+html[data-term="on"] body .ms-col { gap: 8px; }
+html[data-term="on"] body .ms-cards { gap: 8px; margin-bottom: 8px; }
+html[data-term="on"] body .ms-box { border-color: #303030 !important; }
+html[data-term="on"] body .ms-head { min-height: 32px; flex-wrap: wrap; }
+html[data-term="on"] body .ms-head h3 { font-size: 12px; letter-spacing: .025em; }
+html[data-term="on"] body .ms-head h3::before { display: none; }
+html[data-term="on"] body .ms-tb td { padding-top: 6px; padding-bottom: 6px; }
+html[data-term="on"] body .ms-tb td:is(.px, .ch, .tm) { font-variant-numeric: tabular-nums; }
+html[data-term="on"] body :is(.ms-hsub, .ms-tb td.tm) { font-size: 11px; }
+html[data-term="on"] body :is(.ms-ct, .ms-curve-sub, .ms-news .src) { color: var(--text-3); }
+html[data-term="on"] body .ms-tb tr.old td.px { color: var(--text-3) !important; }
+html[data-term="on"] body .ms-card.old .ms-cv { color: var(--text-3) !important; }
+
+/* A densidade compacta continua disponível nos ajustes. */
+html[data-term="on"][data-density="compact"] body .ms-tb td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* Manchetes da Mesa usam fonte de leitura; preços e horários seguem monoespaçados. */
+html[data-term="on"] body .ms-news :is(.tt, .src) {
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+html[data-term="on"] body .ms-news .tt { font-size: 13px; line-height: 1.45; }
+html[data-term="on"] body .ms-news .hr { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* O foco por teclado permanece visível mesmo sem sombras. */
+html[data-term="on"] body :is(button, a, input, select, textarea, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--tt-key) !important;
+  outline-offset: -2px;
+}
+html[data-term="on"] body .ms-tb tr:focus-visible { background: #2b200b !important; }
+
+@media (max-width: 640px) {
+  html[data-term="on"] body .ms-tb td { padding-top: 8px; padding-bottom: 8px; }
+}
