@@ -32,7 +32,7 @@
     ['grade', 'Grade'], ['pontos', 'Pontos'], ['aurora', 'Aurora'], ['candles', 'Candles'],
     ['ondas', 'Ondas'], ['hex', 'Colmeia'], ['diagonal', 'Diagonais'], ['nenhum', 'Liso'], ['imagem', 'Sua imagem']
   ];
-  const MODES = [['dark', 'Escuro', 'fa-moon'], ['light', 'Claro', 'fa-sun'], ['auto', 'Automático', 'fa-desktop'], ['hour', 'Por horário', 'fa-clock']];
+  const MODES = [['dark', 'Escuro', 'fa-moon'], ['light', 'Claro', 'fa-sun'], ['auto', 'Automático', 'fa-desktop'], ['hour', 'Por horário', 'fa-clock'], ['terminal', 'Terminal', 'fa-terminal']];
 
   /* ---------------- aplicar ---------------- */
   function applyAll() {
@@ -55,13 +55,14 @@
     set('updown', P.updown !== 'padrao' ? P.updown : null);
     set('motion', P.motion === 'off' ? 'off' : null);
     set('ticker', P.ticker === 'off' ? 'off' : null);
+    set('term', P.mode === 'terminal' ? 'on' : null);
     set('cardSource', P.cardSource === true ? 'on' : null);
     set('cardTime', P.cardTime === true ? 'on' : null);
     const deskValue = JSON.stringify(P.mesaLayout || null);
     if (deskValue !== deskApplied) { deskApplied = deskValue; window.dispatchEvent(new Event('mesa-layout-changed')); }
   }
   // tema: o painel principal guarda escuro/claro; aqui decidimos quando é automático
-  const wantTheme = () => (P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+  const wantTheme = () => (P.mode === 'terminal' ? 'dark' : P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : P.mode === 'hour' ? (() => { const h = new Date().getHours(); return h >= P.dayFrom && h < P.dayTo ? 'light' : 'dark'; })()
       : null);
   function syncTheme(force) {
@@ -73,7 +74,7 @@
   setInterval(() => { if (P.mode === 'hour') syncTheme(); }, 60 * 1000);
   // o botão de lua/sol e o Alt+L voltam para o modo manual
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    if (P.mode === 'auto' || P.mode === 'hour') { P.mode = 'manual'; save(); }
+    if (P.mode === 'auto' || P.mode === 'hour' || P.mode === 'terminal') { P.mode = 'manual'; save(); applyAll(); }
     if (box && !box.hidden) setTimeout(render, 30);
   });
   const curMode = () => (P.mode === 'manual' ? (document.body.classList.contains('light') ? 'light' : 'dark') : P.mode);
@@ -146,7 +147,7 @@
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
-        <p class="aj-note">${P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
+        <p class="aj-note">${P.mode === 'terminal' ? 'Fundo preto, letras âmbar e fonte de terminal, no estilo das plataformas profissionais. A chave Aparência (ou Alt+L) volta ao tema de sempre.' : P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
           ? `Claro das <select data-num="dayFrom">${[...Array(24).keys()].map((h) => `<option ${h === P.dayFrom ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select> às <select data-num="dayTo">${[...Array(24).keys()].map((h) => `<option ${h === P.dayTo ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select>, escuro no resto do dia.`
           : 'A chave Aparência na barra lateral (ou Alt+L) também troca.'}</p>
       </section>
@@ -451,8 +452,8 @@
     if (b.dataset.set) {
       const k = b.dataset.set, raw = b.dataset.v;
       if (k === 'mode') {
-        if (raw === 'dark' || raw === 'light') { P.mode = 'manual'; save(); syncTheme(raw); }
-        else { P.mode = raw; save(); syncTheme(); }
+        if (raw === 'dark' || raw === 'light') { P.mode = 'manual'; save(); applyAll(); syncTheme(raw); }
+        else { P.mode = raw; save(); applyAll(); syncTheme(); }
       } else {
         P[k] = k === 'scale' ? +raw : raw;
         if (k === 'wp' && raw === 'imagem' && !P.wpUrl && !localStorage.getItem(IMG_KEY)) { save(); render(); return; }

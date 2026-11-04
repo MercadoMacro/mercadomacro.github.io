@@ -1,0 +1,132 @@
+/* =========================================================
+   TEMA TERMINAL (04/11/2026, pedido do Severino)
+   Imersão no estilo dos terminais profissionais de mercado: fundo preto, rótulos em âmbar,
+   números em branco, alta em verde e baixa em vermelho, fonte monoespaçada, cantos retos,
+   faixas de título em cinza-escuro, sem sombras, brilhos ou degradês.
+   Só vale com html[data-term="on"] (Ajustes > Tema > Terminal). Carregado depois dos outros CSS.
+   Para desfazer: tirar o <link> deste arquivo do index.html.
+   ========================================================= */
+html[data-term="on"] body {
+  --bg: #000;
+  --bg-2: #050505;
+  --surface: #0a0a0a;
+  --surface-2: #111;
+  --surface-3: #1a1a1a;
+  --line: #262626;
+  --line-2: #3a3a3a;
+  --text: #f2f2f2;
+  --text-2: #ffa028;
+  --text-3: #b5852f;
+  --accent: #ffa028;
+  --accent-soft: rgba(255,160,40,.14);
+  --accent-line: rgba(255,160,40,.5);
+  --accent-ink: #ffa028;
+  --pos: #23d160;
+  --neg: #ff3b30;
+  --info: #3d8bff;
+  --glass: #0a0a0a;
+  --radius: 0px;
+  --shadow-lg: none;
+  --tt-bar: #1c1c1c;
+  --tt-key: #ffcc00;
+  background: #000 !important;
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace !important;
+  letter-spacing: 0;
+}
+html[data-term="on"] body::before, html[data-term="on"] body::after { display: none !important; }
+html[data-term="on"] body :is(button, input, select, textarea, h1, h2, h3, h4, p, span, td, th, a, div, li, label) { font-family: inherit !important; }
+html[data-term="on"] body *, html[data-term="on"] body *::before, html[data-term="on"] body *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+}
+/* manter redondas as bolinhas de status (ao vivo, mercado aberto) e os botões de liga/desliga */
+html[data-term="on"] body :is(.ms-tb tr.ms-fx-live td.tm, .mn-row.rt .mn-n, .mn-perp.rt .mn-pn, .mn-st i, .tk-status .dot, .side-mkt i)::before,
+html[data-term="on"] body :is(.mn-row.rt .mn-n, .mn-perp.rt .mn-pn)::after,
+html[data-term="on"] body :is(.mn-st i, .aj-knob, .aj-sw, .ns-dot, .dot, [class*="pulse"], [class*="knob"], .switch, .switch *) { border-radius: 50% !important; }
+html[data-term="on"] body :is(.aj-sw, .switch, [role="switch"]) { border-radius: 999px !important; }
+
+/* fundo e painéis */
+html[data-term="on"] body :is(.tab-panel, .market-wrap, .mn-root, .ms-wrap) { background: transparent !important; }
+html[data-term="on"] body :is(.mn-card, .ms-box, .ms-card, .card, .panel, .quote-card, .ind-card, .wn-card) {
+  background: #050505 !important;
+  border: 1px solid var(--line-2) !important;
+}
+
+/* faixas de título dos blocos: cinza-escuro com texto âmbar em maiúsculas */
+html[data-term="on"] body :is(.ms-head, .mn-head) {
+  background: var(--tt-bar) !important;
+  border-bottom: 1px solid var(--line-2) !important;
+}
+html[data-term="on"] body .ms-head { margin: -1px -1px 0; padding: 6px 10px !important; }
+html[data-term="on"] body :is(.ms-head h3, .mn-head h3, .mn-head b, .mn-head strong, .mn-t, h2, h3) {
+  color: var(--accent) !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 600 !important;
+}
+html[data-term="on"] body .ms-head h3::before { background: var(--accent) !important; }
+
+/* tabelas: rótulos âmbar, números brancos */
+html[data-term="on"] body :is(.ms-tb td.nm, .mn-n, .wt-name, .label) { color: var(--text-2) !important; }
+html[data-term="on"] body :is(.ms-tb td.px, .mn-v, .ms-cv, .val, .qc-price) { color: #fff !important; font-variant-numeric: tabular-nums; }
+html[data-term="on"] body :is(.ms-tb tr, .mn-row) { border-color: #1a1a1a !important; }
+html[data-term="on"] body :is(.ms-tb tr:hover, .mn-row:hover, .mn-row.on) { background: #1f1608 !important; }
+html[data-term="on"] body .mn-row.on { box-shadow: inset 2px 0 0 var(--accent) !important; }
+html[data-term="on"] body .cc { background: #1c1c1c !important; color: #9a9a9a !important; border: 0 !important; }
+
+/* barra lateral: itens como teclas de função (ativa em amarelo com texto preto) */
+html[data-term="on"] body :is(.side, .topbar) { background: #000 !important; border-color: var(--line-2) !important; }
+html[data-term="on"] body .side .side-item { color: var(--text-2) !important; text-transform: uppercase; font-size: 12.5px !important; letter-spacing: .03em; }
+html[data-term="on"] body .side .side-item:hover { background: #1a1a1a !important; color: #fff !important; }
+html[data-term="on"] body.has-side .side .side-item.active { background: var(--tt-key) !important; color: #000 !important; }
+html[data-term="on"] body.has-side .side .side-item.active :is(.si-svg, svg, i, span) { color: #000 !important; }
+html[data-term="on"] body.has-side .side .side-item.active::before { display: none !important; }
+html[data-term="on"] body .side :is(.side-group, .side-group *) { color: #6f6f6f !important; }
+html[data-term="on"] body .side-brand { color: var(--accent) !important; }
+html[data-term="on"] body .tab-btn { text-transform: uppercase; color: var(--text-2) !important; }
+html[data-term="on"] body .tab-btn.active { background: var(--tt-key) !important; color: #000 !important; }
+
+/* faixa do topo: fita de cotações */
+html[data-term="on"] body .ticker { background: #000 !important; border: 1px solid var(--line-2) !important; }
+html[data-term="on"] body .ticker .label { color: var(--accent) !important; }
+html[data-term="on"] body .ticker .val { color: #fff !important; }
+html[data-term="on"] body .qbanner { color: #8a8a8a !important; }
+
+/* busca (Ctrl+K) como linha de comando */
+html[data-term="on"] body :is(input, select, textarea) {
+  background: #000 !important;
+  color: var(--tt-key) !important;
+  border: 1px solid var(--line-2) !important;
+  caret-color: var(--tt-key);
+}
+html[data-term="on"] body :is(input, textarea)::placeholder { color: #6b5a33 !important; }
+html[data-term="on"] body :is(input, select, textarea):focus { border-color: var(--accent) !important; outline: none !important; }
+
+/* botões: retos, cinza com texto âmbar; o ativo em amarelo */
+html[data-term="on"] body :is(.btn, .icon-btn, .mn-btn, .ms-seg button, .aj-seg button, .ecal-view-btn, .mn-faixas button) {
+  background: #1a1a1a !important;
+  color: var(--text-2) !important;
+  border: 1px solid var(--line-2) !important;
+}
+html[data-term="on"] body :is(.ms-seg button.on, .aj-seg button.on, .ecal-view-btn.active, .mn-faixas button.on, .mn-faixas button[aria-pressed="true"]) {
+  background: var(--tt-key) !important;
+  color: #000 !important;
+  border-color: var(--tt-key) !important;
+}
+
+/* notícias: hora em âmbar, manchete em branco, linhas finas */
+html[data-term="on"] body :is(.nw2-hora, .news-time, time) { color: var(--accent) !important; font-variant-numeric: tabular-nums; }
+html[data-term="on"] body :is(.nw2-n, .news-item) { border-bottom: 1px solid #1a1a1a !important; background: transparent !important; }
+html[data-term="on"] body :is(.nw2-n a, .nw2-n h4, .news-title) { color: #fff !important; }
+
+/* alta e baixa */
+html[data-term="on"] body :is(.up, .pos, .ch.up, .mn-c.up) { color: var(--pos) !important; }
+html[data-term="on"] body :is(.dn, .down, .neg, .ch.dn, .mn-c.dn) { color: var(--neg) !important; }
+
+/* rolagem fina */
+html[data-term="on"] body * { scrollbar-color: #3a3a3a #000; }
+
+/* status dos cartões do Mercado: a fonte monoespaçada é mais larga */
+html[data-term="on"] body .mn-root .mn-st { font-size: 10.5px !important; }
