@@ -581,7 +581,8 @@
     if (box && !box.hidden) render();
     // acesso perto de terminar: lembra uma vez por dia
     const falta = c.expira ? (Date.parse(c.expira) - Date.now()) / 864e5 : Infinity;
-    if (falta <= 3) {
+    // plano grátis (48 horas): só avisa no último dia, para não abrir o aviso logo depois do cadastro
+    if (falta <= (c.gratis ? 1 : 3)) {
       // uma vez por visita: aparece de novo ao abrir o site numa aba nova
       let visto = false; const k = 'mm_venc_popup';
       try { visto = sessionStorage.getItem(k) === c.expira; sessionStorage.setItem(k, c.expira); } catch (e) { /* nada */ }
@@ -597,9 +598,10 @@
   /* ---------------- aviso de vencimento com os planos ---------------- */
   function avisoVencimento(c, falta) {
     const ate = new Date(c.expira).toLocaleDateString('pt-BR');
-    const reais = (v) => 'R$ ' + (v / 100).toFixed(2).replace('.', ',');
+    const reais = (v) => 'R$\u00a0' + (v / 100).toFixed(2).replace('.', ',');
     fetch('/api/assinatura', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((j) => {
       const planos = (j && j.pix && j.planos) || [];
+      const cartao = !!(j && j.cartao);
       const dias = Math.ceil(falta);
       const quando = falta <= 0 ? 'terminou' : dias <= 1 ? 'termina amanhã' : `termina em ${dias} dias`;
       const el = document.createElement('div');
@@ -608,8 +610,15 @@
         <div class="mm-venc-box" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="mm-venc-t">
           <h2 id="mm-venc-t">Seu acesso ${quando}</h2>
           <p>Ele vale até <b>${ate}</b>. Escolha um plano para continuar usando o Mercado Macro sem interrupção. Se renovar agora, o novo período começa depois dessa data.</p>
-          ${planos.length ? `<div class="mm-venc-pl">${planos.map((p) => `<a href="/assinar?plano=${encodeURIComponent(p.id)}"><b>${esc(p.nome)}</b><strong>${reais(p.valor)}</strong><span>${esc(p.periodo)}${p.id === 'trimestral' || p.id === 'semestral' ? ` · ${reais(Math.round(p.valor / (p.id === 'trimestral' ? 3 : 6)))} por mês` : ''}</span></a>`).join('')}</div>
-          <p class="mm-venc-nota">Pagamento por Pix, sem renovação automática.</p>` : ''}
+          ${planos.length ? `<div class="mm-venc-pl">${planos.map((p) => {
+            // 12 meses é só no cartão: mostra o preço do cartão, não o valor interno do Pix
+            const v = p.soCartao ? p.valorCartao : p.valor;
+            const mes = p.meses > 1 ? ` · ${reais(Math.round(v / p.meses))} por mês` : '';
+            const sub = p.soCartao ? `${esc(p.periodo)} · só no cartão` : `${esc(p.periodo)}${mes}`;
+            const cart = cartao && !p.soCartao && p.valorCartao ? `<em>No cartão: ${reais(p.valorCartao)}</em>` : '';
+            return `<a href="/assinar?plano=${encodeURIComponent(p.id)}"><b>${esc(p.nome)}</b><strong>${reais(v)}</strong><span>${sub}</span>${cart}</a>`;
+          }).join('')}</div>
+          <p class="mm-venc-nota">${cartao ? 'No Pix, pagamento único, sem renovação automática. No cartão, renova sozinho até você cancelar.' : 'Pagamento por Pix, sem renovação automática.'}</p>` : ''}
           <div class="mm-venc-ac"><button type="button" data-x>Agora não</button><a href="/assinar">Ver assinatura</a></div>
         </div>`;
       const fechar = () => { el.remove(); document.removeEventListener('keydown', esc_); };
@@ -644,6 +653,7 @@
   .mm-venc-pl a { display:flex; flex-direction:column; gap:3px; padding:12px; border:1px solid var(--line-2); border-radius:10px; background:var(--surface-2); color:var(--text); text-decoration:none; }
   .mm-venc-pl a:hover, .mm-venc-pl a:focus-visible { border-color:var(--accent); outline:none; }
   .mm-venc-pl b { font-size:13px; } .mm-venc-pl strong { font-size:19px; } .mm-venc-pl span { font-size:11.5px; color:var(--text-3); }
+  .mm-venc-pl strong { white-space:nowrap; } .mm-venc-pl em { font-style:normal; font-size:11.5px; color:var(--accent); margin-top:2px; }
   .mm-venc-box .mm-venc-nota { font-size:12px; color:var(--text-3); }
   .mm-venc-ac { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
   .mm-venc-ac button, .mm-venc-ac a { min-height:40px; padding:9px 16px; border-radius:8px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
