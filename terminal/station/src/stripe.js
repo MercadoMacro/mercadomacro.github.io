@@ -310,8 +310,13 @@ export async function apiAdminStripe(req, env) {
     }
     await env.DB.prepare(`UPDATE stripe_orfas SET status = 'ligada', usuario_id = ?, decidido = ? WHERE id = ?`).bind(u.id, agora, x.id).run();
     // marca a conta na assinatura do Stripe, para as renovações chegarem já com o número da conta
-    if (x.assinatura && c.stripe_key) await stripe(c.stripe_key, 'POST', 'subscriptions/' + encodeURIComponent(x.assinatura), { metadata: { usuario_id: String(u.id), plano: x.plano } }).catch(() => null);
-    return json({ ok: true, nome: u.nome, validade: r.validade || null, repetido: !!r.repetido });
+    // se falhar, o acesso já está liberado; avisa o admin, porque as renovações podem voltar para a lista de faturas sem conta
+    let stripeFalhou = false;
+    if (x.assinatura && c.stripe_key) {
+      try { await stripe(c.stripe_key, 'POST', 'subscriptions/' + encodeURIComponent(x.assinatura), { metadata: { usuario_id: String(u.id), plano: x.plano } }); }
+      catch (e) { stripeFalhou = true; await registrar(env, u.id, 'Stripe: não consegui marcar a conta na assinatura ' + x.assinatura).catch(() => {}); }
+    }
+    return json({ ok: true, nome: u.nome, validade: r.validade || null, repetido: !!r.repetido, stripeFalhou });
   }
   if (b.acao === 'desligar') {
     if (c.stripe_webhook_id && c.stripe_key) await stripe(c.stripe_key, 'DELETE', 'webhook_endpoints/' + c.stripe_webhook_id).catch(() => null);
