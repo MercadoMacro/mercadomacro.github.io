@@ -239,7 +239,10 @@
   const DICA_CFD = 'Mercado fechado: cotação CFD (contrato que negocia quase 24 horas; pode diferir do valor oficial)';
   const cfdFora = (r, src) => src === 'CFD' && !!r && !situacao(r).aberto;
   // a Mesa usa a mesma regra: mercado do ativo aberto? (null = ativo fora dos cartões; futuros seguem a CME)
+  // bolsas com horário próprio, diferente do cartão (Hong Kong fecha depois de Tóquio; Austrália não tem cartão), sem feriados
+  const HORARIO = { '^HSI': { id: 'x-hk', tz: 'Asia/Hong_Kong', ab: '09:30', fe: '16:00' }, '^AXJO': { id: 'x-au', tz: 'Australia/Sydney', ab: '10:00', fe: '16:00' } };
   window.MMMercadoAberto = (s) => {
+    if (HORARIO[s]) return situacao(HORARIO[s]).aberto;
     const r = REGIOES.find((x) => [...x.linhas, ...x.mais].some((l) => l[0] === s)) || (/=F$/.test(s) ? REGIOES.find((x) => x.id === 'co') : null);
     return r ? situacao(r).aberto : null;
   };

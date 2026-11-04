@@ -125,7 +125,9 @@ globalThis.MMForexLive = (() => {
     quote(symbol) {
       if (symbol === DXY) return this.dxyQuote();
       const l = this.liveQuote(symbol), p = this.pollFresco(symbol);
-      const c = !l && this.capQuote(symbol);
+      // 04/11/2026 (Severino): CFD só vale com o mercado do ativo aberto; fechado, fica o preço oficial (fechamento)
+      let c = !l && this.capQuote(symbol);
+      if (c) { try { if (window.MMMercadoAberto?.(symbol) === false) c = null; } catch (e) { /* sem a regra, segue o CFD */ } }
       if (c) {
         const b = this.base(symbol);
         return { symbol, value: c.mid, change: b ? (c.mid / b - 1) * 100 : null, ts: c.t, source: 'Capital.com', epic: c.e, direction: c.dir };

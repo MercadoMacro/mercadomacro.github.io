@@ -665,7 +665,7 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo; <b>calculado</b> = DXY pela fórmula oficial com o câmbio ao vivo; <b>CFD</b> = preço de contrato que acompanha o índice ou futuro e negocia quase 24 horas, por isso pode diferir um pouco do valor oficial e se mexer com a bolsa fechada; Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
+      <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo; <b>calculado</b> = DXY pela fórmula oficial com o câmbio ao vivo; <b>CFD</b> = preço de contrato que acompanha o índice ou futuro, usado só enquanto o mercado do ativo está aberto (fechado, vale o último preço oficial); Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
