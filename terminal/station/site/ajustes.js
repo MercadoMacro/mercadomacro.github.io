@@ -600,7 +600,8 @@
     const ate = new Date(c.expira).toLocaleDateString('pt-BR');
     const reais = (v) => 'R$\u00a0' + (v / 100).toFixed(2).replace('.', ',');
     fetch('/api/assinatura', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((j) => {
-      const planos = (j && j.pix && j.planos) || [];
+      // degustação e grátis não aparecem aqui (a degustação saiu da página /assinar em 03/11/2026)
+      const planos = ((j && j.pix && j.planos) || []).filter((p) => p.id !== 'degustacao' && p.id !== 'gratis');
       const cartao = !!(j && j.cartao);
       const dias = Math.ceil(falta);
       const quando = falta <= 0 ? 'terminou' : dias <= 1 ? 'termina amanhã' : `termina em ${dias} dias`;
@@ -654,6 +655,7 @@
   .mm-venc-pl a:hover, .mm-venc-pl a:focus-visible { border-color:var(--accent); outline:none; }
   .mm-venc-pl b { font-size:13px; } .mm-venc-pl strong { font-size:19px; } .mm-venc-pl span { font-size:11.5px; color:var(--text-3); }
   .mm-venc-pl strong { white-space:nowrap; } .mm-venc-pl em { font-style:normal; font-size:11.5px; color:var(--accent); margin-top:2px; }
+  @media (max-width:560px) { .mm-venc-pl a:last-child:nth-child(odd) { grid-column:1 / -1; } }
   .mm-venc-box .mm-venc-nota { font-size:12px; color:var(--text-3); }
   .mm-venc-ac { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
   .mm-venc-ac button, .mm-venc-ac a { min-height:40px; padding:9px 16px; border-radius:8px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
