@@ -53,7 +53,7 @@
   try { cr = window.MMCryptoLive?.hostAllowed(location.hostname) ? new window.MMCryptoLive.Client({ enabled: true, onChange: (e) => { if (e?.type === 'quote') vivoMudou(e.symbol); } }) : null; } catch { cr = null; }
   const liveOn = () => typeof liveMode === 'undefined' || !!liveMode;
   // nomes dos fornecedores ao vivo ficam em Ajustes > Sobre (04/11/2026)
-  const rotuloVivo = (src) => (src === 'calculado' ? 'Tempo real, calculado pela fórmula oficial do índice (pode diferir um pouco do oficial)' : src === 'CFD' ? 'Tempo real, preço de CFD (pode diferir um pouco do oficial)' : src === 'ao vivo' ? 'Tempo real' : `Tempo real pela ${src}`);
+  const rotuloVivo = (src) => (src === 'calculado' || src === 'CFD' || src === 'ao vivo' ? 'Tempo real' : `Tempo real pela ${src}`);
   function vivo(s) {
     if (!liveOn() || !panel.classList.contains('active')) return null;
     const q = fx?.covers(s) ? fx.quote(s) : null;
@@ -114,7 +114,7 @@
       tr.dataset.s = r.symbol; if (r.symbol === sel && !side.hidden) tr.classList.add('on');
       const open = text('button', nice(r.symbol), 'wt-symbol'); open.type = 'button';
       open.setAttribute('aria-label', 'Ver ' + nice(r.symbol) + ' no painel');
-      if (q?.src) { open.classList.add('rt'); open.title = `${rotuloVivo(q.src)}; variação sobre o fechamento anterior do Yahoo`; }
+      if (q?.src) open.classList.add('rt');
       if (r.name && r.name !== nice(r.symbol)) { const nm = text('span', r.name, 'wt-name'); if (!open.title) open.title = r.name; open.append(nm); }
       name.append(open);
       if (!r.fresh && r.quote) name.append(text('span', 'Salvo', 'wt-saved'));

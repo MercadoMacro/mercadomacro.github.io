@@ -4457,8 +4457,7 @@ window.__onTabSwitch = (tabId) => {
         chgEl.textContent = '';
       }
       const item = valEl.closest('.item');
-      if (item && TITLES[k]) item.title = TITLES[k] + (lv ? ' · tempo real, calculado pela fórmula oficial com o câmbio ao vivo das 6 moedas da cesta' : '');
-      if (item && k === 'dxy') item.classList.toggle('calc', !!lv);
+      if (item && TITLES[k]) item.title = TITLES[k];
     });
   }
   const tk = $('#ticker');
@@ -4951,7 +4950,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=29';
+  sc.src = 'mercado-novo.js?v=30';
   document.body.appendChild(sc);
 })();
 /* =========================================================
@@ -4966,7 +4965,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=36';
+    sc.src = 'mesa.js?v=37';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');
@@ -5248,7 +5247,6 @@ function newsReadMins(n) {
       }
       if (timeEl) timeEl.textContent = 'tempo real · ' + (l.src ? l.src + ' ' : '') + new Date(l.ts || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       card.classList.add('qc-rt');
-      card.title = (l.src === 'calculado' ? 'Valor em tempo real calculado pela fórmula oficial do índice com o câmbio ao vivo das 6 moedas da cesta; pode diferir um pouco do oficial' : l.src === 'CFD' ? 'Preço em tempo real de CFD: contrato que acompanha o ativo e negocia quase 24 horas; pode diferir um pouco do valor oficial' : l.src ? 'Preço em tempo real pela ' + l.src : 'Preço em tempo real') + '. O gráfico e o fechamento anterior vêm do Yahoo.';
       if (dir) flashCard(card, dir > 0 ? 'up' : 'dn');
     }
   }
