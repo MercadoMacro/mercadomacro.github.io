@@ -116,3 +116,22 @@ test('fatura paga sem conta fica na lista do /admin e libera ao ligar pelo e-mai
   assert.equal((await adm()).orfas.length, 0);
   assert.equal((await adm({ acao: 'ligar', id: lista[0].id, email: 'outra@x.com' })).erro, 'Essa fatura já foi resolvida.');
 });
+
+test('fatura da lista já creditada para outra conta não é ligada a uma segunda conta', async () => {
+  db.exec(`INSERT INTO usuarios (id, nome, email, status, expira) VALUES (9, 'Conta B', 'b@x.com', 'pendente', NULL)`);
+  db.exec(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref) VALUES (8, 'mensal', 1990, 'aprovado', '2026-11-04', '2026-11-04', '2026-12-05', 'stripe:in_DUP')`);
+  db.exec(`INSERT INTO stripe_orfas (fatura, cliente, assinatura, email, valor, plano, primeira, criado, status) VALUES ('in_DUP', 'cus_d', 'sub_d', 'b@x.com', 1990, 'mensal', 1, '2026-11-04', 'aberta')`);
+  const chamadas = [];
+  globalThis.fetch = async (url) => { chamadas.push(String(url)); return new Response('{}'); };
+  const adm = (corpo) => apiAdminStripe(new Request('https://x/api/admin/stripe', corpo ? { method: 'POST', body: JSON.stringify(corpo) } : {}), env).then((x) => x.json());
+  const id = (await adm()).orfas.find((o) => o.fatura === 'in_DUP').id;
+  const r = await adm({ acao: 'ligar', id, email: 'b@x.com' });
+  assert.match(r.erro, /já foi creditada para outra conta: Outra/);
+  assert.equal(db.prepare(`SELECT status FROM stripe_orfas WHERE id = ?`).get(id).status, 'aberta');
+  assert.equal(db.prepare('SELECT status FROM usuarios WHERE id = 9').get().status, 'pendente');
+  assert.equal(chamadas.filter((u) => u.includes('subscriptions/')).length, 0);
+  // ligar à conta dona fecha a pendência sem creditar de novo
+  const ok = await adm({ acao: 'ligar', id, email: 'outra@x.com' });
+  assert.equal(ok.ok, true); assert.equal(ok.repetido, true);
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM pagamentos WHERE ref = 'stripe:in_DUP'`).get().n, 1);
+});

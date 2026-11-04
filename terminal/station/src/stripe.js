@@ -151,7 +151,7 @@ function dadosDaFatura(o, meta) {
 async function creditar(env, u, f, agora) {
   const plano = PLANOS[f.plano] || PLANOS.mensal, id = PLANOS[f.plano] ? f.plano : 'mensal';
   const ref = 'stripe:' + f.fatura;
-  if (await env.DB.prepare('SELECT 1 FROM pagamentos WHERE ref = ?').bind(ref).first()) return { repetido: true };
+  { const ja = await env.DB.prepare('SELECT usuario_id FROM pagamentos WHERE ref = ?').bind(ref).first(); if (ja) return { repetido: true, dono: ja.usuario_id }; }
   let validade = null, gravou = false;
   for (let tentativa = 0; tentativa < 5 && !gravou; tentativa++) {
     const atual = await env.DB.prepare('SELECT status, expira FROM usuarios WHERE id = ?').bind(u.id).first();
@@ -169,7 +169,7 @@ async function creditar(env, u, f, agora) {
         .bind(validade, id, f.cliente, f.assinatura, agora, u.id, ref, agora, u.id),
     ]);
     if (ins.meta.changes) { gravou = true; break; }
-    if (await env.DB.prepare('SELECT 1 FROM pagamentos WHERE ref = ?').bind(ref).first()) return { repetido: true };
+    { const ja = await env.DB.prepare('SELECT usuario_id FROM pagamentos WHERE ref = ?').bind(ref).first(); if (ja) return { repetido: true, dono: ja.usuario_id }; }
   }
   // não conseguiu gravar (a conta mudou em todas as tentativas): o Stripe reenvia depois
   if (!gravou) return { erro: 'Conta mudou durante a gravação; tente de novo.' };
@@ -303,6 +303,11 @@ export async function apiAdminStripe(req, env) {
     if (!['ativo', 'pendente', 'expirado'].includes(u.status)) return json({ erro: 'Essa conta está bloqueada ou recusada. Libere a conta antes.' }, 400);
     const r = await creditar(env, u, { fatura: x.fatura, valor: x.valor, cliente: x.cliente, assinatura: x.assinatura, plano: x.plano, fimStripe: x.fim_stripe, primeira: !!x.primeira }, agora);
     if (r.erro) return json({ erro: r.erro }, 409);
+    // a fatura já estava creditada para outra conta: não fecha a pendência nem mexe na assinatura do Stripe
+    if (r.repetido && Number(r.dono) !== Number(u.id)) {
+      const d = await env.DB.prepare('SELECT nome, email FROM usuarios WHERE id = ?').bind(r.dono).first();
+      return json({ erro: `Essa fatura já foi creditada para outra conta${d ? `: ${d.nome} (${d.email})` : ''}. Para fechar a pendência, ligue a essa conta ou clique em Ignorar.` }, 409);
+    }
     await env.DB.prepare(`UPDATE stripe_orfas SET status = 'ligada', usuario_id = ?, decidido = ? WHERE id = ?`).bind(u.id, agora, x.id).run();
     // marca a conta na assinatura do Stripe, para as renovações chegarem já com o número da conta
     if (x.assinatura && c.stripe_key) await stripe(c.stripe_key, 'POST', 'subscriptions/' + encodeURIComponent(x.assinatura), { metadata: { usuario_id: String(u.id), plano: x.plano } }).catch(() => null);
