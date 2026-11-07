@@ -129,9 +129,9 @@ def main():
         if cik in dados:
             continue
         r = anual(cik, RECEITA[:3])
-        if cik == 34088:
+        if tk[cik] == 'XOM':
             cc = get(f'https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/Revenues.json') or {}
-            print('    XOM Revenues:', list(cc.get('units', {}).keys()), [(x.get('start'), x.get('end'), x.get('form'), x.get('fp'), x.get('frame')) for x in cc.get('units', {}).get('USD', [])[-8:]])
+            print(f'    XOM {cik} Revenues:', list(cc.get('units', {}).keys()), [(x.get('start'), x.get('end'), x.get('form'), x.get('fp'), x.get('frame')) for x in cc.get('units', {}).get('USD', [])[-8:]])
         if not r or r[2] < f'{ano - 1}-06-30':
             continue
         l = anual(cik, LUCRO[:1])
