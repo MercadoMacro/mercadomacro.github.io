@@ -120,6 +120,19 @@
     }
   }
 
+  // Zona do euro (área Europa): séries do BCE e do Eurostat que o robô bce.yml grava em terminal/bce/bce.json
+  const BCE_URL = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/bce/bce.json';
+  let bceP = null, bceT = 0;
+  async function bce(k) {
+    if (!bceP || Date.now() - bceT > 10 * 60 * 1000) {
+      bceT = Date.now();
+      bceP = getJSON(BCE_URL + '?t=' + Math.floor(Date.now() / 600000), 20000).catch((e) => { bceP = null; throw e; });
+    }
+    const j = await bceP, s = j && j.series && j.series[k];
+    if (!Array.isArray(s) || !s.length) throw new Error('série indisponível');
+    return s.map(([d, v]) => [parseISO(d), v]);
+  }
+
   // séries derivadas
   const yoy = (s, lag = 12) => s.slice(lag).map((p, i) => [p[0], (p[1] / s[i][1] - 1) * 100]);
   const pop = (s) => s.slice(1).map((p, i) => [p[0], (p[1] / s[i][1] - 1) * 100]);
@@ -445,7 +458,120 @@
           subs: [], series: r.s, unitS: ' bi'
         };
       }
-    }))
+    })),
+
+    /* ---------- Europa (zona do euro) ---------- */
+    {
+      id: 'eu-dfr', area: 'eu', grp: 'Juros', nome: 'Juros do BCE', src: 'BCE · taxa de depósito', dk: 'd', periods: P_FRED_D, pi: 2, step: true,
+      info: 'Taxa de depósito do Banco Central Europeu, a taxa básica que o BCE usa hoje para conduzir a política de juros da zona do euro. Também aparecem a taxa de refinanciamento e a €STR, o juro de um dia entre bancos.',
+      load: async () => ({ s: await bce('dfr'), mro: await bce('mro').catch(() => []), estr: await bce('estr').catch(() => []) }),
+      view: (r) => {
+        const cur = last(r.s), ch = lastChange(r.s);
+        return {
+          value: nf(cur?.[1]), unit: '% (depósito)', date: cur && fmtDate(cur[0], 'd'),
+          delta: ch ? { v: ch.d, txt: `${sign(ch.d * 100, 0)} bp em ${fmtDate(ch.t, 'd')}`, bad: null } : null,
+          subs: [['Refinanciamento', nf(last(r.mro)?.[1]) + '%'], ['€STR', nf(last(r.estr)?.[1], 3) + '%']], series: r.s, unitS: '%'
+        };
+      }
+    },
+    {
+      id: 'eu-curva', area: 'eu', grp: 'Juros', nome: 'Juros dos governos do euro', src: 'BCE · curva de juros', dk: 'd', periods: P_FRED_D, pi: 1,
+      variants: [['2', '2 anos'], ['10', '10 anos'], ['30', '30 anos']], vi: 1,
+      info: 'Rendimento dos títulos de governo da zona do euro, pela curva que o BCE calcula com os títulos de todos os países do bloco. É o equivalente europeu dos Treasuries.',
+      load: async () => ({ 2: await bce('yc2'), 10: await bce('yc10'), 30: await bce('yc30') }),
+      view: (r, v) => {
+        const s = r[v] || [], cur = last(s), prev = last(s, 2);
+        return {
+          value: nf(cur?.[1]), unit: `% (${v} anos)`, date: cur && fmtDate(cur[0], 'd'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign((cur[1] - prev[1]) * 100, 0)} bp no dia`, bad: null } : null,
+          subs: ['2', '10', '30'].filter((k) => k !== v).map((k) => [k + ' anos', nf(last(r[k])?.[1]) + '%']), series: s, unitS: '%'
+        };
+      }
+    },
+    {
+      id: 'eu-spread', area: 'eu', grp: 'Juros', nome: 'Itália − Alemanha (10 anos)', src: 'BCE · juros de longo prazo', dk: 'm', periods: P_FRED_M, pi: 1,
+      variants: [['sp', 'Diferença'], ['de', 'Alemanha'], ['it', 'Itália']],
+      info: 'Diferença entre os juros de 10 anos da Itália e da Alemanha, a medida mais acompanhada do risco fiscal na zona do euro. Quanto maior, mais o mercado cobra para emprestar à Itália. Média mensal.',
+      load: async () => ({ de: await bce('de10'), it: await bce('it10') }),
+      view: (r, v) => {
+        const de = new Map(r.de.map(([t, x]) => [t, x]));
+        const sp = r.it.filter(([t]) => de.has(t)).map(([t, x]) => [t, x - de.get(t)]);
+        const s = v === 'de' ? r.de : v === 'it' ? r.it : sp, cur = last(s), prev = last(s, 2);
+        return {
+          value: nf(cur?.[1]), unit: v === 'sp' ? 'p.p.' : '% (10 anos)', date: cur && fmtDate(cur[0], 'm'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign((cur[1] - prev[1]) * 100, 0)} bp vs. mês anterior`, bad: v === 'sp' ? true : null } : null,
+          subs: [['Alemanha', nf(last(r.de)?.[1]) + '%'], ['Itália', nf(last(r.it)?.[1]) + '%']], series: s, unitS: v === 'sp' ? ' p.p.' : '%'
+        };
+      }
+    },
+    ...[['hicp', 'Inflação (HICP)', 'Inflação ao consumidor da zona do euro (índice harmonizado do Eurostat). A meta do BCE é 2% ao ano.'],
+      ['core', 'Núcleo da inflação', 'Inflação sem energia, alimentos, álcool e fumo, os itens mais voláteis. Mostra a tendência que o BCE acompanha.'],
+      ['serv', 'Inflação de serviços', 'Preços dos serviços na zona do euro. Depende muito de salários e costuma ser a parte mais lenta para cair.']].map(([k, nome, info]) => ({
+      id: 'eu-' + k, area: 'eu', grp: 'Inflação', nome, src: 'Eurostat · HICP', info, dk: 'm', periods: P_FRED_M, pi: 1,
+      ...(k === 'hicp' ? { variants: [['12m', '12 meses'], ['m', 'Mensal']] } : {}),
+      load: async () => (k === 'hicp' ? { s: await bce('hicp'), m: await bce('hicp_m').catch(() => []) } : { s: await bce(k) }),
+      view: (r, v) => {
+        const cur = last(r.s), prev = last(r.s, 2), mes = last(r.m || []);
+        return {
+          value: nf(cur?.[1], 1), unit: '% em 12 meses', date: cur && fmtDate(cur[0], 'm'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign(cur[1] - prev[1], 1)} p.p. vs. mês anterior`, bad: true } : null,
+          subs: [...(mes ? [['No mês', nf(mes[1], 1) + '%']] : []), ['Meta do BCE', '2,0%']], series: v === 'm' && r.m ? r.m : r.s, unitS: '%'
+        };
+      }
+    })),
+    {
+      id: 'eu-pib', area: 'eu', grp: 'Atividade', nome: 'PIB real', src: 'Eurostat · contas trimestrais', dk: 'q', periods: P_FRED_M, pi: 1,
+      variants: [['yoy', 'Anual'], ['qoq', 'Trimestral']],
+      info: 'Crescimento do PIB da zona do euro descontada a inflação. "Anual" compara com o mesmo trimestre do ano anterior; "Trimestral" compara com o trimestre anterior (sem anualizar, como a Europa divulga).',
+      load: async () => ({ a: await bce('pib'), q: await bce('pib_q') }),
+      view: (r, v) => {
+        const a = last(r.a), q = last(r.q), s = v === 'qoq' ? r.q : r.a;
+        return {
+          value: sign((v === 'qoq' ? q : a)?.[1], 1), unit: v === 'qoq' ? '% no trimestre' : '% em 12 meses', date: (v === 'qoq' ? q : a) && fmtDate((v === 'qoq' ? q : a)[0], 'q'),
+          delta: null,
+          subs: v === 'qoq' ? [['Anual', sign(a?.[1], 1) + '%']] : [['No trimestre', sign(q?.[1], 1) + '%']], series: s, unitS: '%', zero: true, bars: true
+        };
+      }
+    },
+    {
+      id: 'eu-desemp', area: 'eu', grp: 'Atividade', nome: 'Desemprego', src: 'BCE · Eurostat', dk: 'm', periods: P_FRED_M, pi: 1,
+      info: 'Taxa de desemprego da zona do euro, com ajuste sazonal.',
+      load: async () => ({ s: await bce('desemp') }),
+      view: (r) => {
+        const cur = last(r.s), prev = last(r.s, 2);
+        return {
+          value: nf(cur?.[1], 1), unit: '%', date: cur && fmtDate(cur[0], 'm'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign(cur[1] - prev[1], 1)} p.p. vs. mês anterior`, bad: true } : null,
+          subs: [], series: r.s, unitS: '%'
+        };
+      }
+    },
+    {
+      id: 'eu-m3', area: 'eu', grp: 'Atividade', nome: 'Dinheiro em circulação (M3)', src: 'BCE · agregados monetários', dk: 'm', periods: P_FRED_M, pi: 1,
+      info: 'Crescimento em 12 meses do M3, a medida mais ampla de dinheiro na zona do euro (moeda, depósitos e aplicações de curto prazo). Acelera quando o crédito e a economia ganham força.',
+      load: async () => ({ s: await bce('m3') }),
+      view: (r) => {
+        const cur = last(r.s), prev = last(r.s, 2);
+        return {
+          value: nf(cur?.[1], 1), unit: '% em 12 meses', date: cur && fmtDate(cur[0], 'm'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign(cur[1] - prev[1], 1)} p.p. vs. mês anterior`, bad: null } : null,
+          subs: [], series: r.s, unitS: '%'
+        };
+      }
+    },
+    {
+      id: 'eu-eurusd', area: 'eu', grp: 'Câmbio', nome: 'Euro em dólares', src: 'BCE · taxa de referência', dk: 'd', periods: P_FRED_D, pi: 1,
+      info: 'Quantos dólares vale um euro pela taxa de referência que o BCE publica todo dia útil por volta das 11h de Brasília. Não é cotação ao vivo.',
+      load: async () => ({ s: await bce('eurusd') }),
+      view: (r) => {
+        const cur = last(r.s), prev = last(r.s, 2), ano = r.s.find(([t]) => cur && t >= cur[0] - 365 * DAY);
+        return {
+          value: nf(cur?.[1], 4), unit: 'US$ por euro', date: cur && fmtDate(cur[0], 'd'),
+          delta: cur && prev ? { v: cur[1] - prev[1], txt: `${sign((cur[1] / prev[1] - 1) * 100)}% no dia`, bad: null } : null,
+          subs: ano ? [['Em 12 meses', sign((cur[1] / ano[1] - 1) * 100) + '%']] : [], series: r.s, unitS: ''
+        };
+      }
+    }
   ];
 
   const GROUP_ICON = { 'Juros': 'fa-percentage', 'Inflação': 'fa-fire', 'Câmbio': 'fa-exchange-alt', 'Atividade': 'fa-industry', 'Risco': 'fa-shield-alt', 'Tesouro Direto': 'fa-landmark', 'Balança comercial': 'fa-ship' };
@@ -701,6 +827,7 @@
       <div class="ind-area" role="tablist">
         <button data-a="br" role="tab">Brasil</button>
         <button data-a="us" role="tab">EUA</button>
+        <button data-a="eu" role="tab">Europa</button>
         <span class="ind-area-bar" aria-hidden="true"></span>
       </div>
       <button class="btn-sm ind-refresh" id="ind-refresh" title="Buscar de novo"><i class="fas fa-sync-alt"></i> Atualizar</button>
@@ -819,7 +946,8 @@
 
   const ATALHOS_AREA = {
     br: [['principais', 'Principais', 'fa-gauge-high'], ['comex', 'Balança comercial', 'fa-ship'], ['ibge', 'IBGE em detalhe', 'fa-building-columns'], ['tesouro', 'Tesouro Direto', 'fa-coins']],
-    us: [['principais', 'Principais', 'fa-gauge-high'], ['balanca', 'Balança comercial', 'fa-ship'], ['pib', 'PIB e renda', 'fa-chart-column'], ['juros', 'Juros e Fed', 'fa-landmark'], ['leiloes', 'Leilões', 'fa-gavel']]
+    us: [['principais', 'Principais', 'fa-gauge-high'], ['balanca', 'Balança comercial', 'fa-ship'], ['pib', 'PIB e renda', 'fa-chart-column'], ['juros', 'Juros e Fed', 'fa-landmark'], ['leiloes', 'Leilões', 'fa-gavel']],
+    eu: []
   };
   let ATALHOS = ATALHOS_AREA.br;
   const jump = root.querySelector('#ind-jump');
@@ -867,11 +995,12 @@
     // Brasil: barrinha de atalhos logo abaixo do título; cada botão mostra só uma parte da página (28/10/2026)
     // EUA ganhou a sua própria barra (28/10/2026)
     ATALHOS = ATALHOS_AREA[area] || ATALHOS_AREA.br;
+    // Europa ainda não tem atalhos: mostra tudo de uma vez
     let secao = 'principais';
     try { secao = localStorage.getItem('ind_secao_' + area) || 'principais'; } catch (e) { /* sem armazenamento */ }
     if (!ATALHOS.some(([k]) => k === secao)) secao = 'principais';
-    body.dataset.secao = secao; root.dataset.secao = secao; body.dataset.area = area;
-    desenhaAtalhos(secao);
+    body.dataset.secao = secao; root.dataset.secao = secao; body.dataset.area = area; root.dataset.area = area;
+    desenhaAtalhos(ATALHOS.length ? secao : null);
     body.innerHTML = grupos.map((g) => {
       const ds = defs.filter((d) => d.grp === g);
       return `<section class="ind-sec" data-s="${(area === 'us' || g !== 'Juros') && SEC_GRUPO[g] || 'principais'}"><div class="market-section-head"><span class="sec-icon"><i class="fas ${GROUP_ICON[g] || 'fa-chart-line'}"></i></span><h2>${esc(g)}</h2><span class="sec-count">${ds.length} ${ds.length > 1 ? 'indicadores' : 'indicador'}</span></div>
@@ -943,7 +1072,7 @@
     const defs = DEFS.filter((d) => d.area === prefs.area);
     const ts = Math.max(0, ...defs.map((d) => state[d.id].ts || 0));
     const loading = defs.some((d) => state[d.id].st === 'loading' || state[d.id].busy);
-    const fontes = prefs.area === 'br' ? 'Banco Central, IBGE e Tesouro Direto' : 'FRED (Federal Reserve de St. Louis)';
+    const fontes = prefs.area === 'br' ? 'Banco Central, IBGE e Tesouro Direto' : prefs.area === 'eu' ? 'Banco Central Europeu e Eurostat' : 'FRED (Federal Reserve de St. Louis)';
     root.querySelector('#ind-sub').textContent = loading ? `Atualizando… · ${fontes}`
       : ts ? `Atualizado às ${new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} · ${fontes}` : fontes;
     root.querySelector('#ind-refresh').classList.toggle('spinning', loading);
@@ -958,7 +1087,7 @@
     running = true;
     todo.forEach((d) => { state[d.id].busy = true; });
     updateSub();
-    await bundle(area, force);
+    if (area !== 'eu') await bundle(area, force);
     const queue = todo.slice();
     const worker = async () => {
       while (queue.length) {
@@ -1474,7 +1603,7 @@
     const cmp = cmpData(series);
 
     box.querySelector('.indx-head').innerHTML = `
-      <div><span class="ind-kick">${esc(d.grp)} · ${d.area === 'br' ? 'Brasil' : 'EUA'}</span>
+      <div><span class="ind-kick">${esc(d.grp)} · ${d.area === 'br' ? 'Brasil' : d.area === 'eu' ? 'Europa' : 'EUA'}</span>
         <h3>${esc(d.nome)}</h3>
         <div class="indx-val">${esc(v?.value ?? '—')}<small>${esc(v?.unit || '')}</small>${v?.date ? `<span>${esc(v.date)}</span>` : ''}</div></div>
       <button class="indx-x" title="Fechar (Esc)" aria-label="Fechar">✕</button>`;
@@ -1498,7 +1627,7 @@
     const grp = (lbl, arr) => (arr.length ? `<optgroup label="${lbl}">${arr.map((x) => `<option value="${x.id}" ${xp.cmp && xp.cmp.id === x.id ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</optgroup>` : '');
     return `<label class="indx-cmp${xp.cmp ? ' on' : ''}" title="Desenhar outro indicador no mesmo gráfico"><span>⇄</span><select data-xcmp aria-label="Comparar com outro indicador">
       <option value="">Comparar com…</option>
-      ${grp('Leitura do momento', c.filter((x) => x.id.startsWith('mo-')))}${grp('Brasil', c.filter((x) => x.area === 'br' && !x.id.startsWith('mo-')))}${grp('EUA', c.filter((x) => x.area === 'us' && !x.id.startsWith('mo-')))}
+      ${grp('Leitura do momento', c.filter((x) => x.id.startsWith('mo-')))}${grp('Brasil', c.filter((x) => x.area === 'br' && !x.id.startsWith('mo-')))}${grp('EUA', c.filter((x) => x.area === 'us' && !x.id.startsWith('mo-')))}${grp('Europa', c.filter((x) => x.area === 'eu'))}
     </select></label>`;
   }
   function loadCmp(cd) {
@@ -1769,6 +1898,7 @@
   .ind-jump button.on .ij-b { background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.35); color:inherit; }
   body:not(.light) .ind-jump button.on .ij-b { background:rgba(0,0,0,.14); border-color:rgba(0,0,0,.2); }
   #ind-root[data-secao]:not([data-secao="principais"]) #ind-mo { display:none; }
+  #ind-root[data-area="eu"] #ind-mo { display:none; } /* a leitura do momento é de Brasil e EUA */
   @media (max-width: 640px) {
     .ind-jump { display:grid; grid-template-columns:1fr 1fr; width:100%; overflow:visible; }
     .ind-jump button { justify-content:center; flex-wrap:wrap; row-gap:3px; padding:9px 8px; font-size:13px; white-space:normal; text-align:center; }
