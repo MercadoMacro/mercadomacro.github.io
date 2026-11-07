@@ -1,11 +1,75 @@
-189 ultimos/11: 200 [{"data":"01/12/2025","valor":"-0.01"},{"data":"01/01/2026",
-189 ultimos/12: 304 [{"data":"01/12/2025","valor":"-0.01"},{"data":"01/01/2026",
-189 ultimos/13: 200 [{"data":"01/10/2025","valor":"-0.36"},{"data":"01/11/2025",
-189 ultimos/14: 200 [{"data":"01/09/2025","valor":"0.42"},{"data":"01/10/2025","
-189 ultimos/24: 400 {"erro":{"statusCode":400,"detail":"br.gov.bcb.pec.sgs.comum
-432 ultimos/12: 200
-4389 ultimos/12: 200
-13522 ultimos/12: 304
-433 ultimos/12: 200
-189 ultimos/12: 304
-shrill 189 u13: "},{"data":"01/08/2026","valor":"-0.22"},{"data":"01/09/2026","valor":"1.57"},{"data":"01/10/2026","valor":"1.47"}] 200
+invezz page 200
+gnw page 403
+INVEZZ links 40
+https://invezz.com/ar/feeds/
+https://invezz.com/au/feeds/
+https://invezz.com/ca/feeds/
+https://invezz.com/cz/feeds/
+https://invezz.com/da/feeds/
+https://invezz.com/de/feeds/
+https://invezz.com/es/feeds/
+https://invezz.com/feeds/
+https://invezz.com/fi/feeds/
+https://invezz.com/fr/feeds/
+https://invezz.com/gr/feeds/
+https://invezz.com/ie/feeds/
+https://invezz.com/in/feeds/
+https://invezz.com/it/feeds/
+https://invezz.com/ms/feeds/
+https://invezz.com/ng/feeds/
+https://invezz.com/nl/feeds/
+https://invezz.com/no/feeds/
+https://invezz.com/nz/feeds/
+https://invezz.com/pk/feeds/
+https://invezz.com/pl/feeds/
+https://invezz.com/pt/feed/
+https://invezz.com/pt/feeds/
+https://invezz.com/pt/noticias/commodities/feed/
+https://invezz.com/pt/noticias/criptomoedas/feed/
+https://invezz.com/pt/noticias/economia/feed/
+https://invezz.com/pt/noticias/forex/feed/
+https://invezz.com/pt/noticias/funcionalidades/feed/
+https://invezz.com/pt/noticias/ideias-de-trading/feed/
+https://invezz.com/pt/noticias/imoveis/feed/
+https://invezz.com/pt/noticias/imprensa/feed/
+https://invezz.com/pt/noticias/investimentos-alternativos/feed/
+https://invezz.com/pt/noticias/mercado-de-acoes/feed/
+https://invezz.com/pt/noticias/mundo/feed/
+https://invezz.com/pt/noticias/obrigacoes/feed/
+https://invezz.com/ro/feeds/
+https://invezz.com/sg/feeds/
+https://invezz.com/tr/feeds/
+https://invezz.com/uk/feeds/
+https://invezz.com/za/feeds/
+GNW links 0
+
+FEED https://invezz.com/ar/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/au/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/ca/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/cz/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/da/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/de/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/es/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/fi/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/fr/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/gr/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/ie/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/in/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/it/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/ms/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/ng/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/nl/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/no/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/nz/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pk/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pl/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/feeds/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/commodities/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/criptomoedas/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/economia/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/forex/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/funcionalidades/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/ideias-de-trading/feed/ | 0 itens | mais novo - | []
+FEED https://invezz.com/pt/noticias/imoveis/feed/ | 0 itens | mais novo - | []
