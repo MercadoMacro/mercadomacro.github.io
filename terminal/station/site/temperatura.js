@@ -62,7 +62,8 @@
     const j = await getJSON(`${PROXY}/history?symbols=${encodeURIComponent(SYMS.join(','))}`);
     const data = {};
     for (const [k, v] of Object.entries(j || {})) if (v && Array.isArray(v.c) && v.c.length > 20) data[k] = { t: v.t, c: v.c, off: v.off || 0 };
-    if (Object.keys(data).length) { try { localStorage.setItem(HIST_KEY, JSON.stringify({ dia: hoje(), data })); } catch { /* cheio */ } }
+    // só guarda o dia se veio quase tudo; senão tenta de novo na próxima abertura
+    if (Object.keys(data).length >= SYMS.length - 2) { try { localStorage.setItem(HIST_KEY, JSON.stringify({ dia: hoje(), data })); } catch { /* cheio */ } }
     return data;
   }
 
