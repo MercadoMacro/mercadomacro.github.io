@@ -8,6 +8,6 @@ jobs:
     steps:
       - run: |
           A=https://data-api.ecb.europa.eu/service/data
-          for k in "ICP/M..N.000000.4.ANR" "ICP/M..N.XEF000.4.ANR" "ICP/M.U2.N.000000.4.*" "MNA/Q.Y..W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.*" "LFSI/M..S.UNEHRT.TOTAL0.15_74.T"; do
-            echo "== $k"; curl -s --max-time 120 "$A/$k?format=csvdata&lastNObservations=1&detail=dataonly" | cut -d, -f1-20 | awk -F, 'NR==1{for(i=1;i<=NF;i++)h[i]=$i; next}{print $0}' | head -40
+          for k in "ICP/M.U2.N..4.ANR" "ICP/M.U2...." "MNA/Q.Y..W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.GY" "MNA/Q.Y.I9.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR."; do
+            echo "== $k"; curl -s --max-time 150 "$A/$k?format=csvdata&startPeriod=2026-01&detail=dataonly" | awk -F, '{print $1","$(NF-1)","$NF}' | sort -u -t, -k1,1 | head -60
           done
