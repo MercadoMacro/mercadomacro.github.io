@@ -36,6 +36,9 @@ SERIES_EUROSTAT = {
 }
 
 
+DEGRAUS = ('dfr', 'mro')
+
+
 def periodo(p):
     p = p.strip()
     if len(p) == 10:
@@ -97,6 +100,8 @@ def main(saida):
     for k, buscar, chave in pedidos:
         s = buscar()
         if s and len(s) >= 3:
+            if k in DEGRAUS:  # taxas que só mudam nas reuniões: guarda só os pontos de mudança e o último
+                s = [x for i, x in enumerate(s) if i == 0 or i == len(s) - 1 or x[1] != s[i - 1][1]]
             series[k] = s
             print(f'{k}: {len(s)} pontos, último {s[-1]}')
         else:
