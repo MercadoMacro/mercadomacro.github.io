@@ -1,14 +1,11 @@
-== BCB 189 direto
-304 head: cannot open '/tmp/r' for reading: No such file or directory
-
-200 [{"data":"01/10/2026","valor":"1.47"}]
-ta":"01/03/2026","valor":"0.52"},{"data":"01/04/2026","valor":"2.73"},{"data":"01/05/2026","valor":"0.84"},{"data":"01/06/2026","valor":"-0.50"},{"data":"01/07/2026","valor":"-1.16"},{"data":"01/08/2026","valor":"-0.22"},{"data":"01/09/2026","valor":"1.57"},{"data":"01/10/2026","valor":"1.47"}] 200
-== 432 ultimos/3
-[{"data":"07/12/2026","valor":"13.75"},{"data":"08/12/2026","valor":"13.75"},{"data":"09/12/2026","valor":"13.75"}]
-== vitrine worker
-{"error":"Banco Central falhou: HTTP 304"} 502
-== home com varios UA
-200 Mozilla/5.0 (X11; Linux x86_64) Chrome/130 Safari/537.36
-200 Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)
-200 curl/8
-node fetch 401 application/json; charset=utf-8
+189 ultimos/11: 200 [{"data":"01/12/2025","valor":"-0.01"},{"data":"01/01/2026",
+189 ultimos/12: 304 [{"data":"01/12/2025","valor":"-0.01"},{"data":"01/01/2026",
+189 ultimos/13: 200 [{"data":"01/10/2025","valor":"-0.36"},{"data":"01/11/2025",
+189 ultimos/14: 200 [{"data":"01/09/2025","valor":"0.42"},{"data":"01/10/2025","
+189 ultimos/24: 400 {"erro":{"statusCode":400,"detail":"br.gov.bcb.pec.sgs.comum
+432 ultimos/12: 200
+4389 ultimos/12: 200
+13522 ultimos/12: 304
+433 ultimos/12: 200
+189 ultimos/12: 304
+shrill 189 u13: "},{"data":"01/08/2026","valor":"-0.22"},{"data":"01/09/2026","valor":"1.57"},{"data":"01/10/2026","valor":"1.47"}] 200
