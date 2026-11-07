@@ -62,7 +62,7 @@
     if (deskValue !== deskApplied) { deskApplied = deskValue; window.dispatchEvent(new Event('mesa-layout-changed')); }
   }
   // tema: o painel principal guarda escuro/claro; aqui decidimos quando é automático
-  const wantTheme = () => (P.mode === 'terminal' ? 'dark' : P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+  const wantTheme = () => (P.mode === 'terminal' ? (P.termClaro ? 'light' : 'dark') : P.mode === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : P.mode === 'hour' ? (() => { const h = new Date().getHours(); return h >= P.dayFrom && h < P.dayTo ? 'light' : 'dark'; })()
       : null);
   function syncTheme(force) {
@@ -73,14 +73,14 @@
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if (P.mode === 'auto') syncTheme(); });
   setInterval(() => { if (P.mode === 'hour') syncTheme(); }, 60 * 1000);
   // o botão de lua/sol e o Alt+L voltam para o modo manual
-  // Saindo do Terminal pela chave Aparência (ou Alt+L), a chave lembra dele: clicar de novo volta ao Terminal, e não ao escuro comum
-  // (pedido do Severino, 07/11/2026). Escolher outro tema nos Ajustes esquece isso.
+  // No Terminal, a chave Aparência (ou Alt+L) alterna entre Terminal escuro e Terminal claro (P.termClaro, pedido do Severino, 07/11/2026).
+  // voltaTerminal é de uma versão anterior (saía do Terminal para o Claro comum): quem ficou com ela volta ao Terminal no próximo clique.
   // A classe mm-troca desliga as transições de cor por um instante, para não piscar âmbar no tema claro.
   const semTransicao = () => { const h = document.documentElement; h.classList.add('mm-troca'); requestAnimationFrame(() => requestAnimationFrame(() => h.classList.remove('mm-troca'))); };
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const claro = document.body.classList.contains('light');
-    if (P.mode === 'terminal') { semTransicao(); P.mode = 'manual'; P.voltaTerminal = true; save(); applyAll(); }
-    else if (P.mode === 'manual' && P.voltaTerminal && !claro) { semTransicao(); P.mode = 'terminal'; save(); applyAll(); }
+    if (P.mode === 'terminal') { semTransicao(); P.termClaro = claro; save(); applyAll(); }
+    else if (P.mode === 'manual' && P.voltaTerminal && !claro) { semTransicao(); P.mode = 'terminal'; P.termClaro = false; delete P.voltaTerminal; save(); applyAll(); }
     else if (P.mode === 'auto' || P.mode === 'hour') { P.mode = 'manual'; save(); applyAll(); }
     if (box && !box.hidden) setTimeout(render, 30);
   });
@@ -154,7 +154,7 @@
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
-        <p class="aj-note">${P.mode === 'terminal' ? 'Fundo preto, letras âmbar e fonte de terminal, no estilo das plataformas profissionais. A chave Aparência (ou Alt+L) volta ao tema de sempre.' : P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
+        <p class="aj-note">${P.mode === 'terminal' ? 'Letras âmbar, cantos retos e fonte de terminal, no estilo das plataformas profissionais. A chave Aparência (ou Alt+L) alterna entre o Terminal escuro e o Terminal claro.' : P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
           ? `Claro das <select data-num="dayFrom">${[...Array(24).keys()].map((h) => `<option ${h === P.dayFrom ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select> às <select data-num="dayTo">${[...Array(24).keys()].map((h) => `<option ${h === P.dayTo ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select>, escuro no resto do dia.`
           : 'A chave Aparência na barra lateral (ou Alt+L) também troca.'}</p>
       </section>
@@ -461,7 +461,7 @@
       const k = b.dataset.set, raw = b.dataset.v;
       if (k === 'mode') {
         if (P.mode === 'terminal' || raw === 'terminal') semTransicao();
-        if (raw === 'light' && P.mode === 'terminal') P.voltaTerminal = true; else if (raw !== 'light') delete P.voltaTerminal;
+        delete P.voltaTerminal;
         if (raw === 'dark' || raw === 'light') { P.mode = 'manual'; save(); applyAll(); syncTheme(raw); }
         else { P.mode = raw; save(); applyAll(); syncTheme(); }
       } else {

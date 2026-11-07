@@ -133,3 +133,51 @@ html[data-term="on"] body .mn-root .mn-st { font-size: 10.5px !important; }
 
 /* troca de tema sem animação de cor (ajustes.js semTransicao), para o âmbar do Terminal não piscar no tema claro */
 html.mm-troca *, html.mm-troca *::before, html.mm-troca *::after { transition:none !important; }
+
+/* =========================================================
+   TERMINAL CLARO (07/11/2026, pedido do Severino)
+   Mesmo Terminal (fonte mono, cantos retos, rótulos em maiúsculas, tecla ativa amarela),
+   em fundo claro: papel branco, rótulos em âmbar escuro, números pretos, alta/baixa mais escuras para ler bem.
+   Vale quando o Terminal está ligado e o tema está claro (chave Aparência ou Alt+L).
+   ========================================================= */
+html[data-term="on"] body.light {
+  --bg: #f3f1ec;
+  --bg-2: #ebe8e1;
+  --surface: #fff;
+  --surface-2: #faf9f6;
+  --surface-3: #efece5;
+  --line: #ddd8cd;
+  --line-2: #c9c2b3;
+  --text: #111;
+  --text-2: #a35a00;
+  --text-3: #7a5a2a;
+  --accent: #b86200;
+  --accent-soft: rgba(184,98,0,.12);
+  --accent-line: rgba(184,98,0,.45);
+  --accent-ink: #a35a00;
+  --pos: #0b8a3e;
+  --neg: #d0211b;
+  --info: #1f63d6;
+  --glass: #fff;
+  --tt-bar: #e6e1d6;
+  --tt-key: #ffcc00;
+  background: #f3f1ec !important;
+}
+html[data-term="on"] body.light :is(.mn-card, .ms-box, .ms-card, .card, .panel, .quote-card, .ind-card, .wn-card) { background: #fff !important; }
+html[data-term="on"] body.light :is(.ms-tb td.px, .mn-v, .ms-cv, .val, .qc-price) { color: #111 !important; }
+html[data-term="on"] body.light :is(.ms-tb tr, .mn-row) { border-color: #ece8df !important; }
+html[data-term="on"] body.light :is(.ms-tb tr:hover, .mn-row:hover, .mn-row.on) { background: #fff4dc !important; }
+html[data-term="on"] body.light .cc { background: #ece8df !important; color: #6b6458 !important; }
+html[data-term="on"] body.light :is(.side, .topbar) { background: #f3f1ec !important; }
+html[data-term="on"] body.light .side .side-item:hover { background: #e6e1d6 !important; color: #111 !important; }
+html[data-term="on"] body.light .side :is(.side-group, .side-group *) { color: #8a8274 !important; }
+html[data-term="on"] body.light .ticker { background: #fff !important; }
+html[data-term="on"] body.light .ticker .val { color: #111 !important; }
+html[data-term="on"] body.light .qbanner { color: #6b6458 !important; }
+html[data-term="on"] body.light :is(input, select, textarea) { background: #fff !important; color: #111 !important; caret-color: #111; }
+html[data-term="on"] body.light :is(input, textarea)::placeholder { color: #9a8f7a !important; }
+html[data-term="on"] body.light :is(.btn, .icon-btn, .mn-btn, .ms-seg button, .aj-seg button, .ecal-view-btn, .mn-faixas button) { background: #ece8df !important; }
+html[data-term="on"] body.light :is(.ms-seg button.on, .aj-seg button.on, .ecal-view-btn.active, .mn-faixas button.on, .mn-faixas button[aria-pressed="true"]) { color: #000 !important; }
+html[data-term="on"] body.light :is(.nw2-n, .news-item) { border-bottom-color: #ece8df !important; }
+html[data-term="on"] body.light :is(.nw2-n a, .nw2-n h4, .news-title) { color: #111 !important; }
+html[data-term="on"] body.light * { scrollbar-color: #c9c2b3 #f3f1ec; }

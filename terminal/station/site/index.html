@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="watchlist-table.css?v=8">
 <link rel="stylesheet" href="conforto.css?v=2">
 <link rel="stylesheet" href="ao-vivo-solto.css?v=2">
-<link rel="stylesheet" href="terminal.css?v=2">
+<link rel="stylesheet" href="terminal.css?v=3">
 <style id="prefs-css">
   /* =====================================================================
      AJUSTES DO PAINEL (engrenagem): cor de destaque, papel de parede,
@@ -144,7 +144,7 @@
     if (p.updown && p.updown !== 'padrao') d.updown = p.updown;
     if (p.motion === 'off') d.motion = 'off';
     if (p.ticker === 'off') d.ticker = 'off';
-    if (p.mode === 'terminal') { d.term = 'on'; localStorage.setItem('trader_theme', 'dark'); }
+    if (p.mode === 'terminal') { d.term = 'on'; localStorage.setItem('trader_theme', p.termClaro ? 'light' : 'dark'); }
     if (p.cardSource === true) d.cardSource = 'on';
     if (p.cardTime === true) d.cardTime = 'on';
     // tema automático (sistema) ou por horário: decide antes do script principal ler o tema
@@ -804,7 +804,7 @@
 <script src="ana-secoes.js?v=10"></script>
 <script src="analise-avancada.js?v=1"></script>
 <script src="mesa-layout.js?v=2"></script>
-<script src="ajustes.js?v=36"></script>
+<script src="ajustes.js?v=37"></script>
 <script src="watchlists-core.js?v=1"></script>
 <script src="watchlists-store.js?v=2"></script>
 <script src="watchlists-ui.js?v=2"></script>
