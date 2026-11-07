@@ -645,6 +645,9 @@
     return isNaN(dt) ? null : dt;
   }
   let rsTxt = '', rsSrc = '', rsDate = null, rsEdit = false, rsLoaded = false;
+  // só o administrador edita; o que ele publica vai para todos (07/11/2026)
+  const rsAdmin = () => !!(window.__conta && window.__conta.admin);
+  window.addEventListener('mm-conta', () => { if (rsLoaded && !rsEdit) rsRender(); });
   const rsRoot = document.getElementById('rs-root');
   let rsBox = null;
   if (rsRoot) {
@@ -658,20 +661,18 @@
     if (!rsTxt && !rsEdit) {
       rsBox.innerHTML = rsLoaded ? `
         <div class="rs-top"><span class="rs-kicker"><i class="fas fa-book-open"></i> Resumo semanal</span><span class="sp"></span>
-          <button type="button" class="rs-ic" data-rs="edit"><i class="fas fa-pen"></i><span>Escrever</span></button></div>
-        <p class="rs-lead">Nenhum resumo publicado. Publique o arquivo <b>resumo-semanal.txt</b> na mesma pasta do site, ou escreva o texto aqui.</p>`
+          ${rsAdmin() ? '<button type="button" class="rs-ic" data-rs="edit"><i class="fas fa-pen"></i><span>Escrever</span></button>' : ''}</div>
+        <p class="rs-lead">Nenhum resumo publicado ainda.</p>`
         : '<div class="ind-boot">Carregando resumo semanal…</div>';
       return;
     }
     if (rsEdit) {
       rsBox.innerHTML = `
         <div class="rs-top"><span class="rs-kicker"><i class="fas fa-pen"></i> Editar resumo semanal</span></div>
-        <p class="rs-help">Cole o texto da semana. A primeira linha em <b>**negrito**</b> vira o título; dias começando com bolinha vermelha ou verde (ou só <b>**Segunda-feira (06/10)**</b>) viram as etiquetas do topo. Salvar guarda só neste navegador; para todos verem, baixe o arquivo e publique ele no lugar do <b>resumo-semanal.txt</b>.</p>
+        <p class="rs-help">Cole o texto da semana. A primeira linha em <b>**negrito**</b> vira o título; dias começando com bolinha vermelha ou verde (ou só <b>**Segunda-feira (06/10)**</b>) viram as etiquetas do topo. Ao publicar, o texto vale na hora para todos os assinantes.</p>
         <textarea id="rs-ta" spellcheck="true">${esc(rsTxt)}</textarea>
         <div class="rs-actions">
-          <button type="button" class="btn-sm rs-pri" data-rs="save"><i class="fas fa-check"></i> Salvar neste navegador</button>
-          <button type="button" class="btn-sm" data-rs="dl"><i class="fas fa-download"></i> Baixar resumo-semanal.txt</button>
-          ${localStorage.getItem(RS_LOCAL) ? '<button type="button" class="btn-sm" data-rs="reset"><i class="fas fa-undo"></i> Voltar ao publicado</button>' : ''}
+          <button type="button" class="btn-sm rs-pri" data-rs="save"><i class="fas fa-check"></i> Publicar para todos</button>
           <button type="button" class="btn-sm" data-rs="cancel">Cancelar</button>
         </div>`;
       setTimeout(() => document.getElementById('rs-ta')?.focus(), 30);
@@ -692,10 +693,10 @@
     rsBox.innerHTML = `
       <div class="rs-top">
         <span class="rs-kicker"><i class="fas fa-newspaper"></i> Resumo semanal</span>
-        ${rsSrc === 'local' ? '<span class="rs-tag" title="Texto salvo neste navegador; quem abre o site vê o arquivo publicado">versão deste navegador</span>' : when ? `<span class="rs-tag">publicado em ${when}</span>` : ''}
+        ${when ? `<span class="rs-tag">publicado em ${when}</span>` : ''}
         <span class="sp"></span>
         <button type="button" class="rs-ic" data-rs="copy" title="Copiar no formato do WhatsApp"><i class="fab fa-whatsapp"></i><span>Copiar</span></button>
-        <button type="button" class="rs-ic" data-rs="edit" title="Editar o texto da semana"><i class="fas fa-pen"></i><span>Editar</span></button>
+        ${rsAdmin() ? '<button type="button" class="rs-ic" data-rs="edit" title="Editar o texto da semana (só o administrador)"><i class="fas fa-pen"></i><span>Editar</span></button>' : ''}
       </div>
       <h3 class="rs-title">${inline(d.title || 'Resumo da semana')}</h3>
       ${velho ? `<p class="rs-old" role="note"><i class="fas fa-exclamation-triangle"></i> Resumo antigo: ${rsTitleDate(d.title) ? 'semana encerrada em' : 'publicado em'} ${refTxt}, há ${dias} dias. Não reflete o mercado desta semana.</p>` : ''}
@@ -713,9 +714,10 @@
         if (/<html|<!doctype/i.test(pub.slice(0, 200))) pub = '';   // hospedagem devolveu a página no lugar do arquivo
       }
     } catch (e) { /* sem arquivo publicado */ }
-    let loc = null;
-    try { loc = JSON.parse(localStorage.getItem(RS_LOCAL) || 'null'); } catch (e) { loc = null; }
-    if (loc && loc.txt && (!pub || !pubDate || loc.ts > pubDate.getTime())) { rsTxt = loc.txt; rsSrc = 'local'; rsDate = new Date(loc.ts); }
+    // o texto que o administrador publica pelo site (guardado na conta) vale sobre o arquivo, se for mais novo
+    let conta = null;
+    try { const r = await fetchT('/api/resumo-semanal', { credentials: 'same-origin', cache: 'no-store' }, 10000); if (r.ok) conta = await r.json(); } catch (e) { conta = null; }
+    if (conta && conta.txt && (!pub || !pubDate || conta.ts > pubDate.getTime())) { rsTxt = conta.txt; rsSrc = 'conta'; rsDate = new Date(conta.ts); }
     else if (pub) { rsTxt = pub; rsSrc = 'file'; rsDate = pubDate; }
     rsLoaded = true;
     rsRender();
@@ -734,23 +736,17 @@
       const t = rsWhats(rsTxt);
       (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => say('Resumo semanal copiado no formato do WhatsApp', 'success'), () => say('Não foi possível copiar', 'danger'));
     }
-    else if (a === 'edit') { rsEdit = true; rsRender(); }
+    else if (a === 'edit') { if (rsAdmin()) { rsEdit = true; rsRender(); } }
     else if (a === 'cancel') { rsEdit = false; rsRender(); }
     else if (a === 'save') {
       const v = document.getElementById('rs-ta').value.trim();
       if (!v) { say('O texto está vazio', 'warning'); return; }
-      try { localStorage.setItem(RS_LOCAL, JSON.stringify({ txt: v, ts: Date.now() })); } catch (err) { say('Sem espaço no navegador para salvar', 'danger'); return; }
-      rsTxt = v; rsSrc = 'local'; rsDate = new Date(); rsEdit = false; rsRender();
-      say('Resumo salvo neste navegador. Baixe o arquivo para publicar.', 'success');
+      b.disabled = true;
+      fetch('/api/admin/resumo-semanal', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ txt: v }) })
+        .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível publicar'); return j; })
+        .then((j) => { rsTxt = v; rsSrc = 'conta'; rsDate = new Date(j.ts); rsEdit = false; rsRender(); say('Resumo publicado para todos', 'success'); })
+        .catch((err) => { b.disabled = false; say(err.message || 'Não foi possível publicar', 'danger'); });
     }
-    else if (a === 'dl') {
-      const v = document.getElementById('rs-ta')?.value ?? rsTxt;
-      const url = URL.createObjectURL(new Blob([v], { type: 'text/plain;charset=utf-8' }));
-      const link = Object.assign(document.createElement('a'), { href: url, download: 'resumo-semanal.txt' });
-      document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }
-    else if (a === 'reset') { localStorage.removeItem(RS_LOCAL); rsEdit = false; rsLoad(); }
   });
   rsLoad();
 

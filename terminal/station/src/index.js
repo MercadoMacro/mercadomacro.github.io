@@ -159,6 +159,12 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      // resumo semanal (07/11/2026): o texto que o administrador salva no site vale para todos; sem ele, o site usa o resumo-semanal.txt
+      if (p === '/api/resumo-semanal' && req.method === 'GET') {
+        const r = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'resumo_semanal'").first().catch(() => null);
+        let v = null; try { v = r ? JSON.parse(r.valor) : null; } catch (e) { v = null; }
+        return json(v && v.txt ? { txt: v.txt, ts: v.ts } : { txt: null }, 200, { 'Cache-Control': 'no-store' });
+      }
       if (p === '/api/passe') {
         // o site aberto renova o passe a cada ~8 min: serve de sinal de "online" no /admin
         await env.DB.prepare('UPDATE usuarios SET visto = ? WHERE id = ?').bind(new Date().toISOString(), u.id).run().catch(() => 0);
@@ -1176,6 +1182,16 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'abertura' && req.method === 'GET') {
     const d = await dadosAbertura(env);
     return json({ ...d, texto: textoAbertura(d), legenda: textoAbertura(d, true), textoCanal: textoCanalAbertura(d) }, 200, { 'Cache-Control': 'no-store' });
+  }
+  if (acao === 'resumo-semanal' && req.method === 'PUT') {
+    if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+    const b = await req.json().catch(() => ({}));
+    const txt = typeof b.txt === 'string' ? b.txt.replace(/\r\n/g, '\n').trim() : '';
+    if (!txt) return json({ erro: 'O texto está vazio.' }, 400);
+    if (txt.length > 60000) return json({ erro: 'Texto grande demais.' }, 413);
+    const ts = Date.now();
+    await salvarConfig(env, { resumo_semanal: JSON.stringify({ txt, ts }) });
+    return json({ ok: true, ts });
   }
   if (acao === 'fechamento-modo' && req.method === 'POST') {
     // como o robô das 18h manda o fechamento: 'imagem' (cartão com legenda) ou 'texto' (só a mensagem)
