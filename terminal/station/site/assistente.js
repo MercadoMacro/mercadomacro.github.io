@@ -208,7 +208,7 @@
   function montar() {
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
-    painel.setAttribute('aria-label', 'Assistente'); painel.setAttribute('aria-hidden', 'true');
+    painel.setAttribute('aria-label', 'Assistente'); painel.inert = true;
     painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true">${marca()}</span><div class="ia-tit"><span class="ia-selo">Mercado Macro</span><h2>Assistente IA</h2><small>Inteligência de Mercado &amp; Análise Macro</small></div>
         <button type="button" data-ia="limpar" title="Apagar a conversa">${IC.lixo}<span>Limpar</span></button><button type="button" data-ia="fechar" aria-label="Fechar o assistente">${IC.x}<span>Fechar</span></button></div>
       <div class="ia-msgs" aria-live="polite"></div>
@@ -224,8 +224,9 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && painel.classList.contains('aberto')) fechar(); });
   }
 
-  function abrir() { if (!painel) montar(); desenhar(); document.body.classList.add('ia-aberto'); painel.classList.add('aberto'); painel.setAttribute('aria-hidden', 'false'); setTimeout(() => campo.focus(), 50); }
-  function fechar() { document.body.classList.remove('ia-aberto'); painel.classList.remove('aberto'); painel.setAttribute('aria-hidden', 'true'); }
+  function abrir() { if (!painel) montar(); desenhar(); document.body.classList.add('ia-aberto'); painel.classList.add('aberto'); painel.inert = false; setTimeout(() => campo.focus(), 50); }
+  // fechado = inert (some para leitores de tela e não recebe foco); o foco volta para o botão antes, senão o navegador reclama
+  function fechar() { const tinhaFoco = painel.contains(document.activeElement); document.body.classList.remove('ia-aberto'); painel.classList.remove('aberto'); if (tinhaFoco) document.getElementById('ia-fab')?.focus({ preventScroll: true }); painel.inert = true; }
 
   // botão flutuante no canto inferior direito (no celular, acima do botão Resumo)
   function botao() {
