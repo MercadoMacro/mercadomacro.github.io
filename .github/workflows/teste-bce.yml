@@ -8,27 +8,8 @@ jobs:
     steps:
       - run: |
           E=https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data
-          for q in "prc_hicp_manr?geo=EA&lastTimePeriod=2" "prc_hicp_minr?geo=EA&lastTimePeriod=2" "namq_10_gdp?geo=EA&unit=CLV_PCH_PRE&s_adj=SCA&na_item=B1GQ&lastTimePeriod=3" "namq_10_gdp?geo=EA&unit=CLV_PCH_SM&s_adj=SCA&na_item=B1GQ&lastTimePeriod=3" "une_rt_m?geo=EA&age=TOTAL&sex=T&unit=PC_ACT&s_adj=SA&lastTimePeriod=2"; do
-            echo "== $q"; curl -s --max-time 120 "$E/$q" > o.json; python3 - <<'P'
-          import json
-          d=json.load(open('o.json'))
-          if 'error' in d: print(d['error']); raise SystemExit
-          dims=d['id']; size=d['size']
-          print(dims, size, d.get('updated'))
-          for k in dims:
-            cat=d['dimension'][k]['category']['index']
-            if len(cat)<15: print(' ',k, list(cat)[:15])
-          # print values with coicop labels for TOTAL-like
-          import itertools
-          idx=[list(d['dimension'][k]['category']['index']) for k in dims]
-          vals=d['value']
-          n=0
-          for i,combo in enumerate(itertools.product(*idx)):
-            if str(i) in vals:
-              c=dict(zip(dims,combo))
-              if 'coicop' in c and c['coicop'] not in ('CP00','TOT_X_NRG_FOOD','TOTAL','TOT_X_NRG_FOOD_ALC_TBC') and not c['coicop'].startswith(('TOT','CP00')): continue
-              print('  ',c, vals[str(i)]); n+=1
-              if n>20: break
-          P
-          done
-          echo "== coicop lista"; curl -s "$E/prc_hicp_manr?geo=EA&lastTimePeriod=1" | python3 -c "import json,sys;d=json.load(sys.stdin);c=d['dimension'].get('coicop') or d['dimension'].get('coicop18');print(list(d['id']));print([k for k in c['category']['index']][:40])"
+          curl -s "$E/prc_hicp_minr?geo=EA&unit=RCH_A&lastTimePeriod=1" | python3 -c "
+          import json,sys;d=json.load(sys.stdin);c=d['dimension']['coicop18']['category']
+          print([(k,c['label'][k]) for k in c['index'] if not k.startswith('CP')])"
+          curl -s "$E/prc_hicp_minr?geo=EA&unit=RCH_A&coicop18=TOTAL&sinceTimePeriod=1997-01" | python3 -c "
+          import json,sys;d=json.load(sys.stdin);t=list(d['dimension']['time']['category']['index']);v=d['value'];print(len(t),t[:2],t[-2:],len(v), [ (t[int(i)],v[i]) for i in sorted(v,key=int)[:3]], [(t[int(i)],v[i]) for i in sorted(v,key=int)[-3:]])"
