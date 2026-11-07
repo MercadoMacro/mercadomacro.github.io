@@ -6,16 +6,11 @@ jobs:
   t:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v5
       - run: |
-          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=10" > t.json
-          python3 -c "
-          import json;d=json.load(open('t.json'))
-          n=[r for r in d if r['type']=='Note'][0]; b=d[0]
-          for r in (n,b): print({k:v for k,v in r.items() if v not in ('',None)})
-          "
-          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/upcoming?format=json" > u.json
-          python3 -c "
-          import json;d=json.load(open('u.json')); print({k:v for k,v in d[0].items() if v not in ('',None)})"
-          curl -s -A "Mozilla/5.0" -o /dev/null -w "%{http_code} %{size_download}\n" "https://www.treasurydirect.gov/TA_WS/securities/search?format=json&type=Note&securityTerm=10-Year&dateFieldName=auctionDate&startDate=2025-01-01"
-          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/search?format=json&dateFieldName=auctionDate&startDate=2026-05-01" > s.json; python3 -c "
-          import json;d=json.load(open('s.json')); print(len(d)); import collections; print(collections.Counter((r['type'],r['securityTerm']) for r in d).most_common(60))"
+          python3 terminal/leiloes/gerar_leiloes.py terminal/leiloes
+          ls -la terminal/leiloes
+          python3 -c "import json;d=json.load(open('terminal/leiloes/leiloes.json'));import collections;print(collections.Counter((x['tipo'],x['orig']) for x in d['leiloes']).most_common(40))"
+          curl -s -A "Mozilla/5.0" -o /dev/null -w "pdf %{http_code} %{content_type}\n" https://www.treasurydirect.gov/instit/annceresult/press/preanre/2026/R_20261029_3.pdf
+          base64 -w0 terminal/leiloes/leiloes.json | gzip -c | base64 -w0 > /dev/null
+          gzip -c terminal/leiloes/leiloes.json | base64 -w0; echo
