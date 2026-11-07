@@ -819,7 +819,7 @@
 
   const ATALHOS_AREA = {
     br: [['principais', 'Principais', 'fa-gauge-high'], ['comex', 'Balança comercial', 'fa-ship'], ['ibge', 'IBGE em detalhe', 'fa-building-columns'], ['tesouro', 'Tesouro Direto', 'fa-coins']],
-    us: [['principais', 'Principais', 'fa-gauge-high'], ['balanca', 'Balança comercial', 'fa-ship'], ['pib', 'PIB e renda', 'fa-chart-column'], ['juros', 'Juros e Fed', 'fa-landmark']]
+    us: [['principais', 'Principais', 'fa-gauge-high'], ['balanca', 'Balança comercial', 'fa-ship'], ['pib', 'PIB e renda', 'fa-chart-column'], ['juros', 'Juros e Fed', 'fa-landmark'], ['leiloes', 'Leilões', 'fa-gavel']]
   };
   let ATALHOS = ATALHOS_AREA.br;
   const jump = root.querySelector('#ind-jump');
@@ -919,7 +919,7 @@
     if (leiloesAsked) return;
     leiloesAsked = true;
     const sc = document.createElement('script');
-    sc.src = 'leiloes.js?v=1';
+    sc.src = 'leiloes.js?v=2';
     sc.onload = () => { if (prefs.area === 'us' && window.__leiloesRender) window.__leiloesRender(body); };
     sc.onerror = () => { leiloesAsked = false; };
     document.body.appendChild(sc);
@@ -1781,7 +1781,8 @@
   #ind-body[data-secao="ibge"] .ind-sec:not(#ibge-sec),
   #ind-body[data-secao="balanca"] .ind-sec:not([data-s="balanca"]),
   #ind-body[data-secao="juros"] .ind-sec:not([data-s="juros"]),
-  #ind-body[data-secao="pib"] .ind-sec:not(#bea-sec) { display:none; }
+  #ind-body[data-secao="pib"] .ind-sec:not(#bea-sec),
+  #ind-body[data-secao="leiloes"] .ind-sec:not(#leiloes-sec) { display:none; }
   .ind-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:14px; }
   .ind-card { display:flex; flex-direction:column; gap:6px; min-height:250px; overflow:hidden; }
   .ind-card.ind-wide { grid-column:1 / -1; min-height:0; }

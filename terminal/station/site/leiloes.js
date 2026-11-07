@@ -1,5 +1,5 @@
 /* =========================================================
-   LEILÕES DO TESOURO DOS EUA NA ABA INDICADORES (área EUA, atalho "Juros e Fed"), 07/11/2026.
+   LEILÕES DO TESOURO DOS EUA NA ABA INDICADORES (área EUA, atalho próprio "Leilões" ao lado de "Juros e Fed"), 07/11/2026.
    Fonte: TreasuryDirect (Departamento do Tesouro dos EUA), API pública sem chave, lida pelo robô leiloes.yml
    do GitHub, que grava terminal/leiloes/leiloes.json. Só títulos de prazo longo (Notes, Bonds, TIPS e FRN);
    as letras curtas (Bills) ficam de fora. Cada leilão é comparado com a média dos 6 anteriores do mesmo prazo.
@@ -130,7 +130,7 @@
     let sec = container.querySelector('#leiloes-sec');
     if (!sec) {
       sec = document.createElement('section');
-      sec.className = 'ind-sec'; sec.id = 'leiloes-sec'; sec.dataset.s = 'juros';
+      sec.className = 'ind-sec'; sec.id = 'leiloes-sec'; sec.dataset.s = 'leiloes';
       sec.innerHTML = `<div class="market-section-head"><span class="sec-icon"><i class="fas fa-gavel"></i></span><h2>Leilões do Tesouro dos EUA</h2><span class="sec-count">Notes, Bonds, TIPS e FRN</span></div>
         <div class="ib-box"><div class="ib-h"><h3>Resultado e agenda dos leilões</h3><span class="ib-meta"></span></div><div class="ib-in"></div></div>`;
       sec.addEventListener('click', (e) => {
