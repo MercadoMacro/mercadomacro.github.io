@@ -140,7 +140,7 @@ function parseDate(raw) {
   return isNaN(d) ? null : d;
 }
 
-async function fetchOneFeed(feed) {
+async function fetchOneFeed(feed, fresco) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -148,7 +148,8 @@ async function fetchOneFeed(feed) {
     const response = await fetch(feed.url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       signal: controller.signal,
-      cf: { cacheTtl: 90, cacheEverything: true }
+      // fresco: lê direto da fonte, sem a cópia de 90 s guardada na borda (notícias em tempo real, 07/11/2026)
+      ...(fresco ? { cache: 'no-store' } : { cf: { cacheTtl: 90, cacheEverything: true } })
     });
 
     if (!response.ok) { clearTimeout(timeout); return []; }
@@ -249,6 +250,13 @@ const CHAVE_ULTIMOS = 'https://cache.local/feeds-ultimos-v1';
 // Junta todos os feeds: tira repetidas e velhas, no máximo 30 por fonte (as mais novas), mais recentes primeiro.
 // Antes eram as 250 de maior nota de todas as fontes juntas, e uma fonte inteira podia sumir da lista.
 // Feed que falhar usa a última leitura boa (guardada num único item do cache, para não gastar pedidos).
+// Financial Juice publica manchete por manchete: o NewsRelay lê este feed direto a cada rodada (15 s),
+// sem esperar o servidor de notícias (que guarda cópias por até 2 a 3 minutos)
+export async function noticiasRapidas() {
+  const fj = FEEDS.find((f) => f.source === 'Financial Juice');
+  return fj ? fetchOneFeed(fj, true) : [];
+}
+
 export async function coletarNoticias(ctx) {
   const res = await Promise.all(FEEDS.map((f) => fetchOneFeed(f)));
   const falharam = [];
