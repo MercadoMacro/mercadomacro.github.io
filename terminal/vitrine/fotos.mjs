@@ -22,6 +22,31 @@ const ABAS = [
   ['noticias', 'news-panel', 10000],
 ];
 
+// passe do servidor de dados (29/10/2026 em diante o servidor recusa pedidos sem passe): troca o token OIDC
+// do GitHub (id-token no vitrine.yml) por um passe de 10 min em /api/robo/passe e entrega ao painel no lugar
+// do /api/passe, que este servidor estático não tem. Fora do GitHub (teste local), segue sem passe.
+let passe = '', passeAte = 0;
+async function passeRobo() {
+  if (passe && Date.now() < passeAte) return passe;
+  const { ACTIONS_ID_TOKEN_REQUEST_URL: u, ACTIONS_ID_TOKEN_REQUEST_TOKEN: t } = process.env;
+  if (!u || !t) return '';
+  try {
+    const oidc = await (await fetch(u + '&audience=mercadomacro-passe', { headers: { Authorization: 'bearer ' + t }, signal: AbortSignal.timeout(20000) })).json();
+    const r = await fetch('https://mercadomacro.com.br/api/robo/passe', { method: 'POST', headers: { Authorization: 'Bearer ' + oidc.value }, signal: AbortSignal.timeout(20000) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.passe) { passe = j.passe; passeAte = Date.now() + 7 * 60000; }
+    else console.log('passe do robô recusado: HTTP ' + r.status);
+  } catch (e) { console.log('sem passe do robô: ' + e.message); }
+  return passe;
+}
+const darPasse = (ctx) => ctx.route('**/api/passe', async (rota) => {
+  const p = await passeRobo();
+  if (!p) return rota.fulfill({ status: 503, body: '' });
+  return rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ passe: p, exp: Math.floor(passeAte / 1000) + 120 }) });
+});
+// tela com erro de dados não vira foto: fica a foto anterior
+const ERRO_DADOS = /Não foi possível atualizar|HTTP 4\d\d|HTTP 5\d\d|Gráfico indisponível agora/;
+
 const prep = () => {
   try {
     localStorage.setItem('trader_theme', 'dark');
@@ -32,6 +57,7 @@ const prep = () => {
 const br = await chromium.launch();
 const ctx = await br.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo', serviceWorkers: 'block' });
 await ctx.addInitScript(prep);
+await darPasse(ctx);
 const pg = await ctx.newPage();
 await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
 await pg.waitForTimeout(6000);
@@ -45,6 +71,8 @@ for (const [nome, aba, espera, rolar] of ABAS) {
     if (rolar) await pg.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), rolar);
     await pg.waitForTimeout(rolar ? 1500 : 0);
     await pg.evaluate(() => document.querySelectorAll('.toast, #cookie-consent').forEach((e) => e.remove()));
+    const erro = await pg.evaluate((re) => { const m = document.body.innerText.match(new RegExp(re)); return m ? m[0] : ''; }, ERRO_DADOS.source);
+    if (erro) { console.log('pulou', nome, '(tela com erro de dados: ' + erro + ')'); continue; }
     await pg.screenshot({ path: `${OUT}/${nome}.jpg`, type: 'jpeg', quality: 78 });
     console.log('ok', nome);
   } catch (e) { console.log('falhou', nome, e.message); }
@@ -53,6 +81,7 @@ for (const [nome, aba, espera, rolar] of ABAS) {
 // celular
 const cel = await br.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo', serviceWorkers: 'block' });
 await cel.addInitScript(prep);
+await darPasse(cel);
 const pc = await cel.newPage();
 await pc.goto(BASE, { waitUntil: 'domcontentloaded' });
 await pc.waitForTimeout(12000);

@@ -1690,7 +1690,7 @@ const ROBOS_AVISO = ['vigia.yml', 'resumo.yml', 'abertura.yml']; // robôs que p
 // robôs do GitHub que buscam dados no servidor de dados: trocam o token OIDC do GitHub (audience mercadomacro-passe)
 // por um passe "robo:<arquivo>" em /api/robo/passe. Nenhuma chave guardada: o GitHub assina o token.
 const GH_AUD_PASSE = 'mercadomacro-passe';
-const ROBOS_PASSE = ['vigia.yml', 'historico.yml'];
+const ROBOS_PASSE = ['vigia.yml', 'historico.yml', 'vitrine.yml'];
 async function passeDoRobo(req, env) {
   if (req.method !== 'POST') return json({ erro: 'Método não permitido.' }, 405);
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
@@ -2058,6 +2058,7 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://mercadomacro.com.br/calculadora-juros-compostos</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/calculadora-aposentadoria</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/planos</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mercadomacro.com.br/fechamento-do-mercado</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://mercadomacro.com.br/balanca-comercial</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>

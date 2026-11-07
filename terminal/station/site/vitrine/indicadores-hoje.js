@@ -5,13 +5,15 @@
   var M = window.MM, $ = function (id) { return document.getElementById(id); };
   var FOCUS = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/historico/focus.json';
   function card(nome, valor, nota, cls) { return '<div class="ind"><span>' + nome + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + valor + '</b><small>' + (nota || '') + '</small></div>'; }
+  // a série 432 do Banco Central já traz a meta repetida até a véspera do próximo Copom (data no futuro)
+  function vigente(d) { var p = d.split('/'), t = new Date(+p[2], +p[1] - 1, +p[0]); return t > new Date() ? 'ao ano, vigente hoje' : 'ao ano, em ' + d; }
   function mes(d) { var p = d.split('/'); return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+p[1] - 1] + '/' + p[2]; }
 
   // juros e inflação
   var J = { selic: null, cdi: null, ipca: null, ipcam: null, igpm: null };
   function juros() {
     var c = [];
-    c.push(J.selic ? card('Selic (meta do Copom)', M.nf(J.selic.v, 2) + '%', 'ao ano, em ' + J.selic.d) : card('Selic (meta do Copom)', '—', 'sem resposta do Banco Central'));
+    c.push(J.selic ? card('Selic (meta do Copom)', M.nf(J.selic.v, 2) + '%', vigente(J.selic.d)) : card('Selic (meta do Copom)', '—', 'sem resposta do Banco Central'));
     c.push(J.cdi ? card('CDI', M.nf(J.cdi.v, 2) + '%', 'ao ano, em ' + J.cdi.d) : card('CDI', '—', ''));
     if (J.ipca) { var a = J.ipca[J.ipca.length - 1], b = J.ipca[J.ipca.length - 2], dif = b ? a.v - b.v : NaN; c.push(card('IPCA em 12 meses', M.nf(a.v, 2) + '%', 'até ' + mes(a.d) + (M.ok(dif) ? ' (' + (dif >= 0 ? '+' : '') + M.nf(dif, 2) + ' ponto no mês)' : ''))); }
     else c.push(card('IPCA em 12 meses', '—', ''));
@@ -29,7 +31,7 @@
     M.serie(4389).then(function (s) { J.cdi = ultimo(s); }).catch(function () {}),
     M.serie(13522, 2).then(function (s) { J.ipca = s; }).catch(function () {}),
     M.serie(433).then(function (s) { J.ipcam = ultimo(s); }).catch(function () {}),
-    M.serie(189, 12).then(function (s) { J.igpm = s; }).catch(function () {})
+    M.serie(189, 13).then(function (s) { J.igpm = s; }).catch(function () {})
   ]).then(juros);
 
   // Focus
