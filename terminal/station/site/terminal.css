@@ -130,3 +130,6 @@ html[data-term="on"] body * { scrollbar-color: #3a3a3a #000; }
 
 /* status dos cartões do Mercado: a fonte monoespaçada é mais larga */
 html[data-term="on"] body .mn-root .mn-st { font-size: 10.5px !important; }
+
+/* troca de tema sem animação de cor (ajustes.js semTransicao), para o âmbar do Terminal não piscar no tema claro */
+html.mm-troca *, html.mm-troca *::before, html.mm-troca *::after { transition:none !important; }
