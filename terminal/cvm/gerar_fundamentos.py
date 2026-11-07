@@ -85,7 +85,7 @@ def digitos(s):
 # ---------------------------------------------------------------- demonstrações
 def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
     """
-    Lê DRE, BPA, BPP e DFC (consolidado; individual só para quem não tem consolidado).
+    Lê DRE, BPA, BPP e DFC (consolidado; individual para quem não tem consolidado ou mandou ele zerado).
     Retorna {cnpj: {dt_refer: {'versao', 'denom', 'cvm', 'contas': {(demo, ordem, ini, fim, cod): (desc, valor)}}}}
     """
     out = {}
@@ -101,17 +101,9 @@ def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
                 doc = emp.get(dt)
                 if doc is None or ver > doc['versao']:
                     doc = emp[dt] = {'versao': ver, 'denom': r.get('DENOM_CIA', ''), 'cvm': digitos(r.get('CD_CVM')).lstrip('0'),
-                                     'tipo': {}, 'contas': {}}
+                                     'por': {'con': {}, 'ind': {}}}
                 elif ver < doc['versao']:
                     continue
-                # consolidado manda: se o documento já tem consolidado desta demonstração, ignora o individual
-                t = doc['tipo'].setdefault(demo, tipo)
-                if t != tipo:
-                    if t == 'ind' and tipo == 'con':
-                        doc['contas'] = {k: v for k, v in doc['contas'].items() if k[0] != demo}
-                        doc['tipo'][demo] = 'con'
-                    else:
-                        continue
                 v = num(r.get('VL_CONTA'))
                 if v is None:
                     continue
@@ -119,7 +111,19 @@ def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
                     v *= 1000
                 ordem = 'U' if norm(r.get('ORDEM_EXERC')).startswith('ULT') else 'P'
                 k = (demo, ordem, r.get('DT_INI_EXERC', ''), r.get('DT_FIM_EXERC', ''), r.get('CD_CONTA', ''))
-                doc['contas'][k] = (norm(r.get('DS_CONTA')), v)
+                doc['por'][tipo][k] = (norm(r.get('DS_CONTA')), v)
+    # consolidado manda; o individual vale quando a empresa não tem consolidado ou entregou o consolidado zerado
+    # (TIM em 2024 e 2025 mandou o consolidado todo em zero: auditoria de 07/11/2026)
+    for emp in out.values():
+        for doc in emp.values():
+            con, ind = doc.pop('por').values()
+            contas = {}
+            for demo in ('DRE', 'BPA', 'BPP', 'DFC'):
+                c = {k: v for k, v in con.items() if k[0] == demo}
+                if not any(v[1] for v in c.values()):
+                    c = {k: v for k, v in ind.items() if k[0] == demo} or c
+                contas.update(c)
+            doc['contas'] = contas
     return out
 
 
