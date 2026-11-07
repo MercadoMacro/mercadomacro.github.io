@@ -71,7 +71,7 @@
   }
   const noticias = () => { try { return (typeof newsAll !== 'undefined' && Array.isArray(newsAll)) ? newsAll : []; } catch (e) { return []; } };
   const agenda = () => { try { return (typeof calFeed !== 'undefined' && Array.isArray(calFeed)) ? calFeed : []; } catch (e) { return []; } };
-  const casasDe = (sym) => (/BRL=X$/.test(sym) ? 4 : /^\^(BVSP)$/.test(sym) ? 0 : 2);
+  const casasDe = (sym) => (/BRL=X$/.test(sym) ? 4 : /^\^(BVSP|N225|DJI|HSI)$/.test(sym) ? 0 : 2);
   const num = (v, c) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
   // o número que a pessoa escreveu, sem zeros sobrando (5,50 e não 5,5000)
   const numAlvo = (v, c) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: Math.min(2, c), maximumFractionDigits: c });
@@ -118,7 +118,12 @@
   // =====================================================================
   let jan = null, janTimer = 0, janBusca = 0;
   const janelaAberta = () => !!(jan && !jan.closed);
-  const ATIVOS = [['^BVSP', 'Ibovespa'], ['^GSPC', 'S&P 500'], ['^IXIC', 'Nasdaq'], ['BRL=X', 'Dólar']];
+  const GRUPOS = [
+    ['Bolsas', [['^BVSP', 'Ibovespa'], ['^GSPC', 'S&P 500'], ['^IXIC', 'Nasdaq'], ['^DJI', 'Dow Jones'], ['ES=F', 'Futuro S&P 500'], ['^N225', 'Nikkei 225'], ['^HSI', 'Hang Seng'], ['^GDAXI', 'DAX'], ['^STOXX50E', 'Euro Stoxx 50'], ['^VIX', 'VIX']]],
+    ['Moedas e juros', [['BRL=X', 'Dólar'], ['EURBRL=X', 'Euro'], ['DX-Y.NYB', 'DXY'], ['^TNX', 'Treasury 10 anos (%)']]],
+    ['Commodities', [['BZ=F', 'Petróleo Brent'], ['CL=F', 'Petróleo WTI'], ['GC=F', 'Ouro'], ['SI=F', 'Prata']]],
+    ['Cripto', [['BTC-USD', 'Bitcoin'], ['ETH-USD', 'Ethereum']]],
+  ];
   const JAN_CSS = `
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -137,7 +142,8 @@
     .j-fala b { color: #f2b92e; } .j-fala small { display: block; color: #9aa0aa; margin-top: 3px; font-size: 11px; }
     .j-fala.urg { border-color: #ea3943; cursor: pointer; } .j-fala.urg b { color: #ff8a8a; }
     ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; overflow: auto; }
-    li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 8px; border-radius: 8px; background: #161920; }
+    li { display: grid; grid-template-columns: minmax(0,1fr) auto 62px; align-items: baseline; gap: 8px; padding: 6px 8px; border-radius: 8px; background: #161920; }
+    li b { text-align: right; } li.j-sep { display: block; background: none; padding: 0; }
     li span { color: #c9ccd1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     li b { font-variant-numeric: tabular-nums; font-weight: 600; } li i { font-style: normal; font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; }
     .sobe { color: #16c784; } .cai { color: #ea3943; }
@@ -150,11 +156,11 @@
       const c = isFinite(d.change) ? d.change : null;
       return `<li title="${esc(d.date ? 'Dado de ' + d.date : '')}"><span>${esc(nome)}</span><b>${num(d.value, casasDe(sym))}</b><i class="${c == null ? '' : c >= 0 ? 'sobe' : 'cai'}">${c == null ? '—' : pct(c)}</i></li>`;
     };
-    let h = ATIVOS.map(([s, n]) => linha(s, n)).join('');
+    let h = GRUPOS.map(([g, l]) => '<li class="j-sep">' + esc(g) + '</li>' + l.map(([s, n]) => linha(s, n)).join('')).join('');
     const W = window.MMWatchRobo;
     if (W) {
       const itens = W.itens().slice(0, 5);
-      if (itens.length) h += '<li class="j-sep" style="background:none;padding:0">Sua watchlist</li>' + itens.map((s) => {
+      if (itens.length) h += '<li class="j-sep">Sua watchlist</li>' + itens.map((s) => {
         const d = W.cot(s);
         if (!d || !isFinite(d.value)) return `<li><span>${esc(W.nome(s))}</span><b>—</b><i>—</i></li>`;
         return `<li><span>${esc(W.nome(s))}</span><b>${num(d.value, 2)}</b><i class="${d.change >= 0 ? 'sobe' : 'cai'}">${isFinite(d.change) ? pct(d.change) : '—'}</i></li>`;
@@ -186,9 +192,9 @@
   async function abrirJanela() {
     if (janelaAberta()) { try { jan.focus(); } catch (e) { /* ok */ } return true; }
     let w = null;
-    try { if (window.documentPictureInPicture) w = await window.documentPictureInPicture.requestWindow({ width: 290, height: 400 }); } catch (e) { w = null; }
+    try { if (window.documentPictureInPicture) w = await window.documentPictureInPicture.requestWindow({ width: 300, height: 560 }); } catch (e) { w = null; }
     if (!w) {
-      w = window.open('', 'mm-robo', 'popup,width=300,height=430');
+      w = window.open('', 'mm-robo', 'popup,width=310,height=600');
       if (!w) { aviso('O navegador bloqueou a janela. Libere as janelas pop-up para este site.', 'warning'); return false; }
     }
     jan = w;

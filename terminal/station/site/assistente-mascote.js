@@ -25,7 +25,15 @@
    ========================================================= */
 (() => {
   const V = '?v=1';
-  const ATIVOS = [['^BVSP', 'IBOV', 'Ibovespa'], ['^GSPC', 'S&P 500', 'S&P 500'], ['^IXIC', 'NASDAQ', 'Nasdaq'], ['BRL=X', 'DÓLAR', 'Dólar']];
+  // o que um trader olha o dia todo (07/11/2026, pedido do Severino): bolsas, juros, moedas, commodities e cripto.
+  // 4º campo: o robô reage (alegre na alta, preocupado na queda) só nas bolsas
+  const ATIVOS = [
+    ['^BVSP', 'IBOV', 'Ibovespa', 1], ['^GSPC', 'S&P 500', 'S&P 500', 1], ['BRL=X', 'DÓLAR', 'Dólar'], ['BZ=F', 'BRENT', 'Petróleo Brent'],
+    ['^IXIC', 'NASDAQ', 'Nasdaq', 1], ['^N225', 'NIKKEI', 'Nikkei 225 (Japão)', 1], ['GC=F', 'OURO', 'Ouro'], ['DX-Y.NYB', 'DXY', 'DXY (dólar no mundo)'],
+    ['^DJI', 'DOW', 'Dow Jones', 1], ['^GDAXI', 'DAX', 'DAX (Alemanha)', 1], ['CL=F', 'WTI', 'Petróleo WTI'], ['BTC-USD', 'BITCOIN', 'Bitcoin'],
+    ['ES=F', 'S&P FUT', 'Futuro do S&P 500', 1], ['^HSI', 'HANG SENG', 'Hang Seng (Hong Kong)', 1], ['^VIX', 'VIX', 'VIX (medo)'],
+    ['^STOXX50E', 'STOXX 50', 'Euro Stoxx 50', 1], ['SI=F', 'PRATA', 'Prata'], ['EURBRL=X', 'EURO', 'Euro'], ['ETH-USD', 'ETHER', 'Ethereum'],
+  ];
   const PAIS = { USD: 'EUA', EUR: 'Zona do euro', CNY: 'China', GBP: 'Reino Unido', BRL: 'Brasil' };
   const DICAS = {
     'mesa-panel': 'Mesa: tudo numa tela só. No card da curva, o botão DI mostra a curva de juros.',
@@ -414,7 +422,9 @@
     function mostraAtivo(curto, nome, d, reage, extra) {
       const cot = $('.pet-cot');
       const sobe = d.change >= 0;
-      cot.querySelector('.cot-nome').textContent = curto;
+      const cn = cot.querySelector('.cot-nome');
+      cn.textContent = curto;
+      if (curto.length > 7) { cn.setAttribute('textLength', '146'); cn.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } else { cn.removeAttribute('textLength'); cn.removeAttribute('lengthAdjust'); }
       cot.querySelector('.cot-var').textContent = (sobe ? '▲ ' : '▼ ') + pct(Math.abs(d.change)).replace('+', '');
       cot.classList.toggle('sobe', sobe); cot.classList.toggle('cai', !sobe);
       const sp = (d.sparkline || []).filter(isFinite);
@@ -438,11 +448,11 @@
     let vezAtivo = 0;
     function cenaCotacao() {
       for (let i = 0; i < ATIVOS.length; i++) {
-        const [sym, curto, nome] = ATIVOS[(vezAtivo + i) % ATIVOS.length];
+        const [sym, curto, nome, reage] = ATIVOS[(vezAtivo + i) % ATIVOS.length];
         const d = cotacao(sym);
         if (!d) continue;
         vezAtivo += i + 1;
-        mostraAtivo(curto, nome, d, sym !== 'BRL=X');
+        mostraAtivo(curto, nome, d, !!reage);
         return true;
       }
       return false;
@@ -467,7 +477,7 @@
       feliz: () => { cena(() => classe('feliz', 1600), 1700); return true; },
       pensa: () => { cena(() => { s.classList.add('pensa'); olhar(.6, -.9); setTimeout(() => s.classList.remove('pensa'), 2200); }, 2300); return true; },
     };
-    const SORTEIO = [['cotacao', 32], ['temperatura', 10], ['cifrao', 14], ['grafico', 12], ['aceno', 14], ['feliz', 10], ['pensa', 8]];
+    const SORTEIO = [['cotacao', 46], ['temperatura', 9], ['cifrao', 10], ['grafico', 9], ['aceno', 11], ['feliz', 8], ['pensa', 7]];
     (function roteiro() {
       setTimeout(() => {
         if (vivo() && !emCima() && !ocupado && !fila.length && !s.classList.contains('m-sono')) {
