@@ -215,7 +215,7 @@
     const on = r.linhas.filter((l) => l.sinal > 0), off = r.linhas.filter((l) => l.sinal < 0);
     const dias = r.dias.filter((d) => Number.isFinite(d.t));
     const hora = new Date(r.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    return `<p class="tm-sub">Atualizado às ${hora} com ${r.usados} de ${r.linhas.length} ativos. Cotações do Yahoo Finance (podem ter atraso de até 15 minutos).</p>
+    return `<p class="tm-sub">Atualizado às ${hora} com ${r.usados} de ${r.linhas.length} ativos.</p>
       <div class="tm-topo"><span class="tm-num">${Number.isFinite(r.temp) ? r.temp : '—'}</span><span class="tm-nome ${f.cls}">${f.nome}</span></div>
       <div class="tm-barra">${Number.isFinite(r.temp) ? `<span class="tm-marca" style="left:${r.temp}%"></span>` : ''}</div>
       <div class="tm-esc"><span>0<i> · forte risk-off</i></span><span>50<i> · neutro</i></span><span><i>forte risk-on · </i>100</span></div>
