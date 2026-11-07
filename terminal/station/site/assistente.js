@@ -65,6 +65,7 @@
   .ia-aviso{margin:7px 4px 0;font-size:10.5px;color:var(--text-3,#888);line-height:1.4;text-align:center;opacity:.85}
   .ia-rot{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#777);margin-bottom:6px}
   .ia-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .ia-rsub{font-size:11.5px;color:var(--text-3);margin:10px 0 0}
   .ia-acoes button,.ia-acoes a{border:1px solid var(--line-2,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
   .ia-acoes button:hover,.ia-acoes a:hover{border-color:var(--accent,#2563eb)}
   .ia-pensando{align-self:flex-start;color:var(--text-3,#777);font-size:13px;display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:12px;background:var(--surface-2,#f3f3f3)}
@@ -102,7 +103,7 @@
       + `<g fill="url(#${g})"><rect x="4" y="20" width="6" height="10" rx="1.5"/><rect x="13" y="13" width="6" height="17" rx="1.5"/><rect x="22" y="7" width="6" height="23" rx="1.5"/>`
       + `<path d="M8 2.5l1.1 3 3 1.1-3 1.1L8 10.7l-1.1-3-3-1.1 3-1.1z"/></g></svg>`;
   }
-  const SUGESTOES = ['Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
+  const SUGESTOES = ['Resuma as principais notícias de hoje', 'Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
   let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
@@ -117,7 +118,7 @@
       msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando" role="status">Analisando<span class="ia-pontos" aria-hidden="true"><i></i><i></i><i></i></span></div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
     msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
@@ -127,6 +128,7 @@
 
   // resposta pronta (base local do /vitrine/ajuda-conteudo.js): atalho para a aba e opção de perguntar ao Gemini
   function rodapePronta(x, i) {
+    if (x.pronta === 'resumo') return `<p class="ia-rsub">${esc(x.sub || '')} Pode conter erros; confira na fonte.</p><div class="ia-acoes">${document.querySelector('.tab-btn[data-tab="news-panel"]') ? '<button type="button" data-ia-aba="news-panel">Abrir a aba Notícias</button>' : ''}</div>`;
     const a = x.acao;
     let h = '<div class="ia-acoes">';
     if (a && a.aba && document.querySelector('.tab-btn[data-tab="' + a.aba + '"]')) h += `<button type="button" data-ia-aba="${esc(a.aba)}">${esc(a.texto)}</button>`;
@@ -135,6 +137,10 @@
     if (gemini && assinante) h += `<button type="button" data-ia-gemini="${i}">Perguntar ao Gemini</button>`;
     else if (gemini) h += '<a href="/assinar">Assinar para perguntar ao Gemini</a>';
     return h + '</div>';
+  }
+  function pedeResumo(p) {
+    const t = p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return /\b(resum\w*|principais|destaques?|o que (esta )?acontec\w*)\b/.test(t) && /\b(noticias?|manchetes?)\b/.test(t);
   }
   function prontaPara(p) {
     try { return (window.MMAjudaConteudo && window.MMAjudaConteudo.buscar(p)[0]) || null; } catch (e) { return null; }
@@ -150,6 +156,15 @@
     if (!p || ocupado) return;
     campo.value = ''; ajustar();
     const item = { p };
+    // pedido de resumo das notícias: usa o resumo do servidor (resumo-ia.js), sem gastar as perguntas do dia
+    if (soGemini !== true && pedeResumo(p) && window.MMResumoIA) {
+      conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
+      const j = await window.MMResumoIA.buscar();
+      if (j.ok) { item.r = j.texto; item.pronta = 'resumo'; item.sub = window.MMResumoIA.legenda(j); }
+      else { item.e = j.erro; item.assinar = !!j.assinar; }
+      ocupado = false; enviar.disabled = false; salvar(); desenhar(); campo.focus();
+      return;
+    }
     const pr = soGemini === true ? null : prontaPara(p);
     const li = soGemini === true ? null : licaoPara(p);
     if (pr || li || !gemini || !assinante) {

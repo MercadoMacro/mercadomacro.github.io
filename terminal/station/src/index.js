@@ -5,7 +5,7 @@ import { noticiasCache, noticiasSoCache } from './noticias.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
-import { apiAssistente, apiAdminAssistente, ligarAssistente } from './assistente.js';
+import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias } from './assistente.js';
 import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
@@ -187,6 +187,7 @@ export default {
         const h = new Headers(req.headers); h.set('X-MM-Sessao', await sha256hex(lerCookie(req)));
         return env.NEWS.get(env.NEWS.idFromName('main')).fetch(new Request(req, { headers: h }));
       }
+      if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx)).lista);
       if (p === '/api/noticias') {
         const { lista, cache, falharam } = await noticiasCache(ctx);
         if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo

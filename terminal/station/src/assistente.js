@@ -28,29 +28,29 @@ const ocupadoAte = {};
 // pensar pouco: o Gemini 3 pensa bastante por padrão e isso atrasa a resposta; se o Google recusar o campo, segue sem ele
 let semThinking = false;
 
-async function chamar(m, chave, contents, stream, comThinking) {
+async function chamar(m, chave, contents, stream, comThinking, instrucoes = INSTRUCOES) {
   const gc = { maxOutputTokens: 2048 };
   if (comThinking) gc.thinkingConfig = { thinkingLevel: 'low' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`;
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: INSTRUCOES }] }, contents, generationConfig: gc }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: instrucoes }] }, contents, generationConfig: gc }),
   }).catch((e) => ({ ok: false, status: 0, erroRede: String(e) }));
 }
 
 // stream = true devolve {ok, corpo: ReadableStream de texto puro}; sem stream, {ok, texto}
 // preferido: modelo escolhido no /admin (config gemini_modelo), tentado antes dos outros
-async function gemini(chave, contents, stream = false, preferido = '') {
+async function gemini(chave, contents, stream = false, preferido = '', instrucoes = INSTRUCOES) {
   let ultimo = '', ocupado = 0;
   const agora = Date.now();
   const todos = [...new Set([preferido, ...MODELOS].filter(Boolean))];
   const lista = todos.filter((m) => !(ocupadoAte[m] > agora));
   for (const m of lista.length ? lista : todos) {
-    let r = await chamar(m, chave, contents, stream, !semThinking);
+    let r = await chamar(m, chave, contents, stream, !semThinking, instrucoes);
     if (r.status === 400 && !semThinking) {
       const t = await r.text().catch(() => '');
-      if (/thinking/i.test(t)) { semThinking = true; r = await chamar(m, chave, contents, stream, false); }
+      if (/thinking/i.test(t)) { semThinking = true; r = await chamar(m, chave, contents, stream, false, instrucoes); }
       else r = { ok: false, status: 400, json: async () => { try { return JSON.parse(t); } catch (e) { return {}; } } };
     }
     if (r.status === 404) { ultimo = 'modelo ' + m + ' indisponível'; continue; }
@@ -165,4 +165,83 @@ export async function apiAdminAssistente(req, env) {
     return json({ ok: true });
   }
   return json({ erro: 'Ação inválida.' }, 400);
+}
+
+/* ---------------- resumo das notícias pela IA (07/11/2026, pedido do Severino) ----------------
+   O Gemini lê as manchetes (e o trecho que vem no RSS) das últimas 12 horas e escreve um resumo por tema.
+   Um resumo só para todo mundo, refeito no máximo a cada 15 minutos e guardado no D1 (tabela resumo_noticias):
+   não gasta a cota grátis do Google a cada leitor nem as perguntas diárias de cada assinante. Só para assinantes. */
+const RESUMO_MS = 15 * 60000;
+const RESUMO_JANELA = 12 * 3600000;
+const RESUMO_MAX = 140; // manchetes que vão ao Gemini
+const FONTES_POLITICA = new Set(['O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']); // grupo que o leitor liga à parte
+const INSTRUCOES_RESUMO = `Você escreve o resumo das notícias do Mercado Macro, um terminal financeiro brasileiro, para quem acompanha o mercado.
+Você recebe uma lista de manchetes (algumas em inglês, com um trecho quando houver), cada uma com hora (horário de Brasília) e fonte.
+Escreva em português do Brasil, neste formato:
+- Primeiro, um parágrafo curto (2 ou 3 frases) começando com "Em resumo:" com o que mais pesou no período.
+- Depois, seções com título iniciado por "## ", só as que tiverem notícias, nesta ordem: Juros e bancos centrais; Brasil; Estados Unidos e mundo; Câmbio; Commodities; Empresas; Cripto.
+- Em cada seção, de 2 a 6 itens começando com "- ", cada um com uma frase objetiva e a fonte entre parênteses no fim, por exemplo (Valor Investe). Junte manchetes do mesmo assunto num item só.
+Regras:
+- Use somente o que está nas manchetes. Não acrescente números, nomes, datas ou fatos que não estejam lá; copie os números como vieram.
+- Traduza as manchetes em inglês. Não opine, não preveja e não faça recomendação de compra ou venda.
+- Deixe de fora fofoca, esporte e assuntos sem relação com economia, mercados ou empresas.
+- Não use emojis nem negrito.`;
+
+const horaBR = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+export function manchetesParaResumo(lista, agora = Date.now()) {
+  const vistos = new Set();
+  return (Array.isArray(lista) ? lista : [])
+    .filter((n) => n && typeof n.titulo === 'string' && n.titulo.trim() && Number.isFinite(+n.data) && agora - n.data < RESUMO_JANELA && !FONTES_POLITICA.has(n.fonte))
+    .filter((n) => { const k = n.titulo.toLowerCase().replace(/[^a-z0-9à-ú]+/g, ' ').trim(); return !vistos.has(k) && vistos.add(k); })
+    .sort((a, b) => ((b.finalScore || 0) - (a.finalScore || 0)) || (b.data - a.data))
+    .slice(0, RESUMO_MAX)
+    .sort((a, b) => b.data - a.data);
+}
+export function textoDasManchetes(ms) {
+  return ms.map((n) => {
+    const fonte = n.fonte === 'Google News' && n.veiculo ? n.veiculo : n.fonte;
+    const trecho = String(n.trecho || n.resumo || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+    return `[${horaBR(+n.data)}] ${fonte}: ${n.titulo.replace(/\s+/g, ' ').trim()}${trecho ? ' | ' + trecho : ''}`;
+  }).join('\n');
+}
+
+async function tabelaResumo(env) {
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS resumo_noticias (id INTEGER PRIMARY KEY, texto TEXT, gerado INTEGER, manchetes INTEGER, gerando INTEGER)').run();
+  return env.DB.prepare('SELECT texto, gerado, manchetes, gerando FROM resumo_noticias WHERE id = 1').first();
+}
+const respostaResumo = (row, extra = {}) => json({ texto: row.texto, gerado: row.gerado, manchetes: row.manchetes, atualizaA: RESUMO_MS / 60000, ...extra });
+
+// GET /api/noticias/resumo
+export async function apiResumoNoticias(req, env, u, gratis, lerNoticias) {
+  if (req.method !== 'GET') return json({ erro: 'Método não permitido.' }, 405);
+  if (gratis) return json({ erro: 'O resumo das notícias pela IA é para assinantes.', codigo: 'assinar' }, 403);
+  if (!u.admin && !(await dentroDoLimite(env, 'resumo:' + u.id, 30, 600))) return json({ erro: 'Muitos pedidos seguidos. Espere alguns minutos.' }, 429);
+  const agora = Date.now();
+  const row = await tabelaResumo(env);
+  if (row?.texto && agora - row.gerado < RESUMO_MS) return respostaResumo(row);
+  const c = await config(env);
+  const anterior = (erro, status) => (row?.texto ? respostaResumo(row, { antigo: true }) : json({ erro }, status));
+  if (!c.gemini_key) return anterior('O assistente de IA ainda não está ligado.', 503);
+  // um pedido gera; os outros que chegarem juntos recebem o resumo anterior (ou "gerando")
+  const trava = await env.DB.prepare(`INSERT INTO resumo_noticias (id, gerando) VALUES (1, ?1)
+    ON CONFLICT(id) DO UPDATE SET gerando = ?1 WHERE gerando IS NULL OR gerando < ?2`).bind(agora, agora - 90000).run();
+  if (!trava.meta?.changes) return anterior('O resumo está sendo gerado. Tente de novo em alguns segundos.', 503);
+  const soltar = () => env.DB.prepare('UPDATE resumo_noticias SET gerando = NULL WHERE id = 1').run().catch(() => 0);
+  try {
+    const ms = manchetesParaResumo(await lerNoticias().catch(() => []), agora);
+    if (ms.length < 5) { await soltar(); return anterior('Ainda não há manchetes suficientes para resumir.', 503); }
+    const pedido = `Manchetes das últimas 12 horas (de ${horaBR(+ms[ms.length - 1].data)} a ${horaBR(+ms[0].data)}, horário de Brasília):\n\n${textoDasManchetes(ms)}`;
+    const r = await gemini(c.gemini_key, [{ role: 'user', parts: [{ text: pedido }] }], false, c.gemini_modelo, INSTRUCOES_RESUMO);
+    if (!r.ok) {
+      await soltar();
+      return anterior(r.status === 429 ? 'A IA atingiu o limite gratuito do Google por agora. Tente mais tarde.' : 'A IA não conseguiu resumir agora. Tente de novo em alguns minutos.', r.status === 429 ? 429 : 503);
+    }
+    const texto = r.texto.replace(/\*\*(.+?)\*\*/g, '$1').trim().slice(0, 8000);
+    const gerado = Date.now();
+    await env.DB.prepare('UPDATE resumo_noticias SET texto = ?, gerado = ?, manchetes = ?, gerando = NULL WHERE id = 1').bind(texto, gerado, ms.length).run();
+    return respostaResumo({ texto, gerado, manchetes: ms.length });
+  } catch (e) {
+    await soltar();
+    return anterior('A IA não conseguiu resumir agora.', 503);
+  }
 }
