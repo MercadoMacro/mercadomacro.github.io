@@ -52,3 +52,52 @@ body.lvs-janela .lc-item { gap: 10px; padding: 9px 0; }
 
 /* no celular não há janelas para arrastar */
 @media (max-width: 900px) { .lvs-destacar { display: none; } }
+
+/* =========================================================
+   VISUAL NOVO DO AO VIVO (07/11/2026, modelo do Severino): brilho azul no topo, "AO VIVO" em vermelho,
+   linha do tempo ligando os pontos, destaque ao passar o mouse e etiquetas de fonte com fundo translúcido
+   ========================================================= */
+.lvs-quadro { border-radius: 14px; border-color: rgba(120,150,200,.22); }
+.lvs-topo, .lvs-jtopo {
+  position: relative; padding: 10px 10px 10px 16px; gap: 6px;
+  background: linear-gradient(180deg, rgba(76,141,255,.16), rgba(76,141,255,.03) 70%, transparent);
+  border-bottom: 1px solid rgba(120,150,200,.18);
+  font-size: 13.5px; letter-spacing: 1px; color: #ff5a5f;
+}
+.lvs-topo::before, .lvs-jtopo::before {
+  content: ''; position: absolute; left: 12%; right: 12%; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(110,170,255,.95), transparent);
+  box-shadow: 0 0 14px 2px rgba(76,141,255,.55);
+}
+.lvs-topo b, .lvs-jtopo b { font-weight: 800; color: #ff5a5f; }
+.lvs-topo .live-indicator, .lvs-jtopo .live-indicator { background: #ff3b47; box-shadow: 0 0 10px rgba(255,59,71,.9); }
+.lvs-b { width: 32px; height: 32px; font-size: 15px; }
+
+/* busca do Ao Vivo (aberta pela lupa) */
+.lv-busca {
+  width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 7px 10px;
+  background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-size: 13px;
+}
+.lv-busca[hidden] { display: none; }
+
+/* linha do tempo */
+#live-container .lc-item {
+  position: relative; gap: 14px; padding: 11px 10px; margin: 0;
+  border-bottom: 0; border-radius: 10px; transition: background .15s;
+}
+#live-container .lc-item::before {
+  content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: var(--line-2); opacity: .7;
+}
+#live-container .lc-item:first-child::before { top: 18px; }
+#live-container .lc-item:last-child::before { bottom: calc(100% - 18px); }
+#live-container .lc-icon { position: relative; z-index: 1; background: var(--surface); }
+#live-container .lc-item.alto .lc-icon { background: var(--accent); }
+#live-container .lc-item.critico .lc-icon { background: var(--neg); }
+#live-container .lc-item.medio .lc-icon { box-shadow: 0 0 8px rgba(76,141,255,.6); }
+#live-container .lc-item:hover { background: rgba(148,163,184,.08); }
+#live-container .lc-title { font-size: 14px; line-height: 1.45; }
+#live-container .lc-meta .nc-source, #live-container .lc-meta .nc-tag {
+  border-width: 1px; border-style: solid; border-radius: 6px; padding: 2px 7px; font-weight: 700; letter-spacing: .3px;
+}
+body.light #live-container .lc-item:hover { background: rgba(15,23,42,.05); }
+.lvs-miolo #live-container .lc-item, body.lvs-janela #live-container .lc-item { margin: 0 -10px; }
