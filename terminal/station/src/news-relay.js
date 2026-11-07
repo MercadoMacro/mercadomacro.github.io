@@ -1,4 +1,5 @@
 // Uma coleta para todos os leitores; SQLite guarda o snapshot entre hibernações.
+import { noticiasRapidas } from './noticias.js';
 const SOURCE = 'https://news.cota-cotacao10.workers.dev/';
 const PERIOD = 15000, MAX_AGE = 48 * 3600000;
 export function cleanNews(value, now = Date.now()) {
@@ -51,6 +52,8 @@ export class NewsRelay {
       if(!r.ok)throw Error('Fonte indisponível');return await r.json();
     }finally{clearTimeout(timer);}
   }
+  // feed lido direto a cada rodada (Financial Juice), para a manchete chegar sem o atraso do servidor de notícias
+  async readFast() { try { return await noticiasRapidas(); } catch { return []; } }
   collect() {
     if(this.inflight)return this.inflight;
     this.inflight=this.collectOnce().finally(()=>{this.inflight=null;});return this.inflight;
@@ -58,7 +61,12 @@ export class NewsRelay {
   async collectOnce() {
     if(!this.sockets().length)return;
     try {
-      const items=cleanNews(await this.readSource()),now=Date.now();
+      // as duas leituras juntas; a direta vem primeiro, então ganha quando a mesma manchete chega pelas duas
+      const [fonte,rapidas]=await Promise.allSettled([this.readSource(),this.readFast()]);
+      const lista=[...(rapidas.status==='fulfilled'?rapidas.value:[]),...(fonte.status==='fulfilled'?fonte.value:[])];
+      if(fonte.status!=='fulfilled'&&!lista.length)throw Error('Fonte indisponível');
+      // sem o servidor de notícias, mantém as que já estavam e soma as novas da leitura direta
+      const items=cleanNews(fonte.status==='fulfilled'?lista:[...lista,...this.items]),now=Date.now();
       const before=new Map(this.items.map(n=>[n.link,JSON.stringify(n)]));
       const delta=items.filter(n=>before.get(n.link)!==JSON.stringify(n));
       const payload=JSON.stringify(items);
