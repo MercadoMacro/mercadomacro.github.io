@@ -168,8 +168,8 @@ def metricas(dre, bpa, bpp, dfc, financeira):
                 lucro = v
                 break
     # algumas empresas informam a parte dos controladores com o sinal trocado (ex.: +87 mi com prejuízo total de −86 mi):
-    # sinal oposto ao total e tamanho parecido é erro de sinal, então vale o sinal do total (auditoria de 07/11/2026)
-    if lucro is not None and lucro_tot and lucro * lucro_tot < 0 and 0.5 <= abs(lucro / lucro_tot) <= 2:
+    # sinal oposto ao total e quase o mesmo tamanho (diferença até ~15%) é erro de sinal; com minoritários grandes a diferença é maior e fica como veio, então vale o sinal do total (auditoria de 07/11/2026)
+    if lucro is not None and lucro_tot and lucro * lucro_tot < 0 and 0.87 <= abs(lucro / lucro_tot) <= 1.15:
         lucro = -lucro
     m['lucro'] = lucro
     m['lucro_total'] = lucro_tot
@@ -200,7 +200,8 @@ def metricas(dre, bpa, bpp, dfc, financeira):
         prov = [abs(v) for c, (ds, v) in filhos(dfc, '6.03', 4).items() if v < 0 and ('DIVIDENDO' in ds or 'JUROS SOBRE' in ds)]
     if _DBG['on'] and dfc:
         print('  DFC 6.03:', [(c, ds[:60], v) for c, (ds, v) in dfc.items() if c.startswith('6.03') and ('DIVIDEND' in ds or 'JUROS' in ds)][:12])
-    m['proventos'] = sum(prov) if prov else (0.0 if dfc else None)
+    # banco sem linha de dividendos no fluxo de caixa (Santander nos DFP de 2021 a 2025): não dá para afirmar que pagou zero
+    m['proventos'] = sum(prov) if prov else (0.0 if dfc and not financeira else None)
     return {k: (round(v) if isinstance(v, float) else v) for k, v in m.items()}
 
 
