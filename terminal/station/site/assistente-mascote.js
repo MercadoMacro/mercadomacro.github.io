@@ -380,6 +380,8 @@
     const dizer = (html, ms, acao, longo) => {
       clearTimeout(falaTimer);
       fala.innerHTML = html; fala.classList.toggle('longo', !!longo);
+      // balão comprido com o robô na metade de baixo da tela: cresce para cima, senão sai da tela
+      { const r = b.getBoundingClientRect(); if (r.width) b.classList.toggle('ia-pet-baixo', r.top > innerHeight - 150 || (!!longo && r.top > innerHeight / 2)); }
       acaoFala = acao || null; b.classList.toggle('ia-pet-clica', !!acao);
       b.classList.add('ia-pet-oi');
       falaTimer = setTimeout(calar, ms);
@@ -729,7 +731,11 @@
     setTimeout(acenar, 700);
 
     // para conferir à mão no console: MMPet.cena('cotacao' | 'temperatura' | 'cifrao' | 'grafico' | 'pensa' | 'sono')
-    window.MMPet = { canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); } };
+    window.MMPet = { canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
+      // usado pelo robo-extras.js (bom dia, alarmes, decisões, pergunta do dia, janela flutuante)
+      api: { el: s, botao: b, pedir, cena, dizer, calar, tela, classe, acenar, olhar, vivo, mostraAtivo, ocupado: () => ocupado || fila.length > 0,
+        txt: (l1, l2, cls) => { const x = $('.pet-txt'); x.querySelector('.txt-1').textContent = l1; x.querySelector('.txt-2').textContent = l2; x.classList.toggle('sobe', cls === 'sobe'); x.classList.toggle('cai', cls === 'cai'); } } };
+    window.dispatchEvent(new Event('mm-pet-pronto'));
   }
 
   // o botão é criado pelo assistente.js depois que a conta responde; espera ele aparecer
