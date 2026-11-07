@@ -7,25 +7,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          B=https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query
-          F=record_date,auction_date,security_type,security_term,reopening,high_yield,high_investment_rate,high_discnt_rate,bid_to_cover_ratio,offering_amt,primary_dealer_accepted,direct_bidder_accepted,indirect_bidder_accepted,soma_accepted,comp_accepted,noncomp_accepted
-          curl -s "$B?sort=-auction_date&page%5Bsize%5D=60&fields=$F&filter=auction_date:lte:2026-11-07" > a.json
-          python3 -c "
-          import json;d=json.load(open('a.json'))
-          print(d.get('meta',{}).get('total-count'), d.get('error'), d.get('message'))
-          for r in d.get('data',[]): print('|'.join(str(r.get(k)) for k in '$F'.split(',')))
-          "
-          echo ---- TD auctioned
-          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=20" > t.json; head -c 300 t.json; echo
+          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=10" > t.json
           python3 -c "
           import json;d=json.load(open('t.json'))
-          print(len(d)); print(sorted(d[0].keys()))
-          for r in d[:40]: print(r.get('auctionDate'),r.get('securityType'),r.get('securityTerm'),r.get('reopening'),r.get('highYield'),r.get('highInvestmentRate'),r.get('highDiscountRate'),r.get('bidToCoverRatio'),r.get('offeringAmount'),r.get('primaryDealerAccepted'),r.get('directBidderAccepted'),r.get('indirectBidderAccepted'),r.get('totalAccepted'),r.get('competitiveAccepted'),r.get('somaAccepted'),r.get('tips'),r.get('type'))
+          n=[r for r in d if r['type']=='Note'][0]; b=d[0]
+          for r in (n,b): print({k:v for k,v in r.items() if v not in ('',None)})
           "
-          echo ---- TD upcoming
           curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/upcoming?format=json" > u.json
           python3 -c "
-          import json;d=json.load(open('u.json'))
-          print(len(d))
-          for r in d: print(r.get('announcementDate'),r.get('auctionDate'),r.get('securityType'),r.get('securityTerm'),r.get('offeringAmount'),r.get('reopening'), r.get('closingTimeCompetitive'))
-          "
+          import json;d=json.load(open('u.json')); print({k:v for k,v in d[0].items() if v not in ('',None)})"
+          curl -s -A "Mozilla/5.0" -o /dev/null -w "%{http_code} %{size_download}\n" "https://www.treasurydirect.gov/TA_WS/securities/search?format=json&type=Note&securityTerm=10-Year&dateFieldName=auctionDate&startDate=2025-01-01"
+          curl -s -A "Mozilla/5.0" "https://www.treasurydirect.gov/TA_WS/securities/search?format=json&dateFieldName=auctionDate&startDate=2026-05-01" > s.json; python3 -c "
+          import json;d=json.load(open('s.json')); print(len(d)); import collections; print(collections.Counter((r['type'],r['securityTerm']) for r in d).most_common(60))"
