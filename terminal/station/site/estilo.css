@@ -3416,3 +3416,11 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
 html body .aj-busca-in input, html body .aj-busca-in input:focus { border:0 !important; box-shadow:none !important; background:transparent !important; min-height:0; padding:8px 0; margin:0; border-radius:0 !important; outline:none; }
 @media (min-width:901px) { html body .aj.aj-em-aparencia .aj-rapido { display:none; } }
 
+
+/* LOGO NOVO NA BARRA (07/11/2026, modelo do Severino): barras douradas com a seta, "mercado" fino e "macro" dourado em negrito */
+body.has-side .side-brand .sb-mark.sb-ouro { width:36px; height:32px; flex:0 0 36px; fill:none; overflow:visible; }
+body.has-side .side-brand b.sb-nome { display:flex; flex-direction:column; gap:1px; line-height:1; letter-spacing:0; }
+body.has-side .side-brand .sb-l1 { font-size:15px; font-weight:400; color:var(--text); letter-spacing:.01em; }
+body.has-side .side-brand .sb-l2 { font-size:19px; font-weight:800; color:#f2b92e; letter-spacing:-.01em; margin-top:-1px; }
+body.light.has-side .side-brand .sb-l2 { color:#d99a1e; }
+html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !important; text-transform:none; }
