@@ -25,6 +25,10 @@ const FEEDS = [
   { name: 'Valor Investe', url: 'https://pox.globo.com/rss/valorinveste/', source: 'Valor Investe', weight: 6 },
   { name: 'Bloomberg Línea', url: 'https://www.bloomberglinea.com.br/arc/outboundfeeds/rss.xml', source: 'Bloomberg Línea', weight: 7 },
   { name: 'Suno', url: 'https://www.suno.com.br/noticias/feed/', source: 'Suno', weight: 6 },
+  // Invezz em português (07/11/2026, sugestão do Severino): mercado internacional já em português
+  { name: 'Invezz Economia', url: 'https://invezz.com/pt/noticias/economia/feed/', source: 'Invezz', weight: 5 },
+  { name: 'Invezz Ações', url: 'https://invezz.com/pt/noticias/mercado-de-acoes/feed/', source: 'Invezz', weight: 5 },
+  { name: 'Invezz Commodities', url: 'https://invezz.com/pt/noticias/commodities/feed/', source: 'Invezz', weight: 5 },
   // ============ POLÍTICA (o site só mostra se a pessoa ligar "Política" nas Notícias) ============
   { name: 'O Antagonista', url: 'https://oantagonista.com.br/feed/', source: 'O Antagonista', weight: 4, so: /oantagonista\.com\.br\/(brasil|politica)\// }, // o feed traz muita variedade (ladooa, curiosidades em economia)
   { name: 'Poder360', url: 'https://www.poder360.com.br/feed/', source: 'Poder360', weight: 4 },

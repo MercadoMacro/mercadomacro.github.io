@@ -126,7 +126,8 @@ const NEWS_SOURCES = {
   'FX Markets':       { letter: 'FX',  color: '#8b5cf6', scope: 'int', name: 'FX Markets' },
   'ING Think':        { letter: 'ING', color: '#f97316', scope: 'int', name: 'ING Think' },
   'CNBC':             { letter: 'C',   color: '#a78bfa', scope: 'int', name: 'CNBC' },
-  'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' }
+  'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' },
+  'Invezz':           { letter: 'IZ',  color: '#2dd4bf', scope: 'int', name: 'Invezz' }
 };
 
 /* =========================================================
@@ -1180,7 +1181,7 @@ function newsRank(n) {
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
 const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
-const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News',
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz',
   'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
 // Política fica desligada até a pessoa ligar (botão na lateral das Notícias); escolha guardada neste aparelho
 const NEWS_POL_KEY = 'news_politica_v1';
