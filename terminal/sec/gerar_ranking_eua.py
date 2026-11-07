@@ -125,10 +125,12 @@ def main():
             grandes.append(c)
         if len(grandes) >= 200:
             break
+    print(f'  {sum(c not in dados for c in grandes)} das 200 maiores não vieram nos frames; Exxon na lista: {34088 in grandes}')
     for cik in grandes:
         if cik in dados:
             continue
         r = anual(cik, RECEITA[:3])
+        print(f'    {tk[cik]}: {r}')
         if not r or r[2] < f'{ano - 1}-06-30':
             continue
         l = anual(cik, LUCRO[:1])
