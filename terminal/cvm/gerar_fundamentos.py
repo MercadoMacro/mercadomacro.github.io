@@ -144,6 +144,9 @@ def filhos(d, pai, nv=None):
     return {c: v for c, v in d.items() if c.startswith(pai + '.') and (nv is None or nivel(c) == nv)}
 
 
+_DBG = {'on': False}
+
+
 def metricas(dre, bpa, bpp, dfc, financeira):
     m = {}
     g = lambda d, c: d.get(c, (None, None))[1]
@@ -164,6 +167,10 @@ def metricas(dre, bpa, bpp, dfc, financeira):
             if 'CONTROLADOR' in ds and 'NAO CONTROLADOR' not in ds:
                 lucro = v
                 break
+    # algumas empresas informam a parte dos controladores com o sinal trocado (ex.: +87 mi com prejuízo total de −86 mi):
+    # sinal oposto ao total e tamanho parecido é erro de sinal, então vale o sinal do total (auditoria de 07/11/2026)
+    if lucro is not None and lucro_tot and lucro * lucro_tot < 0 and 0.5 <= abs(lucro / lucro_tot) <= 2:
+        lucro = -lucro
     m['lucro'] = lucro
     m['lucro_total'] = lucro_tot
     dep = [abs(v) for c, (ds, v) in dfc.items() if c.startswith('6.01.01.') and ('DEPRECIA' in ds or 'AMORTIZA' in ds or 'EXAUST' in ds)]
@@ -187,7 +194,12 @@ def metricas(dre, bpa, bpp, dfc, financeira):
         m['divida'] = sum(dv) if dv else (0.0 if bpp else None)
         m['div_liq'] = (m['divida'] - m['caixa']) if (m['divida'] is not None and m['caixa'] is not None) else None
     m['fco'] = g(dfc, '6.01')
+    # dividendos e JCP pagos: contas de nível 3 do fluxo de financiamento; bancos às vezes abrem no nível 4
     prov = [abs(v) for c, (ds, v) in filhos(dfc, '6.03', 3).items() if v < 0 and ('DIVIDENDO' in ds or 'JUROS SOBRE' in ds)]
+    if not prov:
+        prov = [abs(v) for c, (ds, v) in filhos(dfc, '6.03', 4).items() if v < 0 and ('DIVIDENDO' in ds or 'JUROS SOBRE' in ds)]
+    if _DBG['on'] and dfc:
+        print('  DFC 6.03:', [(c, ds[:60], v) for c, (ds, v) in dfc.items() if c.startswith('6.03') and ('DIVIDEND' in ds or 'JUROS' in ds)][:12])
     m['proventos'] = sum(prov) if prov else (0.0 if dfc else None)
     return {k: (round(v) if isinstance(v, float) else v) for k, v in m.items()}
 
@@ -282,6 +294,8 @@ def main():
                 fin = 'INTERMEDIACAO FINANCEIRA' in recorte(doc['contas'], 'DRE', 'U').get('3.01', ('', 0))[0] or \
                       re.search(r'BANCO|INTERMEDIA|SEGURADORA|PREVIDENCIA|ARRENDAMENTO', norm(emp.get(cnpj, {}).get('setor', ''))) is not None
                 c = doc['contas']
+                _DBG['on'] = os.environ.get('FUND_DEBUG') == cnpj
+                if _DBG['on']: print('DFP', dt)
                 m = metricas(recorte(c, 'DRE', 'U'), recorte(c, 'BPA', 'U'), recorte(c, 'BPP', 'U'), recorte(c, 'DFC', 'U'), fin)
                 anual.setdefault(cnpj, {})[int(dt[:4])] = {'dt': dt, 'm': m, 'fin': fin}
         for cnpj, v in acoes(z, 'dfp').items():
@@ -308,6 +322,8 @@ def main():
             c = doc['contas']
             fin = any(a.get('fin') for a in anual.get(cnpj, {}).values()) or \
                   'INTERMEDIACAO FINANCEIRA' in recorte(c, 'DRE', 'U').get('3.01', ('', 0))[0]
+            _DBG['on'] = os.environ.get('FUND_DEBUG') == cnpj
+            if _DBG['on']: print('ITR', dt)
             cur = metricas(recorte(c, 'DRE', 'U'), recorte(c, 'BPA', 'U'), recorte(c, 'BPP', 'U'), recorte(c, 'DFC', 'U'), fin)
             prev = metricas(recorte(c, 'DRE', 'P'), {}, {}, recorte(c, 'DFC', 'P'), fin)
             trimestral[cnpj] = {'dt': dt, 'cur': cur, 'prev': prev}
@@ -342,6 +358,9 @@ def main():
                 for k in FLUXO:
                     x, y, z_ = t['cur'].get(k), base['m'].get(k), t['prev'].get(k)
                     ttm[k] = (x + y - z_) if None not in (x, y, z_) else None
+                # proventos pagos não podem ser negativos: conta mudou de lugar entre ITR e DFP, melhor "—" que número errado
+                if ttm.get('proventos') is not None and ttm['proventos'] < 0:
+                    ttm['proventos'] = None
         elif ult_ano is not None:
             ref = a[ult_ano]['dt']
             ttm = {k: a[ult_ano]['m'].get(k) for k in FLUXO}
@@ -352,6 +371,11 @@ def main():
         pl_ref = (balanco or {}).get('pl')
         if q and pl_ref and pl_ref > 0 and (q[1] + q[2]) > 0 and pl_ref / (q[1] + q[2]) > 1500:
             q = (q[0], q[1] * 1000, q[2] * 1000)
+        # Auditoria de 07/11/2026: com patrimônio pequeno o limite de R$ 1.500 não pegava (GPA, Whirlpool, Quero-Quero, Enjoei).
+        # Menos de 5 milhões de ações e mais de R$ 250 de patrimônio por ação também é quantidade em mil (até duas vezes).
+        for _ in range(2):
+            if q and pl_ref and pl_ref > 0 and 0 < (q[1] + q[2]) < 5_000_000 and pl_ref / (q[1] + q[2]) > 250:
+                q = (q[0], q[1] * 1000, q[2] * 1000)
         fin = any(x.get('fin') for x in a.values())
         lista_t = sorted(tks)
         doc = {
