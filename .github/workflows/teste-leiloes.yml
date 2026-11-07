@@ -1,0 +1,15 @@
+name: Teste leiloes (temporario)
+on:
+  push:
+    branches: [leiloes-teste]
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          B=https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query
+          curl -s "$B?sort=-auction_date&page%5Bsize%5D=2" | python3 -m json.tool | head -200
+          echo ----
+          curl -s "$B?sort=-auction_date&page%5Bsize%5D=40&fields=auction_date,security_type,security_term,high_yield,high_investment_rate,high_discount_rate,bid_to_cover_ratio,offering_amt,cusip,primary_dealer_accepted,direct_bidder_accepted,indirect_bidder_accepted,soma_accepted,total_accepted,reopening" | python3 -m json.tool | head -400
+          echo ---- upcoming
+          curl -s "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/upcoming_auctions?sort=auction_date&page%5Bsize%5D=20" | python3 -m json.tool | head -150
