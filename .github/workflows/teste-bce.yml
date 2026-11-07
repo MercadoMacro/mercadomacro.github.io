@@ -2,11 +2,15 @@ name: Teste BCE (temporario)
 on:
   push:
     branches: [europa-bce]
+    paths: ['.github/workflows/teste-bce.yml']
+permissions:
+  contents: write
 jobs:
   t:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - run: python3 terminal/bce/gerar_bce.py terminal/bce
-      - uses: actions/upload-artifact@v4
-        with: { name: bce, path: terminal/bce/bce.json }
+      - run: |
+          python3 terminal/bce/gerar_bce.py terminal/bce
+          git config user.name bce-bot; git config user.email actions@users.noreply.github.com
+          git add terminal/bce/bce.json; git commit -m "bce.json de teste"; git push origin HEAD:europa-bce
