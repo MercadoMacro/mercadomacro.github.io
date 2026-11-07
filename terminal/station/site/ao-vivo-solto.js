@@ -55,6 +55,20 @@
     if (c.hidden) { if (c.value) { c.value = ''; c.dispatchEvent(new Event('input')); } } else c.focus();
   }
 
+  // tamanho da letra fora da aba (07/11/2026): A− e A+ no topo do quadro e da janela; guardado neste aparelho
+  const ZOOM_KEY = 'mm_aovivo_zoom_v1';
+  const lerZoom = () => { try { const z = parseFloat(localStorage.getItem(ZOOM_KEY)); return z >= 0.7 && z <= 1.8 ? z : 1; } catch { return 1; } };
+  function aplicarZoom(z) { corpo.style.zoom = z === 1 ? '' : String(z); }
+  function mudarZoom(passo) {
+    const z = Math.round(Math.min(1.8, Math.max(0.7, lerZoom() + passo)) * 10) / 10;
+    try { localStorage.setItem(ZOOM_KEY, String(z)); } catch { /* sem armazenamento */ }
+    aplicarZoom(z);
+  }
+  function ligarTamanho(raiz) {
+    raiz.querySelector('[data-a="menor"]').addEventListener('click', () => mudarZoom(-0.1));
+    raiz.querySelector('[data-a="maior"]').addEventListener('click', () => mudarZoom(0.1));
+  }
+
   /* ---------- quadro flutuante ---------- */
   function montarQuadro() {
     quadro = document.createElement('section');
@@ -63,7 +77,7 @@
     quadro.innerHTML = `<header class="lvs-topo" title="Arraste para mover">
         <span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b>
         <span class="lvs-esp"></span>
-        <button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+        <button type="button" class="lvs-b lvs-tam" data-a="menor" title="Diminuir a letra" aria-label="Diminuir a letra">A−</button><button type="button" class="lvs-b lvs-tam" data-a="maior" title="Aumentar a letra" aria-label="Aumentar a letra">A+</button><button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
         <button type="button" class="lvs-b" data-a="janela" title="Abrir numa janela separada" aria-label="Abrir numa janela separada"><i class="fas fa-window-restore" aria-hidden="true"></i></button>
         <button type="button" class="lvs-b" data-a="fechar" title="Devolver para a aba Notícias" aria-label="Devolver para a aba Notícias"><i class="fas fa-xmark" aria-hidden="true"></i></button>
       </header><div class="lvs-miolo"></div>`;
@@ -72,6 +86,7 @@
     quadro.querySelector('[data-a="fechar"]').addEventListener('click', () => encaixar());
     quadro.querySelector('[data-a="janela"]').addEventListener('click', () => abrirJanela());
     quadro.querySelector('[data-a="busca"]').addEventListener('click', alternarBusca);
+    ligarTamanho(quadro);
 
     const topo = quadro.querySelector('.lvs-topo');
     topo.addEventListener('pointerdown', (e) => {
@@ -122,6 +137,7 @@
     quadro.style.height = h + 'px';
     quadro.querySelector('.lvs-miolo').append(corpo);
     quadro.hidden = false;
+    aplicarZoom(lerZoom());
     por(Number.isFinite(s.x) ? s.x : innerWidth - w - 24, Number.isFinite(s.y) ? s.y : 96);
     marcar('quadro');
   }
@@ -130,6 +146,7 @@
     fecharJanela();
     const c = corpo.querySelector('#live-busca');
     if (c && !c.hidden) alternarBusca(); // na aba Notícias vale a busca das Notícias
+    aplicarZoom(1); // na aba, a letra segue o resto do site
     view.insertBefore(corpo, aviso);
     if (quadro) quadro.hidden = true;
     marcar('');
@@ -178,7 +195,7 @@
     copiarAparencia(d);
     const topo = d.createElement('header');
     topo.className = 'lvs-jtopo';
-    topo.innerHTML = '<span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b><span class="lvs-esp"></span><button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button><button type="button" class="btn-sm lvs-devolver">Devolver ao site</button>';
+    topo.innerHTML = '<span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b><span class="lvs-esp"></span><button type="button" class="lvs-b lvs-tam" data-a="menor" title="Diminuir a letra" aria-label="Diminuir a letra">A−</button><button type="button" class="lvs-b lvs-tam" data-a="maior" title="Aumentar a letra" aria-label="Aumentar a letra">A+</button><button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button><button type="button" class="btn-sm lvs-devolver">Devolver ao site</button>';
     d.body.append(topo);
     d.body.append(corpo); // o fluxo muda de documento; quem desenha guarda a referência (liveEl no app.js)
     if (quadro) quadro.hidden = true;
@@ -186,8 +203,10 @@
     marcar('janela');
     topo.querySelector('.lvs-devolver').addEventListener('click', () => encaixar());
     topo.querySelector('[data-a="busca"]').addEventListener('click', alternarBusca);
+    ligarTamanho(topo);
+    aplicarZoom(lerZoom());
     // fechou a janela pelo X: o fluxo volta para a aba Notícias
-    const voltou = () => { if (janela === w) { janela = null; clearInterval(vigiaJanela); view.insertBefore(corpo, aviso); marcar(''); } };
+    const voltou = () => { if (janela === w) { janela = null; clearInterval(vigiaJanela); aplicarZoom(1); view.insertBefore(corpo, aviso); marcar(''); } };
     w.addEventListener('pagehide', voltou);
     if (!pip) vigiaJanela = setInterval(() => { if (w.closed) voltou(); }, 1000);
   }
