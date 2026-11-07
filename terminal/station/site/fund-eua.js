@@ -224,6 +224,8 @@
     </svg>`;
   }
 
+  // o ranking dos EUA (fundamentos.js) escolhe a empresa antes de abrir este modo
+  window.__fundEuaAbrir = (s) => { prefs.s = s; savePrefs(); };
   window.__fundEua = (el, footEl) => {
     foot = footEl;
     setFoot();

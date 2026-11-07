@@ -1,0 +1,33 @@
+# Ranking das 500 maiores empresas americanas por receita (aba Fundamentos > Ranking > EUA).
+# Lê os balanços entregues à SEC e grava terminal/sec/ranking_eua.json.
+name: Ranking EUA (SEC)
+
+on:
+  schedule:
+    - cron: '30 10 * * 2'   # terça, 7h30 em Brasília
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  gerar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Gerar o ranking a partir da SEC
+        run: python3 terminal/sec/gerar_ranking_eua.py terminal/sec
+      - name: Salvar no repositório
+        run: |
+          git config user.name "sec-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # o campo "gerado" muda a cada execução; só grava se os dados mudaram
+          p=terminal/sec/ranking_eua.json
+          if git cat-file -e HEAD:$p 2>/dev/null && [ "$(git show HEAD:$p | python3 -c 'import json,sys;d=json.load(sys.stdin);d.pop("gerado",None);print(json.dumps(d,sort_keys=True))')" = "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d.pop("gerado",None);print(json.dumps(d,sort_keys=True))' $p)" ]; then echo "Sem mudanças"; exit 0; fi
+          git add $p
+          git commit -m "Ranking EUA: dados da SEC de $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1

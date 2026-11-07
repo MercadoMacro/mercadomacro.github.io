@@ -47,7 +47,21 @@
     return m === 12 ? `ano de ${y}` : `${Math.ceil(m / 3)}º tri/${y}`;
   };
 
-  let prefs = { cvm: null, view: 'empresa', sort: 'receita', dir: -1, setor: '' };
+  // bandeirinhas em bolha (as mesmas de Indicadores); id muda para cada uso no documento
+  const flagBR = (id) => `<svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-${id}"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-${id})"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg>`;
+  const flagUS = (id) => `<svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-${id}"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-${id})"><rect y="0.00" width="20" height="1.54" fill="#b22234"/><rect y="1.54" width="20" height="1.54" fill="#fff"/><rect y="3.08" width="20" height="1.54" fill="#b22234"/><rect y="4.62" width="20" height="1.54" fill="#fff"/><rect y="6.15" width="20" height="1.54" fill="#b22234"/><rect y="7.69" width="20" height="1.54" fill="#fff"/><rect y="9.23" width="20" height="1.54" fill="#b22234"/><rect y="10.77" width="20" height="1.54" fill="#fff"/><rect y="12.31" width="20" height="1.54" fill="#b22234"/><rect y="13.85" width="20" height="1.54" fill="#fff"/><rect y="15.38" width="20" height="1.54" fill="#b22234"/><rect y="16.92" width="20" height="1.54" fill="#fff"/><rect y="18.46" width="20" height="1.54" fill="#b22234"/><rect width="10" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2.5" cy="2.5" r=".6"/><circle cx="5" cy="2.5" r=".6"/><circle cx="7.5" cy="2.5" r=".6"/><circle cx="3.75" cy="4.6" r=".6"/><circle cx="6.25" cy="4.6" r=".6"/><circle cx="2.5" cy="6.7" r=".6"/><circle cx="5" cy="6.7" r=".6"/><circle cx="7.5" cy="6.7" r=".6"/><circle cx="3.75" cy="8.8" r=".6"/><circle cx="6.25" cy="8.8" r=".6"/></g></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg>`;
+  // ranking dos EUA: arquivo do robô da SEC (terminal/sec/ranking_eua.json), baixado só quando escolhido
+  const SEC_SOURCES = ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/sec/ranking_eua.json'];
+  let rkEua = null, rkEuaFalhou = false, rkEuaCarregando = null;
+  const usd = (v) => {
+    if (!ok(v)) return '—';
+    const a = Math.abs(v), sg = v < 0 ? '−' : '';
+    if (a >= 1e12) return `${sg}US$ ${nf(a / 1e12, 2)} tri`;
+    if (a >= 1e9) return `${sg}US$ ${nf(a / 1e9, a >= 1e11 ? 0 : 1)} bi`;
+    if (a >= 1e6) return `${sg}US$ ${nf(a / 1e6, 0)} mi`;
+    return `${sg}US$ ${nf(a, 0)}`;
+  };
+  let prefs = { cvm: null, view: 'empresa', sort: 'receita', dir: -1, setor: '', rkm: 'br', setorUs: '' };
   try { prefs = { ...prefs, ...(JSON.parse(localStorage.getItem(PREF_KEY) || '{}') || {}) }; } catch (e) { /* padrão */ }
   const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* cheio */ } };
 
@@ -134,9 +148,9 @@
             <div class="fd-sug" id="fd-sug" role="listbox" hidden></div>
           </div>
           <div class="fd-views" role="tablist" aria-label="Modo">
-            <button data-v="empresa" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-br1"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-br1)"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Empresa</span></button>
-            <button data-v="ranking" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-br2"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-br2)"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Ranking</span></button>
-            <button data-v="eua" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-us"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-us)"><rect y="0.00" width="20" height="1.54" fill="#b22234"/><rect y="1.54" width="20" height="1.54" fill="#fff"/><rect y="3.08" width="20" height="1.54" fill="#b22234"/><rect y="4.62" width="20" height="1.54" fill="#fff"/><rect y="6.15" width="20" height="1.54" fill="#b22234"/><rect y="7.69" width="20" height="1.54" fill="#fff"/><rect y="9.23" width="20" height="1.54" fill="#b22234"/><rect y="10.77" width="20" height="1.54" fill="#fff"/><rect y="12.31" width="20" height="1.54" fill="#b22234"/><rect y="13.85" width="20" height="1.54" fill="#fff"/><rect y="15.38" width="20" height="1.54" fill="#b22234"/><rect y="16.92" width="20" height="1.54" fill="#fff"/><rect y="18.46" width="20" height="1.54" fill="#b22234"/><rect width="10" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2.5" cy="2.5" r=".6"/><circle cx="5" cy="2.5" r=".6"/><circle cx="7.5" cy="2.5" r=".6"/><circle cx="3.75" cy="4.6" r=".6"/><circle cx="6.25" cy="4.6" r=".6"/><circle cx="2.5" cy="6.7" r=".6"/><circle cx="5" cy="6.7" r=".6"/><circle cx="7.5" cy="6.7" r=".6"/><circle cx="3.75" cy="8.8" r=".6"/><circle cx="6.25" cy="8.8" r=".6"/></g></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>EUA</span></button>
+            <button data-v="empresa" role="tab">${flagBR('br1')}<span>Empresa</span></button>
+            <button data-v="ranking" role="tab"><span>Ranking</span></button>
+            <button data-v="eua" role="tab">${flagUS('us')}<span>EUA</span></button>
           </div>
         </div>
         <div class="fd-pop" id="fd-pop"></div>
@@ -233,7 +247,7 @@
     if (window.__fundEua) { window.__fundEua(el, foot); naBarra(); return; }
     if (document.querySelector('script[data-fund-eua]')) return;
     const sc = document.createElement('script');
-    sc.src = 'fund-eua.js?v=2'; sc.dataset.fundEua = '1';
+    sc.src = 'fund-eua.js?v=3'; sc.dataset.fundEua = '1';
     sc.onload = () => { if (prefs.view === 'eua' && window.__fundEua) { window.__fundEua(root.querySelector('#fd-eua') || el, foot); naBarra(); } };
     sc.onerror = () => { el.innerHTML = '<div class="fd-msg">Não foi possível carregar o modo EUA.</div>'; sc.remove(); };
     document.head.appendChild(sc);
@@ -334,7 +348,11 @@
       <line class="fd-zero" x1="${L}" x2="${W - R}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>${bars}</svg>`;
   }
 
+  const mercadoSeg = () => `<div class="fd-rkm" role="tablist" aria-label="Bolsa"><button data-m="br" role="tab" class="${prefs.rkm !== 'us' ? 'on' : ''}">${flagBR('rb')}<span>Brasil</span></button><button data-m="us" role="tab" class="${prefs.rkm === 'us' ? 'on' : ''}">${flagUS('ru')}<span>EUA</span></button></div>`;
+  const ligaSeg = (body) => body.querySelectorAll('.fd-rkm button').forEach((b) => b.addEventListener('click', () => { if (prefs.rkm === b.dataset.m) return; prefs.rkm = b.dataset.m; prefs.sort = 'receita'; prefs.dir = -1; savePrefs(); renderRanking(); }));
+
   function renderRanking() {
+    if (prefs.rkm === 'us') { renderRankingEua(); return; }
     const body = root.querySelector('#fd-body');
     const setores = [...new Set(idx.empresas.map((e) => setorDe(e.setor)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const row = (e) => ({ ...e, margem: div(e.lucro, e.receita, 100), roe: div(e.lucro, e.pl, 100), alav: e.fin ? null : div(e.div_liq, e.pl) });
@@ -353,6 +371,7 @@
     const th = (key, label, cls = '') => `<th class="${cls} ${k === key ? 'on' : ''}" data-k="${key}" tabindex="0" aria-sort="${k === key ? (dir > 0 ? 'ascending' : 'descending') : 'none'}">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     body.innerHTML = `
       <div class="fd-rk-bar">
+        ${mercadoSeg()}
         <label>Setor <select id="fd-setor"><option value="">Todos (${idx.empresas.length})</option>${setores.map((s) => `<option ${s === prefs.setor ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
         <span>${rows.length} empresas · números dos últimos 12 meses · clique numa linha para abrir</span>
       </div>
@@ -367,6 +386,7 @@
           <td class="n">${esc(pc(e.roe))}</td>
           <td class="n hide-s">${esc(e.fin ? 'n/a' : xx(e.alav, 2))}</td></tr>`).join('')}</tbody>
       </table></div>`;
+    ligaSeg(body);
     body.querySelector('#fd-setor').addEventListener('change', (e) => { prefs.setor = e.target.value; savePrefs(); renderRanking(); });
     const sortBy = (key) => { if (prefs.sort === key) prefs.dir = -prefs.dir; else { prefs.sort = key; prefs.dir = key === 'nome' || key === 'setor' ? 1 : -1; } savePrefs(); renderRanking(); };
     body.querySelectorAll('th[data-k]').forEach((h) => {
@@ -375,6 +395,71 @@
     });
     body.querySelectorAll('tr[data-cvm]').forEach((tr) => {
       const go = () => { prefs.view = 'empresa'; open(tr.dataset.cvm); };
+      tr.addEventListener('click', go);
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    });
+  }
+
+  // ranking das 500 maiores empresas americanas por receita (último ano fiscal entregue à SEC)
+  // a SEC guarda muitos nomes em maiúsculas ("AMAZON COM INC"): vira "Amazon Com Inc"; siglas curtas sem vogal ficam (IBM, CVS)
+  const NOME_PALAVRA = new Set(['INC', 'CO', 'LLC', 'LTD', 'PLC', 'THE', 'AND', 'OF', 'NEW', 'COM', 'CORP', 'HOLDINGS', 'GROUP']);
+  const nomeBonito = (n) => (/[a-z]/.test(n) ? n : String(n).replace(/\s+\/NEW\/?$/i, '').split(' ').map((w) => (w.length <= 3 && !NOME_PALAVRA.has(w) ? w
+    : w.charAt(0) + w.slice(1).toLowerCase())).join(' '));
+  function renderRankingEua() {
+    const body = root.querySelector('#fd-body');
+    if (!rkEua) {
+      body.innerHTML = `<div class="fd-rk-bar">${mercadoSeg()}</div><div class="fd-msg">${rkEuaFalhou ? 'O ranking dos EUA não carregou agora. Tente de novo em alguns minutos.' : 'Carregando o ranking dos EUA…'}</div>`;
+      ligaSeg(body);
+      if (!rkEuaFalhou && !rkEuaCarregando) {
+        rkEuaCarregando = (async () => {
+          for (const u of SEC_SOURCES) { try { const j = await getJSON(u); if (j && Array.isArray(j.empresas) && j.empresas.length) { rkEua = j; return; } } catch (e) { /* próxima */ } }
+          rkEuaFalhou = true;
+        })().finally(() => { rkEuaCarregando = null; if (prefs.view === 'ranking' && prefs.rkm === 'us') renderRankingEua(); });
+      }
+      return;
+    }
+    const setores = [...new Set(rkEua.empresas.map((e) => e.setor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    let rows = rkEua.empresas.filter((e) => !prefs.setorUs || e.setor === prefs.setorUs)
+      .map((e) => ({ ...e, margem: div(e.lucro, e.receita, 100), roe: ok(e.pl) && e.pl > 0 ? div(e.lucro, e.pl, 100) : null }));
+    const k = ['nome', 'setor', 'receita', 'lucro', 'margem', 'roe'].includes(prefs.sort) ? prefs.sort : 'receita', dir = prefs.dir;
+    rows.sort((a, b) => {
+      const va = a[k], vb = b[k];
+      if (k === 'nome' || k === 'setor') return dir * String(va || '').localeCompare(String(vb || ''), 'pt-BR');
+      if (!ok(va) && !ok(vb)) return 0; if (!ok(va)) return 1; if (!ok(vb)) return -1;
+      return dir * (va - vb);
+    });
+    const th = (key, label, cls = '') => `<th class="${cls} ${k === key ? 'on' : ''}" data-k="${key}" tabindex="0" aria-sort="${k === key ? (dir > 0 ? 'ascending' : 'descending') : 'none'}">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+    body.innerHTML = `
+      <div class="fd-rk-bar">
+        ${mercadoSeg()}
+        <label>Setor <select id="fd-setor-us"><option value="">Todos (${rkEua.empresas.length})</option>${setores.map((st) => `<option ${st === prefs.setorUs ? 'selected' : ''}>${esc(st)}</option>`).join('')}</select></label>
+        <span>${rows.length} maiores empresas por receita · último ano fiscal (${esc(String(rkEua.ano))}) · clique numa linha para abrir</span>
+      </div>
+      <div class="fd-box fd-rk"><table>
+        <thead><tr>${th('nome', 'Empresa')}${th('setor', 'Setor', 'hide-s')}${th('receita', 'Receita', 'n')}${th('lucro', 'Lucro', 'n')}${th('margem', 'Margem', 'n')}${th('roe', 'ROE', 'n')}</tr></thead>
+        <tbody>${rows.map((e) => `<tr data-s="${esc(e.t)}" tabindex="0">
+          <td><b>${esc(e.t)}</b> <span>${esc(nomeBonito(e.nome))}</span>${e.ano < rkEua.ano ? ` <em class="fd-old" title="Último ano fiscal entregue à SEC">até ${esc(dmy(e.ref).slice(3))}</em>` : ''}</td>
+          <td class="hide-s">${esc(e.setor || '—')}</td>
+          <td class="n">${esc(usd(e.receita))}</td>
+          <td class="n ${ok(e.lucro) && e.lucro < 0 ? 'dn' : ''}">${esc(usd(e.lucro))}</td>
+          <td class="n">${esc(pc(e.margem))}</td>
+          <td class="n">${esc(pc(e.roe))}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+    ligaSeg(body);
+    body.querySelector('#fd-setor-us').addEventListener('change', (e) => { prefs.setorUs = e.target.value; savePrefs(); renderRankingEua(); });
+    const sortBy = (key) => { if (prefs.sort === key) prefs.dir = -prefs.dir; else { prefs.sort = key; prefs.dir = key === 'nome' || key === 'setor' ? 1 : -1; } savePrefs(); renderRankingEua(); };
+    body.querySelectorAll('th[data-k]').forEach((h) => {
+      h.addEventListener('click', () => sortBy(h.dataset.k));
+      h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortBy(h.dataset.k); } });
+    });
+    // abre a empresa no modo EUA (perfil e indicadores do Finnhub); o ticker da SEC usa "-" onde o Finnhub usa "." (BRK-B)
+    body.querySelectorAll('tr[data-s]').forEach((tr) => {
+      const go = () => {
+        const sym = tr.dataset.s.replace(/-/g, '.');
+        if (typeof window.__fundEuaAbrir === 'function') window.__fundEuaAbrir(sym);
+        else { try { const pe = JSON.parse(localStorage.getItem('fund_eua_v1') || '{}') || {}; pe.s = sym; localStorage.setItem('fund_eua_v1', JSON.stringify(pe)); } catch (e) { /* sem espaço */ } }
+        prefs.view = 'eua'; savePrefs(); render();
+      };
       tr.addEventListener('click', go);
       tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     });
@@ -468,6 +553,10 @@
   .fd-tbl thead th.ttm { color:var(--accent-ink); }
   .fd-tbl tr:last-child th, .fd-tbl tr:last-child td { border-bottom:0; }
   .fd-rk-bar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--text-3); }
+  .fd-rkm { display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .fd-rkm button { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:0; background:var(--surface); color:var(--text-3); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .fd-rkm button.on { background:var(--surface-2); color:var(--accent-ink); }
+  .fd-rkm button:not(.on) .fd-flag { opacity:.75; }
   .fd-rk-bar select { height:32px; margin-left:6px; padding:0 10px; border-radius:9px; background:var(--surface); color:var(--text); border:1px solid var(--line-2); font:inherit; font-size:12.5px; max-width:260px; }
   .fd-rk { overflow-x:auto; }
   .fd-rk th, .fd-rk td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }

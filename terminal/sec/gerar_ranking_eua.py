@@ -105,7 +105,7 @@ def main():
             if cik in dados and dados[cik]['rec'][2] >= r[2]:
                 continue
             dados[cik] = {'ano': a, 'rec': r, 'luc': luc.get(cik)}
-    # Os frames às vezes deixam de fora uma empresa grande (a Exxon em 2025). A lista de tickers da SEC vem mais ou menos
+    # Os frames às vezes deixam de fora uma empresa grande. A lista de tickers da SEC vem mais ou menos
     # na ordem do valor de mercado: as 200 primeiras que faltaram são buscadas uma a uma, no último 10-K anual.
     def anual(cik, contas):
         melhor = None
@@ -129,9 +129,6 @@ def main():
         if cik in dados:
             continue
         r = anual(cik, RECEITA[:3])
-        if tk[cik] == 'XOM':
-            cc = get(f'https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/Revenues.json') or {}
-            print(f'    XOM {cik} Revenues:', list(cc.get('units', {}).keys()), [(x.get('start'), x.get('end'), x.get('form'), x.get('fp'), x.get('frame')) for x in cc.get('units', {}).get('USD', [])[-8:]])
         if not r or r[2] < f'{ano - 1}-06-30':
             continue
         l = anual(cik, LUCRO[:1])
