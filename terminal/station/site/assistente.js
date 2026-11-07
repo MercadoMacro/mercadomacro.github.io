@@ -110,9 +110,9 @@
       + `<g fill="url(#${g})"><rect x="4" y="20" width="6" height="10" rx="1.5"/><rect x="13" y="13" width="6" height="17" rx="1.5"/><rect x="22" y="7" width="6" height="23" rx="1.5"/>`
       + `<path d="M8 2.5l1.1 3 3 1.1-3 1.1L8 10.7l-1.1-3-3-1.1 3-1.1z"/></g></svg>`;
   }
-  const SUGESTOES = ['Resuma as principais notícias de hoje', 'Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?', 'Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
+  const SUGESTOES = ['Resuma as principais notícias de hoje', 'Meu radar: o que importa hoje para a minha watchlist?', 'Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?', 'Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
   // pedem dado de agora: vão direto ao Gemini (que consulta o terminal), sem resposta pronta
-  const SO_GEMINI = new Set(['Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?']);
+  const SO_GEMINI = new Set(['Meu radar: o que importa hoje para a minha watchlist?', 'Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?']);
   let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
@@ -127,7 +127,7 @@
       msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { if (b.hasAttribute('data-ia-tela')) return explicarTela(); campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(b.hasAttribute('data-ia-so') || undefined); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'alarme' ? 'Alarme de preço' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'alarme' ? 'Alarme de preço' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : x.licao && window.MMEdu ? `<div class="ia-acoes"><button type="button" data-ia-licao="${esc(x.licao.id)}">Abrir a lição: ${esc(x.licao.titulo)}</button></div>` : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando" role="status">Analisando<span class="ia-pontos" aria-hidden="true"><i></i><i></i><i></i></span></div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
     msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
@@ -180,6 +180,38 @@
     perguntar(true, tela);
   }
 
+  // ---- o que o assistente sabe de quem pergunta (fica só neste navegador; vai junto com a pergunta ao Gemini) ----
+  const TEMAS_KEY = 'mm_ia_temas_v1';
+  const TEMAS = [
+    ['juros e Selic', /selic|copom|juros|cdi|di\b|curva/], ['Fed e EUA', /\bfed\b|fomc|powell|eua|treasur|payroll|cpi\b/], ['câmbio', /dolar|cambio|euro|moeda|dxy/],
+    ['ações da B3', /\b[a-z]{4}\d{1,2}\b|acao|acoes|ibov|bolsa|b3\b/], ['dividendos', /dividend|provento|jcp|yield/], ['renda fixa', /tesouro|cdb|lci|lca|debenture|renda fixa|ipca\+/],
+    ['opções e derivativos', /opcao|opcoes|call|put|derivativ|futuro|hedge/], ['cripto', /bitcoin|cripto|btc|ethereum/], ['commodities', /petroleo|brent|ouro|minerio|soja|commodit/],
+    ['inflação', /inflac|ipca|igp|cpi\b|pce\b/], ['análise de empresas', /balanco|lucro|ebitda|p\/l|valuation|fundament|roe\b/],
+  ];
+  const tira = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function anotaTemas(p) {
+    try {
+      const t = tira(p), o = JSON.parse(localStorage.getItem(TEMAS_KEY) || '{}') || {};
+      TEMAS.forEach(([nome, re]) => { if (re.test(t)) o[nome] = (o[nome] || 0) + 1; });
+      localStorage.setItem(TEMAS_KEY, JSON.stringify(o));
+    } catch (e) { /* sem armazenamento */ }
+  }
+  function perfil() {
+    let temas = [];
+    try { temas = Object.entries(JSON.parse(localStorage.getItem(TEMAS_KEY) || '{}') || {}).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k); } catch (e) { /* nada */ }
+    let nivel = 'intermediario';
+    try { const v = (JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}') || {}).iaNivel; if (['iniciante', 'intermediario', 'avancado'].includes(v)) nivel = v; } catch (e) { /* padrão */ }
+    let watchlist = [];
+    try { watchlist = window.MMRadar ? window.MMRadar.watchlist() : (window.MMWatchRobo ? window.MMWatchRobo.itens().map((s) => ({ s, nome: window.MMWatchRobo.nome(s), termos: [] })) : []); } catch (e) { watchlist = []; }
+    return { nivel, temas, watchlist: watchlist.slice(0, 30) };
+  }
+  // lição da aba Educação sobre o assunto: vai como referência para o Gemini citar
+  function conteudoSite(p) {
+    const li = licaoPara(p);
+    if (!li) return { lista: [], licao: null };
+    return { licao: { id: li.id, titulo: li.titulo, trilha: li.trilha }, lista: [{ tipo: 'lição da aba Educação', titulo: li.titulo, trilha: li.trilha, texto: (li.abertura + ' ' + (li.pontos || []).join(' ')).slice(0, 1500) }] };
+  }
+
   async function perguntar(soGemini, tela) {
     const p = tela ? 'Explique a tela "' + tela.rot + '"' : campo.value.trim();
     if (!p || ocupado) return;
@@ -215,9 +247,12 @@
       return;
     }
     const historico = conversa.filter((x) => x.r && !x.pronta).slice(-6).map((x) => ({ p: x.p, r: x.r }));
+    if (!tela) anotaTemas(p);
+    const site = tela ? { lista: [], licao: null } : conteudoSite(p);
+    if (site.licao) item.licao = site.licao;
     conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
     try {
-      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tela ? { pergunta: 'Explique de forma simples o que esta tela do terminal mostra agora e o que mais chama a atenção nos números. Seja breve.', contexto: tela.t, tela: tela.rot, historico, stream: true } : { pergunta: p, historico, stream: true }) });
+      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tela ? { pergunta: 'Explique de forma simples o que esta tela do terminal mostra agora e o que mais chama a atenção nos números. Seja breve.', contexto: tela.t, tela: tela.rot, historico, perfil: perfil(), stream: true } : { pergunta: p, historico, perfil: perfil(), site: site.lista, stream: true }) });
       if (r.ok && r.body && /text\/plain/.test(r.headers.get('content-type') || '')) {
         // a resposta chega aos pedaços: mostra enquanto o Gemini escreve
         const leitor = r.body.getReader(), dec = new TextDecoder();

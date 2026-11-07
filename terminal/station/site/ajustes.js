@@ -205,6 +205,10 @@
         <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
         <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
         <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
+        <div class="aj-row" style="margin-top:12px"><span>Respostas do Assistente</span><select data-str="iaNivel" aria-label="Nível das respostas do Assistente">${[['iniciante', 'Para iniciante'], ['intermediario', 'Intermediário'], ['avancado', 'Avançado']].map(([v, l]) => `<option value="${v}" ${(P.iaNivel || 'intermediario') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <p class="aj-note">O Assistente ajusta a linguagem a este nível, relaciona as respostas com a sua watchlist e lembra os assuntos que você mais pergunta (guardados só neste navegador).</p>
+        <button type="button" class="btn-sm aj-wide" data-act="iaEsquecer"><i class="fas fa-eraser"></i> Esquecer os assuntos que pergunto</button>
+        ${sw('roboRadar', P.roboRadar !== false, 'Radar da watchlist (o robô avisa notícia importante sobre os seus ativos)')}
         ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia do robô (resumo da manhã, nos dias de pregão)')}
         ${sw('roboQuiz', P.roboQuiz !== false, 'Pergunta do dia (das lições da aba Educação)')}
         ${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
@@ -500,7 +504,7 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
-      if (k === 'roboBomDia' || k === 'roboQuiz') P[k] = P[k] === false;
+      if (k === 'roboBomDia' || k === 'roboQuiz' || k === 'roboRadar') P[k] = P[k] === false;
       if (k === 'roboNotif') {
         if (P.roboNotif === true) P.roboNotif = false;
         else { window.MMRoboExtras?.pedirNotif().then((ok) => { if (!ok) return; P.roboNotif = true; save(); render(); toast('Pronto. Aviso no sistema quando o terminal estiver em segundo plano.'); }); return; }
@@ -510,6 +514,7 @@
       return setTimeout(render, k === 'live' ? 60 : 0);
     }
     if (act === 'roboTestar') { if (!window.MMRoboVoz?.falar('Olá! Esta é a voz que vou usar para as notícias urgentes.')) toast('Este navegador não tem voz disponível.'); return; }
+    if (act === 'iaEsquecer') { try { localStorage.removeItem('mm_ia_temas_v1'); } catch (e2) { /* nada */ } toast('Pronto. O Assistente esqueceu os assuntos que você pergunta.'); return; }
     if (act === 'roboJanela') { window.MMRoboExtras?.abrirJanela(); return; }
     if (act === 'roboAlarmeApaga') { window.MMRoboAlarmes?.apagar(b.dataset.id); toast('Alarme apagado.'); return render(); }
     if (act === 'roboCanto') { window.MMPet?.canto?.(); toast('O robô voltou para o canto.'); return; }
@@ -589,7 +594,7 @@
     const t = e.target;
     if (t.id === 'aj-file' && t.files && t.files[0]) return loadImage(t.files[0]);
     if (t.dataset.num && t.tagName === 'SELECT') { P[t.dataset.num] = +t.value; save(); syncTheme(); return; }
-    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
+    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (t.dataset.str === 'iaNivel') toast('O Assistente vai responder no nível ' + t.selectedOptions[0].textContent.toLowerCase().replace('para ', '') + '.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
   }
   // reduz a foto (no máximo 1920 px, JPEG) para caber no armazenamento do navegador
   function loadImage(file) {
