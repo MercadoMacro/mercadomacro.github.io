@@ -825,9 +825,9 @@
         <p id="ind-sub">Dados oficiais do Banco Central, IBGE, Tesouro e Fed</p>
       </div>
       <div class="ind-area" role="tablist">
-        <button data-a="br" role="tab">Brasil</button>
-        <button data-a="us" role="tab">EUA</button>
-        <button data-a="eu" role="tab">Europa</button>
+        <button data-a="br" role="tab"><svg class="ia-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="iaf-br"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#iaf-br)"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Brasil</span></button>
+        <button data-a="us" role="tab"><svg class="ia-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="iaf-us"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#iaf-us)"><rect y="0.00" width="20" height="1.54" fill="#b22234"/><rect y="1.54" width="20" height="1.54" fill="#fff"/><rect y="3.08" width="20" height="1.54" fill="#b22234"/><rect y="4.62" width="20" height="1.54" fill="#fff"/><rect y="6.15" width="20" height="1.54" fill="#b22234"/><rect y="7.69" width="20" height="1.54" fill="#fff"/><rect y="9.23" width="20" height="1.54" fill="#b22234"/><rect y="10.77" width="20" height="1.54" fill="#fff"/><rect y="12.31" width="20" height="1.54" fill="#b22234"/><rect y="13.85" width="20" height="1.54" fill="#fff"/><rect y="15.38" width="20" height="1.54" fill="#b22234"/><rect y="16.92" width="20" height="1.54" fill="#fff"/><rect y="18.46" width="20" height="1.54" fill="#b22234"/><rect width="10" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2.5" cy="2.5" r=".6"/><circle cx="5" cy="2.5" r=".6"/><circle cx="7.5" cy="2.5" r=".6"/><circle cx="3.75" cy="4.6" r=".6"/><circle cx="6.25" cy="4.6" r=".6"/><circle cx="2.5" cy="6.7" r=".6"/><circle cx="5" cy="6.7" r=".6"/><circle cx="7.5" cy="6.7" r=".6"/><circle cx="3.75" cy="8.8" r=".6"/><circle cx="6.25" cy="8.8" r=".6"/></g></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>EUA</span></button>
+        <button data-a="eu" role="tab"><svg class="ia-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="iaf-eu"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#iaf-eu)"><rect width="20" height="20" fill="#003399"/><g fill="#ffcc00"><circle cx="15.20" cy="10.00" r=".85"/><circle cx="14.50" cy="12.60" r=".85"/><circle cx="12.60" cy="14.50" r=".85"/><circle cx="10.00" cy="15.20" r=".85"/><circle cx="7.40" cy="14.50" r=".85"/><circle cx="5.50" cy="12.60" r=".85"/><circle cx="4.80" cy="10.00" r=".85"/><circle cx="5.50" cy="7.40" r=".85"/><circle cx="7.40" cy="5.50" r=".85"/><circle cx="10.00" cy="4.80" r=".85"/><circle cx="12.60" cy="5.50" r=".85"/><circle cx="14.50" cy="7.40" r=".85"/></g></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Europa</span></button>
         <span class="ind-area-bar" aria-hidden="true"></span>
       </div>
       <button class="btn-sm ind-refresh" id="ind-refresh" title="Buscar de novo"><i class="fas fa-sync-alt"></i> Atualizar</button>
@@ -1873,6 +1873,9 @@
   .ind-title { flex:1 1 260px; min-width:0; }
   .ind-title h2 { margin:0; font-size:20px; letter-spacing:-.015em; color:var(--text); }
   .ind-title p { margin:4px 0 0; font-size:12px; color:var(--text-3); font-family:'JetBrains Mono',monospace; }
+  .ind-area button { display:inline-flex; align-items:center; gap:7px; }
+  .ia-flag { width:16px; height:16px; flex:none; border-radius:50%; display:block; }
+  .ind-area button:not(.on) .ia-flag { opacity:.75; }
   .ind-area { position:relative; display:flex; padding:3px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
   .ind-area button { position:relative; z-index:1; border:0; background:transparent; color:var(--text-3); font:inherit; font-size:12.5px; font-weight:600; padding:7px 16px; border-radius:9px; cursor:pointer; transition:color .18s; }
   .ind-area button.on { color:var(--text); }
