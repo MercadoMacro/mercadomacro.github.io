@@ -3,6 +3,7 @@
    Faixa grátis do Gemini: limite de pedidos por minuto e por dia (por projeto do Google) e as conversas podem
    ser usadas pelo Google para melhorar os produtos dele (a página /privacidade avisa).
    Cada conta pode fazer PERGUNTAS_DIA perguntas por dia; o administrador não tem limite. */
+import { retrato, FERRAMENTAS, executar, ligarDados } from './assistente-dados.js';
 let json, mesmaOrigem, config, salvarConfig, dentroDoLimite;
 export function ligarAssistente(u) {
   ({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite } = u);
@@ -19,8 +20,11 @@ const INSTRUCOES = `Você é o assistente do Mercado Macro, um terminal financei
 indicadores do Brasil e dos EUA, balanços, fluxo do investidor estrangeiro na B3, probabilidades do Fed e do Copom, calculadoras e opções).
 Responda sempre em português do Brasil, de forma clara e curta (no máximo uns 6 parágrafos curtos ou uma lista), para quem acompanha o mercado.
 Regras:
-- Quando a mensagem trouxer um bloco de dados copiados da tela do terminal, você pode comentar os números desse bloco, citando-os como estão.
-- Fora desse bloco, você NÃO tem acesso às cotações, notícias ou dados de agora. Nunca invente preços, taxas, datas ou números atuais; se a pergunta depender deles, diga que não tem esse dado e indique onde olhar no painel.
+- A mensagem traz um bloco "Dados do terminal agora" com cotações, agenda e manchetes reais deste momento. Use esses números quando a pergunta pedir e diga o horário do dado.
+- Para outros dados (outro ativo, histórico, probabilidades do Fed ou do Copom, fundamentos de empresa, fluxo do estrangeiro, notícias de um assunto, agenda dos próximos dias), chame as ferramentas disponíveis.
+- Quando a mensagem trouxer um bloco de dados copiados da tela do terminal, você também pode comentar os números desse bloco, citando-os como estão.
+- Nunca invente preços, taxas, datas ou números que não vieram desses blocos ou das ferramentas. Se um dado veio como "sem dado" ou com erro, diga que não tem esse dado agora e indique onde olhar no painel.
+- Cotação e notícia mudam rápido: deixe claro que é o dado do horário informado. Explique por que um ativo se mexeu só com base nas manchetes recebidas, citando a fonte, e diga quando não houver manchete que explique.
 - Explique conceitos, indicadores, termos, como ler gráficos e como funcionam produtos (ações, juros, câmbio, derivativos, opções, renda fixa).
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
 - Se não souber, diga que não sabe. Não use emojis.`;
@@ -30,29 +34,29 @@ const ocupadoAte = {};
 // pensar pouco: o Gemini 3 pensa bastante por padrão e isso atrasa a resposta; se o Google recusar o campo, segue sem ele
 let semThinking = false;
 
-async function chamar(m, chave, contents, stream, comThinking, instrucoes = INSTRUCOES) {
+async function chamar(m, chave, contents, stream, comThinking, instrucoes = INSTRUCOES, extra = null) {
   const gc = { maxOutputTokens: 2048 };
   if (comThinking) gc.thinkingConfig = { thinkingLevel: 'low' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`;
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chave },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: instrucoes }] }, contents, generationConfig: gc }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: instrucoes }] }, contents, generationConfig: gc, ...(extra || {}) }),
   }).catch((e) => ({ ok: false, status: 0, erroRede: String(e) }));
 }
 
 // stream = true devolve {ok, corpo: ReadableStream de texto puro}; sem stream, {ok, texto}
 // preferido: modelo escolhido no /admin (config gemini_modelo), tentado antes dos outros
-async function gemini(chave, contents, stream = false, preferido = '', instrucoes = INSTRUCOES) {
+async function gemini(chave, contents, stream = false, preferido = '', instrucoes = INSTRUCOES, extra = null) {
   let ultimo = '', ocupado = 0;
   const agora = Date.now();
   const todos = [...new Set([preferido, ...MODELOS].filter(Boolean))];
   const lista = todos.filter((m) => !(ocupadoAte[m] > agora));
   for (const m of lista.length ? lista : todos) {
-    let r = await chamar(m, chave, contents, stream, !semThinking, instrucoes);
+    let r = await chamar(m, chave, contents, stream, !semThinking, instrucoes, extra);
     if (r.status === 400 && !semThinking) {
       const t = await r.text().catch(() => '');
-      if (/thinking/i.test(t)) { semThinking = true; r = await chamar(m, chave, contents, stream, false, instrucoes); }
+      if (/thinking/i.test(t)) { semThinking = true; r = await chamar(m, chave, contents, stream, false, instrucoes, extra); }
       else r = { ok: false, status: 400, json: async () => { try { return JSON.parse(t); } catch (e) { return {}; } } };
     }
     if (r.status === 404) { ultimo = 'modelo ' + m + ' indisponível'; continue; }
@@ -65,10 +69,35 @@ async function gemini(chave, contents, stream = false, preferido = '', instrucoe
     if (stream) return { ok: true, corpo: textoDoSSE(r.body), modelo: m };
     const j = await r.json().catch(() => ({}));
     const texto = (j?.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('').trim();
+    // com ferramentas, a resposta pode ser só um pedido de dados (functionCall), sem texto
+    if (extra && j?.candidates?.[0]?.content) return { ok: true, texto, j, modelo: m };
     if (!texto) return { ok: false, status: 502, erro: j?.promptFeedback?.blockReason ? 'pergunta bloqueada pelo filtro do Google' : 'resposta vazia' };
     return { ok: true, texto, modelo: m };
   }
   return { ok: false, status: ocupado || 404, erro: ultimo || 'nenhum modelo disponível' };
+}
+
+// pergunta com as ferramentas do terminal: o Gemini pede dados (functionCall), o servidor busca e devolve,
+// até ele responder em texto. No máximo RODADAS idas e voltas; depois disso, responde com o que tiver.
+const RODADAS = 3;
+async function responderComDados(chave, contents, preferido) {
+  let modelo = preferido;
+  for (let i = 0; i < RODADAS; i++) {
+    const r = await gemini(chave, contents, false, modelo, INSTRUCOES, { tools: FERRAMENTAS });
+    if (!r.ok) return r;
+    modelo = r.modelo;
+    const cont = r.j.candidates[0].content;
+    const chamadas = (cont.parts || []).filter((p) => p.functionCall);
+    if (!chamadas.length) return r.texto ? { ok: true, texto: r.texto, modelo } : { ok: false, status: 502, erro: 'resposta vazia' };
+    // devolve a mensagem do modelo como veio (com a assinatura do raciocínio) e as respostas das ferramentas
+    contents.push({ role: 'model', parts: cont.parts });
+    const respostas = await Promise.all(chamadas.slice(0, 6).map(async (p) => ({
+      functionResponse: { name: p.functionCall.name, response: { resultado: await executar(p.functionCall.name, p.functionCall.args || {}) } },
+    })));
+    contents.push({ role: 'user', parts: respostas });
+  }
+  contents.push({ role: 'user', parts: [{ text: 'Responda agora com os dados que já recebeu.' }] });
+  return gemini(chave, contents, false, modelo);
 }
 
 // converte o SSE do Google ("data: {...}") em texto puro, pedaço a pedaço
@@ -97,7 +126,8 @@ function textoDoSSE(body) {
 }
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
-export async function apiAssistente(req, env, u, gratis) {
+export async function apiAssistente(req, env, u, gratis, fontes) {
+  if (fontes) ligarDados(fontes);
   const c = await config(env);
   if (req.method === 'GET') return json({ ligado: !!c.gemini_key, limite: u.admin ? null : PERGUNTAS_DIA, assinante: !gratis });
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
@@ -116,8 +146,14 @@ export async function apiAssistente(req, env, u, gratis) {
   // "Explicar esta tela": o navegador manda o texto visível da aba aberta; vai junto só nesta pergunta
   const ctx = String(b.contexto || '').slice(0, MAX_CONTEXTO).trim();
   const aba = String(b.tela || '').replace(/["\n]/g, ' ').slice(0, 60).trim();
-  const texto = ctx ? `Dados que aparecem agora na tela "${aba || 'aberta'}" do terminal, copiados da página (use só estes números; não invente outros):\n"""\n${ctx.replace(/"""/g, '"')}\n"""\n\n${pergunta}` : pergunta;
-  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: texto }] }], !!b.stream, c.gemini_modelo);
+  const agora = await retrato().catch(() => '');
+  const blocoDados = agora ? `Dados do terminal agora (fonte: servidor de dados do Mercado Macro):\n"""\n${agora}\n"""\n\n` : '';
+  const texto = blocoDados + (ctx ? `Dados que aparecem agora na tela "${aba || 'aberta'}" do terminal, copiados da página (use só estes números; não invente outros):\n"""\n${ctx.replace(/"""/g, '"')}\n"""\n\n${pergunta}` : pergunta);
+  const contents = [...hist, { role: 'user', parts: [{ text: texto }] }];
+  let r = await responderComDados(c.gemini_key, contents.slice(), c.gemini_modelo);
+  // se as ferramentas falharem (modelo sem suporte, formato recusado), responde do jeito antigo, só com o retrato
+  if (!r.ok && r.status === 400) r = await gemini(c.gemini_key, contents, !!b.stream, c.gemini_modelo);
+  if (r.ok && r.texto != null && b.stream) return new Response(r.texto, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   if (r.ok && r.corpo) return new Response(r.corpo, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   if (r.ok) return json({ resposta: r.texto });
   if (r.status === 429) return json({ erro: 'O assistente atingiu o limite gratuito do Google por agora. Tente de novo mais tarde.' }, 429);

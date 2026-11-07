@@ -110,19 +110,21 @@
       + `<g fill="url(#${g})"><rect x="4" y="20" width="6" height="10" rx="1.5"/><rect x="13" y="13" width="6" height="17" rx="1.5"/><rect x="22" y="7" width="6" height="23" rx="1.5"/>`
       + `<path d="M8 2.5l1.1 3 3 1.1-3 1.1L8 10.7l-1.1-3-3-1.1 3-1.1z"/></g></svg>`;
   }
-  const SUGESTOES = ['Resuma as principais notícias de hoje', 'Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
+  const SUGESTOES = ['Resuma as principais notícias de hoje', 'Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?', 'Como adicionar um ativo à watchlist?', 'O que é a Selic? Meta e efetiva são iguais?', 'Como interpretar as probabilidades do Fed?', 'O que é a curva de juros DI x pré e como ler?'];
+  // pedem dado de agora: vão direto ao Gemini (que consulta o terminal), sem resposta pronta
+  const SO_GEMINI = new Set(['Por que o Ibovespa está se mexendo hoje?', 'Quais as chances do Copom e do Fed nas próximas reuniões?']);
   let painel, msgs, campo, enviar, limite = null, ocupado = false, gemini = false, assinante = true;
 
   function desenhar() {
     if (!conversa.length) {
       // layout e textos de 04/11/2026 (propostas do Severino): saudação, um texto curto sobre como responde e sugestões com ícone
-      const sug = SUGESTOES.filter((x) => (gemini && assinante) || prontaPara(x) || licaoPara(x))
-        .map((s) => { const pronta = prontaPara(s) || licaoPara(s); return `<button type="button" class="ia-sug${pronta ? '' : ' gem'}"><span class="ia-ic" aria-hidden="true">${IC[pronta ? 'balao' : 'brilho']}</span><span class="ia-sug-x">${esc(s)}</span></button>`; }).join('');
+      const sug = SUGESTOES.filter((x) => (gemini && assinante) || (!SO_GEMINI.has(x) && (prontaPara(x) || licaoPara(x))))
+        .map((s) => { const pronta = !SO_GEMINI.has(s) && (prontaPara(s) || licaoPara(s)); return `<button type="button" class="ia-sug${pronta ? '' : ' gem'}"${SO_GEMINI.has(s) ? ' data-ia-so' : ''}><span class="ia-ic" aria-hidden="true">${IC[pronta ? 'balao' : 'brilho']}</span><span class="ia-sug-x">${esc(s)}</span></button>`; }).join('');
       const como = 'Dúvidas comuns e assuntos das lições da aba Educação têm resposta na hora, da nossa base.'
-        + (gemini ? (assinante ? ` Para o resto, o Google Gemini apoia a sua análise${limite ? ` (até ${limite} perguntas por dia)` : ''}. Ele não vê as cotações em tempo real.` : ' Perguntas livres vão ao Google Gemini, exclusivo para assinantes.') : '');
+        + (gemini ? (assinante ? ` Para o resto, o Google Gemini apoia a sua análise${limite ? ` (até ${limite} perguntas por dia)` : ''}. Ele consulta as cotações, a agenda, as notícias, as probabilidades e os fundamentos do terminal antes de responder.` : ' Perguntas livres vão ao Google Gemini, exclusivo para assinantes.') : '');
       msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso ajudar na sua análise hoje?<small>${como}</small></p>
         ${sug || (gemini && assinante) ? `<p class="ia-sug-t">Sugestões</p>` : ''}${gemini && assinante ? `<button type="button" class="ia-sug gem tela" data-ia-tela><span class="ia-ic" aria-hidden="true">${IC.tela}</span><span class="ia-sug-x">Explicar a tela que estou vendo</span></button>` : ''}${sug}</div>`;
-      msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { if (b.hasAttribute('data-ia-tela')) return explicarTela(); campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
+      msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { if (b.hasAttribute('data-ia-tela')) return explicarTela(); campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(b.hasAttribute('data-ia-so') || undefined); }));
       return;
     }
     msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'alarme' ? 'Alarme de preço' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
