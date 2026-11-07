@@ -105,12 +105,35 @@ def main():
             if cik in dados and dados[cik]['rec'][2] >= r[2]:
                 continue
             dados[cik] = {'ano': a, 'rec': r, 'luc': luc.get(cik)}
-    # diagnóstico: contas de receita de quem faltou (Exxon)
-    for cik in (34088,):
-        if cik not in dados:
-            cf = get(f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json') or {}
-            ks = [k for k in cf.get('facts', {}).get('us-gaap', {}) if 'Revenue' in k or 'Sales' in k]
-            print(f'  CIK {cik} sem receita nos frames; contas: {ks[:30]}')
+    # Os frames às vezes deixam de fora uma empresa grande (a Exxon em 2025). A lista de tickers da SEC vem mais ou menos
+    # na ordem do valor de mercado: as 200 primeiras que faltaram são buscadas uma a uma, no último 10-K anual.
+    def anual(cik, contas):
+        melhor = None
+        for c in contas:
+            cc = get(f'https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/{c}.json')
+            for x in (cc or {}).get('units', {}).get('USD', []):
+                if x.get('form') not in ('10-K', '10-K/A') or not x.get('start'):
+                    continue
+                dias = (date.fromisoformat(x['end']) - date.fromisoformat(x['start'])).days
+                if 350 <= dias <= 380 and (melhor is None or (x['end'], x['val']) > (melhor[2], melhor[0])):
+                    melhor = (x['val'], x['start'], x['end'], '')
+        return melhor
+    grandes = []
+    for v in tick.values():
+        c = int(v['cik_str'])
+        if c not in grandes:
+            grandes.append(c)
+        if len(grandes) >= 200:
+            break
+    for cik in grandes:
+        if cik in dados:
+            continue
+        r = anual(cik, RECEITA[:3])
+        if not r or r[2] < f'{ano - 1}-06-30':
+            continue
+        l = anual(cik, LUCRO[:1])
+        dados[cik] = {'ano': int(r[2][:4]) if r[2][5:7] > '06' else int(r[2][:4]) - 1, 'rec': r, 'luc': l if l and l[2] == r[2] else None}
+        print(f'  {tk[cik]} entrou pela busca individual: receita {r[0]:,} até {r[2]}')
     if len(dados) < 1000:
         sys.exit(f'Só {len(dados)} empresas lidas: a SEC pode ter mudado o formato. Nada foi gravado.')
 
