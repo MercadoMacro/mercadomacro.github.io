@@ -6,10 +6,7 @@ jobs:
   t:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v5
       - run: |
-          E=https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data
-          curl -s "$E/prc_hicp_minr?geo=EA&unit=RCH_A&lastTimePeriod=1" | python3 -c "
-          import json,sys;d=json.load(sys.stdin);c=d['dimension']['coicop18']['category']
-          print([(k,c['label'][k]) for k in c['index'] if not k.startswith('CP')])"
-          curl -s "$E/prc_hicp_minr?geo=EA&unit=RCH_A&coicop18=TOTAL&sinceTimePeriod=1997-01" | python3 -c "
-          import json,sys;d=json.load(sys.stdin);t=list(d['dimension']['time']['category']['index']);v=d['value'];print(len(t),t[:2],t[-2:],len(v), [ (t[int(i)],v[i]) for i in sorted(v,key=int)[:3]], [(t[int(i)],v[i]) for i in sorted(v,key=int)[-3:]])"
+          python3 terminal/bce/gerar_bce.py terminal/bce
+          gzip -c terminal/bce/bce.json | base64 -w0; echo
