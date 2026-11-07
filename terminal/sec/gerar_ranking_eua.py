@@ -125,12 +125,13 @@ def main():
             grandes.append(c)
         if len(grandes) >= 200:
             break
-    print(f'  {sum(c not in dados for c in grandes)} das 200 maiores não vieram nos frames; Exxon na lista: {34088 in grandes}')
     for cik in grandes:
         if cik in dados:
             continue
         r = anual(cik, RECEITA[:3])
-        print(f'    {tk[cik]}: {r}')
+        if cik == 34088:
+            cc = get(f'https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/Revenues.json') or {}
+            print('    XOM Revenues:', list(cc.get('units', {}).keys()), [(x.get('start'), x.get('end'), x.get('form'), x.get('fp'), x.get('frame')) for x in cc.get('units', {}).get('USD', [])[-8:]])
         if not r or r[2] < f'{ano - 1}-06-30':
             continue
         l = anual(cik, LUCRO[:1])
