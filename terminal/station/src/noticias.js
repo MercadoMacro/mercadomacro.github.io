@@ -31,7 +31,7 @@ const FEEDS = [
   { name: 'Invezz Commodities', url: 'https://invezz.com/pt/noticias/commodities/feed/', source: 'Invezz', weight: 5 },
   // Notícias Agrícolas (07/11/2026, sugestão do Severino): o site não tem RSS aberto; lê o widget público
   // de notícias (o mesmo que eles oferecem para colar em sites) e converte as manchetes em itens (widget: 'na')
-  { name: 'Notícias Agrícolas', url: 'https://www.noticiasagricolas.com.br/widgets/noticias?subsecao=163,97,14,80,84,28,212,149,26,69,90,62,27,92,148,154,32,67,213,218,164,117,118,214&qtd=30&output=js', source: 'Notícias Agrícolas', weight: 5, widget: 'na' },
+  { name: 'Notícias Agrícolas', url: 'https://www.noticiasagricolas.com.br/widgets/noticias?subsecao=163,14,80,84,32,213,218,164,117,118,214&qtd=30&output=js', source: 'Notícias Agrícolas', weight: 5, widget: 'na' },
   // ============ POLÍTICA (o site só mostra se a pessoa ligar "Política" nas Notícias) ============
   { name: 'O Antagonista', url: 'https://oantagonista.com.br/feed/', source: 'O Antagonista', weight: 4, so: /oantagonista\.com\.br\/(brasil|politica)\// }, // o feed traz muita variedade (ladooa, curiosidades em economia)
   { name: 'Poder360', url: 'https://www.poder360.com.br/feed/', source: 'Poder360', weight: 4 },
