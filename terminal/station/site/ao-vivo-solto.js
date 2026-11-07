@@ -47,6 +47,14 @@
     redesenhar();
   }
 
+  // lupa: mostra ou esconde a busca do Ao Vivo (o campo fica dentro do fluxo e vai junto para onde ele for)
+  function alternarBusca() {
+    const c = corpo.querySelector('#live-busca');
+    if (!c) return;
+    c.hidden = !c.hidden;
+    if (c.hidden) { if (c.value) { c.value = ''; c.dispatchEvent(new Event('input')); } } else c.focus();
+  }
+
   /* ---------- quadro flutuante ---------- */
   function montarQuadro() {
     quadro = document.createElement('section');
@@ -55,6 +63,7 @@
     quadro.innerHTML = `<header class="lvs-topo" title="Arraste para mover">
         <span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b>
         <span class="lvs-esp"></span>
+        <button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
         <button type="button" class="lvs-b" data-a="janela" title="Abrir numa janela separada" aria-label="Abrir numa janela separada"><i class="fas fa-window-restore" aria-hidden="true"></i></button>
         <button type="button" class="lvs-b" data-a="fechar" title="Devolver para a aba Notícias" aria-label="Devolver para a aba Notícias"><i class="fas fa-xmark" aria-hidden="true"></i></button>
       </header><div class="lvs-miolo"></div>`;
@@ -62,6 +71,7 @@
     document.body.append(quadro);
     quadro.querySelector('[data-a="fechar"]').addEventListener('click', () => encaixar());
     quadro.querySelector('[data-a="janela"]').addEventListener('click', () => abrirJanela());
+    quadro.querySelector('[data-a="busca"]').addEventListener('click', alternarBusca);
 
     const topo = quadro.querySelector('.lvs-topo');
     topo.addEventListener('pointerdown', (e) => {
@@ -118,6 +128,8 @@
 
   function encaixar() {
     fecharJanela();
+    const c = corpo.querySelector('#live-busca');
+    if (c && !c.hidden) alternarBusca(); // na aba Notícias vale a busca das Notícias
     view.insertBefore(corpo, aviso);
     if (quadro) quadro.hidden = true;
     marcar('');
@@ -166,13 +178,14 @@
     copiarAparencia(d);
     const topo = d.createElement('header');
     topo.className = 'lvs-jtopo';
-    topo.innerHTML = '<span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b><span class="lvs-esp"></span><button type="button" class="btn-sm">Devolver ao site</button>';
+    topo.innerHTML = '<span class="live-indicator" aria-hidden="true"></span><b>Ao vivo</b><span class="lvs-esp"></span><button type="button" class="lvs-b" data-a="busca" title="Buscar no Ao Vivo" aria-label="Buscar no Ao Vivo"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button><button type="button" class="btn-sm lvs-devolver">Devolver ao site</button>';
     d.body.append(topo);
     d.body.append(corpo); // o fluxo muda de documento; quem desenha guarda a referência (liveEl no app.js)
     if (quadro) quadro.hidden = true;
     janela = w;
     marcar('janela');
-    topo.querySelector('button').addEventListener('click', () => encaixar());
+    topo.querySelector('.lvs-devolver').addEventListener('click', () => encaixar());
+    topo.querySelector('[data-a="busca"]').addEventListener('click', alternarBusca);
     // fechou a janela pelo X: o fluxo volta para a aba Notícias
     const voltou = () => { if (janela === w) { janela = null; clearInterval(vigiaJanela); view.insertBefore(corpo, aviso); marcar(''); } };
     w.addEventListener('pagehide', voltou);

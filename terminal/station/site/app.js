@@ -1920,6 +1920,7 @@ function liveFonteSelect() {
   if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
   if (!sel.dataset.ligado) {
     sel.dataset.ligado = '1';
+    liveEl('live-busca')?.addEventListener('input', () => renderLiveView());
     sel.addEventListener('change', () => { try { localStorage.setItem(LIVE_FONTE_KEY, sel.value); } catch (e) { /* sem armazenamento */ } renderLiveView(); });
   }
 }
@@ -1931,10 +1932,14 @@ function renderLiveView() {
   liveFonteSelect();
   const fonte = liveFonte();
   const filtrado = newsBusca(fonte === 'todas' ? filterNewsBySources(newsAll) : (Array.isArray(newsAll) ? newsAll : []).filter((n) => n.fonte === fonte));
-  const live = [...filtrado].sort((a, b) => b.data - a.data).slice(0, 100);
+  // busca própria do Ao Vivo (lupa do quadro destacado): sem acento e sem maiúsculas
+  const semAc = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const tl = semAc(liveEl('live-busca')?.value.trim());
+  const doFluxo = tl ? filtrado.filter((n) => semAc(n.titulo + ' ' + n.fonte).includes(tl)) : filtrado;
+  const live = [...doFluxo].sort((a, b) => b.data - a.data).slice(0, 100);
 
   if (!live.length) {
-    container.innerHTML = `<div class="nl-empty">${newsTermo() ? 'Nenhuma notícia com esse termo.' : 'Nenhuma notícia no momento.'}</div>`;
+    container.innerHTML = `<div class="nl-empty">${newsTermo() || tl ? 'Nenhuma notícia com esse termo.' : 'Nenhuma notícia no momento.'}</div>`;
     if (counter) counter.textContent = '';
     return;
   }
