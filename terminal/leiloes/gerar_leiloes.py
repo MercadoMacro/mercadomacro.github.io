@@ -6,6 +6,7 @@ Só biblioteca padrão. Uso: python3 gerar_leiloes.py <pasta de saída>"""
 import json, sys, time, urllib.request, datetime
 
 BASE = 'https://www.treasurydirect.gov/TA_WS/securities/'
+LONGOS = ('Note', 'Bond', 'TIPS', 'FRN')
 UA = {'User-Agent': 'Mozilla/5.0 (MercadoMacro robo de leiloes)', 'Accept': 'application/json'}
 
 
@@ -79,7 +80,8 @@ def main(saida):
     hoje = datetime.date.today()
     vistos, lista = set(), []
     # títulos de prazo longo: 2 anos de histórico (para comparar com os leilões anteriores do mesmo prazo)
-    for t, dias in (('Note', 760), ('Bond', 760), ('TIPS', 760), ('FRN', 760), ('Bill', 100)):
+    # as letras curtas (Bills) ficam de fora: saem várias por semana e pouco mexem com o mercado
+    for t, dias in (('Note', 760), ('Bond', 760), ('TIPS', 760), ('FRN', 760)):
         rs = pedir(f'auctioned?format=json&type={t}&days={dias}')
         print(t, len(rs))
         for r in rs:
@@ -92,19 +94,19 @@ def main(saida):
             vistos.add(k)
             lista.append(x)
     lista.sort(key=lambda x: (x['d'], x['tipo'], x['prazo']), reverse=True)
-    longos = [x for x in lista if x['tipo'] not in ('Bill', 'CMB')]
+    longos = [x for x in lista if x['tipo'] in LONGOS]
     if len(longos) < 20:
         raise SystemExit(f'Poucos leilões de títulos longos ({len(longos)}); arquivo mantido')
     prox = []
     for r in pedir('upcoming?format=json'):
         d = data(r.get('competitiveAuctionCloseDate')) or data(r.get('auctionDate'))
-        if not d or d < hoje.isoformat():
+        if not d or d < hoje.isoformat() or tipo(r) not in LONGOS:
             continue
         prox.append({'d': d, 'anuncio': data(r.get('announcementDate')), 'tipo': tipo(r), 'prazo': (r.get('securityTerm') or '').strip(),
                      'orig': (r.get('originalSecurityTerm') or r.get('securityTerm') or '').strip(),
                      'reab': r.get('reopening') == 'Yes', 'oferta': num(r.get('offeringAmount'))})
     prox.sort(key=lambda x: (x['d'], x['tipo'], x['prazo']))
-    out = {'fonte': 'TreasuryDirect (U.S. Department of the Treasury)', 'gerado': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%MZ'),
+    out = {'fonte': 'TreasuryDirect (U.S. Department of the Treasury)', 'gerado': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),
            'leiloes': lista, 'proximos': prox}
     with open(f'{saida}/leiloes.json', 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))

@@ -879,7 +879,7 @@
     }).join('');
     defs.forEach(fillCard);
     if (area === 'br') { ibge(); comex(); }
-    if (area === 'us') bea();
+    if (area === 'us') { bea(); leiloes(); }
     updateSub();
   }
 
@@ -908,6 +908,20 @@
     sc.src = 'comex.js?v=7';
     sc.onload = () => { if (prefs.area === 'br' && window.__comexRender) window.__comexRender(body); };
     sc.onerror = () => { comexAsked = false; };
+    document.body.appendChild(sc);
+  }
+
+  // Leilões do Tesouro dos EUA (TreasuryDirect): código no leiloes.js, baixado na primeira vez; aparece em "Juros e Fed"
+  let leiloesAsked = false;
+  function leiloes(force = false) {
+    if (prefs.area !== 'us') return;
+    if (window.__leiloesRender) { window.__leiloesRender(body, force); return; }
+    if (leiloesAsked) return;
+    leiloesAsked = true;
+    const sc = document.createElement('script');
+    sc.src = 'leiloes.js?v=1';
+    sc.onload = () => { if (prefs.area === 'us' && window.__leiloesRender) window.__leiloesRender(body); };
+    sc.onerror = () => { leiloesAsked = false; };
     document.body.appendChild(sc);
   }
 
@@ -985,7 +999,7 @@
       pilula();
       return;
     }
-    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); bea(true); return; }
+    if (e.target.closest('#ind-refresh')) { loadArea(prefs.area, true); loadMo(true); loadFocus(true); ibge(true); comex(true); bea(true); leiloes(true); return; }
     const card = e.target.closest('.ind-card');
     if (!card) return;
     const d = DEFS.find((x) => x.id === card.dataset.id);
