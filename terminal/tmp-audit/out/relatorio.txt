@@ -1,0 +1,110 @@
+SITEMAP 25 urls, 17 fechamentos; ultimos /fechamento-do-mercado/2026-10-16 /fechamento-do-mercado/2026-10-15 /fechamento-do-mercado/2026-10-14
+
+[360] / -> 200 | Mercado Macro | Terminal financeiro: cotações, indicadores e fluxo da B3 | desc 186 | canon https://mercadomacro.com.br/ | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /calculadora-renda-fixa -> 200 | Calculadora de renda fixa: CDB, LCI, LCA, Tesouro e poupança | Mercado Macro | desc 154 | canon https://mercadomacro.com.br/calculadora-renda-fixa | h1 1 | sw 360 | travessoes 4 | imgs sem alt 0
+
+[360] /calculadora-juros-compostos -> 200 | Calculadora de juros compostos com aporte mensal | Mercado Macro | desc 128 | canon https://mercadomacro.com.br/calculadora-juros-compostos | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /calculadora-aposentadoria -> 200 | Calculadora de aposentadoria: quanto juntar por mês | Mercado Macro | desc 121 | canon https://mercadomacro.com.br/calculadora-aposentadoria | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /indicadores-hoje -> 200 | Indicadores econômicos de hoje: Selic, IPCA, dólar e Ibovespa | Mercado Macro | desc 115 | canon https://mercadomacro.com.br/indicadores-hoje | h1 1 | sw 360 | travessoes 1 | imgs sem alt 0
+   ERR console Failed to load resource: the server responded with a status of 502 ()
+   BAD FAIL net::ERR_ABORTED https://widget-sheriff.tradingview-widget.com/sheriff/api/v1/rules/search?origin=https%3A%2F%2Fmercadomacro.com.br || 502 https://mercadomacro-vitrine.cota-cotacao10.workers.dev/bcb?c=189&n=12 || 502 https://shrill-meadow-89c1.danilo-nillo.workers.dev/bcb?mmp=vitrine&c=189&q=%2Fultimos%2F12 || FAIL net::ERR_ABORTED https://api.bcb.gov.br/dados/serie/bcdata.sgs.189/dados/ultimos/12?formato=json
+
+[360] /privacidade -> 200 | Política de privacidade | Mercado Macro | desc 77 | canon https://mercadomacro.com.br/privacidade | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /fechamento-do-mercado -> 200 | Fechamento do mercado hoje: Ibovespa, dólar e bolsas | Mercado Macro | desc 172 | canon https://mercadomacro.com.br/fechamento-do-mercado | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /balanca-comercial -> 200 | Balança comercial do Brasil em outubro de 2026: superávit de US$ 9,32 bi | Mercado Macro | desc 198 | canon https://mercadomacro.com.br/balanca-comercial | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /fechamento-do-mercado/2026-10-16 -> 200 | Fechamento do mercado 16/10/2026: Ibovespa sobe 0,54% e dólar a R$ 5,07 | Mercado Macro | desc 265 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-16 | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /fechamento-do-mercado/2026-10-15 -> 200 | Fechamento do mercado 15/10/2026: Ibovespa cai 1,06% e dólar a R$ 5,10 | Mercado Macro | desc 266 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-15 | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /fechamento-do-mercado/2026-10-14 -> 200 | Fechamento do mercado 14/10/2026: Ibovespa cai 0,18% e dólar a R$ 5,05 | Mercado Macro | desc 266 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-14 | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /planos -> 200 | Planos e termos | Mercado Macro | desc 93 | canon https://mercadomacro.com.br/planos | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /termos -> 200 | Planos e termos | Mercado Macro | desc 93 | canon https://mercadomacro.com.br/planos | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+
+[360] /pagina-que-nao-existe -> 404 | Página não encontrada | Mercado Macro | desc 0 | canon  | h1 1 | sw 360 | travessoes 0 | imgs sem alt 0
+   ERR console Failed to load resource: the server responded with a status of 404 ()
+
+[1366] / -> 200 | Mercado Macro | Terminal financeiro: cotações, indicadores e fluxo da B3 | desc 186 | canon https://mercadomacro.com.br/ | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /calculadora-renda-fixa -> 200 | Calculadora de renda fixa: CDB, LCI, LCA, Tesouro e poupança | Mercado Macro | desc 154 | canon https://mercadomacro.com.br/calculadora-renda-fixa | h1 1 | sw 1366 | travessoes 4 | imgs sem alt 0
+
+[1366] /calculadora-juros-compostos -> 200 | Calculadora de juros compostos com aporte mensal | Mercado Macro | desc 128 | canon https://mercadomacro.com.br/calculadora-juros-compostos | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /calculadora-aposentadoria -> 200 | Calculadora de aposentadoria: quanto juntar por mês | Mercado Macro | desc 121 | canon https://mercadomacro.com.br/calculadora-aposentadoria | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /indicadores-hoje -> 200 | Indicadores econômicos de hoje: Selic, IPCA, dólar e Ibovespa | Mercado Macro | desc 115 | canon https://mercadomacro.com.br/indicadores-hoje | h1 1 | sw 1366 | travessoes 1 | imgs sem alt 0
+   ERR console Failed to load resource: the server responded with a status of 502 ()
+   BAD 502 https://mercadomacro-vitrine.cota-cotacao10.workers.dev/bcb?c=189&n=12 || FAIL net::ERR_ABORTED https://widget-sheriff.tradingview-widget.com/sheriff/api/v1/rules/search?origin=https%3A%2F%2Fmercadomacro.com.br || 502 https://shrill-meadow-89c1.danilo-nillo.workers.dev/bcb?mmp=vitrine&c=189&q=%2Fultimos%2F12 || FAIL net::ERR_ABORTED https://api.bcb.gov.br/dados/serie/bcdata.sgs.189/dados/ultimos/12?formato=json
+
+[1366] /privacidade -> 200 | Política de privacidade | Mercado Macro | desc 77 | canon https://mercadomacro.com.br/privacidade | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /fechamento-do-mercado -> 200 | Fechamento do mercado hoje: Ibovespa, dólar e bolsas | Mercado Macro | desc 172 | canon https://mercadomacro.com.br/fechamento-do-mercado | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /balanca-comercial -> 200 | Balança comercial do Brasil em outubro de 2026: superávit de US$ 9,32 bi | Mercado Macro | desc 198 | canon https://mercadomacro.com.br/balanca-comercial | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /fechamento-do-mercado/2026-10-16 -> 200 | Fechamento do mercado 16/10/2026: Ibovespa sobe 0,54% e dólar a R$ 5,07 | Mercado Macro | desc 265 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-16 | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /fechamento-do-mercado/2026-10-15 -> 200 | Fechamento do mercado 15/10/2026: Ibovespa cai 1,06% e dólar a R$ 5,10 | Mercado Macro | desc 266 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-15 | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /fechamento-do-mercado/2026-10-14 -> 200 | Fechamento do mercado 14/10/2026: Ibovespa cai 0,18% e dólar a R$ 5,05 | Mercado Macro | desc 266 | canon https://mercadomacro.com.br/fechamento-do-mercado/2026-10-14 | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /planos -> 200 | Planos e termos | Mercado Macro | desc 93 | canon https://mercadomacro.com.br/planos | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /termos -> 200 | Planos e termos | Mercado Macro | desc 93 | canon https://mercadomacro.com.br/planos | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+
+[1366] /pagina-que-nao-existe -> 404 | Página não encontrada | Mercado Macro | desc 0 | canon  | h1 1 | sw 1366 | travessoes 0 | imgs sem alt 0
+   ERR console Failed to load resource: the server responded with a status of 404 ()
+
+== LINKS
+401 https://mercadomacro.com.br/
+200 https://mercadomacro.com.br/esqueci
+200 https://mercadomacro.com.br/privacidade
+302 -> https://t.me/+7VdRYRrGNrVlMzlh https://mercadomacro.com.br/telegram?de=cadastro
+200 https://mercadomacro.com.br/fechamento-do-mercado
+200 https://mercadomacro.com.br/indicadores-hoje
+200 https://mercadomacro.com.br/calculadora-renda-fixa
+200 https://mercadomacro.com.br/calculadora-juros-compostos
+200 https://mercadomacro.com.br/calculadora-aposentadoria
+302 -> https://t.me/+4f9MyaUe2EQ2OWIx https://mercadomacro.com.br/telegram?de=rodape
+200 https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs
+200 https://mercadomacro.com.br/planos
+200 https://br.tradingview.com/?utm_source=mercadomacro.com.br&utm_medium=widget_new&utm_campaign=market-quotes
+200 https://mercadomacro.com.br/entrar
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-11-06
+200 https://www.infomoney.com.br/mercados/por-que-o-ibovespa-sobe-mais-de-1-mesmo-com-dados-fortes-do-payroll-nos-eua/
+200 https://www.infomoney.com.br/mercados/nasdaq-sobe-apos-setor-de-chips-reduzir-perdas-mas-persiste-temor-de-alta-de-juros/
+200 https://valor.globo.com/financas/ao-vivo/2023/06/16/dolar-avanca-e-ibovespa-recua-em-dia-de-correcao-siga-os-mercados.ghtml
+200 https://valor.globo.com/financas/noticia/2026/11/06/juros-futuros-recuam-e-tem-semana-de-alivio-depois-de-estresse-pos-eleicao.ghtml
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-11-05
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-11-04
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-11-03
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-30
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-29
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-28
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-27
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-26
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-23
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-22
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-21
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-20
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-19
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-16
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-15
+200 https://mercadomacro.com.br/fechamento-do-mercado/2026-10-14
+200 https://mercadomacro.com.br/balanca-comercial
+200 https://valor.globo.com/brasil/noticia/2026/10/16/eventual-governo-lula-4-tera-desafio-de-reduzir-juros-no-brasil-sem-dar-cavalo-de-pau-diz-durigan.ghtml
+200 https://cointelegraph.com.br/markets/bitcoin-price-steadies-82k-fed-warsh-avoids-rate-hike-hints?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound
+200 https://www.infomoney.com.br/mercados/prio-lidera-ganhos-e-vamos-tomba-em-semana-de-correcao-do-ibovespa-veja-destaques/
+200 https://www.infomoney.com.br/mercados/bolsas-de-ny-fecham-em-alta-mesmo-com-inflacao-nos-eua-e-incerteza-com-ia/
+200 https://valor.globo.com/financas/noticia/2026/10/15/estresse-com-quadro-eleitoral-se-amplia-e-juros-futuros-tem-forte-alta.ghtml
+200 https://www.infomoney.com.br/mercados/dolar-hoje-abertura-fechamento-comercial-turismo-15102026/
+200 https://valor.globo.com/financas/noticia/2026/10/14/bolsas-caem-em-ny-com-techs-e-dados-de-inflacao-dos-eua-acima-do-esperado.ghtml
+403 https://br.investing.com/news/commodities-news/ouro-se-recupera-apos-queda-impulsionada-pela-inflacao-e-apostas-em-alta-de-juros-crescem-2092130
+403 https://br.investing.com/news/economy-news/daly-do-fed-diz-que-devem-ser-necessarios-aumentos-nos-juros-mas-nao-com-urgencia-2092121
