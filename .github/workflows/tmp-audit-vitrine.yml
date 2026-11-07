@@ -2,7 +2,7 @@ name: tmp auditoria vitrine
 on:
   push:
     branches: [auditoria-vitrine]
-    paths: [terminal/tmp-audit/crawl.mjs, .github/workflows/tmp-audit-vitrine.yml]
+    paths: [terminal/tmp-audit/sonda.sh, .github/workflows/tmp-audit-vitrine.yml]
 permissions:
   contents: write
 jobs:
@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: mkdir -p terminal/tmp-audit/out
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
-      - run: node terminal/tmp-audit/crawl.mjs
+      - run: bash terminal/tmp-audit/sonda.sh 2>&1 | tee terminal/tmp-audit/out/sonda.txt
       - run: |
           git config user.name "auditoria" && git config user.email "actions@users.noreply.github.com"
           git add -f terminal/tmp-audit/out && git commit -qm "saida auditoria vitrine" && git push -q
