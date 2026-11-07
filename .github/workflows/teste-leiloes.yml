@@ -8,8 +8,17 @@ jobs:
     steps:
       - run: |
           B=https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query
-          curl -s "$B?sort=-auction_date&page%5Bsize%5D=2" | python3 -m json.tool | head -200
-          echo ----
-          curl -s "$B?sort=-auction_date&page%5Bsize%5D=40&fields=auction_date,security_type,security_term,high_yield,high_investment_rate,high_discount_rate,bid_to_cover_ratio,offering_amt,cusip,primary_dealer_accepted,direct_bidder_accepted,indirect_bidder_accepted,soma_accepted,total_accepted,reopening" | python3 -m json.tool | head -400
+          F=record_date,auction_date,issue_date,security_type,security_term,reopening,cusip,high_yield,high_investment_rate,high_discnt_rate,high_discnt_margin,int_rate,bid_to_cover_ratio,offering_amt,primary_dealer_accepted,direct_bidder_accepted,indirect_bidder_accepted,soma_accepted,comp_accepted,noncomp_accepted,total_accepted,tips,floating_rate,cash_management_bill_cmb
+          curl -s "$B?sort=-auction_date&page%5Bsize%5D=70&fields=$F" > a.json
+          python3 -c "
+          import json;d=json.load(open('a.json'))
+          print(d.get('meta',{}).get('total-count'), d.get('error'), d.get('message'))
+          for r in d.get('data',[]): print('|'.join(str(r.get(k)) for k in '$F'.split(',')))
+          "
           echo ---- upcoming
-          curl -s "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/upcoming_auctions?sort=auction_date&page%5Bsize%5D=20" | python3 -m json.tool | head -150
+          curl -s "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/upcoming_auctions?sort=auction_date&page%5Bsize%5D=30" > u.json
+          python3 -c "
+          import json;d=json.load(open('u.json'))
+          print(d.get('meta',{}).get('total-count'), d.get('error'))
+          for r in d.get('data',[])[:30]: print(r)
+          "
