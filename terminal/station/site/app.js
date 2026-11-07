@@ -1637,7 +1637,8 @@ function liveEl(id) { return newsLiveEls[id]?.isConnected ? newsLiveEls[id] : (n
 function newsLiveShown() { return newsCurrentMode === 'live' || !!globalThis.MMLiveSolto?.on; }
 let newsFetchInFlight = null, newsLastAttempt = 0, newsStreamClient = null, newsStreamRevision = 0;
 function newsLiveActive() {
-  if (globalThis.MMLiveSolto?.on) return liveMode;
+  // destacado: na janela separada segue mesmo com o site em segundo plano; no quadro, só com a página à vista
+  if (globalThis.MMLiveSolto?.on) return liveMode && (globalThis.MMLiveSolto.onde === 'janela' || !document.hidden);
   return liveMode && !document.hidden && newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
 }
 function newsLiveTick() {
