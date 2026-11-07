@@ -114,6 +114,7 @@ const NEWS_SOURCES = {
   'Bloomberg Línea':  { letter: 'BL',  color: '#6366f1', scope: 'br', name: 'Bloomberg Línea' },
   'Suno':             { letter: 'SU',  color: '#84cc16', scope: 'br', name: 'Suno' },
   'BMC News':         { letter: 'BM',  color: '#14b8a6', scope: 'br', name: 'BMC News' },
+  'Notícias Agrícolas': { letter: 'NA', color: '#65a30d', scope: 'br', name: 'Notícias Agrícolas' },
   'O Antagonista':    { letter: 'OA',  color: '#dc2626', scope: 'pol', name: 'O Antagonista' },
   'Poder360':         { letter: 'P3',  color: '#2563eb', scope: 'pol', name: 'Poder360' },
   'G1 Política':      { letter: 'G1',  color: '#c4170c', scope: 'pol', name: 'G1 Política' },
@@ -1181,7 +1182,7 @@ function newsRank(n) {
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
 const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
-const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz',
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas',
   'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
 // Política fica desligada até a pessoa ligar (botão na lateral das Notícias); escolha guardada neste aparelho
 const NEWS_POL_KEY = 'news_politica_v1';
