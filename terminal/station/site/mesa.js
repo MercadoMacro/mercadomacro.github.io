@@ -651,7 +651,8 @@
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
         <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
-        <button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button>
+        <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura do mercado <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
+        <button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
@@ -800,6 +801,9 @@
   .ms-err { color:var(--neg); }
   .ms-refresh { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
   .ms-refresh:hover { color:var(--text); }
+  .ms-bar-acoes { display:flex; gap:8px; flex-wrap:wrap; }
+  .ms-temp-btn { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .ms-temp-btn:hover { color:var(--text); }
   .ms-refresh.busy { opacity:.6; pointer-events:none; }
   #mesa-root.ms-qb .ms-bar { display:none; }
   /* situação da Binance: só para leitor de tela (a barra de cima saiu em 29/10/2026) */
