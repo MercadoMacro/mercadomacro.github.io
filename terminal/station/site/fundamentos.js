@@ -110,9 +110,18 @@
     if (pOn != null && (pPn != null || !a.pn)) mcap = a.on * pOn + (a.pn || 0) * (pPn || 0);
     else if (pPn != null && !a.on) mcap = a.pn * pPn;
     else if (pOn != null || pPn != null) { mcap = (a.on + a.pn) * (pOn ?? pPn); aprox = true; }
+    else if (unit && UNIT[unit]) {
+      // só a unit tem cotação: cada unit vale ON + n PN; o preço por ação sai da unit dividida pelo número de ações dela
+      mcap = (a.on + a.pn) * quotes.get(unit).value / UNIT[unit]; aprox = true;
+    }
     else if (unit) aprox = true;
+    // número de ações informado à CVM fora de escala (preço ÷ patrimônio por ação absurdo): melhor "—" que P/L errado
+    const pl = d.balanco && d.balanco.pl;
+    if (ok(mcap) && ok(pl) && pl > 0 && (mcap / pl < 0.02 || mcap / pl > 150)) return { mcap: null, aprox: false, escala: true };
     return { mcap, aprox };
   }
+  // ações em cada unit (1 ON + n PN), para as empresas cujas ações sozinhas não têm cotação no site
+  const UNIT = { KLBN11: 5, ALUP11: 3, BRBI11: 3 };
 
   /* ---------------- desenho ---------------- */
   function shell() {
@@ -224,14 +233,14 @@
   function renderEmpresa(d) {
     const body = root.querySelector('#fd-body');
     const t = d.ttm || {}, b = d.balanco || {};
-    const { mcap, aprox } = mercado(d);
+    const { mcap, aprox, escala } = mercado(d);
     const ev = ok(mcap) && ok(b.div_liq) ? mcap + b.div_liq : null;
     const tkq = d.tickers.filter((k) => quotes.has(k));
     const kp = [
-      ['Valor de mercado', brl(mcap), aprox ? 'aproximado: uma classe de ação sem cotação' : (d.acoes ? `${nf((d.acoes.on + d.acoes.pn) / 1e6, 0)} mi de ações` : 'sem número de ações')],
+      ['Valor de mercado', brl(mcap), escala ? 'número de ações informado à CVM fora de escala' : aprox ? 'aproximado: uma classe de ação sem cotação' : (d.acoes ? `${nf((d.acoes.on + d.acoes.pn) / 1e6, 0)} mi de ações` : 'sem número de ações')],
       ['P/L', xx(div(mcap, t.lucro)), t.lucro != null && t.lucro < 0 ? 'prejuízo em 12 meses' : 'preço ÷ lucro de 12 meses'],
       ['P/VP', xx(div(mcap, b.pl), 2), 'preço ÷ patrimônio'],
-      ['Dividend yield', pc(div(t.proventos, mcap, 100), 1), 'proventos pagos em 12 meses (caixa)'],
+      ['Dividend yield', pc(ok(t.proventos) && t.proventos >= 0 ? div(t.proventos, mcap, 100) : null, 1), 'proventos pagos em 12 meses (caixa)'],
       ['ROE', pc(div(t.lucro, b.pl, 100), 1), 'lucro de 12 meses ÷ patrimônio'],
       ['Margem líquida', pc(div(t.lucro, t.receita, 100), 1), 'lucro ÷ receita']
     ];
@@ -328,6 +337,10 @@
       if (!ok(va) && !ok(vb)) return 0; if (!ok(va)) return 1; if (!ok(vb)) return -1;
       return dir * (va - vb);
     });
+    // empresas com balanço mais antigo que o penúltimo trimestre entregue pela maioria ganham a data ao lado do nome
+    const refs = idx.empresas.map((e) => e.ref).filter(Boolean).sort();
+    const comum = refs[Math.floor(refs.length / 2)] || '';
+    const velho = comum ? new Date(Date.UTC(+comum.slice(0, 4), +comum.slice(5, 7) - 4, 28)).toISOString().slice(0, 10) : '';
     const th = (key, label, cls = '') => `<th class="${cls} ${k === key ? 'on' : ''}" data-k="${key}" tabindex="0" aria-sort="${k === key ? (dir > 0 ? 'ascending' : 'descending') : 'none'}">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
     body.innerHTML = `
       <div class="fd-rk-bar">
@@ -337,7 +350,7 @@
       <div class="fd-box fd-rk"><table>
         <thead><tr>${th('nome', 'Empresa')}${th('setor', 'Setor', 'hide-s')}${th('receita', 'Receita', 'n')}${th('lucro', 'Lucro', 'n')}${th('margem', 'Margem', 'n')}${th('roe', 'ROE', 'n')}${th('alav', 'Dív. líq./PL', 'n hide-s')}</tr></thead>
         <tbody>${rows.slice(0, 400).map((e) => `<tr data-cvm="${esc(e.cvm)}" tabindex="0">
-          <td><b>${esc(e.tickers[0] || '')}</b> <span>${esc(e.nome)}</span></td>
+          <td><b>${esc(e.tickers[0] || '')}</b> <span>${esc(e.nome)}</span>${e.ref && e.ref < velho ? ` <em class="fd-old" title="Últimos números entregues à CVM">até ${esc(dmy(e.ref).slice(3))}</em>` : ''}</td>
           <td class="hide-s">${esc(e.setor || '—')}</td>
           <td class="n">${esc(brl(e.receita))}</td>
           <td class="n ${ok(e.lucro) && e.lucro < 0 ? 'dn' : ''}">${esc(brl(e.lucro))}</td>
@@ -454,6 +467,7 @@
   .fd-rk .n { text-align:right; font-family:'JetBrains Mono', monospace; font-size:12px; font-variant-numeric:tabular-nums; }
   .fd-rk td b { font:600 12px 'JetBrains Mono', monospace; color:var(--text); margin-right:6px; }
   .fd-rk td span { color:var(--text-2); }
+  .fd-rk td em.fd-old { font-style:normal; font-size:10.5px; color:var(--text-3); margin-left:6px; }
   .fd-rk tbody tr { cursor:pointer; }
   .fd-rk tbody tr:hover { background:var(--surface-2); }
   .fd-rk tbody tr:focus-visible, .fd-tk:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }

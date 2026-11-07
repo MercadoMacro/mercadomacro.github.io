@@ -85,7 +85,7 @@ def digitos(s):
 # ---------------------------------------------------------------- demonstrações
 def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
     """
-    Lê DRE, BPA, BPP e DFC (consolidado; individual só para quem não tem consolidado).
+    Lê DRE, BPA, BPP e DFC (consolidado; individual para quem não tem consolidado ou mandou ele zerado).
     Retorna {cnpj: {dt_refer: {'versao', 'denom', 'cvm', 'contas': {(demo, ordem, ini, fim, cod): (desc, valor)}}}}
     """
     out = {}
@@ -101,17 +101,9 @@ def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
                 doc = emp.get(dt)
                 if doc is None or ver > doc['versao']:
                     doc = emp[dt] = {'versao': ver, 'denom': r.get('DENOM_CIA', ''), 'cvm': digitos(r.get('CD_CVM')).lstrip('0'),
-                                     'tipo': {}, 'contas': {}}
+                                     'por': {'con': {}, 'ind': {}}}
                 elif ver < doc['versao']:
                     continue
-                # consolidado manda: se o documento já tem consolidado desta demonstração, ignora o individual
-                t = doc['tipo'].setdefault(demo, tipo)
-                if t != tipo:
-                    if t == 'ind' and tipo == 'con':
-                        doc['contas'] = {k: v for k, v in doc['contas'].items() if k[0] != demo}
-                        doc['tipo'][demo] = 'con'
-                    else:
-                        continue
                 v = num(r.get('VL_CONTA'))
                 if v is None:
                     continue
@@ -119,7 +111,19 @@ def carregar_demos(zbytes, prefixo, so_ultimo_doc=False):
                     v *= 1000
                 ordem = 'U' if norm(r.get('ORDEM_EXERC')).startswith('ULT') else 'P'
                 k = (demo, ordem, r.get('DT_INI_EXERC', ''), r.get('DT_FIM_EXERC', ''), r.get('CD_CONTA', ''))
-                doc['contas'][k] = (norm(r.get('DS_CONTA')), v)
+                doc['por'][tipo][k] = (norm(r.get('DS_CONTA')), v)
+    # consolidado manda; o individual vale quando a empresa não tem consolidado ou entregou o consolidado zerado
+    # (TIM em 2024 e 2025 mandou o consolidado todo em zero: auditoria de 07/11/2026)
+    for emp in out.values():
+        for doc in emp.values():
+            con, ind = doc.pop('por').values()
+            contas = {}
+            for demo in ('DRE', 'BPA', 'BPP', 'DFC'):
+                c = {k: v for k, v in con.items() if k[0] == demo}
+                if not any(v[1] for v in c.values()):
+                    c = {k: v for k, v in ind.items() if k[0] == demo} or c
+                contas.update(c)
+            doc['contas'] = contas
     return out
 
 
@@ -144,6 +148,9 @@ def filhos(d, pai, nv=None):
     return {c: v for c, v in d.items() if c.startswith(pai + '.') and (nv is None or nivel(c) == nv)}
 
 
+_DBG = {'on': False}
+
+
 def metricas(dre, bpa, bpp, dfc, financeira):
     m = {}
     g = lambda d, c: d.get(c, (None, None))[1]
@@ -160,10 +167,21 @@ def metricas(dre, bpa, bpp, dfc, financeira):
         c = cand[-1]
         lucro_tot = dre[c][1]
         lucro = lucro_tot
+        nc = None
         for cc, (ds, v) in filhos(dre, c, 3).items():
-            if 'CONTROLADOR' in ds and 'NAO CONTROLADOR' not in ds:
+            if 'NAO CONTROLADOR' in ds:
+                nc = v
+            elif 'CONTROLADOR' in ds:
                 lucro = v
-                break
+        # linha dos controladores preenchida com zero e lucro total diferente de zero (TIM, Klabin, Light e outras ~200 vezes):
+        # a parte dos controladores é o total menos a dos não controladores (auditoria de 07/11/2026)
+        if lucro == 0 and lucro_tot:
+            lucro = lucro_tot - (nc or 0)
+    # algumas empresas informam a parte dos controladores com o sinal trocado (ex.: +87 mi com prejuízo total de −86 mi):
+    # sinal oposto ao total e quase o mesmo tamanho (diferença até ~15%) é erro de sinal e vale o sinal do total;
+    # com minoritários grandes a diferença é maior e o número fica como veio (auditoria de 07/11/2026)
+    if lucro is not None and lucro_tot and lucro * lucro_tot < 0 and 0.87 <= abs(lucro / lucro_tot) <= 1.15:
+        lucro = -lucro
     m['lucro'] = lucro
     m['lucro_total'] = lucro_tot
     dep = [abs(v) for c, (ds, v) in dfc.items() if c.startswith('6.01.01.') and ('DEPRECIA' in ds or 'AMORTIZA' in ds or 'EXAUST' in ds)]
@@ -187,8 +205,14 @@ def metricas(dre, bpa, bpp, dfc, financeira):
         m['divida'] = sum(dv) if dv else (0.0 if bpp else None)
         m['div_liq'] = (m['divida'] - m['caixa']) if (m['divida'] is not None and m['caixa'] is not None) else None
     m['fco'] = g(dfc, '6.01')
+    # dividendos e JCP pagos: contas de nível 3 do fluxo de financiamento; bancos às vezes abrem no nível 4
     prov = [abs(v) for c, (ds, v) in filhos(dfc, '6.03', 3).items() if v < 0 and ('DIVIDENDO' in ds or 'JUROS SOBRE' in ds)]
-    m['proventos'] = sum(prov) if prov else (0.0 if dfc else None)
+    if not prov:
+        prov = [abs(v) for c, (ds, v) in filhos(dfc, '6.03', 4).items() if v < 0 and ('DIVIDENDO' in ds or 'JUROS SOBRE' in ds)]
+    if _DBG['on'] and dfc:
+        print('  DFC 6.03:', [(c, ds[:60], v) for c, (ds, v) in dfc.items() if c.startswith('6.03') and ('DIVIDEND' in ds or 'JUROS' in ds)][:12])
+    # banco sem linha de dividendos no fluxo de caixa (Santander nos DFP de 2021 a 2025): não dá para afirmar que pagou zero
+    m['proventos'] = sum(prov) if prov else (0.0 if dfc and not financeira else None)
     return {k: (round(v) if isinstance(v, float) else v) for k, v in m.items()}
 
 
@@ -282,7 +306,12 @@ def main():
                 fin = 'INTERMEDIACAO FINANCEIRA' in recorte(doc['contas'], 'DRE', 'U').get('3.01', ('', 0))[0] or \
                       re.search(r'BANCO|INTERMEDIA|SEGURADORA|PREVIDENCIA|ARRENDAMENTO', norm(emp.get(cnpj, {}).get('setor', ''))) is not None
                 c = doc['contas']
+                _DBG['on'] = os.environ.get('FUND_DEBUG') == cnpj
+                if _DBG['on']: print('DFP', dt)
                 m = metricas(recorte(c, 'DRE', 'U'), recorte(c, 'BPA', 'U'), recorte(c, 'BPP', 'U'), recorte(c, 'DFC', 'U'), fin)
+                # documento todo zerado (TIM 2024, Gerdau Par 2023): fica de fora em vez de mostrar R$ 0 como se fosse número
+                if not m.get('ativo') and not m.get('receita') and not m.get('pl'):
+                    continue
                 anual.setdefault(cnpj, {})[int(dt[:4])] = {'dt': dt, 'm': m, 'fin': fin}
         for cnpj, v in acoes(z, 'dfp').items():
             if cnpj not in qtd or v[0] >= qtd[cnpj][0]:
@@ -308,6 +337,8 @@ def main():
             c = doc['contas']
             fin = any(a.get('fin') for a in anual.get(cnpj, {}).values()) or \
                   'INTERMEDIACAO FINANCEIRA' in recorte(c, 'DRE', 'U').get('3.01', ('', 0))[0]
+            _DBG['on'] = os.environ.get('FUND_DEBUG') == cnpj
+            if _DBG['on']: print('ITR', dt)
             cur = metricas(recorte(c, 'DRE', 'U'), recorte(c, 'BPA', 'U'), recorte(c, 'BPP', 'U'), recorte(c, 'DFC', 'U'), fin)
             prev = metricas(recorte(c, 'DRE', 'P'), {}, {}, recorte(c, 'DFC', 'P'), fin)
             trimestral[cnpj] = {'dt': dt, 'cur': cur, 'prev': prev}
@@ -342,6 +373,9 @@ def main():
                 for k in FLUXO:
                     x, y, z_ = t['cur'].get(k), base['m'].get(k), t['prev'].get(k)
                     ttm[k] = (x + y - z_) if None not in (x, y, z_) else None
+                # proventos pagos não podem ser negativos: conta mudou de lugar entre ITR e DFP, melhor "—" que número errado
+                if ttm.get('proventos') is not None and ttm['proventos'] < 0:
+                    ttm['proventos'] = None
         elif ult_ano is not None:
             ref = a[ult_ano]['dt']
             ttm = {k: a[ult_ano]['m'].get(k) for k in FLUXO}
@@ -352,6 +386,11 @@ def main():
         pl_ref = (balanco or {}).get('pl')
         if q and pl_ref and pl_ref > 0 and (q[1] + q[2]) > 0 and pl_ref / (q[1] + q[2]) > 1500:
             q = (q[0], q[1] * 1000, q[2] * 1000)
+        # Auditoria de 07/11/2026: com patrimônio pequeno o limite de R$ 1.500 não pegava (GPA, Whirlpool, Quero-Quero, Enjoei).
+        # Menos de 5 milhões de ações e mais de R$ 250 de patrimônio por ação também é quantidade em mil (até duas vezes).
+        for _ in range(2):
+            if q and pl_ref and pl_ref > 0 and 0 < (q[1] + q[2]) < 5_000_000 and pl_ref / (q[1] + q[2]) > 250:
+                q = (q[0], q[1] * 1000, q[2] * 1000)
         fin = any(x.get('fin') for x in a.values())
         lista_t = sorted(tks)
         doc = {
