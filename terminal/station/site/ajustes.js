@@ -197,6 +197,13 @@
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
       <section class="aj-sec">
+        <h3>Assistente (robô)</h3>
+        ${sw('roboVoz', P.roboVoz === true, 'Ler em voz alta as notícias urgentes')}
+        <p class="aj-note">Usa a voz do seu navegador e só funciona com o terminal aberto. Vem desligado.</p>
+        <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
+        <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
+      </section>
+      <section class="aj-sec">
         <h3>Minha Mesa</h3>
         ${window.MMDeskLayout ? window.MMDeskLayout.editor(P.mesaLayout) : '<p class="aj-note">Recarregue a página para personalizar a Mesa.</p>'}
       </section>
@@ -241,7 +248,7 @@
     const groups = [
       ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Aparelhos conectados', 'Excluir minha conta']]] : []),
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
-      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa']],
+      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Assistente (robô)', 'Minha Mesa']],
       ['data', 'Dados', ['Dados']],
       ['help', 'Ajuda', ['Contato', 'Atalhos de teclado']],
       ['about', 'Sobre', ['Sobre']]
@@ -481,9 +488,11 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
+      if (k === 'roboVoz') { P.roboVoz = P.roboVoz !== true; if (P.roboVoz) window.MMRoboVoz?.falar('Pronto. Vou ler as notícias urgentes em voz alta.'); else try { speechSynthesis.cancel(); } catch (e2) { /* sem voz */ } }
       save(); applyAll();
       return setTimeout(render, k === 'live' ? 60 : 0);
     }
+    if (act === 'roboCanto') { window.MMPet?.canto?.(); toast('O robô voltou para o canto.'); return; }
     if (act === 'url') {
       const v = box.querySelector('#aj-url').value.trim();
       if (v && !/^https:\/\//i.test(v)) { toast('Use um link que comece com https://'); return; }

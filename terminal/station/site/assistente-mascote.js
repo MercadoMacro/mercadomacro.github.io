@@ -111,7 +111,7 @@
   </svg>`;
 
   const css = `
-  @media (min-width:641px) {
+  @media (min-width:901px) {
     #ia-fab.ia-pet-on { padding:0; gap:0; border:0; background:transparent; box-shadow:none; border-radius:0; overflow:visible; }
     #ia-fab.ia-pet-on:hover { transform:none; }
     #ia-fab.ia-pet-on .ia-marca, #ia-fab.ia-pet-on .ia-fab-txt { display:none; }
@@ -192,7 +192,24 @@
     #ia-fab.ia-pet-clica .ia-pet-fala { pointer-events:auto; cursor:pointer; }
     #ia-fab.ia-pet-clica .ia-pet-fala:hover { border-color:var(--accent,#f2b92e); }
   }
-  @media (max-width:640px) { #ia-fab .ia-pet { display:none; } }
+  @media (max-width:900px) { #ia-fab .ia-pet { display:none; } }
+  /* arrastar (computador) */
+  #ia-fab.ia-pet-arrastando { cursor:grabbing !important; transition:none !important; }
+  #ia-fab.ia-pet-arrastando .ia-pet-fala { opacity:0 !important; }
+  #ia-fab.ia-pet-esq .ia-pet-fala { right:auto; left:calc(100% + 2px); border-radius:12px 12px 12px 4px; transform:translateX(-6px); }
+  #ia-fab.ia-pet-baixo .ia-pet-fala { top:auto; bottom:14px; }
+  /* versão pequena no celular e tablet: robô dentro da aba da borda, só pisca e acena */
+  #ia-fab .ia-pet-mini { display:none; }
+  @media (max-width:900px) {
+    #ia-fab.ia-pet-on .ia-marca { display:none !important; }
+    #ia-fab .ia-pet-mini { display:block; flex:0 0 38px; width:38px; height:36px; margin:0 -2px 0 -4px; }
+    #ia-fab .ia-pet-mini svg { width:38px; height:36px; overflow:visible; }
+    #ia-fab .mini-olho { transform-box:fill-box; transform-origin:center; animation:pet-mini-pisca 4.3s infinite; }
+    #ia-fab .mini-braco { transform-box:view-box; transform-origin:62px 246px; animation:pet-mini-acena 9s ease-in-out infinite 2s; }
+  }
+  @media (max-width:900px) and (prefers-reduced-motion: reduce) { #ia-fab .mini-olho, #ia-fab .mini-braco { animation:none; } }
+  @keyframes pet-mini-pisca { 0%,92%,100% { transform:scaleY(1); } 94%,96% { transform:scaleY(.1); } }
+  @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-14deg); } 86% { transform:rotate(8deg); } 89% { transform:rotate(-14deg); } 92% { transform:rotate(8deg); } 95% { transform:rotate(0); } }
   @media (prefers-reduced-motion: reduce) {
     #ia-fab .pet-tudo, #ia-fab .pet-corpo, #ia-fab .ia-pet-sombra, #ia-fab .pet-cabeca-in, #ia-fab .pet-braco { animation:none !important; }
     #ia-fab .pet-cabeca, #ia-fab .pet-olhos { transition:none; }
@@ -250,6 +267,31 @@
   const noticias = () => { try { return (typeof newsAll !== 'undefined' && Array.isArray(newsAll)) ? newsAll : []; } catch (e) { return []; } };
   const agenda = () => { try { return (typeof calFeed !== 'undefined' && Array.isArray(calFeed)) ? calFeed : []; } catch (e) { return []; } };
 
+  // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
+  const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
+    <image href="robo-corpo.webp${V}" width="326" height="302"/>
+    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g>
+    <image href="robo-cabeca.webp${V}" width="326" height="302"/>
+    <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
+    <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
+    <path d="M149 131q13.5 9 27 0" fill="none" stroke="#ffd86e" stroke-width="7" stroke-linecap="round"/>
+  </svg>`;
+  const PREFS_KEY = 'trader_prefs_v1';
+  const prefs = () => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  // voz (opcional, desligada por padrão; liga em Ajustes > Assistente)
+  function falar(texto) {
+    try {
+      if (!('speechSynthesis' in window) || prefs().roboVoz !== true) return false;
+      const u = new SpeechSynthesisUtterance(String(texto).slice(0, 260));
+      u.lang = 'pt-BR'; u.rate = 1.04;
+      const v = speechSynthesis.getVoices().find((x) => /^pt(-|_)BR/i.test(x.lang)) || speechSynthesis.getVoices().find((x) => /^pt/i.test(x.lang));
+      if (v) u.voice = v;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  }
+  window.MMRoboVoz = { falar: (t) => { try { if (!('speechSynthesis' in window)) return false; const u = new SpeechSynthesisUtterance(t); u.lang = 'pt-BR'; const v = speechSynthesis.getVoices().find((x) => /^pt/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); return true; } catch (e) { return false; } }, tem: () => 'speechSynthesis' in window };
+
   function ligar(b) {
     if (b.querySelector('.ia-pet')) return;
     const st = document.createElement('style'); st.textContent = css; document.head.append(st);
@@ -258,6 +300,8 @@
     const FALA = 'Assistente IA<small>Pergunte sobre o mercado</small>';
     s.innerHTML = '<span class="ia-pet-fala">' + FALA + '</span><span class="ia-pet-sombra"></span>' + PET;
     b.prepend(s);
+    const mini = document.createElement('span'); mini.className = 'ia-pet-mini'; mini.innerHTML = MINI;
+    b.prepend(mini);
     b.classList.add('ia-pet-on');
     b.title = 'Assistente IA';
     const fala = s.querySelector('.ia-pet-fala');
@@ -443,6 +487,7 @@
             tela('alerta'); s.classList.add('mao-alto'); classe('surpreso', 900);
             dizer('<span class="urg">Urgente</span>' + esc(corta(n.titulo, 140)) + '<small>' + esc(n.fonte || '') + '</small><span class="acao">Ler a notícia</span>', 9000, abre, true);
             setTimeout(() => { tela(''); s.classList.remove('mao-alto'); }, 6000);
+            falar('Notícia urgente. ' + n.titulo);
           }, 9200);
         }, 'n:' + n.id));
     }
@@ -614,12 +659,65 @@
       }, 900);
     };
 
+    // ===== arrastar: leva o robô para qualquer canto; o lugar fica salvo neste navegador =====
+    const POS_KEY = 'mm_robo_pos_v1';
+    const GRANDE = matchMedia('(min-width: 901px)');
+    const lado = () => {
+      const r = b.getBoundingClientRect();
+      b.classList.toggle('ia-pet-esq', r.left + r.width / 2 < innerWidth / 2);
+      b.classList.toggle('ia-pet-baixo', r.top > innerHeight - 150);
+    };
+    const limpaPos = () => { b.style.left = b.style.top = b.style.right = b.style.bottom = ''; b.classList.remove('ia-pet-esq', 'ia-pet-baixo'); };
+    function aplicaPos() {
+      if (!GRANDE.matches) return limpaPos();
+      let p = null; try { p = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); } catch (e) { p = null; }
+      if (!p || !isFinite(p.x) || !isFinite(p.y)) return limpaPos();
+      const w = b.offsetWidth || 100, h = b.offsetHeight || 100;
+      // guarda em fração da tela: funciona em telas de tamanhos diferentes
+      const x = Math.min(Math.max(4, p.x * innerWidth), innerWidth - w - 4), y = Math.min(Math.max(4, p.y * innerHeight), innerHeight - h - 4);
+      b.style.right = 'auto'; b.style.bottom = 'auto'; b.style.left = x + 'px'; b.style.top = y + 'px';
+      lado();
+    }
+    let arr = null, engolir = false;
+    b.addEventListener('pointerdown', (e) => {
+      if (!GRANDE.matches || e.button !== 0 || e.target.closest('.ia-pet-fala')) return;
+      const r = b.getBoundingClientRect();
+      arr = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, mov: false };
+    });
+    addEventListener('pointermove', (e) => {
+      if (!arr || e.pointerId !== arr.id) return;
+      if (!arr.mov && Math.hypot(e.clientX - arr.sx, e.clientY - arr.sy) < 6) return;
+      if (!arr.mov) { arr.mov = true; b.classList.add('ia-pet-arrastando'); try { b.setPointerCapture(arr.id); } catch (x) { /* ok */ } s.classList.add('surpreso'); calar(); }
+      const w = b.offsetWidth, h = b.offsetHeight;
+      const x = Math.min(Math.max(4, e.clientX - arr.ox), innerWidth - w - 4), y = Math.min(Math.max(4, e.clientY - arr.oy), innerHeight - h - 4);
+      b.style.right = 'auto'; b.style.bottom = 'auto'; b.style.left = x + 'px'; b.style.top = y + 'px';
+      // balança para o lado em que está sendo levado
+      s.style.setProperty('--hr', Math.max(-8, Math.min(8, (e.movementX || 0) * 1.2)) + 'deg');
+    });
+    const solta = (e) => {
+      if (!arr || (e && e.pointerId !== arr.id)) return;
+      const mov = arr.mov; arr = null;
+      if (!mov) return;
+      engolir = true; setTimeout(() => { engolir = false; }, 0);
+      b.classList.remove('ia-pet-arrastando'); s.classList.remove('surpreso'); s.style.setProperty('--hr', '0deg');
+      const r = b.getBoundingClientRect();
+      try { localStorage.setItem(POS_KEY, JSON.stringify({ x: r.left / innerWidth, y: r.top / innerHeight })); } catch (x) { /* sem armazenamento */ }
+      lado(); classe('feliz', 1200);
+    };
+    addEventListener('pointerup', solta); addEventListener('pointercancel', solta);
+    // depois de arrastar, o clique de soltar não abre o painel
+    b.addEventListener('click', (e) => { if (engolir) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    addEventListener('resize', aplicaPos);
+    GRANDE.addEventListener?.('change', aplicaPos);
+    aplicaPos();
+    const canto = () => { try { localStorage.removeItem(POS_KEY); } catch (e) { /* nada */ } limpaPos(); classe('feliz', 1200); acenar(); };
+
     // ao aparecer: acena e o balão se apresenta por alguns segundos
     b.classList.add('ia-pet-oi'); setTimeout(() => { if (!acaoFala) b.classList.remove('ia-pet-oi'); }, 5000);
     setTimeout(acenar, 700);
 
     // para conferir à mão no console: MMPet.cena('cotacao' | 'temperatura' | 'cifrao' | 'grafico' | 'pensa' | 'sono')
-    window.MMPet = { cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); } };
+    window.MMPet = { canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); } };
   }
 
   // o botão é criado pelo assistente.js depois que a conta responde; espera ele aparecer
