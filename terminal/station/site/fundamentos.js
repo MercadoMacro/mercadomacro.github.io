@@ -353,6 +353,7 @@
 
   function renderRanking() {
     if (prefs.rkm === 'us') { renderRankingEua(); return; }
+    footer();
     const body = root.querySelector('#fd-body');
     const setores = [...new Set(idx.empresas.map((e) => setorDe(e.setor)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const row = (e) => ({ ...e, margem: div(e.lucro, e.receita, 100), roe: div(e.lucro, e.pl, 100), alav: e.fin ? null : div(e.div_liq, e.pl) });
@@ -403,8 +404,9 @@
   // ranking das 500 maiores empresas americanas por receita (último ano fiscal entregue à SEC)
   // a SEC guarda muitos nomes em maiúsculas ("AMAZON COM INC"): vira "Amazon Com Inc"; siglas curtas sem vogal ficam (IBM, CVS)
   const NOME_PALAVRA = new Set(['INC', 'CO', 'LLC', 'LTD', 'PLC', 'THE', 'AND', 'OF', 'NEW', 'COM', 'CORP', 'HOLDINGS', 'GROUP']);
-  const nomeBonito = (n) => (/[a-z]/.test(n) ? n : String(n).replace(/\s+\/NEW\/?$/i, '').split(' ').map((w) => (w.length <= 3 && !NOME_PALAVRA.has(w) ? w
-    : w.charAt(0) + w.slice(1).toLowerCase())).join(' '));
+  // tira o estado de registro que a SEC põe no fim do nome (/DE/, /MN, \DE\)
+  const nomeBonito = (n0) => { const n = String(n0).replace(/\s*[/\\][a-z]{2,3}[/\\]?$/i, '').trim(); return (/[a-z]/.test(n) ? n : n.replace(/\s+\/NEW\/?$/i, '').split(' ').map((w) => (w.length <= 3 && !NOME_PALAVRA.has(w) ? w
+    : w.charAt(0) + w.slice(1).toLowerCase())).join(' ')); };
   function renderRankingEua() {
     const body = root.querySelector('#fd-body');
     if (!rkEua) {
@@ -446,6 +448,7 @@
           <td class="n">${esc(pc(e.roe))}</td></tr>`).join('')}</tbody>
       </table></div>`;
     ligaSeg(body);
+    root.querySelector('#fd-foot').innerHTML = `Fonte: <a href="https://www.sec.gov/edgar" target="_blank" rel="noopener">SEC EDGAR</a> (balanços anuais em US-GAAP entregues à SEC)${rkEua.gerado ? `, dados gerados em ${esc(new Date(rkEua.gerado).toLocaleDateString('pt-BR'))}` : ''}. Receita e lucro do último ano fiscal de cada empresa; ROE sobre o patrimônio no fim desse ano. Empresas que entregam balanço em IFRS (20-F) não entram. Não é recomendação de investimento.`;
     body.querySelector('#fd-setor-us').addEventListener('change', (e) => { prefs.setorUs = e.target.value; savePrefs(); renderRankingEua(); });
     const sortBy = (key) => { if (prefs.sort === key) prefs.dir = -prefs.dir; else { prefs.sort = key; prefs.dir = key === 'nome' || key === 'setor' ? 1 : -1; } savePrefs(); renderRankingEua(); };
     body.querySelectorAll('th[data-k]').forEach((h) => {
