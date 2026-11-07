@@ -170,7 +170,10 @@ export default {
         await env.DB.prepare('UPDATE usuarios SET visto = ? WHERE id = ?').bind(new Date().toISOString(), u.id).run().catch(() => 0);
         return await emitirPasse(env, u);
       }
-      if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u));
+      if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u), {
+        // de onde o assistente tira os dados de agora (assistente-dados.js): servidor de dados, cache de notícias, fluxo da B3
+        api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx)).lista, fluxo: fluxoEstrangeiro,
+      });
       // uso das abas (04/11/2026): soma 1 por aba aberta no total e por assinante (o /admin mostra quem está em qual aba); o administrador não conta
       if (p === '/api/uso' && req.method === 'POST') {
         if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
@@ -419,6 +422,13 @@ async function guardarAjusteDI(env) {
       if (!r.ok) console.error('ajuste ' + rota + ': HTTP ' + r.status);
     } catch (e) { console.error('ajuste ' + rota + ':', e.message); }
   }
+}
+// pedido JSON ao servidor de dados (shrill-meadow) com o passe do site
+async function servidorDados(env, rota) {
+  const req = new Request(await urlDados(env, rota), { headers: { Origin: ORIGEM_SITE } });
+  const r = env.API ? await env.API.fetch(req) : await fetch(req);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
 }
 async function dadosFechamento(env) {
   const api = async (rota) => {
