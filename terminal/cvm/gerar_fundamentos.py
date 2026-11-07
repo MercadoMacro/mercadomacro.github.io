@@ -309,6 +309,9 @@ def main():
                 _DBG['on'] = os.environ.get('FUND_DEBUG') == cnpj
                 if _DBG['on']: print('DFP', dt)
                 m = metricas(recorte(c, 'DRE', 'U'), recorte(c, 'BPA', 'U'), recorte(c, 'BPP', 'U'), recorte(c, 'DFC', 'U'), fin)
+                # documento todo zerado (TIM 2024, Gerdau Par 2023): fica de fora em vez de mostrar R$ 0 como se fosse número
+                if not m.get('ativo') and not m.get('receita') and not m.get('pl'):
+                    continue
                 anual.setdefault(cnpj, {})[int(dt[:4])] = {'dt': dt, 'm': m, 'fin': fin}
         for cnpj, v in acoes(z, 'dfp').items():
             if cnpj not in qtd or v[0] >= qtd[cnpj][0]:
