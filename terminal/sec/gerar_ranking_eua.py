@@ -88,7 +88,9 @@ def main():
     print(f'{len(tk)} empresas com ticker')
 
     dados = {}   # cik -> {'ano', 'rec': (val, ini, fim), 'luc': ...}
-    for a in (ano, ano - 1):
+    # ano seguinte primeiro: empresas com ano fiscal fora do calendário (Microsoft fecha em junho) já têm o ano que acabou
+    # neste ano civil; fica o período de fim mais recente de cada empresa
+    for a in (ano + 1, ano, ano - 1):
         rec = {}
         for c in RECEITA:
             for cik, v in frame(c, a).items():
@@ -100,9 +102,15 @@ def main():
                 if cik in tk and cik not in luc:
                     luc[cik] = v   # NetIncomeLoss (dos controladores) tem prioridade
         for cik, r in rec.items():
-            if cik in dados:
+            if cik in dados and dados[cik]['rec'][2] >= r[2]:
                 continue
             dados[cik] = {'ano': a, 'rec': r, 'luc': luc.get(cik)}
+    # diagnóstico: contas de receita de quem faltou (Exxon)
+    for cik in (34088,):
+        if cik not in dados:
+            cf = get(f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json') or {}
+            ks = [k for k in cf.get('facts', {}).get('us-gaap', {}) if 'Revenue' in k or 'Sales' in k]
+            print(f'  CIK {cik} sem receita nos frames; contas: {ks[:30]}')
     if len(dados) < 1000:
         sys.exit(f'Só {len(dados)} empresas lidas: a SEC pode ter mudado o formato. Nada foi gravado.')
 
@@ -123,7 +131,7 @@ def main():
         empresas.append({
             't': tk[cik], 'cik': cik, 'nome': sub.get('name') or d['rec'][3],
             'setor': setor(sub.get('sic')), 'sic': sub.get('sic') or None,
-            'ref': fim, 'ano': d['ano'],
+            'ref': fim, 'ano': min(d['ano'], ano),
             'receita': d['rec'][0],
             'lucro': luc[0] if luc and luc[2] == fim else None,   # lucro só se for do mesmo período da receita
             'pl': pl,
