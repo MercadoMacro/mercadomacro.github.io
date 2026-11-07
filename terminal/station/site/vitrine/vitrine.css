@@ -169,7 +169,7 @@ main { width: 100%; }
 .vt-phone-in { width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: var(--bg-2) center top / cover no-repeat; }
 
 /* fontes */
-.vt-fontes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.vt-fontes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .vt-fontes li { background: var(--bg-2); padding: 18px 20px; }
 .vt-fontes b { display: block; font-size: 15px; }
 .vt-fontes span { color: var(--text-3); font-size: 13px; }
@@ -282,6 +282,7 @@ main { width: 100%; }
 /* ferramentas grátis e planos */
 .vt-gratis, .vt-planos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .vt-gratis { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+@media (min-width: 900px) { .vt-gratis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .vt-gratis a { display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 16px 18px; background: rgba(13,20,34,.85); border: 1px solid var(--line); border-radius: 14px; color: var(--text); text-decoration: none; transition: border-color .2s; }
 .vt-gratis a:hover, .vt-gratis a:focus-visible { border-color: var(--accent); }
 .vt-gratis b { font-size: 15px; } .vt-gratis b::after { content: " \2192"; color: var(--accent); }
