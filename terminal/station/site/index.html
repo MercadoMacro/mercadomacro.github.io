@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="mesa-layout.css?v=2">
 <link rel="stylesheet" href="watchlist-table.css?v=8">
 <link rel="stylesheet" href="conforto.css?v=2">
+<link rel="stylesheet" href="ao-vivo-solto.css?v=1">
 <link rel="stylesheet" href="terminal.css?v=1">
 <style id="prefs-css">
   /* =====================================================================
@@ -462,10 +463,15 @@
               <span class="live-indicator"></span>
               Transmissão ao Vivo
             </div>
-            <div class="live-count" id="live-count"></div>
+            <div class="lvs-dir">
+              <div class="live-count" id="live-count"></div>
+              <button type="button" class="btn-sm lvs-destacar" id="live-destacar" title="Soltar o Ao Vivo num quadro que você arrasta pela tela ou leva para outra janela"><i class="fas fa-up-right-from-square" aria-hidden="true"></i> Destacar</button>
+            </div>
           </div>
-          <p id="news-stream-status" role="status" style="font-size:12px;color:var(--text-3);margin:0 0 12px">Conectando às notícias…</p>
-          <div class="live-feed" id="live-container"></div>
+          <div id="live-corpo">
+            <p id="news-stream-status" role="status" style="font-size:12px;color:var(--text-3);margin:0 0 12px">Conectando às notícias…</p>
+            <div class="live-feed" id="live-container"></div>
+          </div>
         </div>
       </main>
     </div>
@@ -790,7 +796,7 @@
 <script src="forex-live.js?v=11"></script>
 <script src="feriados.js?v=2"></script>
 <script src="news-stream.js?v=1"></script>
-<script src="app.js?v=144"></script>
+<script src="app.js?v=145"></script>
 <script src="ana-secoes.js?v=10"></script>
 <script src="analise-avancada.js?v=1"></script>
 <script src="mesa-layout.js?v=2"></script>
@@ -814,6 +820,7 @@
 <script src="abas-borda.js?v=5"></script>
 <script src="/vitrine/ajuda-conteudo.js?v=2"></script>
 <script src="assistente.js?v=9"></script>
+<script src="ao-vivo-solto.js?v=1"></script>
 <script>requestAnimationFrame(() => document.documentElement.classList.remove('mm-boot'));</script>
 </body>
 </html>

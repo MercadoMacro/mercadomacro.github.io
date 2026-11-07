@@ -1196,7 +1196,7 @@ function toggleNewsPolitica() {
   buildNewsSidebar();
   updateNewsBubbleStates();
   renderNewsView();
-  if (newsCurrentMode === 'live') renderLiveView();
+  if (newsLiveShown()) renderLiveView();
 }
 const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias de meses atrás
 const NEWS_TR_KEY = 'news_tr_v1';
@@ -1268,7 +1268,7 @@ async function newsTraduzir() {
     try { localStorage.setItem(NEWS_TR_KEY, JSON.stringify(newsTr)); } catch (e) { /* silencioso */ }
     newsAll.forEach(newsAplicaTraducao);
     renderNewsView();
-    if (newsCurrentMode === 'live') renderLiveView();
+    if (newsLiveShown()) renderLiveView();
   } finally { newsTraduzindo = false; }
 }
 // Financial Juice e ForexLive mandam cada frase de um discurso como uma notícia ("Fed's Goolsbee: ...").
@@ -1565,7 +1565,7 @@ function toggleNewsSource(source) {
   updateNewsBubbleStates();
   if (source !== 'ALL') closeNewsCategories();
   renderNewsView();
-  if (newsCurrentMode === 'live') renderLiveView();
+  if (newsLiveShown()) renderLiveView();
 }
 
 function updateNewsBubbleStates() {
@@ -1631,8 +1631,13 @@ function showNewsSkeleton() {
 // NEWS_LIVE_START: atualização independente das cotações, com uma busca por vez.
 // busca por HTTP só quando a conexão ao vivo (WebSocket) falha: 60 s poupa o worker de notícias da outra conta
 const NEWS_LIVE_MS = 60000;
+// o fluxo do Ao Vivo pode estar destacado num quadro ou noutra janela (ao-vivo-solto.js): guarda os elementos, não busca pelo id
+var newsLiveEls = {};
+function liveEl(id) { return newsLiveEls[id]?.isConnected ? newsLiveEls[id] : (newsLiveEls[id] = document.getElementById(id)); }
+function newsLiveShown() { return newsCurrentMode === 'live' || !!globalThis.MMLiveSolto?.on; }
 let newsFetchInFlight = null, newsLastAttempt = 0, newsStreamClient = null, newsStreamRevision = 0;
 function newsLiveActive() {
+  if (globalThis.MMLiveSolto?.on) return liveMode;
   return liveMode && !document.hidden && newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
 }
 function newsLiveTick() {
@@ -1647,7 +1652,7 @@ function syncNewsStream() {
     newsStreamClient = new MMNewsStream.Client({url:url.href,
       onData:items=>{ newsStreamRevision++; newsLastAttempt=Date.now(); newsApplyUpdate(newsMergeLive(newsBruto,items)); },
       onState:state=>{
-        const el=document.getElementById('news-stream-status');
+        const el=liveEl('news-stream-status');
         const text=state==='live'?'Conectado · atualização automática':state==='connecting'?'Conectando às notícias…':state==='paused'?'Atualização automática pausada':state==='auth'?'Sessão encerrada':'Atualização periódica ativa · tentando reconectar';
         if(el&&el.textContent!==text)el.textContent=text;
       },
@@ -1742,7 +1747,7 @@ function newsApplyUpdate(data,silent=true,cacheHeader='') {
     }
 
     renderNewsView();
-    if (newsCurrentMode === 'live') renderLiveView();
+    if (newsLiveShown()) renderLiveView();
     newsTraduzir();
     if (!silent) toast('Notícias atualizadas', 'success');
 }
@@ -1898,8 +1903,8 @@ document.getElementById('news-view')?.addEventListener('click', (e) => {
 });
 
 function renderLiveView() {
-  const container = document.getElementById('live-container');
-  const counter = document.getElementById('live-count');
+  const container = liveEl('live-container');
+  const counter = liveEl('live-count');
   if (!container) return;
 
   const filtrado = newsBusca(filterNewsBySources(newsAll));
@@ -1933,7 +1938,7 @@ function renderLiveView() {
 
 document.getElementById('news-search')?.addEventListener('input', () => {
   if (newsCurrentMode === 'news') renderNewsView();
-  else renderLiveView();
+  if (newsLiveShown()) renderLiveView();
 });
 
 document.getElementById('news-refresh-btn')?.addEventListener('click', function () {
@@ -4919,6 +4924,7 @@ function newsReadMins(n) {
   $('#live-container')?.addEventListener('click', (e) => {
     const a = e.target.closest('.lc-title a');
     if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    if (a.ownerDocument !== document) return; // na janela separada o link abre normal, numa aba nova
     const n = newsAll.find(x => x.link === a.getAttribute('href'));
     if (!n) return;
     e.preventDefault();
