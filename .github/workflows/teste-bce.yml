@@ -1,0 +1,13 @@
+name: Teste BCE (temporario)
+on:
+  push:
+    branches: [europa-bce]
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          python3 terminal/bce/gerar_bce.py terminal/bce
+          ls -la terminal/bce
+          gzip -c terminal/bce/bce.json | base64 -w0; echo
