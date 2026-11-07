@@ -588,6 +588,7 @@
   fetch('/api/auth/eu', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((c) => {
     if (!c || !c.logado) return;
     window.__conta = c;
+    window.dispatchEvent(new Event('mm-conta'));
     if (box && !box.hidden) render();
     // acesso perto de terminar: lembra uma vez por dia
     const falta = c.expira ? (Date.parse(c.expira) - Date.now()) / 864e5 : Infinity;
