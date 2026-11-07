@@ -233,6 +233,8 @@
     }
     const px = precos();
     const agora = calcula(reun, todas, px.agora, effr);
+    // o robô (robo-extras.js) usa no dia da decisão: "o mercado esperava..."
+    try { localStorage.setItem('mm_fed_exp_v1', JSON.stringify({ quando: Date.now(), alvo: base.alvo, reunioes: agora.slice(0, 2).map((x) => ({ data: x.data, dist: x.dist })) })); } catch (e) { /* sem armazenamento */ }
     const ontem = calcula(reun, todas, px.ontem, effr);
     const semana = calcula(reun, todas, px.semana, effr);
     if (!agora.length) {

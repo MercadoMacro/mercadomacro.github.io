@@ -12,13 +12,15 @@ export function ligarAssistente(u) {
 const MODELOS = ['gemini-3.8-flash', 'gemini-3.6-flash'];
 const PERGUNTAS_DIA = 25;
 const MAX_PERGUNTA = 1200;
+const MAX_CONTEXTO = 4000; // texto da tela que o usuário pede para explicar (botão do robô)
 const MAX_HISTORICO = 6; // pares pergunta/resposta anteriores que vão junto, para a conversa ter contexto
 
 const INSTRUCOES = `Você é o assistente do Mercado Macro, um terminal financeiro brasileiro (cotações, mesa de operações, mapa de calor,
 indicadores do Brasil e dos EUA, balanços, fluxo do investidor estrangeiro na B3, probabilidades do Fed e do Copom, calculadoras e opções).
 Responda sempre em português do Brasil, de forma clara e curta (no máximo uns 6 parágrafos curtos ou uma lista), para quem acompanha o mercado.
 Regras:
-- Você NÃO tem acesso às cotações, notícias ou dados de agora. Nunca invente preços, taxas, datas ou números atuais; se a pergunta depender deles, diga que não tem esse dado e indique onde olhar no painel.
+- Quando a mensagem trouxer um bloco de dados copiados da tela do terminal, você pode comentar os números desse bloco, citando-os como estão.
+- Fora desse bloco, você NÃO tem acesso às cotações, notícias ou dados de agora. Nunca invente preços, taxas, datas ou números atuais; se a pergunta depender deles, diga que não tem esse dado e indique onde olhar no painel.
 - Explique conceitos, indicadores, termos, como ler gráficos e como funcionam produtos (ações, juros, câmbio, derivativos, opções, renda fixa).
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
 - Se não souber, diga que não sabe. Não use emojis.`;
@@ -111,7 +113,11 @@ export async function apiAssistente(req, env, u, gratis) {
   const hist = (Array.isArray(b.historico) ? b.historico : []).slice(-MAX_HISTORICO)
     .filter((x) => x && typeof x.p === 'string' && typeof x.r === 'string')
     .flatMap((x) => [{ role: 'user', parts: [{ text: x.p.slice(0, MAX_PERGUNTA) }] }, { role: 'model', parts: [{ text: x.r.slice(0, 4000) }] }]);
-  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: pergunta }] }], !!b.stream, c.gemini_modelo);
+  // "Explicar esta tela": o navegador manda o texto visível da aba aberta; vai junto só nesta pergunta
+  const ctx = String(b.contexto || '').slice(0, MAX_CONTEXTO).trim();
+  const aba = String(b.tela || '').replace(/["\n]/g, ' ').slice(0, 60).trim();
+  const texto = ctx ? `Dados que aparecem agora na tela "${aba || 'aberta'}" do terminal, copiados da página (use só estes números; não invente outros):\n"""\n${ctx.replace(/"""/g, '"')}\n"""\n\n${pergunta}` : pergunta;
+  const r = await gemini(c.gemini_key, [...hist, { role: 'user', parts: [{ text: texto }] }], !!b.stream, c.gemini_modelo);
   if (r.ok && r.corpo) return new Response(r.corpo, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   if (r.ok) return json({ resposta: r.texto });
   if (r.status === 429) return json({ erro: 'O assistente atingiu o limite gratuito do Google por agora. Tente de novo mais tarde.' }, 429);

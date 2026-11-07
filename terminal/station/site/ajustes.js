@@ -205,6 +205,15 @@
         <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
         <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
         <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
+        ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia do robô (resumo da manhã, nos dias de pregão)')}
+        ${sw('roboQuiz', P.roboQuiz !== false, 'Pergunta do dia (das lições da aba Educação)')}
+        ${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
+        <p class="aj-note">Notícias urgentes, alarmes de preço e decisões do Copom e do Fed aparecem como aviso do Windows (ou do Mac) enquanto você usa outro programa. O terminal precisa ficar aberto numa aba.</p>
+        ${window.MMRoboExtras ? '<button type="button" class="btn-sm aj-wide" data-act="roboJanela"><i class="far fa-window-restore"></i> Abrir o robô numa janela flutuante</button><p class="aj-note">A janela fica por cima de outros programas, com cotações, a sua watchlist e os avisos.</p>' : ''}
+        ${(() => { const A = window.MMRoboAlarmes; if (!A) return ''; const l = A.lista();
+          return `<p class="aj-note" style="margin-top:12px"><b>Alarmes de preço</b></p>${l.length ? l.map((a) => `<div class="aj-row"><span>${esc(a.nome)} ${a.dir === 'acima' ? 'acima de' : 'abaixo de'} ${esc(A.nomeNum(a))}</span><button type="button" class="btn-sm" data-act="roboAlarmeApaga" data-id="${esc(a.id)}">Apagar</button></div>`).join('') : ''}
+          <p class="aj-note">${l.length ? '' : 'Nenhum alarme. '}Para criar, escreva no Assistente, por exemplo: "me avisa se o dólar passar de 5,50".</p>`; })()}
+        ${window.MMRoboComando && window.MMRoboComando.tem() ? '<p class="aj-note">Comandos de voz: toque no microfone do Assistente ou use Alt+V e fale, por exemplo, "abre o calendário", "cotação do dólar" ou "explica a tela". A voz é reconhecida pelo serviço do navegador.</p>' : ''}
       </section>
       <section class="aj-sec">
         <h3>Minha Mesa</h3>
@@ -491,11 +500,18 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
+      if (k === 'roboBomDia' || k === 'roboQuiz') P[k] = P[k] === false;
+      if (k === 'roboNotif') {
+        if (P.roboNotif === true) P.roboNotif = false;
+        else { window.MMRoboExtras?.pedirNotif().then((ok) => { if (!ok) return; P.roboNotif = true; save(); render(); toast('Pronto. Aviso no sistema quando o terminal estiver em segundo plano.'); }); return; }
+      }
       if (k === 'roboVoz') { P.roboVoz = P.roboVoz !== true; if (P.roboVoz) window.MMRoboVoz?.falar('Pronto. Vou ler as notícias urgentes em voz alta.'); else try { speechSynthesis.cancel(); } catch (e2) { /* sem voz */ } }
       save(); applyAll();
       return setTimeout(render, k === 'live' ? 60 : 0);
     }
     if (act === 'roboTestar') { if (!window.MMRoboVoz?.falar('Olá! Esta é a voz que vou usar para as notícias urgentes.')) toast('Este navegador não tem voz disponível.'); return; }
+    if (act === 'roboJanela') { window.MMRoboExtras?.abrirJanela(); return; }
+    if (act === 'roboAlarmeApaga') { window.MMRoboAlarmes?.apagar(b.dataset.id); toast('Alarme apagado.'); return render(); }
     if (act === 'roboCanto') { window.MMPet?.canto?.(); toast('O robô voltou para o canto.'); return; }
     if (act === 'url') {
       const v = box.querySelector('#aj-url').value.trim();

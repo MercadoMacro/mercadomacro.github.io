@@ -62,6 +62,11 @@
   .ia-form button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
   .ia-form button:hover:not(:disabled){transform:scale(1.06)}
   .ia-form button:disabled{opacity:.45;cursor:default}
+  .ia-form button.ia-mic{background:transparent;color:var(--text-2,#888);border:1px solid var(--line-2,#ddd)}
+  .ia-form button.ia-mic svg{fill:currentColor;stroke:none;width:15px;height:15px}
+  .ia-form button.ia-mic.ouvindo{background:var(--neg,#ea3943);border-color:var(--neg,#ea3943);color:#fff;animation:ia-mic 1.1s ease-in-out infinite}
+  @keyframes ia-mic{50%{box-shadow:0 0 0 6px rgba(234,57,67,.18)}}
+  .ia-sug.tela{border-style:dashed}
   .ia-aviso{margin:7px 4px 0;font-size:10.5px;color:var(--text-3,#888);line-height:1.4;text-align:center;opacity:.85}
   .ia-rot{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#777);margin-bottom:6px}
   .ia-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -90,6 +95,8 @@
   const IC = {
     raio: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
     brilho: '<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
+    mic: '<svg viewBox="0 0 24 24"><path d="M12 2a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0v-6A3.5 3.5 0 0 0 12 2z"/><path d="M6 11a1 1 0 0 0-2 0 8 8 0 0 0 7 7.9V21H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.1A8 8 0 0 0 20 11a1 1 0 0 0-2 0 6 6 0 0 1-12 0z"/></svg>',
+    tela: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
     balao: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
     lixo: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
     x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -114,11 +121,11 @@
       const como = 'Dúvidas comuns e assuntos das lições da aba Educação têm resposta na hora, da nossa base.'
         + (gemini ? (assinante ? ` Para o resto, o Google Gemini apoia a sua análise${limite ? ` (até ${limite} perguntas por dia)` : ''}. Ele não vê as cotações em tempo real.` : ' Perguntas livres vão ao Google Gemini, exclusivo para assinantes.') : '');
       msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso ajudar na sua análise hoje?<small>${como}</small></p>
-        ${sug ? `<p class="ia-sug-t">Sugestões</p>${sug}` : ''}</div>`;
-      msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
+        ${sug || (gemini && assinante) ? `<p class="ia-sug-t">Sugestões</p>` : ''}${gemini && assinante ? `<button type="button" class="ia-sug gem tela" data-ia-tela><span class="ia-ic" aria-hidden="true">${IC.tela}</span><span class="ia-sug-x">Explicar a tela que estou vendo</span></button>` : ''}${sug}</div>`;
+      msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { if (b.hasAttribute('data-ia-tela')) return explicarTela(); campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(); }));
       return;
     }
-    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
+    msgs.innerHTML = conversa.map((x, i) => `<div class="ia-msg ia-eu">${esc(x.p)}</div>` + (x.r ? `<div class="ia-msg ia-ele">${x.pronta ? `<div class="ia-rot">${x.pronta === 'resumo' ? 'Resumo das notícias pela IA' : x.pronta === 'alarme' ? 'Alarme de preço' : x.pronta === 'licao' && x.licao ? 'Da aba Educação · ' + esc(x.licao.trilha) : 'Resposta pronta'}</div>` : ''}${md(x.r)}${x.pronta ? rodapePronta(x, i) : ''}</div>` : x.e ? `<div class="ia-erro">${esc(x.e)}${x.assinar ? ' <a href="/assinar">Ver planos</a>' : ''}</div>` : '')).join('')
       + (ocupado && !conversa[conversa.length - 1].r ? '<div class="ia-pensando" role="status">Analisando<span class="ia-pontos" aria-hidden="true"><i></i><i></i><i></i></span></div>' : '');
     msgs.querySelectorAll('[data-ia-aba]').forEach((b) => (b.onclick = () => { const t = document.querySelector('.tab-btn[data-tab="' + b.dataset.iaAba + '"]'); if (t) { fechar(); t.click(); } }));
     msgs.querySelectorAll('[data-ia-licao]').forEach((b) => (b.onclick = () => { if (window.MMEdu && window.MMEdu.abrir(b.dataset.iaLicao)) fechar(); }));
@@ -128,6 +135,7 @@
 
   // resposta pronta (base local do /vitrine/ajuda-conteudo.js): atalho para a aba e opção de perguntar ao Gemini
   function rodapePronta(x, i) {
+    if (x.pronta === 'alarme') return '';
     if (x.pronta === 'resumo') return `<p class="ia-rsub">${esc(x.sub || '')} Pode conter erros; confira na fonte.</p><div class="ia-acoes">${document.querySelector('.tab-btn[data-tab="news-panel"]') ? '<button type="button" data-ia-aba="news-panel">Abrir a aba Notícias</button>' : ''}</div>`;
     const a = x.acao;
     let h = '<div class="ia-acoes">';
@@ -151,11 +159,38 @@
     try { return (window.MMEdu && window.MMEdu.buscar(p)[0]) || null; } catch (e) { return null; }
   }
 
-  async function perguntar(soGemini) {
-    const p = campo.value.trim();
+  // texto visível da aba aberta, para "Explicar a tela" (vai ao Gemini junto com a pergunta)
+  function telaAtual() {
+    const el = document.querySelector('.tab-panel.active');
+    if (!el) return null;
+    const rot = (document.querySelector('.tab-btn.active')?.textContent || el.id).replace(/\s+/g, ' ').trim();
+    const t = (el.innerText || '').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+    return t ? { rot, t: t.slice(0, 3800) } : null;
+  }
+  function explicarTela() {
+    abrir();
+    if (ocupado) return;
+    const tela = telaAtual();
+    if (!gemini || !assinante || !tela) {
+      conversa.push({ p: 'Explicar a tela', e: !tela ? 'Não achei conteúdo nesta tela para explicar.' : gemini ? 'Explicar a tela usa o Google Gemini, que é para assinantes.' : 'Explicar a tela precisa do Google Gemini, que ainda não está ligado.', assinar: !!tela && gemini && !assinante });
+      salvar(); desenhar(); return;
+    }
+    perguntar(true, tela);
+  }
+
+  async function perguntar(soGemini, tela) {
+    const p = tela ? 'Explique a tela "' + tela.rot + '"' : campo.value.trim();
     if (!p || ocupado) return;
-    campo.value = ''; ajustar();
+    if (!tela) { campo.value = ''; ajustar(); }
     const item = { p };
+    // "me avisa se o dólar passar de 5,50": vira alarme de preço do robô (robo-extras.js), sem ir ao Gemini
+    if (!tela && soGemini !== true && window.MMRoboAlarmes && window.MMRoboAlarmes.ehPedido(p)) {
+      conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
+      const j = await window.MMRoboAlarmes.doTexto(p).catch(() => null);
+      if (j && j.r) { item.r = j.r; item.pronta = 'alarme'; } else item.e = (j && j.e) || 'Não consegui criar o alarme agora.';
+      ocupado = false; enviar.disabled = false; salvar(); desenhar(); campo.focus();
+      return;
+    }
     // pedido de resumo das notícias: usa o resumo do servidor (resumo-ia.js), sem gastar as perguntas do dia
     if (soGemini !== true && pedeResumo(p) && window.MMResumoIA) {
       conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
@@ -180,7 +215,7 @@
     const historico = conversa.filter((x) => x.r && !x.pronta).slice(-6).map((x) => ({ p: x.p, r: x.r }));
     conversa.push(item); ocupado = true; enviar.disabled = true; desenhar();
     try {
-      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pergunta: p, historico, stream: true }) });
+      const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tela ? { pergunta: 'Explique de forma simples o que esta tela do terminal mostra agora e o que mais chama a atenção nos números. Seja breve.', contexto: tela.t, tela: tela.rot, historico, stream: true } : { pergunta: p, historico, stream: true }) });
       if (r.ok && r.body && /text\/plain/.test(r.headers.get('content-type') || '')) {
         // a resposta chega aos pedaços: mostra enquanto o Gemini escreve
         const leitor = r.body.getReader(), dec = new TextDecoder();
@@ -212,14 +247,16 @@
     painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true">${marca()}</span><div class="ia-tit"><span class="ia-selo">Mercado Macro</span><h2>Assistente IA</h2><small>Inteligência de Mercado &amp; Análise Macro</small></div>
         <button type="button" data-ia="limpar" title="Apagar a conversa">${IC.lixo}<span>Limpar</span></button><button type="button" data-ia="fechar" aria-label="Fechar o assistente">${IC.x}<span>Fechar</span></button></div>
       <div class="ia-msgs" aria-live="polite"></div>
-      <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea><button type="submit" aria-label="Enviar" title="Enviar">${IC.enviar}</button></form>
+      <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea>${window.MMRoboComando && window.MMRoboComando.tem() ? `<button type="button" class="ia-mic" data-ia="mic" aria-label="Falar um comando ou pergunta" title="Falar (Alt+V)">${IC.mic}</button>` : ''}<button type="submit" aria-label="Enviar" title="Enviar">${IC.enviar}</button></form>
         <p class="ia-aviso">${gemini ? 'Conteúdo analítico e informativo gerado por IA. Não constitui recomendação de investimento. Não escreva dados pessoais: as perguntas vão para o Google.' : 'Respostas prontas do Mercado Macro, sem IA. Não escreva senhas nem dados pessoais.'}</p></div>`;
     document.body.appendChild(painel);
-    msgs = painel.querySelector('.ia-msgs'); campo = painel.querySelector('textarea'); enviar = painel.querySelector('.ia-form button');
+    msgs = painel.querySelector('.ia-msgs'); campo = painel.querySelector('textarea'); enviar = painel.querySelector('.ia-form button[type="submit"]');
     painel.querySelector('form').onsubmit = (e) => { e.preventDefault(); perguntar(); };
     campo.addEventListener('input', ajustar);
     campo.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); perguntar(); } });
     painel.querySelector('[data-ia="fechar"]').onclick = fechar;
+    const mic = painel.querySelector('[data-ia="mic"]');
+    if (mic) mic.onclick = () => window.MMRoboComando.escutar(mic);
     painel.querySelector('[data-ia="limpar"]').onclick = () => { if (ocupado) return; conversa = []; salvar(); desenhar(); };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && painel.classList.contains('aberto')) fechar(); });
   }
@@ -237,7 +274,8 @@
     b.innerHTML = '<span class="ia-marca" aria-hidden="true">' + marca() + '</span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
     b.onclick = abrir;
     // o mascote (assistente-mascote.js) usa para "Explique isso": abre o painel com a pergunta escrita, sem enviar
-    window.MMAssistente = { abrir, escrever: (t) => { abrir(); campo.value = String(t || '').slice(0, 600); ajustar(); setTimeout(() => { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }, 60); } };
+    window.MMAssistente = { abrir, fechar: () => painel && fechar(), explicarTela, gemini: () => gemini && assinante,
+      perguntarTexto: (t) => { abrir(); campo.value = String(t || '').slice(0, 600); perguntar(); }, escrever: (t) => { abrir(); campo.value = String(t || '').slice(0, 600); ajustar(); setTimeout(() => { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }, 60); } };
     document.body.appendChild(b);
     if (window.MMAbaBorda) window.MMAbaBorda.marcar(b);
   }
