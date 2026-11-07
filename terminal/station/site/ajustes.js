@@ -73,8 +73,15 @@
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if (P.mode === 'auto') syncTheme(); });
   setInterval(() => { if (P.mode === 'hour') syncTheme(); }, 60 * 1000);
   // o botão de lua/sol e o Alt+L voltam para o modo manual
+  // Saindo do Terminal pela chave Aparência (ou Alt+L), a chave lembra dele: clicar de novo volta ao Terminal, e não ao escuro comum
+  // (pedido do Severino, 07/11/2026). Escolher outro tema nos Ajustes esquece isso.
+  // A classe mm-troca desliga as transições de cor por um instante, para não piscar âmbar no tema claro.
+  const semTransicao = () => { const h = document.documentElement; h.classList.add('mm-troca'); requestAnimationFrame(() => requestAnimationFrame(() => h.classList.remove('mm-troca'))); };
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    if (P.mode === 'auto' || P.mode === 'hour' || P.mode === 'terminal') { P.mode = 'manual'; save(); applyAll(); }
+    const claro = document.body.classList.contains('light');
+    if (P.mode === 'terminal') { semTransicao(); P.mode = 'manual'; P.voltaTerminal = true; save(); applyAll(); }
+    else if (P.mode === 'manual' && P.voltaTerminal && !claro) { semTransicao(); P.mode = 'terminal'; save(); applyAll(); }
+    else if (P.mode === 'auto' || P.mode === 'hour') { P.mode = 'manual'; save(); applyAll(); }
     if (box && !box.hidden) setTimeout(render, 30);
   });
   const curMode = () => (P.mode === 'manual' ? (document.body.classList.contains('light') ? 'light' : 'dark') : P.mode);
@@ -453,6 +460,8 @@
     if (b.dataset.set) {
       const k = b.dataset.set, raw = b.dataset.v;
       if (k === 'mode') {
+        if (P.mode === 'terminal' || raw === 'terminal') semTransicao();
+        if (raw === 'light' && P.mode === 'terminal') P.voltaTerminal = true; else if (raw !== 'light') delete P.voltaTerminal;
         if (raw === 'dark' || raw === 'light') { P.mode = 'manual'; save(); applyAll(); syncTheme(raw); }
         else { P.mode = raw; save(); applyAll(); syncTheme(); }
       } else {
