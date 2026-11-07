@@ -134,9 +134,9 @@
             <div class="fd-sug" id="fd-sug" role="listbox" hidden></div>
           </div>
           <div class="fd-views" role="tablist" aria-label="Modo">
-            <button data-v="empresa" role="tab">Empresa</button>
-            <button data-v="ranking" role="tab">Ranking</button>
-            <button data-v="eua" role="tab">EUA</button>
+            <button data-v="empresa" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-br1"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-br1)"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Empresa</span></button>
+            <button data-v="ranking" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-br2"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-br2)"><rect width="20" height="20" fill="#009c3b"/><path d="M10 2.6 18.6 10 10 17.4 1.4 10z" fill="#ffdf00"/><circle cx="10" cy="10" r="4.1" fill="#002776"/><path d="M6.1 9.2c2.6-.7 5.4-.4 7.8.8" stroke="#fff" stroke-width=".7" fill="none"/></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>Ranking</span></button>
+            <button data-v="eua" role="tab"><svg class="fd-flag" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="fdf-us"><circle cx="10" cy="10" r="10"/></clipPath><g clip-path="url(#fdf-us)"><rect y="0.00" width="20" height="1.54" fill="#b22234"/><rect y="1.54" width="20" height="1.54" fill="#fff"/><rect y="3.08" width="20" height="1.54" fill="#b22234"/><rect y="4.62" width="20" height="1.54" fill="#fff"/><rect y="6.15" width="20" height="1.54" fill="#b22234"/><rect y="7.69" width="20" height="1.54" fill="#fff"/><rect y="9.23" width="20" height="1.54" fill="#b22234"/><rect y="10.77" width="20" height="1.54" fill="#fff"/><rect y="12.31" width="20" height="1.54" fill="#b22234"/><rect y="13.85" width="20" height="1.54" fill="#fff"/><rect y="15.38" width="20" height="1.54" fill="#b22234"/><rect y="16.92" width="20" height="1.54" fill="#fff"/><rect y="18.46" width="20" height="1.54" fill="#b22234"/><rect width="10" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2.5" cy="2.5" r=".6"/><circle cx="5" cy="2.5" r=".6"/><circle cx="7.5" cy="2.5" r=".6"/><circle cx="3.75" cy="4.6" r=".6"/><circle cx="6.25" cy="4.6" r=".6"/><circle cx="2.5" cy="6.7" r=".6"/><circle cx="5" cy="6.7" r=".6"/><circle cx="7.5" cy="6.7" r=".6"/><circle cx="3.75" cy="8.8" r=".6"/><circle cx="6.25" cy="8.8" r=".6"/></g></g><circle cx="10" cy="10" r="9.6" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/></svg><span>EUA</span></button>
           </div>
         </div>
         <div class="fd-pop" id="fd-pop"></div>
@@ -221,11 +221,20 @@
     let el = body.querySelector('#fd-eua');
     if (!el) { body.innerHTML = '<div id="fd-eua"><div class="fd-msg">Carregando…</div></div>'; el = body.querySelector('#fd-eua'); }
     const foot = root.querySelector('#fd-foot');
-    if (window.__fundEua) { window.__fundEua(el, foot); return; }
+    // a busca dos EUA vai para a mesma linha dos botões, no lugar da busca do Brasil (07/11/2026: a linha pulava ao trocar)
+    const naBarra = () => {
+      const box = root.querySelector('#fd-eua'), s = box && box.querySelector('.fe-bar .fd-search'), bar = root.querySelector('.fd-bar');
+      if (!s || !bar) return;
+      bar.querySelectorAll('.fe-in-bar').forEach((x) => x.remove());
+      s.classList.add('fe-in-bar');
+      bar.insertBefore(s, bar.firstChild);
+      box.querySelector('.fe-bar')?.remove();
+    };
+    if (window.__fundEua) { window.__fundEua(el, foot); naBarra(); return; }
     if (document.querySelector('script[data-fund-eua]')) return;
     const sc = document.createElement('script');
     sc.src = 'fund-eua.js?v=2'; sc.dataset.fundEua = '1';
-    sc.onload = () => { if (prefs.view === 'eua' && window.__fundEua) window.__fundEua(root.querySelector('#fd-eua') || el, foot); };
+    sc.onload = () => { if (prefs.view === 'eua' && window.__fundEua) { window.__fundEua(root.querySelector('#fd-eua') || el, foot); naBarra(); } };
     sc.onerror = () => { el.innerHTML = '<div class="fd-msg">Não foi possível carregar o modo EUA.</div>'; sc.remove(); };
     document.head.appendChild(sc);
   }
@@ -472,7 +481,10 @@
   .fd-rk tbody tr:hover { background:var(--surface-2); }
   .fd-rk tbody tr:focus-visible, .fd-tk:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
   .fd-rk td:first-child { max-width:340px; overflow:hidden; text-overflow:ellipsis; }
-  .fd-wrap.eua > .fd-bar > .fd-search, .fd-wrap.eua > .fd-pop { display:none; }
+  .fd-wrap.eua > .fd-bar > .fd-search:not(.fe-in-bar), .fd-wrap.eua > .fd-pop, .fd-wrap:not(.eua) > .fd-bar > .fe-in-bar { display:none; }
+  .fd-views button { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+  .fd-flag { width:16px; height:16px; flex:none; border-radius:50%; display:block; }
+  .fd-views button:not(.on) .fd-flag { opacity:.75; }
   .fd-foot { margin:0; font-size:11px; color:var(--text-3); line-height:1.6; }
   .fd-foot a { color:var(--text-2); }
   @media (max-width: 1100px) { .fd-grid { grid-template-columns:minmax(0,1fr); } }
