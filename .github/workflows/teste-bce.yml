@@ -6,8 +6,8 @@ jobs:
   t:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
       - run: |
-          python3 terminal/bce/gerar_bce.py terminal/bce
-          ls -la terminal/bce
-          gzip -c terminal/bce/bce.json | base64 -w0; echo
+          A=https://data-api.ecb.europa.eu/service/data
+          for k in "ICP/M..N.000000.4.ANR" "ICP/M..N.XEF000.4.ANR" "ICP/M.U2.N.000000.4.*" "MNA/Q.Y..W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.*" "LFSI/M..S.UNEHRT.TOTAL0.15_74.T"; do
+            echo "== $k"; curl -s --max-time 120 "$A/$k?format=csvdata&lastNObservations=1&detail=dataonly" | cut -d, -f1-20 | awk -F, 'NR==1{for(i=1;i<=NF;i++)h[i]=$i; next}{print $0}' | head -40
+          done
