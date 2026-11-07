@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { widgetNaParaRss } from '../src/noticias.js';
+
+const html = '<style>x</style><div id="na_main"><ul> <div class="na_dia">06/11/2026</div> <li> 18:38 | <a href="https://www.noticiasagricolas.com.br/noticias/politica-economia/1-a.html?utm_source=widgets&utm_medium=widget_noticias" target="_blank"> Dólar fecha em alta &amp; juros <i>(Reuters)</i> </a> </li> <div class="na_dia">05/11/2026</div> <li> 9:05 | <a href="https://www.noticiasagricolas.com.br/videos/tempo/2-b.html?utm_source=widgets" target="_blank"> Frente fria </a> </li></ul></div>';
+const js = 'document.write(' + JSON.stringify(html) + ');';
+
+test('widget do Notícias Agrícolas vira itens com data de Brasília, sem utm e com o veículo', () => {
+  const x = widgetNaParaRss(js);
+  const itens = x.match(/<item>[\s\S]*?<\/item>/g);
+  assert.equal(itens.length, 2);
+  assert.match(itens[0], /<title>Dólar fecha em alta &amp; juros<\/title>/);
+  assert.match(itens[0], /<link>https:\/\/www\.noticiasagricolas\.com\.br\/noticias\/politica-economia\/1-a\.html<\/link>/);
+  assert.match(itens[0], /<pubDate>2026-11-06T18:38:00-03:00<\/pubDate><category>Reuters<\/category>/);
+  assert.match(itens[1], /<pubDate>2026-11-05T09:05:00-03:00<\/pubDate><\/item>/);
+  assert.equal(Date.parse('2026-11-06T18:38:00-03:00'), Date.UTC(2026, 10, 6, 21, 38));
+});
+
+test('resposta fora do formato não inventa notícia', () => {
+  assert.equal(widgetNaParaRss('<html>erro</html>'), '');
+  assert.equal(widgetNaParaRss('document.write("<li> 10:00 | <a href=\\"https://x\\">sem dia</a></li>");'), '');
+});
