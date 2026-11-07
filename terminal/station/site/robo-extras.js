@@ -626,10 +626,9 @@
   // =====================================================================
   const BT_CSS = `
     @media (min-width:901px) {
-      #ia-fab .rx-bts { position:absolute; left:-12px; top:-4px; display:flex; flex-direction:column; gap:5px; opacity:0; transform:translateX(4px); transition:opacity .15s, transform .15s; pointer-events:none; z-index:2; }
-      #ia-fab:hover .rx-bts, #ia-fab:focus-within .rx-bts { opacity:1; transform:none; pointer-events:auto; }
+      #ia-fab .rx-bts { position:absolute; left:50%; top:-42px; padding-bottom:12px; display:flex; flex-direction:row; gap:6px; opacity:0; transform:translate(-50%, 4px); transition:opacity .15s, transform .15s; pointer-events:none; z-index:2; }
+      #ia-fab:hover .rx-bts, #ia-fab:focus-within .rx-bts { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
       #ia-fab.ia-pet-arrastando .rx-bts { opacity:0 !important; }
-      #ia-fab.ia-pet-esq .rx-bts { left:auto; right:-12px; }
       #ia-fab .rx-bt { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--surface,#1a1d24); border:1px solid var(--line-2,#2a2f3a); color:var(--accent,#f2b92e); box-shadow:0 4px 10px rgba(0,0,0,.3); cursor:pointer; }
       #ia-fab .rx-bt:hover { border-color:var(--accent,#f2b92e); transform:scale(1.08); }
       #ia-fab .rx-bt svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
