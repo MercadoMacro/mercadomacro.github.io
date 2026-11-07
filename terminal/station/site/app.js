@@ -1905,12 +1905,32 @@ document.getElementById('news-view')?.addEventListener('click', (e) => {
   toggleNewsPick(star.dataset.id);
 });
 
+// Fonte do Ao Vivo (07/11/2026, pedido do Severino): por padrão só o Financial Juice, que publica manchete
+// por manchete; "Todas as fontes" segue os filtros de fontes das Notícias. Escolha guardada neste aparelho.
+const LIVE_FONTE_KEY = 'mm_aovivo_fonte_v1';
+function liveFonte() { try { return localStorage.getItem(LIVE_FONTE_KEY) || 'Financial Juice'; } catch (e) { return 'Financial Juice'; } }
+function liveFonteSelect() {
+  const sel = liveEl('live-fonte');
+  if (!sel) return;
+  const atual = liveFonte();
+  const fontes = [...new Set((Array.isArray(newsAll) ? newsAll : []).map((n) => n.fonte))].filter((f) => f && f !== 'Financial Juice').sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  if (atual !== 'todas' && atual !== 'Financial Juice' && !fontes.includes(atual)) fontes.push(atual);
+  const opts = [['Financial Juice', 'Financial Juice'], ['todas', 'Todas as fontes'], ...fontes.map((f) => [f, f])];
+  const html = opts.map(([v, t]) => `<option value="${escapeHTML(v)}"${v === atual ? ' selected' : ''}>${escapeHTML(t)}</option>`).join('');
+  if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
+  if (!sel.dataset.ligado) {
+    sel.dataset.ligado = '1';
+    sel.addEventListener('change', () => { try { localStorage.setItem(LIVE_FONTE_KEY, sel.value); } catch (e) { /* sem armazenamento */ } renderLiveView(); });
+  }
+}
+
 function renderLiveView() {
   const container = liveEl('live-container');
   const counter = liveEl('live-count');
   if (!container) return;
-
-  const filtrado = newsBusca(filterNewsBySources(newsAll));
+  liveFonteSelect();
+  const fonte = liveFonte();
+  const filtrado = newsBusca(fonte === 'todas' ? filterNewsBySources(newsAll) : (Array.isArray(newsAll) ? newsAll : []).filter((n) => n.fonte === fonte));
   const live = [...filtrado].sort((a, b) => b.data - a.data).slice(0, 100);
 
   if (!live.length) {
