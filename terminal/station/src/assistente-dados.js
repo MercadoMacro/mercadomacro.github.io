@@ -4,8 +4,31 @@
       fundamentos de empresas da B3, fluxo do estrangeiro, notícias e agenda).
    Tudo vem das mesmas fontes do site (servidor de dados shrill-meadow, arquivos dos robôs no GitHub, cache de notícias).
    Valor que falhar volta como "sem dado"; nada é inventado. */
-let api = null, noticias = null, fluxo = null;
-export function ligarDados(u) { ({ api, noticias, fluxo } = u); }
+let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null;
+export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; }
+
+// perfil que o navegador manda (nível, watchlist com os nomes de cada ativo, assuntos frequentes): só o que é seguro
+export function limpaPerfil(p) {
+  if (!p || typeof p !== 'object') return null;
+  const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f"]/g, ' ').trim().slice(0, n);
+  const nivel = ['iniciante', 'intermediario', 'avancado'].includes(p.nivel) ? p.nivel : 'intermediario';
+  const temas = (Array.isArray(p.temas) ? p.temas : []).map((t) => txt(t, 30)).filter(Boolean).slice(0, 6);
+  const watchlist = (Array.isArray(p.watchlist) ? p.watchlist : []).filter((w) => w && SYMBOL_RE.test(String(w.s || ''))).slice(0, 30)
+    .map((w) => ({ s: String(w.s), nome: txt(w.nome || w.s, 40), termos: (Array.isArray(w.termos) ? w.termos : []).map((t) => txt(t, 30)).filter((t) => t.length >= 2).slice(0, 6) }));
+  return { nivel, temas, watchlist };
+}
+const NIVEL_TXT = {
+  iniciante: 'iniciante: use palavras simples, explique cada termo técnico na primeira vez e dê um exemplo curto',
+  intermediario: 'intermediário: pode usar os termos comuns do mercado, explicando os menos conhecidos',
+  avancado: 'avançado: seja direto, use o jargão do mercado e foque em números e implicações',
+};
+export function textoPerfil(p) {
+  if (!p) return '';
+  const l = ['Sobre quem pergunta (preferências guardadas no navegador dele):', `- Nível: ${NIVEL_TXT[p.nivel]}.`];
+  if (p.watchlist.length) l.push('- Watchlist: ' + p.watchlist.map((w) => w.nome !== w.s.replace(/\.SA$/, '') ? `${w.s} (${w.nome})` : w.s).join(', ') + '. Quando fizer sentido, relacione a resposta com esses ativos.');
+  if (p.temas.length) l.push('- Assuntos que ele mais pergunta: ' + p.temas.join(', ') + '.');
+  return l.join('\n');
+}
 
 const RAW = 'https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/';
 const SYMBOL_RE = /^[\^A-Za-z0-9.=\-]{1,20}$/;
@@ -221,6 +244,25 @@ async function fundamentos(ticker) {
   };
 }
 
+// ---------------- radar da watchlist ----------------
+async function radar(horas) {
+  const wl = perfilAtual?.watchlist || [];
+  if (!wl.length) return { erro: 'a watchlist de quem pergunta está vazia' };
+  const h = Math.min(Math.max(+horas || 24, 1), 48), de = Date.now() - h * 3600000;
+  const tira = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const cita = (titulo, termos) => termos.some((t) => new RegExp('(^|[^a-z0-9])' + tira(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])').test(tira(titulo)));
+  const [q, ns] = await Promise.all([cotacoes(wl.map((w) => w.s)).catch(() => ({})), Promise.resolve().then(() => noticias()).catch(() => [])]);
+  const recentes = (Array.isArray(ns) ? ns : []).filter((n) => n && n.titulo && +n.data >= de);
+  return {
+    horas: h,
+    ativos: wl.map((w) => {
+      const termos = w.termos.length ? w.termos : [w.s.replace(/\.SA$/, '')];
+      const ms = recentes.filter((n) => cita(n.titulo, termos)).sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0) || +b.data - +a.data).slice(0, 5);
+      return { ativo: w.s, nome: w.nome, cotacao: q[w.s] || 'sem dado', manchetes: ms.map((n) => ({ quando: brt(+n.data), fonte: n.fonte, titulo: n.titulo })) };
+    }),
+  };
+}
+
 // ---------------- notícias e agenda ----------------
 async function buscaNoticias(termo, horas) {
   const h = Math.min(Math.max(+horas || 12, 1), 48);
@@ -252,6 +294,9 @@ export const FERRAMENTAS = [{
     { name: 'fluxo_estrangeiro', description: 'Saldo do investidor estrangeiro na B3 (R$ mil): último dia disponível, mês e ano.', parameters: { type: 'object', properties: {} } },
     { name: 'noticias', description: 'Manchetes recentes do terminal, opcionalmente filtradas por palavras.',
       parameters: { type: 'object', properties: { termo: { type: 'string', description: 'Palavras para filtrar; vazio = as mais importantes' }, horas: { type: 'number', description: '1 a 48, padrão 12' } } } },
+    { name: 'resumo_semanal', description: 'O Resumo semanal escrito pela equipe do Mercado Macro (o que marcou a semana nos mercados).', parameters: { type: 'object', properties: {} } },
+    { name: 'radar_watchlist', description: 'Radar da watchlist de quem pergunta: cotação de cada ativo e as manchetes recentes que citam cada um. Use para perguntas sobre "minha watchlist", "meus ativos" ou "meu radar".',
+      parameters: { type: 'object', properties: { horas: { type: 'number', description: '1 a 48, padrão 24' } } } },
     { name: 'agenda', description: 'Agenda econômica (Brasil, EUA, Europa, China) a partir de hoje, com previsão, anterior e resultado.',
       parameters: { type: 'object', properties: { dias: { type: 'number', description: '1 a 7' }, todos: { type: 'boolean', description: 'true inclui eventos de impacto baixo e médio' } } } },
   ],
@@ -268,6 +313,11 @@ export async function executar(nome, a = {}) {
       case 'fluxo_estrangeiro': { const f = await fluxo(); return f ? { unidade: 'R$ mil', ultimo_dia: f.data, saldo_dia: f.dia, saldo_mes: f.mes, saldo_ano: f.ano, fonte: 'B3, boletim diário (participação dos investidores, todos os mercados de ações)' } : { erro: 'sem dado' }; }
       case 'noticias': return await buscaNoticias(a.termo, a.horas);
       case 'agenda': return await agenda(a.dias, a.todos);
+      case 'resumo_semanal': {
+        let r = null; try { r = JSON.parse((resumo && (await resumo())) || 'null'); } catch (e) { r = null; }
+        return r && r.txt ? { atualizado: r.ts ? brt(r.ts) : null, texto: String(r.txt).slice(0, 8000) } : { erro: 'o Resumo semanal não está disponível agora' };
+      }
+      case 'radar_watchlist': return await radar(a.horas);
       default: return { erro: 'ferramenta desconhecida' };
     }
   } catch (e) { return { erro: 'não foi possível buscar agora (' + String(e.message || e).slice(0, 80) + ')' }; }

@@ -3,7 +3,7 @@
    Faixa grátis do Gemini: limite de pedidos por minuto e por dia (por projeto do Google) e as conversas podem
    ser usadas pelo Google para melhorar os produtos dele (a página /privacidade avisa).
    Cada conta pode fazer PERGUNTAS_DIA perguntas por dia; o administrador não tem limite. */
-import { retrato, FERRAMENTAS, executar, ligarDados } from './assistente-dados.js';
+import { retrato, FERRAMENTAS, executar, ligarDados, limpaPerfil, textoPerfil } from './assistente-dados.js';
 let json, mesmaOrigem, config, salvarConfig, dentroDoLimite;
 export function ligarAssistente(u) {
   ({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite } = u);
@@ -24,6 +24,7 @@ Regras:
 - Para outros dados (outro ativo, histórico, probabilidades do Fed ou do Copom, fundamentos de empresa, fluxo do estrangeiro, notícias de um assunto, agenda dos próximos dias), chame as ferramentas disponíveis.
 - Quando a mensagem trouxer um bloco de dados copiados da tela do terminal, você também pode comentar os números desse bloco, citando-os como estão.
 - Nunca invente preços, taxas, datas ou números que não vieram desses blocos ou das ferramentas. Se um dado veio como "sem dado" ou com erro, diga que não tem esse dado agora e indique onde olhar no painel.
+- Ajuste a linguagem ao nível de quem pergunta, quando informado. O Resumo semanal do Mercado Macro está na ferramenta resumo_semanal; perguntas sobre a watchlist usam a ferramenta radar_watchlist.
 - Cotação e notícia mudam rápido: deixe claro que é o dado do horário informado. Explique por que um ativo se mexeu só com base nas manchetes recebidas, citando a fonte, e diga quando não houver manchete que explique.
 - Explique conceitos, indicadores, termos, como ler gráficos e como funcionam produtos (ações, juros, câmbio, derivativos, opções, renda fixa).
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
@@ -127,7 +128,6 @@ function textoDoSSE(body) {
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
 export async function apiAssistente(req, env, u, gratis, fontes) {
-  if (fontes) ligarDados(fontes);
   const c = await config(env);
   if (req.method === 'GET') return json({ ligado: !!c.gemini_key, limite: u.admin ? null : PERGUNTAS_DIA, assinante: !gratis });
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
@@ -146,9 +146,17 @@ export async function apiAssistente(req, env, u, gratis, fontes) {
   // "Explicar esta tela": o navegador manda o texto visível da aba aberta; vai junto só nesta pergunta
   const ctx = String(b.contexto || '').slice(0, MAX_CONTEXTO).trim();
   const aba = String(b.tela || '').replace(/["\n]/g, ' ').slice(0, 60).trim();
+  const perfil = limpaPerfil(b.perfil);
+  const c0 = c;
+  if (fontes) ligarDados({ ...fontes, perfil, resumo: async () => c0.resumo_semanal || null });
+  // lições do site sobre o assunto (o navegador acha e manda; o Gemini cita)
+  const site = (Array.isArray(b.site) ? b.site : []).slice(0, 2).filter((x) => x && x.texto)
+    .map((x) => `- ${String(x.tipo || 'conteúdo').slice(0, 40)} "${String(x.titulo || '').slice(0, 100)}"${x.trilha ? ' (trilha ' + String(x.trilha).slice(0, 60) + ')' : ''}: ${String(x.texto).slice(0, 1500)}`);
+  const blocoSite = site.length ? `Conteúdo do próprio Mercado Macro sobre o assunto (prefira explicar com ele e cite pelo nome, por exemplo "lição X da aba Educação"):\n${site.join('\n')}\n\n` : '';
+  const blocoPerfil = perfil ? textoPerfil(perfil) + '\n\n' : '';
   const agora = await retrato().catch(() => '');
   const blocoDados = agora ? `Dados do terminal agora (fonte: servidor de dados do Mercado Macro):\n"""\n${agora}\n"""\n\n` : '';
-  const texto = blocoDados + (ctx ? `Dados que aparecem agora na tela "${aba || 'aberta'}" do terminal, copiados da página (use só estes números; não invente outros):\n"""\n${ctx.replace(/"""/g, '"')}\n"""\n\n${pergunta}` : pergunta);
+  const texto = blocoDados + blocoPerfil + blocoSite + (ctx ? `Dados que aparecem agora na tela "${aba || 'aberta'}" do terminal, copiados da página (use só estes números; não invente outros):\n"""\n${ctx.replace(/"""/g, '"')}\n"""\n\n${pergunta}` : pergunta);
   const contents = [...hist, { role: 'user', parts: [{ text: texto }] }];
   let r = await responderComDados(c.gemini_key, contents.slice(), c.gemini_modelo);
   // se as ferramentas falharem (modelo sem suporte, formato recusado), responde do jeito antigo, só com o retrato

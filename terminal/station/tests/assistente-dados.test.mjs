@@ -14,7 +14,7 @@ const fontes = {
     if (rota.startsWith('/history')) return { '^BVSP': { t: [1790000000, 1790086400, 1790172800], c: [128000, 132000, 131250], off: -10800 } };
     throw new Error('rota ' + rota);
   },
-  noticias: async () => [{ titulo: 'Copom mantém Selic', fonte: 'Teste', data: Date.now() - 600000, nivel: 'CRITICO', finalScore: 10 }],
+  noticias: async () => [{ titulo: 'Copom mantém Selic', fonte: 'Teste', data: Date.now() - 600000, nivel: 'CRITICO', finalScore: 10 }, { titulo: 'Petrobras anuncia dividendos', fonte: 'Teste', data: Date.now() - 900000, nivel: 'ALTO', finalScore: 7 }],
   fluxo: async () => ({ data: '2026-11-05', dia: -120000, mes: 900000, ano: 2000000 }),
 };
 const fetchOriginal = globalThis.fetch;
@@ -58,13 +58,24 @@ test('pergunta: Gemini pede cotação, servidor busca e devolve, resposta em tex
   };
   const env = {}; const cfg = { gemini_key: 'k'.repeat(30) };
   ligarAssistente({ json: (o, s = 200) => new Response(JSON.stringify(o), { status: s }), mesmaOrigem: () => true, config: async () => cfg, salvarConfig: async () => {}, dentroDoLimite: async () => true });
-  const req = new Request('https://x/api/assistente', { method: 'POST', body: JSON.stringify({ pergunta: 'quanto está PETR4?', historico: [], stream: true }) });
+  const req = new Request('https://x/api/assistente', { method: 'POST', body: JSON.stringify({ pergunta: 'quanto está PETR4?', historico: [], stream: true, perfil: { nivel: 'iniciante', temas: ['juros e Selic'], watchlist: [{ s: 'PETR4.SA', nome: 'Petrobras', termos: ['PETR4', 'Petrobras'] }, { s: 'bad sym!', nome: 'x' }] }, site: [{ tipo: 'lição da aba Educação', titulo: 'Selic, CDI e IPCA', texto: 'A Selic é a taxa básica.' }] }) });
   const r = await apiAssistente(req, env, { id: 1, admin: 0 }, false, fontes);
   assert.equal(await r.text(), 'PETR4 está em R$ 38,20.');
   assert.ok(pedidos[0].tools[0].functionDeclarations.some((f) => f.name === 'fundamentos'));
-  assert.match(pedidos[0].contents.at(-1).parts[0].text, /Dados do terminal agora/);
+  const t0 = pedidos[0].contents.at(-1).parts[0].text;
+  assert.match(t0, /Dados do terminal agora/);
+  assert.match(t0, /Nível: iniciante/);
+  assert.match(t0, /PETR4\.SA \(Petrobras\)/);
+  assert.doesNotMatch(t0, /bad sym/);
+  assert.match(t0, /lição da aba Educação "Selic, CDI e IPCA"/);
+  const rd = await executar('radar_watchlist');
+  assert.equal(rd.ativos.length, 1);
+  assert.equal(rd.ativos[0].cotacao.preco, 38.2);
   const volta = pedidos[1].contents;
   assert.equal(volta.at(-2).parts[0].thoughtSignature, 'abc', 'devolve a assinatura do modelo');
   assert.equal(volta.at(-1).parts[0].functionResponse.response.resultado['PETR4.SA'].preco, 38.2);
+  globalThis.fetch = fetchOriginal;
+  assert.equal(rd.ativos[0].manchetes[0].titulo, 'Petrobras anuncia dividendos');
+  assert.equal(rd.ativos[0].manchetes.length, 1);
   globalThis.fetch = fetchOriginal;
 });

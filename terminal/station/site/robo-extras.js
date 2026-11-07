@@ -656,6 +656,76 @@
   }
   if (pet()) botoes(); else window.addEventListener('mm-pet-pronto', botoes, { once: true });
 
+  // =====================================================================
+  // Radar pessoal: nomes pelos quais cada ativo da watchlist aparece nas manchetes
+  // =====================================================================
+  const NOMES_B3 = {
+    PETR: ['Petrobras'], VALE: ['Vale'], ITUB: ['Itaú', 'Itau Unibanco'], BBDC: ['Bradesco'], BBAS: ['Banco do Brasil'], B3SA: ['B3'], ABEV: ['Ambev'],
+    WEGE: ['WEG'], ITSA: ['Itaúsa', 'Itausa'], SUZB: ['Suzano'], RENT: ['Localiza'], PRIO: ['PRIO', 'PetroRio'], GGBR: ['Gerdau'], GOAU: ['Gerdau'], BPAC: ['BTG Pactual', 'BTG'],
+    EQTL: ['Equatorial'], RDOR: ['Rede D\'Or'], RADL: ['Raia Drogasil', 'RD Saúde'], SBSP: ['Sabesp'], VIVT: ['Vivo', 'Telefônica Brasil'], CMIG: ['Cemig'],
+    LREN: ['Renner'], HAPV: ['Hapvida'], CSAN: ['Cosan'], UGPA: ['Ultrapar'], KLBN: ['Klabin'], TOTS: ['Totvs'], ENEV: ['Eneva'], BBSE: ['BB Seguridade'],
+    CSNA: ['CSN'], USIM: ['Usiminas'], MGLU: ['Magazine Luiza', 'Magalu'], CYRE: ['Cyrela'], ASAI: ['Assaí', 'Assai'], HYPE: ['Hypera'], VBBR: ['Vibra'],
+    BRAP: ['Bradespar'], SANB: ['Santander Brasil'], TIMS: ['TIM'], EGIE: ['Engie'], CPFE: ['CPFL'], RAIL: ['Rumo'], MULT: ['Multiplan'], CXSE: ['Caixa Seguridade'],
+    ELET: ['Eletrobras', 'Axia'], EMBR: ['Embraer'], AZUL: ['Azul'], NTCO: ['Natura'], JBSS: ['JBS'], BRFS: ['BRF'], MRFG: ['Marfrig'], BEEF: ['Minerva'],
+    CMIN: ['CSN Mineração'], RAIZ: ['Raízen'], SLCE: ['SLC Agrícola'], PETZ: ['Petz'], COGN: ['Cogna'], YDUQ: ['Yduqs'], IRBR: ['IRB'], BRKM: ['Braskem'],
+    TAEE: ['Taesa'], TRPL: ['ISA CTEEP', 'Isa Energia'], SAPR: ['Sanepar'], CPLE: ['Copel'], ALOS: ['Allos'], SMFT: ['Smart Fit'], VAMO: ['Vamos'], POMO: ['Marcopolo'],
+    INTB: ['Intelbras'], CASH: ['Méliuz'], ROXO: ['Nubank'], NU: ['Nubank'], INBR: ['Inter'], STBP: ['Santos Brasil'], AURE: ['Auren'], ALPA: ['Alpargatas'],
+  };
+  const NOMES_OUTROS = {
+    '^BVSP': ['Ibovespa', 'Bolsa brasileira'], '^GSPC': ['S&P 500', 'S&P'], '^IXIC': ['Nasdaq'], '^DJI': ['Dow Jones'], 'BRL=X': ['dólar', 'câmbio'], 'EURBRL=X': ['euro'],
+    'DX-Y.NYB': ['DXY', 'dólar global'], 'BTC-USD': ['bitcoin', 'BTC'], 'ETH-USD': ['ethereum', 'ether'], 'GC=F': ['ouro', 'gold'], 'SI=F': ['prata', 'silver'],
+    'BZ=F': ['petróleo', 'Brent', 'oil'], 'CL=F': ['petróleo', 'WTI', 'oil'], 'AAPL': ['Apple'], 'MSFT': ['Microsoft'], 'NVDA': ['Nvidia'], 'TSLA': ['Tesla'],
+    'AMZN': ['Amazon'], 'GOOGL': ['Google', 'Alphabet'], 'GOOG': ['Google', 'Alphabet'], 'META': ['Meta', 'Facebook'], 'NFLX': ['Netflix'], 'AMD': ['AMD'],
+    'JPM': ['JPMorgan'], 'BRK-B': ['Berkshire'], 'NU': ['Nubank'], 'MELI': ['Mercado Livre'], 'XP': ['XP Inc', 'XP Investimentos'],
+  };
+  function termosDe(sym) {
+    const s = String(sym || '').toUpperCase(), base = s.replace(/\.SA$/, '');
+    const t = new Set();
+    if (/^[A-Z]{4}\d{1,2}$/.test(base)) { t.add(base); (NOMES_B3[base.slice(0, 4)] || []).forEach((x) => t.add(x)); }
+    (NOMES_OUTROS[s] || NOMES_OUTROS[base] || []).forEach((x) => t.add(x));
+    if (!t.size && /^[A-Z]{2,5}$/.test(base)) t.add(base);
+    return [...t];
+  }
+  const reTermo = new Map();
+  function citaAtivo(titulo, termos) {
+    const tt = norm(titulo);
+    return termos.find((x) => {
+      const k = norm(x);
+      if (!reTermo.has(k)) reTermo.set(k, new RegExp('(^|[^a-z0-9])' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])'));
+      return reTermo.get(k).test(tt);
+    }) || null;
+  }
+  function watchlistTermos() {
+    const W = window.MMWatchRobo; if (!W) return [];
+    return W.itens().slice(0, 30).map((s) => { const t = termosDe(s), b = W.nome(s); return { s, nome: t.find((x) => x !== b && x.length > 2) || b, termos: t }; }).filter((x) => x.termos.length);
+  }
+  // o robô avisa, sozinho, quando sai manchete importante sobre um ativo da sua watchlist
+  const vistasRadar = new Set();
+  let radarSemeado = false;
+  function olhaRadar() {
+    if (prefs().roboRadar === false) return;
+    const wl = watchlistTermos(); if (!wl.length) return;
+    const lista = noticias();
+    if (!radarSemeado) { lista.forEach((n) => n && vistasRadar.add(n.id)); radarSemeado = lista.length > 0; return; }
+    const hoje = sp().dia;
+    mem.radar = mem.radar && mem.radar.dia === hoje ? mem.radar : { dia: hoje, n: 0, ult: 0 };
+    for (const n of lista) {
+      if (!n || n.id == null || vistasRadar.has(n.id)) continue;
+      vistasRadar.add(n.id);
+      if (Date.now() - n.data > 90 * 60000 || n.nivel === 'NORMAL' && !(n.impactScore >= 5)) continue;
+      const alvo = wl.find((w) => citaAtivo(n.titulo, w.termos));
+      if (!alvo || mem.radar.n >= 8 || Date.now() - mem.radar.ult < 10 * 60000) continue;
+      mem.radar.n++; mem.radar.ult = Date.now(); memSalva();
+      const abre = () => { if (typeof window.openNewsReader === 'function') window.openNewsReader(n.id); else if (n.link) window.open(n.link, '_blank', 'noopener'); };
+      avisar({ chave: 'rd:' + n.id, pri: 7, visor: ['RADAR', alvo.s.replace(/\.SA$/, '').replace(/-USD$/, '').slice(0, 6)], ms: 10000,
+        html: '<small style="margin:0 0 3px">Radar da sua watchlist · ' + esc(alvo.nome) + '</small><b>' + esc(corta(n.titulo, 150)) + '</b><small>' + esc(n.fonte || '') + '</small><span class="acao">Ler a notícia</span>',
+        titulo: 'Radar: ' + alvo.nome, texto: n.titulo, acao: abre });
+    }
+  }
+  setInterval(() => { if (!document.hidden || prefs().roboNotif === true || janelaAberta()) olhaRadar(); }, 30000);
+  setTimeout(olhaRadar, 12000);
+  window.MMRadar = { termos: termosDe, watchlist: watchlistTermos, cita: citaAtivo };
+
   window.MMRoboAlarmes = { ehPedido, doTexto, lista: lerAlarmes, apagar: (id) => gravaAlarmes(lerAlarmes().filter((a) => a.id !== id)), checar: checaAlarmes, nomeNum: (a) => numAlvo(a.alvo, casasDe(a.sym)) };
   window.MMRoboComando = { tem: () => !!SR, escutar, executar };
   window.MMRoboExtras = { abrirJanela, janelaAberta, bomDia: () => bomDia(true), quiz: abrirQuiz, decisoes: olhaDecisoes, juros: () => juros, pedirNotif, avisar,
