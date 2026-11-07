@@ -236,6 +236,8 @@
     b.setAttribute('aria-label', 'Abrir o Assistente IA do Mercado Macro');
     b.innerHTML = '<span class="ia-marca" aria-hidden="true">' + marca() + '</span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
     b.onclick = abrir;
+    // o mascote (assistente-mascote.js) usa para "Explique isso": abre o painel com a pergunta escrita, sem enviar
+    window.MMAssistente = { abrir, escrever: (t) => { abrir(); campo.value = String(t || '').slice(0, 600); ajustar(); setTimeout(() => { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }, 60); } };
     document.body.appendChild(b);
     if (window.MMAbaBorda) window.MMAbaBorda.marcar(b);
   }

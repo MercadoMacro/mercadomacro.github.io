@@ -45,6 +45,8 @@
     try { listsStore.saveItems(wl, sync); } catch (e) { say(e.message, 'warning'); }
   };
   const wlSync = () => listsStore.sync();
+  // o mascote do Assistente olha a watchlist para avisar de movimentos fortes (só leitura; atualizar = 1 chamada em lote)
+  window.MMWatchRobo = { itens: () => (wlReady ? wl.map((x) => x.s) : []), cot: (s) => wlMemo[s] || null, ultimo: () => wlLast, atualizar: () => wlRefresh(), nome: (s) => nice(s) };
   const inWl = (s) => wl.some((x) => x.s === s);
   const grid = document.getElementById('grid-watch');
   const ALIAS = {

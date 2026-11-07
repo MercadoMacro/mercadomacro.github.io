@@ -142,7 +142,8 @@
     return `<b class="tm-chip tm-${f.cls}">${ultimo.temp}</b>`;
   }
   function pintarBotao() { document.querySelectorAll('[data-mm-temp-v]').forEach((el) => { el.innerHTML = badge(); }); }
-  window.MMTemp = { badge, calcular, faixa, escala };
+  // atual(): último cálculo ({ temp, quando, ... }) ou null; o mascote do Assistente usa para o humor dele
+  window.MMTemp = { badge, calcular, faixa, escala, atual: () => ultimo };
 
   /* ---------- painel ---------- */
   const CSS = `
