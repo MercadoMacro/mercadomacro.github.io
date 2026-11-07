@@ -278,19 +278,31 @@
   </svg>`;
   const PREFS_KEY = 'trader_prefs_v1';
   const prefs = () => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {}; } catch (e) { return {}; } };
-  // voz (opcional, desligada por padrão; liga em Ajustes > Assistente)
-  function falar(texto) {
+  // voz (opcional, desligada por padrão; liga em Ajustes > Meu painel > Assistente)
+  // suave: um pouco mais lenta, volume menor e, quando o navegador tem, uma voz "natural" (neural)
+  const VOZ_BOA = [/natural/i, /online/i, /francisca|thalita|antonio/i, /google.*portugu/i, /luciana|felipe/i, /maria|daniel|helo/i];
+  function vozesPt() { try { return speechSynthesis.getVoices().filter((x) => /^pt(-|_)?BR/i.test(x.lang) || /^pt$/i.test(x.lang)); } catch (e) { return []; } }
+  function escolheVoz() {
+    const lista = vozesPt(); if (!lista.length) return null;
+    const nome = prefs().roboVozNome;
+    if (nome) { const v = lista.find((x) => x.name === nome); if (v) return v; }
+    for (const re of VOZ_BOA) { const v = lista.find((x) => re.test(x.name)); if (v) return v; }
+    return lista[0];
+  }
+  function dizerAlto(texto) {
     try {
-      if (!('speechSynthesis' in window) || prefs().roboVoz !== true) return false;
+      if (!('speechSynthesis' in window)) return false;
       const u = new SpeechSynthesisUtterance(String(texto).slice(0, 260));
-      u.lang = 'pt-BR'; u.rate = 1.04;
-      const v = speechSynthesis.getVoices().find((x) => /^pt(-|_)BR/i.test(x.lang)) || speechSynthesis.getVoices().find((x) => /^pt/i.test(x.lang));
-      if (v) u.voice = v;
+      u.lang = 'pt-BR'; u.rate = 0.92; u.pitch = 1.05; u.volume = 0.85;
+      const v = escolheVoz(); if (v) u.voice = v;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
       return true;
     } catch (e) { return false; }
   }
-  window.MMRoboVoz = { falar: (t) => { try { if (!('speechSynthesis' in window)) return false; const u = new SpeechSynthesisUtterance(t); u.lang = 'pt-BR'; const v = speechSynthesis.getVoices().find((x) => /^pt/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); return true; } catch (e) { return false; } }, tem: () => 'speechSynthesis' in window };
+  // as vozes chegam depois de a página abrir em alguns navegadores
+  try { speechSynthesis.getVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => {}); } catch (e) { /* sem voz */ }
+  const falar = (texto) => prefs().roboVoz === true && dizerAlto(texto);
+  window.MMRoboVoz = { falar: dizerAlto, tem: () => 'speechSynthesis' in window, vozes: () => vozesPt().map((x) => x.name), atual: () => escolheVoz()?.name || '' };
 
   function ligar(b) {
     if (b.querySelector('.ia-pet')) return;

@@ -199,7 +199,10 @@
       <section class="aj-sec">
         <h3>Assistente (robô)</h3>
         ${sw('roboVoz', P.roboVoz === true, 'Ler em voz alta as notícias urgentes')}
-        <p class="aj-note">Usa a voz do seu navegador e só funciona com o terminal aberto. Vem desligado.</p>
+        ${(() => { const V = window.MMRoboVoz; const vs = V ? V.vozes() : []; const cur = P.roboVozNome || (V ? V.atual() : '');
+          return vs.length ? `<div class="aj-row"><span>Voz</span><select data-str="roboVozNome" aria-label="Voz do robô">${vs.map((n) => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n.replace(/^Microsoft |^Google /, '').replace(/ - .*$/, ''))}</option>`).join('')}</select></div>
+          <button type="button" class="btn-sm" data-act="roboTestar"><i class="fas fa-volume-up"></i> Testar a voz</button>` : ''; })()}
+        <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
         <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
         <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
       </section>
@@ -492,6 +495,7 @@
       save(); applyAll();
       return setTimeout(render, k === 'live' ? 60 : 0);
     }
+    if (act === 'roboTestar') { if (!window.MMRoboVoz?.falar('Olá! Esta é a voz que vou usar para as notícias urgentes.')) toast('Este navegador não tem voz disponível.'); return; }
     if (act === 'roboCanto') { window.MMPet?.canto?.(); toast('O robô voltou para o canto.'); return; }
     if (act === 'url') {
       const v = box.querySelector('#aj-url').value.trim();
@@ -569,7 +573,7 @@
     const t = e.target;
     if (t.id === 'aj-file' && t.files && t.files[0]) return loadImage(t.files[0]);
     if (t.dataset.num && t.tagName === 'SELECT') { P[t.dataset.num] = +t.value; save(); syncTheme(); return; }
-    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (!t.value) toast('O painel vai abrir na última aba usada.'); }
+    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
   }
   // reduz a foto (no máximo 1920 px, JPEG) para caber no armazenamento do navegador
   function loadImage(file) {
