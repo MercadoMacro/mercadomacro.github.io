@@ -3418,11 +3418,9 @@ html body .aj-busca-in input, html body .aj-busca-in input:focus { border:0 !imp
 
 
 /* LOGO NOVO NA BARRA (07/11/2026, modelo do Severino): barras douradas com a seta, "mercado" fino e "macro" dourado em negrito */
-body.has-side .side-brand:has(.sb-ouro) { gap:4px; }
-body.has-side .side-brand .sb-mark.sb-ouro { width:40px; height:35px; flex:0 0 40px; fill:none; overflow:visible; }
-body.has-side .side-brand b.sb-nome { display:block; line-height:0; --sb-s1:#ffffff; --sb-s2:#e3e8ef; --sb-s3:#aab3c0; --sb-s4:#dfe4ea; }
-body.has-side .side-brand .sb-txt { width:69px; height:30.5px; display:block; overflow:visible; }
-body.has-side .side-brand .sb-txt text { font-family:'Montserrat', 'Inter', system-ui, sans-serif; }
-body.has-side .side-brand .sb-t1 { font-size:222px; font-weight:400; }
-body.has-side .side-brand .sb-t2 { font-size:300px; font-weight:800; }
-body.light.has-side .side-brand b.sb-nome { --sb-s1:#4a5466; --sb-s2:#1f2633; --sb-s3:#0f141d; --sb-s4:#3a4352; }
+body.has-side .side-brand .sb-mark.sb-ouro { width:36px; height:32px; flex:0 0 36px; fill:none; overflow:visible; }
+body.has-side .side-brand b.sb-nome { display:flex; flex-direction:column; gap:1px; line-height:1; letter-spacing:0; }
+body.has-side .side-brand .sb-l1 { font-size:15px; font-weight:400; color:var(--text); letter-spacing:.01em; }
+body.has-side .side-brand .sb-l2 { font-size:19px; font-weight:800; color:#f2b92e; letter-spacing:-.01em; margin-top:-1px; }
+body.light.has-side .side-brand .sb-l2 { color:#d99a1e; }
+html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !important; text-transform:none; }
