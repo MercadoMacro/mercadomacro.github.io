@@ -58,7 +58,7 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <g class="pet-corpo"><defs><clipPath id="jade-pet-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-pet-ombro)"/><g transform="translate(4 -3)"><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g></g>
+      <g class="pet-corpo"><g transform="translate(4 -3)"><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g><defs><clipPath id="jade-pet-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-pet-ombro)"/></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -134,11 +134,11 @@
     #ia-fab .ia-pet.concorda .pet-cabeca-in { animation:pet-sim .5s ease-in-out 3; }
     #ia-fab .ia-pet.nega .pet-cabeca-in { animation:pet-nao .5s ease-in-out 3; }
     #ia-fab .ia-pet.susto .pet-tudo { animation:pet-susto .45s ease-out; }
-    #ia-fab .pet-braco { transform-box:view-box; transform-origin:62px 246px; transition:transform .45s cubic-bezier(.3,1.4,.5,1); }
-    #ia-fab .pet-braco.acena { animation:pet-acena .9s ease-in-out 2; }
-    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-9deg) translateY(-2px); }
-    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-16deg); }
-    #ia-fab:hover .pet-braco { animation:pet-acena 1s ease-in-out 2; }
+    #ia-fab .pet-braco { transform-box:view-box; transform-origin:86px 238px; transition:transform .6s ease-in-out; }
+    #ia-fab .pet-braco.acena { animation:pet-acena 1.3s ease-in-out 2; }
+    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-5deg); }
+    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-8deg); }
+    #ia-fab:hover .pet-braco { animation:pet-acena 1.3s ease-in-out 2; }
     #ia-fab .pet-olhos { transform:translate(calc(var(--ex,0) * 1px), calc(var(--ey,0) * 1px)); transition:transform .18s ease-out; }
     #ia-fab .pet-olho { transform-box:fill-box; transform-origin:center; transition:transform .07s; }
     #ia-fab .pet-olho .feliz, #ia-fab .pet-olho .cifrao, #ia-fab .pet-pensa, #ia-fab .pet-tela, #ia-fab .pet-zz text, #ia-fab .pet-suor { opacity:0; }
@@ -212,11 +212,11 @@
     #ia-fab .ia-pet-mini { display:block; flex:0 0 38px; width:38px; height:36px; margin:0 -2px 0 -4px; }
     #ia-fab .ia-pet-mini svg { width:38px; height:36px; overflow:visible; }
     #ia-fab .mini-olho { transform-box:fill-box; transform-origin:center; animation:pet-mini-pisca 4.3s infinite; }
-    #ia-fab .mini-braco { transform-box:view-box; transform-origin:62px 246px; animation:pet-mini-acena 9s ease-in-out infinite 2s; }
+    #ia-fab .mini-braco { transform-box:view-box; transform-origin:86px 238px; animation:pet-mini-acena 9s ease-in-out infinite 2s; }
   }
   @media (max-width:900px) and (prefers-reduced-motion: reduce) { #ia-fab .mini-olho, #ia-fab .mini-braco { animation:none; } }
   @keyframes pet-mini-pisca { 0%,92%,100% { transform:scaleY(1); } 94%,96% { transform:scaleY(.1); } }
-  @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-7deg); } 86% { transform:rotate(5deg); } 89% { transform:rotate(-7deg); } 92% { transform:rotate(5deg); } 95% { transform:rotate(0); } }
+  @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-5deg); } 86% { transform:rotate(4deg); } 89% { transform:rotate(-5deg); } 92% { transform:rotate(4deg); } 95% { transform:rotate(0); } }
   #ia-fab.ia-pet-pausado .ia-pet *,
   #ia-fab.ia-pet-pausado .ia-pet-mini * { animation-play-state:paused !important; }
   @media (prefers-reduced-motion: reduce) {
@@ -228,7 +228,7 @@
   @keyframes pet-sombra { 0%,100% { transform:scaleX(1); opacity:1; } 50% { transform:scaleX(.82); opacity:.65; } }
   @keyframes pet-respira { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.009,1.012); } }
   @keyframes pet-balanca { 0%,100% { transform:rotate(0); } 25% { transform:rotate(-1deg); } 50% { transform:rotate(0); } 75% { transform:rotate(.8deg); } }
-  @keyframes pet-acena { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-7deg); } 70% { transform:rotate(5deg); } }
+  @keyframes pet-acena { 0%,100% { transform:rotate(0); } 25% { transform:rotate(-5deg); } 75% { transform:rotate(4deg); } }
   @keyframes pet-sim { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(5px) rotate(1deg); } }
   @keyframes pet-nao { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-5deg); } 70% { transform:rotate(5deg); } }
   @keyframes pet-susto { 0% { transform:translateY(0); } 40% { transform:translateY(-3px) scale(1.01); } 100% { transform:translateY(0); } }
@@ -279,8 +279,8 @@
 
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
-    <defs><clipPath id="jade-mini-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-mini-ombro)"/>
-    <g transform="translate(4 -3)"><g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g></g>
+    
+    <g transform="translate(4 -3)"><g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g></g><defs><clipPath id="jade-mini-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-mini-ombro)"/>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
     <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
