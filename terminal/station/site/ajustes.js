@@ -203,6 +203,7 @@
           return vs.length ? `<div class="aj-row"><span>Voz</span><select data-str="roboVozNome" aria-label="Voz do robô">${vs.map((n) => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n.replace(/^Microsoft |^Google /, '').replace(/ - .*$/, ''))}</option>`).join('')}</select></div>
           <button type="button" class="btn-sm" data-act="roboTestar"><i class="fas fa-volume-up"></i> Testar a voz</button>` : ''; })()}
         <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
+        <div class="aj-row"><span>Jeito da Jade</span><select data-str="roboModo" aria-label="Jeito da Jade">${[['', 'Normal: se mexe, mostra cotações e dá dicas'], ['discreta', 'Discreta: fica quieta e só dá os avisos']].map(([v, l]) => `<option value="${v}" ${(P.roboModo || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="aj-row"><span>Tamanho da Jade</span><select data-str="roboTam" aria-label="Tamanho da Jade">${[['p', 'Pequeno'], ['m', 'Normal'], ['g', 'Grande'], ['gg', 'Muito grande']].map(([v, l]) => `<option value="${v}" ${(P.roboTam || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
         <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
@@ -597,7 +598,7 @@
     const t = e.target;
     if (t.id === 'aj-file' && t.files && t.files[0]) return loadImage(t.files[0]);
     if (t.dataset.num && t.tagName === 'SELECT') { P[t.dataset.num] = +t.value; save(); syncTheme(); return; }
-    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboTam') window.MMPet?.tamanho?.(); else if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (t.dataset.str === 'iaNivel') toast('O Assistente vai responder no nível ' + t.selectedOptions[0].textContent.toLowerCase().replace('para ', '') + '.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
+    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboTam') window.MMPet?.tamanho?.(); else if (t.dataset.str === 'roboModo') { window.MMPet?.modo?.(); toast(t.value ? 'Jade discreta: ela fica quieta e só aparece para os avisos. Passe o mouse para ver Ibovespa e dólar.' : 'Jade no modo normal.'); } else if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (t.dataset.str === 'iaNivel') toast('O Assistente vai responder no nível ' + t.selectedOptions[0].textContent.toLowerCase().replace('para ', '') + '.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
   }
   // reduz a foto (no máximo 1920 px, JPEG) para caber no armazenamento do navegador
   function loadImage(file) {
