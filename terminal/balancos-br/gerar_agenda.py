@@ -19,6 +19,7 @@ from datetime import date, datetime, timedelta, timezone
 # reaproveita a leitura da DRE do robô dos Fundamentos (mesmas regras de lucro e receita)
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cvm"))
 import gerar_fundamentos as gf  # noqa: E402
+import rad  # noqa: E402
 
 BASE = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC"
 UA = {"User-Agent": "MercadoMacro (contato@mercadomacro.com.br)"}
@@ -285,6 +286,50 @@ def main():
     # trimestre em aberto: o último que já fechou (e o anterior, para quem ainda não entregou)
     alvo = fim_trimestre_anterior(hoje)
     alvos = [alvo, fim_trimestre_anterior(alvo)]
+
+    # ITR entregues no RAD da CVM, que lista na hora (o arquivo de dados abertos atrasa dias): 08/11/2026.
+    # Só trimestres 1 a 3; o DFP (4º trimestre) continua vindo só do arquivo e do IPE.
+    if alvo.month != 12:
+        rad_docs = rad.lista_entregas("EST_3", alvo + timedelta(days=1), hoje) or []
+        refs = {a.isoformat() for a in alvos}
+        ultimos, primeiro = {}, {}  # versão mais nova de cada documento; data da primeira entrega
+        for d in rad_docs:
+            k = (d["cvm"], d["ref"])
+            if d["cvm"] not in empresas or d["ref"] not in refs:
+                continue
+            primeiro[k] = min(d["receb"], primeiro.get(k, d["receb"]))
+            if k not in ultimos or d["ver"] > ultimos[k]["ver"]:
+                ultimos[k] = d
+        for k, d in ultimos.items():
+            d["primeiro"] = primeiro[k]
+        por_k = {(x["cvm"], x["ref"]): x for x in divulgados}
+        novos = lidos = 0
+        inicio = time.time()
+        for k, d in sorted(ultimos.items(), key=lambda kv: kv[1]["primeiro"], reverse=True):
+            x = por_k.get(k)
+            if x is None:
+                x = {"cvm": k[0], "ref": k[1], "tri": tri_nome(k[1]), "data": d["primeiro"], "doc": "ITR", "link": d["link"]}
+                divulgados.append(x)
+                por_k[k] = x
+                entregas[k] = {"data": d["primeiro"], "link": d["link"], "doc": "ITR"}
+                novos += 1
+            elif x["doc"] == "comunicado":
+                x.update({"doc": "ITR", "link": d["link"]})
+                entregas[k]["doc"] = "ITR"
+            if "res" in x or time.time() - inicio > 12 * 60:
+                continue
+            dre = rad.dre_do_documento(d, gf.norm)
+            if not dre:
+                continue
+            fin = bool(empresas.get(k[0], {}).get("fin"))
+            u = gf.metricas(dre[0], {}, {}, {}, fin)
+            p = gf.metricas(dre[1], {}, {}, {}, fin)
+            r = {"per": "tri", "rec": u.get("receita"), "rec_a": p.get("receita"), "luc": u.get("lucro"), "luc_a": p.get("lucro")}
+            if any(v is not None for k2, v in r.items() if k2 != "per"):
+                x["res"] = {k2: (round(v) if isinstance(v, float) else v) for k2, v in r.items()}
+                lidos += 1
+        divulgados.sort(key=lambda x: (x["data"], x["cvm"]), reverse=True)
+        print(f"  RAD: {len(rad_docs)} ITR listados, {len(ultimos)} das nossas empresas, {novos} novos, {lidos} resultados lidos")
 
     # comunicados com a agenda de divulgação (IPE): data confirmada pela empresa
     confirmadas = {}
