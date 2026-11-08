@@ -18,7 +18,7 @@ def lista(cat, de, ate):
         if len(c) < 7 or not m:
             continue
         ref = re.search(r"(\d{2})/(\d{2})/(\d{4})", c[5]); rec = re.search(r"(\d{2})/(\d{2})/(\d{4})", c[6])
-        out.append({"cvm": int(re.sub(r"\D", "", c[0])[:-1]), "nome": c[1], "ref": f"{ref[3]}-{ref[2]}-{ref[1]}",
+        out.append({"cvm": int(re.sub(r"\D", "", c[0])), "nome": c[1], "ref": f"{ref[3]}-{ref[2]}-{ref[1]}",
                     "receb": f"{rec[3]}-{rec[2]}-{rec[1]}", "seq": m[1], "ver": m[2], "prot": m[3], "tipo": m[4]})
     return out
 def xml_doc(d):
