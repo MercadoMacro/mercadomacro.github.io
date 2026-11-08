@@ -6,6 +6,7 @@ on:
   schedule:
     - cron: '0 10 * * 1-5'   # 07h em Brasília
     - cron: '30 23 * * 1-5'  # 20h30, depois dos balanços divulgados após o fechamento
+    - cron: '0 12 * * 6'     # sábado 09h: a CVM completa os arquivos no fim de semana
   workflow_dispatch:
 
 permissions:
