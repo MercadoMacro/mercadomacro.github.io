@@ -197,7 +197,7 @@
         <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
       <section class="aj-sec">
-        <h3>Assistente (robô)</h3>
+        <h3>Jade (assistente robô)</h3>
         ${sw('roboVoz', P.roboVoz === true, 'Ler em voz alta as notícias urgentes')}
         ${(() => { const V = window.MMRoboVoz; const vs = V ? V.vozes() : []; const cur = P.roboVozNome || (V ? V.atual() : '');
           return vs.length ? `<div class="aj-row"><span>Voz</span><select data-str="roboVozNome" aria-label="Voz do robô">${vs.map((n) => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n.replace(/^Microsoft |^Google /, '').replace(/ - .*$/, ''))}</option>`).join('')}</select></div>
@@ -209,7 +209,8 @@
         <p class="aj-note">O Assistente ajusta a linguagem a este nível, relaciona as respostas com a sua watchlist e lembra os assuntos que você mais pergunta (guardados só neste navegador).</p>
         <button type="button" class="btn-sm aj-wide" data-act="iaEsquecer"><i class="fas fa-eraser"></i> Esquecer os assuntos que pergunto</button>
         ${sw('roboRadar', P.roboRadar !== false, 'Radar da watchlist (o robô avisa notícia importante sobre os seus ativos)')}
-        ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia do robô (resumo da manhã, nos dias de pregão)')}
+        ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia da Jade (resumo da manhã, nos dias de pregão)')}
+        ${sw('roboOi', P.roboOi !== false, 'Jade diz oi quando você entra no site')}
         ${sw('roboQuiz', P.roboQuiz !== false, 'Pergunta do dia (das lições da aba Educação)')}
         ${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
         <p class="aj-note">Notícias urgentes, alarmes de preço e decisões do Copom e do Fed aparecem como aviso do Windows (ou do Mac) enquanto você usa outro programa. O terminal precisa ficar aberto numa aba.</p>
@@ -264,7 +265,7 @@
     const groups = [
       ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Aparelhos conectados', 'Excluir minha conta']]] : []),
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
-      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Assistente (robô)', 'Minha Mesa']],
+      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Jade (assistente robô)', 'Minha Mesa']],
       ['data', 'Dados', ['Dados']],
       ['help', 'Ajuda', ['Contato', 'Atalhos de teclado']],
       ['about', 'Sobre', ['Sobre']]
@@ -504,7 +505,7 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
-      if (k === 'roboBomDia' || k === 'roboQuiz' || k === 'roboRadar') P[k] = P[k] === false;
+      if (k === 'roboBomDia' || k === 'roboOi' || k === 'roboQuiz' || k === 'roboRadar') P[k] = P[k] === false;
       if (k === 'roboNotif') {
         if (P.roboNotif === true) P.roboNotif = false;
         else { window.MMRoboExtras?.pedirNotif().then((ok) => { if (!ok) return; P.roboNotif = true; save(); render(); toast('Pronto. Aviso no sistema quando o terminal estiver em segundo plano.'); }); return; }

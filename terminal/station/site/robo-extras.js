@@ -282,7 +282,7 @@
     lista.unshift({ id: Date.now().toString(36), sym: at.sym, nome: at.nome, alvo, dir, criado: Date.now() });
     if (lista.length > 12) lista = lista.slice(0, 12);
     gravaAlarmes(lista);
-    return { r: `Combinado. Vou avisar quando **${at.nome}** ${dir === 'acima' ? 'passar de' : 'cair abaixo de'} **${numAlvo(alvo, c)}**. Agora está em ${num(d.value, c)}.\n\nO alarme funciona enquanto o terminal estiver aberto neste navegador. Você vê e apaga os alarmes em Ajustes > Meu painel > Assistente (robô).` };
+    return { r: `Combinado. Vou avisar quando **${at.nome}** ${dir === 'acima' ? 'passar de' : 'cair abaixo de'} **${numAlvo(alvo, c)}**. Agora está em ${num(d.value, c)}.\n\nO alarme funciona enquanto o terminal estiver aberto neste navegador. Você vê e apaga os alarmes em Ajustes > Meu painel > Jade (assistente robô).` };
   }
   let alRodando = false;
   async function checaAlarmes() {
@@ -323,13 +323,16 @@
     });
     return out.sort((a, b) => a.t - b.t);
   }
+  function bomDiaHoje() {
+    const agora = sp();
+    if (prefs().roboBomDia === false || agora.sem < 1 || agora.sem > 5 || agora.min < 360 || agora.min >= 720) return false;
+    if (mem.bomDia === agora.dia) return false;
+    try { const f = window.MMFeriados && window.MMFeriados.b3(agora.dia); if (f && !f.abre) return false; } catch (e) { /* sem feriados */ }
+    return true;
+  }
   function bomDia(forcar) {
     const agora = sp();
-    if (!forcar) {
-      if (prefs().roboBomDia === false || agora.sem < 1 || agora.sem > 5 || agora.min < 360 || agora.min >= 720) return false;
-      if (mem.bomDia === agora.dia || !petVisivel()) return false;
-      try { const f = window.MMFeriados && window.MMFeriados.b3(agora.dia); if (f && !f.abre) return false; } catch (e) { /* sem feriados */ }
-    }
+    if (!forcar && (!bomDiaHoje() || !petVisivel())) return false;
     const linhas = [];
     const es = cot('ES=F'), ib = cot('^BVSP'), dl = cot('BRL=X');
     if (es && isFinite(es.change)) linhas.push('Futuro do S&P 500: <span class="' + (es.change >= 0 ? 'sobe' : 'cai') + '">' + esc(pct(es.change)) + '</span>');
@@ -345,8 +348,9 @@
     const sem = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][agora.sem];
     const abreCal = () => { const t = document.querySelector('[data-tab="calendar-panel"]'); if (t) t.click(); };
     const P = pet();
-    const html = '<b>Bom dia!</b><small>' + linhas.join('<br>') + '</small>' + (ev.length ? '<span class="acao">Ver a agenda de hoje</span>' : '');
-    const voz = 'Bom dia! ' + (ev.length ? 'Hoje tem ' + ev.length + (ev.length === 1 ? ' evento importante' : ' eventos importantes') + ' na agenda.' : 'Os números da manhã estão no meu balão.');
+    const nm = primeiroNome();
+    const html = (jadeDisse ? '<b>Os números da manhã</b><small>' : '<b>Bom dia' + (nm ? ', ' + esc(nm) : '') + '!</b><small>') + linhas.join('<br>') + '</small>' + (ev.length ? '<span class="acao">Ver a agenda de hoje</span>' : '');
+    const voz = (jadeDisse ? '' : 'Bom dia' + (nm ? ', ' + nm : '') + '! ') + (ev.length ? 'Hoje tem ' + ev.length + (ev.length === 1 ? ' evento importante' : ' eventos importantes') + ' na agenda.' : 'Os números da manhã estão no meu balão.');
     if (P && P.vivo()) {
       P.pedir(forcar ? 9 : 5, () => {
         P.txt('BOM DIA', sem);
@@ -362,6 +366,62 @@
     if (++tentaBomDia > 24 || mem.bomDia === sp().dia) return clearInterval(bomDiaTimer);
     if (!document.hidden && (cot('^BVSP') || cot('ES=F'))) { if (bomDia(false)) clearInterval(bomDiaTimer); }
   }, 5000);
+
+  // ===== Jade diz oi quando a pessoa entra (uma vez por aba aberta) =====
+  let jadeDisse = false;
+  function primeiroNome() {
+    const n = String((window.__conta && window.__conta.nome) || '').trim().split(/\s+/)[0] || '';
+    return n.length > 1 ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : '';
+  }
+  function estadoB3() {
+    try {
+      if (typeof MARKETS === 'undefined' || typeof marketIsOpen !== 'function') return '';
+      const m = MARKETS.find((x) => x.label === 'B3'); if (!m) return '';
+      if (marketIsOpen(m)) return 'aberta';
+      const a = sp(), f = typeof feriadoHoje === 'function' ? feriadoHoje(m) : null;
+      if (a.sem < 1 || a.sem > 5 || (f && !f.abre)) return 'sem';
+      return a.min < m.open ? 'antes' : 'depois';
+    } catch (e) { return ''; }
+  }
+  function dizerOi(forcar) {
+    const P = pet();
+    if (!P || !P.vivo()) return false;
+    if (!forcar) {
+      if (prefs().roboOi === false) return false;
+      try { if (sessionStorage.getItem('mm_jade_oi')) return false; sessionStorage.setItem('mm_jade_oi', '1'); } catch (e) { /* sem sessionStorage: diz oi mesmo assim */ }
+    }
+    const a = sp(), h = a.min / 60;
+    const sauda = h >= 5 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : 'Boa noite';
+    const nm = primeiroNome();
+    const primeira = !mem.jadeConheceu;
+    const manha = bomDiaHoje();
+    const ESTADO = {
+      aberta: 'A B3 está aberta, e eu estou de olho no mercado com você.',
+      antes: 'A B3 ainda não abriu. Até lá, eu acompanho os mercados lá fora.',
+      depois: 'O pregão da B3 já terminou. Eu continuo de olho nos mercados lá fora e nas criptos.',
+      sem: 'Hoje não tem pregão na B3. As criptos não param, e eu continuo de olho.',
+    };
+    let corpo = primeira
+      ? 'Eu sou a Jade, a assistente do Mercado Macro. Vou te ajudar a acompanhar o mercado: cotações, notícias urgentes, a agenda do dia e os seus alarmes. Clique em mim para perguntar.'
+      : 'Que bom te ver de novo. ' + (ESTADO[estadoB3()] || 'Eu continuo de olho no mercado com você.');
+    if (manha) corpo += ' Já já eu trago os números da manhã.';
+    const titulo = sauda + (nm ? ', ' + nm : '') + '!';
+    mem.jadeConheceu = 1; memSalva();
+    jadeDisse = manha;
+    P.pedir(forcar ? 9 : 6, () => {
+      P.txt(nm ? 'OLÁ,' : 'OLÁ!', nm ? nm.toUpperCase() : ':)');
+      P.cena(() => { P.tela('txt'); P.acenar(); P.classe('feliz', 1800); P.dizer('<b>' + esc(titulo) + '</b><small>' + esc(corpo) + '</small>', primeira ? 11000 : 7500, null, true); setTimeout(() => P.tela(''), 4500); }, primeira ? 11200 : 7700);
+      falar(titulo + ' ' + (primeira ? 'Eu sou a Jade. Vou te ajudar a acompanhar o mercado.' : corpo));
+    }, 'oi');
+    return true;
+  }
+  {
+    // espera o robô aparecer e o nome da conta chegar (no máximo uns 6 s)
+    let feito = false;
+    const tenta = () => { if (feito) return; feito = true; setTimeout(() => dizerOi(false), 900); };
+    const comeca = () => { if (window.__conta) tenta(); else { window.addEventListener('mm-conta', tenta, { once: true }); setTimeout(tenta, 6000); } };
+    if (pet()) setTimeout(comeca, 1500); else window.addEventListener('mm-pet-pronto', () => setTimeout(comeca, 1500), { once: true });
+  }
 
   // =====================================================================
   // 5. Decisão do Copom e do Fed ao vivo
@@ -734,7 +794,7 @@
 
   window.MMRoboAlarmes = { ehPedido, doTexto, lista: lerAlarmes, apagar: (id) => gravaAlarmes(lerAlarmes().filter((a) => a.id !== id)), checar: checaAlarmes, nomeNum: (a) => numAlvo(a.alvo, casasDe(a.sym)) };
   window.MMRoboComando = { tem: () => !!SR, escutar, executar };
-  window.MMRoboExtras = { abrirJanela, janelaAberta, bomDia: () => bomDia(true), quiz: abrirQuiz, decisoes: olhaDecisoes, juros: () => juros, pedirNotif, avisar,
+  window.MMRoboExtras = { oi: () => dizerOi(true), abrirJanela, janelaAberta, bomDia: () => bomDia(true), quiz: abrirQuiz, decisoes: olhaDecisoes, juros: () => juros, pedirNotif, avisar,
     // para conferir à mão (testes): troca os dados de reuniões e roda a checagem
     _setJuros: (j) => { juros = j; } };
 })();

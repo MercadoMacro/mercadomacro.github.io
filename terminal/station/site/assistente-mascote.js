@@ -317,13 +317,13 @@
     const st = document.createElement('style'); st.textContent = css; document.head.append(st);
     const s = document.createElement('span');
     s.className = 'ia-pet';
-    const FALA = 'Assistente IA<small>Pergunte sobre o mercado</small>';
+    const FALA = 'Jade<small>Sua assistente de mercado</small>';
     s.innerHTML = '<span class="ia-pet-fala">' + FALA + '</span><span class="ia-pet-sombra"></span>' + PET;
     b.prepend(s);
     const mini = document.createElement('span'); mini.className = 'ia-pet-mini'; mini.innerHTML = MINI;
     b.prepend(mini);
     b.classList.add('ia-pet-on');
-    b.title = 'Assistente IA';
+    b.title = 'Jade, a assistente IA do Mercado Macro';
     const fala = s.querySelector('.ia-pet-fala');
     const braco = s.querySelector('.pet-braco');
     const $ = (sel) => s.querySelector(sel);
@@ -744,7 +744,7 @@
     window.MMPet = { canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
       // usado pelo robo-extras.js (bom dia, alarmes, decisões, pergunta do dia, janela flutuante)
       api: { el: s, botao: b, pedir, cena, dizer, calar, tela, classe, acenar, olhar, vivo, mostraAtivo, ocupado: () => ocupado || fila.length > 0,
-        txt: (l1, l2, cls) => { const x = $('.pet-txt'); x.querySelector('.txt-1').textContent = l1; x.querySelector('.txt-2').textContent = l2; x.classList.toggle('sobe', cls === 'sobe'); x.classList.toggle('cai', cls === 'cai'); } } };
+        txt: (l1, l2, cls) => { const x = $('.pet-txt'); const aperta = (e, t, max, w) => { e.textContent = t; if (String(t).length > max) { e.setAttribute('textLength', w); e.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } else { e.removeAttribute('textLength'); e.removeAttribute('lengthAdjust'); } }; aperta(x.querySelector('.txt-1'), l1, 10, '150'); aperta(x.querySelector('.txt-2'), l2, 6, '150'); x.classList.toggle('sobe', cls === 'sobe'); x.classList.toggle('cai', cls === 'cai'); } } };
     window.dispatchEvent(new Event('mm-pet-pronto'));
   }
 

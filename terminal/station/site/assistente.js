@@ -7,6 +7,7 @@
   try { conversa = JSON.parse(sessionStorage.getItem(GUARDA) || '[]') || []; } catch (e) { conversa = []; }
   const salvar = () => { try { sessionStorage.setItem(GUARDA, JSON.stringify(conversa.slice(-20))); } catch (e) {} };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ola = () => { const n = String(window.__conta?.nome || '').trim().split(/\s+/)[0] || ''; return n ? 'Olá, ' + n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() + '!' : 'Olá!'; };
 
   // markdown simples: parágrafos, listas, **negrito**, `código`
   function md(t) {
@@ -122,7 +123,7 @@
         .map((s) => { const pronta = !SO_GEMINI.has(s) && (prontaPara(s) || licaoPara(s)); return `<button type="button" class="ia-sug${pronta ? '' : ' gem'}"${SO_GEMINI.has(s) ? ' data-ia-so' : ''}><span class="ia-ic" aria-hidden="true">${IC[pronta ? 'balao' : 'brilho']}</span><span class="ia-sug-x">${esc(s)}</span></button>`; }).join('');
       const como = 'Dúvidas comuns e assuntos das lições da aba Educação têm resposta na hora, da nossa base.'
         + (gemini ? (assinante ? ` Para o resto, o Google Gemini apoia a sua análise${limite ? ` (até ${limite} perguntas por dia)` : ''}. Ele consulta as cotações, a agenda, as notícias, as probabilidades e os fundamentos do terminal antes de responder.` : ' Perguntas livres vão ao Google Gemini, exclusivo para assinantes.') : '');
-      msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">Olá! Como posso ajudar na sua análise hoje?<small>${como}</small></p>
+      msgs.innerHTML = `<div class="ia-vazio"><p class="ia-ola">${esc(ola())} Eu sou a Jade. Como posso ajudar na sua análise hoje?<small>${como}</small></p>
         ${sug || (gemini && assinante) ? `<p class="ia-sug-t">Sugestões</p>` : ''}${gemini && assinante ? `<button type="button" class="ia-sug gem tela" data-ia-tela><span class="ia-ic" aria-hidden="true">${IC.tela}</span><span class="ia-sug-x">Explicar a tela que estou vendo</span></button>` : ''}${sug}</div>`;
       msgs.querySelectorAll('.ia-vazio .ia-sug').forEach((b) => (b.onclick = () => { if (b.hasAttribute('data-ia-tela')) return explicarTela(); campo.value = b.querySelector('.ia-sug-x').textContent; perguntar(b.hasAttribute('data-ia-so') || undefined); }));
       return;
@@ -281,7 +282,7 @@
     painel = document.createElement('aside');
     painel.className = 'ia-painel'; painel.id = 'ia-painel';
     painel.setAttribute('aria-label', 'Assistente'); painel.inert = true;
-    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true">${marca()}</span><div class="ia-tit"><span class="ia-selo">Mercado Macro</span><h2>Assistente IA</h2><small>Inteligência de Mercado &amp; Análise Macro</small></div>
+    painel.innerHTML = `<div class="ia-cab"><span class="ia-marca" aria-hidden="true">${marca()}</span><div class="ia-tit"><span class="ia-selo">Mercado Macro</span><h2>Jade</h2><small>Assistente IA de mercado</small></div>
         <button type="button" data-ia="limpar" title="Apagar a conversa">${IC.lixo}<span>Limpar</span></button><button type="button" data-ia="fechar" aria-label="Fechar o assistente">${IC.x}<span>Fechar</span></button></div>
       <div class="ia-msgs" aria-live="polite"></div>
       <div class="ia-pe"><form class="ia-form"><textarea rows="1" maxlength="1200" placeholder="Escreva sua pergunta" aria-label="Sua pergunta"></textarea>${window.MMRoboComando && window.MMRoboComando.tem() ? `<button type="button" class="ia-mic" data-ia="mic" aria-label="Falar um comando ou pergunta" title="Falar (Alt+V)">${IC.mic}</button>` : ''}<button type="submit" aria-label="Enviar" title="Enviar">${IC.enviar}</button></form>
@@ -307,8 +308,8 @@
     if (document.getElementById('ia-fab')) return;
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'ia-fab'; b.className = 'ia-fab';
-    b.setAttribute('aria-label', 'Abrir o Assistente IA do Mercado Macro');
-    b.innerHTML = '<span class="ia-marca" aria-hidden="true">' + marca() + '</span><span class="ia-fab-txt"><b>Assistente IA</b><small>Mercado Macro</small></span>';
+    b.setAttribute('aria-label', 'Abrir a Jade, assistente IA do Mercado Macro');
+    b.innerHTML = '<span class="ia-marca" aria-hidden="true">' + marca() + '</span><span class="ia-fab-txt"><b>Jade</b><small>Assistente IA</small></span>';
     b.onclick = abrir;
     // o mascote (assistente-mascote.js) usa para "Explique isso": abre o painel com a pergunta escrita, sem enviar
     window.MMAssistente = { abrir, fechar: () => painel && fechar(), explicarTela, gemini: () => gemini && assinante,
