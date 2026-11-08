@@ -24,7 +24,7 @@ def lista(cat, de, ate):
 def xml_doc(d):
     url = (f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo={d['tipo']}&CodigoInstituicao=1"
            f"&numProtocolo={d['prot']}&numSequencia={d['seq']}&numVersao={d['ver']}")
-    with urllib.request.urlopen(url, timeout=120) as r:
+    with urllib.request.urlopen(url, timeout=40) as r:
         h = r.read(30)
         if h[:4] != b"PK\x03\x04":
             return None
@@ -58,7 +58,7 @@ def dres(x):
 t0 = time.time()
 docs = [d for d in lista("EST_3", "01/10/2026", "08/11/2026") if d["ref"] == "2026-09-30"]
 print(len(docs), "ITR 3T26 no RAD;", len({d['cvm'] for d in docs}), "empresas;", len([d for d in docs if d['cvm'] in CVMS]), "das nossas por comunicado")
-for d in [d for d in docs if d["cvm"] in CVMS][:60]:
+for d in [d for d in docs if d["cvm"] in CVMS][:15]:
     try:
         x = xml_doc(d)
     except Exception as e:
