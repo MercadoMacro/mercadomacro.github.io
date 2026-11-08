@@ -220,6 +220,8 @@
   @keyframes pet-mini-pisca { 0%,92%,100% { transform:scaleY(1); } 94%,96% { transform:scaleY(.1); } }
   @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-5deg); } 86% { transform:rotate(4deg); } 89% { transform:rotate(-5deg); } 92% { transform:rotate(4deg); } 95% { transform:rotate(0); } }
   html[data-motion="off"] #ia-fab .ia-pet *, html[data-motion="off"] #ia-fab .ia-pet-mini * { animation:none !important; transition:none !important; }
+  /* Jade discreta (08/11/2026): parada no canto, só pisca; avisos continuam */
+  #ia-fab.jade-discreta .pet-tudo, #ia-fab.jade-discreta .pet-corpo, #ia-fab.jade-discreta .ia-pet-sombra, #ia-fab.jade-discreta .pet-cabeca-in, #ia-fab.jade-discreta:hover .pet-braco { animation:none; }
   #ia-fab.ia-pet-pausado .ia-pet *,
   #ia-fab.ia-pet-pausado .ia-pet-mini * { animation-play-state:paused !important; }
   @media (prefers-reduced-motion: reduce) {
@@ -333,6 +335,9 @@
     const TAM = { p: .9, m: 1.15, g: 1.35, gg: 1.6 };
     const tamanho = () => b.style.setProperty('--jt', String(TAM[prefs().roboTam] || TAM.m));
     tamanho();
+    const discreta = () => prefs().roboModo === 'discreta';
+    const modo = () => { b.classList.toggle('jade-discreta', discreta()); if (discreta()) s.classList.remove('m-sono'); };
+    modo();
     const pausa = () => b.classList.toggle('ia-pet-pausado', document.hidden);
     document.addEventListener('visibilitychange', pausa);
     pausa();
@@ -368,13 +373,13 @@
         if (Date.now() < travaOlhar) return;
         const d = olharPara(mx, my);
         if (d == null) return;
-        if (d < 130 && longe && !ocupado && vivo()) { classe('surpreso', 650); classe('susto', 460); }
+        if (d < 130 && longe && !ocupado && vivo() && !discreta()) { classe('surpreso', 650); classe('susto', 460); }
         longe = d > 220;
       });
     }, { passive: true });
     (function passeia() {
       setTimeout(() => {
-        if (vivo() && Date.now() - ultimoMouse > 2500 && Date.now() > travaOlhar && !emCima() && !s.classList.contains('m-sono')) {
+        if (vivo() && !discreta() && Date.now() - ultimoMouse > 2500 && Date.now() > travaOlhar && !emCima() && !s.classList.contains('m-sono')) {
           const alvos = [[0, 0], [-1, 0], [1, 0], [-.7, -.6], [.7, -.6], [0, .5], [-.4, .3]];
           const [x, y] = alvos[Math.floor(Math.random() * alvos.length)];
           olhar(x, y);
@@ -425,7 +430,7 @@
     let fimCena = 0;
     const cena = (fn, ms) => { ocupado = true; fn(); clearTimeout(fimCena); fimCena = setTimeout(() => { ocupado = false; }, ms); };
     const fila = []; // { pri, fn, chave }
-    const pedir = (pri, fn, chave) => { if (chave && fila.some((x) => x.chave === chave)) return; fila.push({ pri, fn, chave }); fila.sort((a, z) => z.pri - a.pri); };
+    const pedir = (pri, fn, chave) => { if (discreta() && (chave === 'dica' || chave === 'oi' || chave === 'quiz')) return; if (chave && fila.some((x) => x.chave === chave)) return; fila.push({ pri, fn, chave }); fila.sort((a, z) => z.pri - a.pri); };
     setInterval(() => {
       if (!fila.length || ocupado || !vivo() || emCima()) return;
       if (s.classList.contains('m-sono')) { if (fila[0].pri < 5) return; acordar(); }
@@ -493,7 +498,7 @@
     const SORTEIO = [['cotacao', 46], ['temperatura', 9], ['cifrao', 10], ['grafico', 9], ['aceno', 11], ['feliz', 8], ['pensa', 7]];
     (function roteiro() {
       setTimeout(() => {
-        if (vivo() && !emCima() && !ocupado && !fila.length && !s.classList.contains('m-sono')) {
+        if (vivo() && !discreta() && !emCima() && !ocupado && !fila.length && !s.classList.contains('m-sono')) {
           let r = Math.random() * 100, nome = 'aceno';
           for (const [n, p] of SORTEIO) { if ((r -= p) < 0) { nome = n; break; } }
           if (!cenas[nome]()) cenas.aceno();
@@ -505,9 +510,16 @@
     // ---- cochilo ----
     function acordar() { s.classList.remove('m-sono'); classe('surpreso', 700); classe('susto', 460); }
     setInterval(() => {
-      if (vivo() && !ocupado && !fila.length && !emCima() && Date.now() - ultimoMouse > 60000) { s.classList.add('m-sono'); olhar(0, .4); }
+      if (vivo() && !discreta() && !ocupado && !fila.length && !emCima() && Date.now() - ultimoMouse > 60000) { s.classList.add('m-sono'); olhar(0, .4); }
     }, 5000);
-    b.addEventListener('mouseenter', () => { s.classList.remove('m-sono'); });
+    b.addEventListener('mouseenter', () => {
+      s.classList.remove('m-sono');
+      // discreta: passar o mouse mostra Ibovespa e dólar (dados que o painel já tem)
+      if (!discreta() || b.classList.contains('ia-pet-oi')) return;
+      const l = [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar', 4]].map(([k, n, c]) => { const d = cotacao(k); return d ? n + ' ' + d.value.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c }) + ' <span class="' + (d.change >= 0 ? 'sobe' : 'cai') + '">' + pct(d.change) + '</span>' : ''; }).filter(Boolean);
+      if (l.length) fala.innerHTML = 'Jade<small>' + l.join('<br>') + '</small>';
+    });
+    b.addEventListener('mouseleave', () => { if (discreta()) setTimeout(() => { if (!b.classList.contains('ia-pet-oi') && !b.matches(':hover')) fala.innerHTML = FALA; }, 250); });
 
     // ===== 1. notícia urgente =====
     const vistasNoticia = new Set(noticias().map((n) => n.id));
@@ -764,7 +776,7 @@
     setTimeout(acenar, 700);
 
     // para conferir à mão no console: MMPet.cena('cotacao' | 'temperatura' | 'cifrao' | 'grafico' | 'pensa' | 'sono')
-    window.MMPet = { tamanho, canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
+    window.MMPet = { modo, tamanho, canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
       // usado pelo robo-extras.js (bom dia, alarmes, decisões, pergunta do dia, janela flutuante)
       api: { el: s, botao: b, pedir, cena, dizer, calar, tela, classe, acenar, olhar, vivo, mostraAtivo, ocupado: () => ocupado || fila.length > 0,
         txt: (l1, l2, cls) => { const x = $('.pet-txt'); const aperta = (e, t, max, w) => { e.textContent = t; if (String(t).length > max) { e.setAttribute('textLength', w); e.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } else { e.removeAttribute('textLength'); e.removeAttribute('lengthAdjust'); } }; aperta(x.querySelector('.txt-1'), l1, 10, '150'); aperta(x.querySelector('.txt-2'), l2, 6, '150'); x.classList.toggle('sobe', cls === 'sobe'); x.classList.toggle('cai', cls === 'cai'); } } };
