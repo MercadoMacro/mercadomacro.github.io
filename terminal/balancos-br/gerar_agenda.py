@@ -312,7 +312,7 @@ def main():
         divulgados.append({"cvm": cvm, "ref": ref_alvo, "tri": tri_nome(ref_alvo), "data": r["data"], "doc": "comunicado", "link": r["link"]})
         novos += 1
     divulgados.sort(key=lambda x: (x["data"], x["cvm"]), reverse=True)
-    print(f"  {novos} divulgados pelo IPE (demonstração ou release) que ainda não estão no arquivo de ITR/DFP")
+    print(f"  {novos} divulgados pelo IPE (demonstração ou release) ainda não estão no arquivo de ITR/DFP")
 
     proximos = []
     for cvm in empresas:

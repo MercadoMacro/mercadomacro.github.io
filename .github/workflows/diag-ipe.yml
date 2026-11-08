@@ -24,5 +24,10 @@ jobs:
           for cvm in (22357,):
               print(cvm, [x for x in n['divulgados'] if x['cvm']==cvm][:2], [x for x in n['proximos'] if x['cvm']==cvm])
           for x in [x for x in n['divulgados'] if x['doc']=='comunicado'][:15]:
-              print(' ', x['cvm'], x['data'], x['tri'])
+              print(' ', x['cvm'], x['data'], x['tri'], x['link'])
+          import csv,io,zipfile,urllib.request
+          z=zipfile.ZipFile(io.BytesIO(urllib.request.urlopen('https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/IPE/DADOS/ipe_cia_aberta_2026.zip').read()))
+          for l in csv.DictReader(io.TextIOWrapper(z.open('ipe_cia_aberta_2026.csv'),encoding='latin-1'),delimiter=';'):
+              if l['Codigo_CVM'].lstrip('0') in ('11312','18724') and l['Data_Entrega']>'2026-09-30':
+                  print('  IPE', l['Codigo_CVM'], l['Data_Entrega'], '|', l['Categoria'], '|', l['Tipo'], '|', l['Especie'], '|', l['Assunto'])
           PY
