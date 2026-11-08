@@ -51,6 +51,38 @@ def le_csv(zbytes, nome):
     return list(csv.DictReader(io.StringIO(texto), delimiter=";"))
 
 
+def eh_release(l, alvo):
+    """Linha do IPE com a demonstração financeira ou o release de resultados do trimestre 'alvo'."""
+    if gf_norm(l.get("Categoria")) != "DADOS ECONOMICO-FINANCEIROS":
+        return False
+    tipo = gf_norm(l.get("Tipo"))
+    if not (tipo.startswith("DEMONSTRACOES FINANCEIRAS") or tipo == "PRESS-RELEASE"):
+        return False
+    if "ADICIONAIS" in tipo:  # versão em inglês ou IFRS extra, vem junto com a principal
+        return False
+    t = gf_norm(f"{l.get('Assunto', '')} {l.get('Especie', '')}")
+    n = (alvo.month + 2) // 3
+    aa = alvo.strftime("%y")
+    # se o assunto cita um trimestre, tem de ser o do alvo (evita ITR atrasado do trimestre anterior)
+    citados = set()
+    for m in re.finditer(r"\b([1-4])\s*(?:O|º|ª)?\s*(?:T|TRI|ITR|TRIMESTRE)\s*(?:DE\s*)?(?:20)?(\d{2})\b", t):
+        citados.add((int(m.group(1)), m.group(2)))
+    for nome, num in (("PRIMEIRO", 1), ("SEGUNDO", 2), ("TERCEIRO", 3), ("QUARTO", 4)):
+        if f"{nome} TRIMESTRE" in t:
+            citados.add((num, aa))
+    if alvo.month == 12 and re.search(r"\b(ANUA|EXERCICIO|4T)", t):
+        citados.add((4, aa))
+    if citados and (n, aa) not in citados:
+        return False
+    return True
+
+
+def gf_norm(t):
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(t or "")).encode("ascii", "ignore").decode().upper()
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def tri_nome(ref):
     """'2026-09-30' -> '3T26'; '2025-12-31' -> '4T25'."""
     return f"{(int(ref[5:7]) + 2) // 3}T{ref[2:4]}"
@@ -228,6 +260,7 @@ def main():
 
     # comunicados com a agenda de divulgação (IPE): data confirmada pela empresa
     confirmadas = {}
+    releases = {}  # (cvm) -> primeira entrega de demonstração/release do trimestre no IPE
     for ano in sorted({alvo.year, hoje.year}):
         z = baixa(f"{BASE}/IPE/DADOS/ipe_cia_aberta_{ano}.zip")
         if z is None or (not z and ano != hoje.year):
@@ -245,6 +278,10 @@ def main():
                 continue
             if cvm not in empresas or l.get("Data_Entrega", "") <= alvo.isoformat():
                 continue
+            if eh_release(l, alvo):
+                r = releases.get(cvm)
+                if not r or l["Data_Entrega"] < r["data"]:
+                    releases[cvm] = {"data": l["Data_Entrega"], "link": l.get("Link_Download", "")}
             ass = f"{l.get('Assunto', '')} {l.get('Tipo', '')}".lower()
             if "apresenta" in ass or "press" in ass:
                 continue
@@ -263,6 +300,19 @@ def main():
             print(f"    {cvm} {l['Nome_Companhia']}: {d} <- ...{trecho}...")
             confirmadas[cvm] = {"data": d.isoformat(), "link": l["Link_Download"], "comunicado": l["Data_Entrega"]}
     print(f"  {len(confirmadas)} datas confirmadas por comunicado")
+
+    # o arquivo de ITR/DFP da CVM é atualizado com atraso (às vezes uma semana); o IPE sai todo dia.
+    # quem já mandou a demonstração ou o release do trimestre pelo IPE conta como divulgado (08/11/2026)
+    ref_alvo = alvo.isoformat()
+    novos = 0
+    for cvm, r in releases.items():
+        if (cvm, ref_alvo) in entregas:
+            continue
+        entregas[(cvm, ref_alvo)] = {"data": r["data"], "link": r["link"], "doc": "comunicado"}
+        divulgados.append({"cvm": cvm, "ref": ref_alvo, "tri": tri_nome(ref_alvo), "data": r["data"], "doc": "comunicado", "link": r["link"]})
+        novos += 1
+    divulgados.sort(key=lambda x: (x["data"], x["cvm"]), reverse=True)
+    print(f"  {novos} divulgados pelo IPE (demonstração ou release) que ainda não estão no arquivo de ITR/DFP")
 
     proximos = []
     for cvm in empresas:

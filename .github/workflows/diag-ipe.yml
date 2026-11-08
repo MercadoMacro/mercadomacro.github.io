@@ -2,13 +2,27 @@ name: Diagnóstico IPE (temporário)
 on:
   push:
     branches: [balancos-br-ipe]
-    paths: ['terminal/balancos-br/diag_ipe.py']
+    paths: ['terminal/balancos-br/gerar_agenda.py']
 permissions:
   contents: read
 jobs:
   diag:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - run: python3 terminal/balancos-br/diag_ipe.py
+      - run: cp terminal/balancos-br/agenda.json /tmp/velho.json && python3 terminal/balancos-br/gerar_agenda.py
+      - run: |
+          python3 - <<'PY'
+          import json
+          from datetime import date
+          n=json.load(open('terminal/balancos-br/agenda.json')); v=json.load(open('/tmp/velho.json'))
+          hoje=date.today().isoformat()
+          for nome,a in (('antes',v),('agora',n)):
+              d=a['divulgados']; p=a['proximos']
+              print(nome, 'divulgados', len(d), '3T26', sum(1 for x in d if x['ref']=='2026-09-30'), 'via comunicado', sum(1 for x in d if x['doc']=='comunicado'), 'proximos', len(p), 'atrasados', sum(1 for x in p if x['data']<hoje))
+          for cvm in (22357,):
+              print(cvm, [x for x in n['divulgados'] if x['cvm']==cvm][:2], [x for x in n['proximos'] if x['cvm']==cvm])
+          for x in [x for x in n['divulgados'] if x['doc']=='comunicado'][:15]:
+              print(' ', x['cvm'], x['data'], x['tri'])
+          PY
