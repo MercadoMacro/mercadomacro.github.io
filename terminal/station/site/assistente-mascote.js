@@ -35,19 +35,21 @@
     ['^STOXX50E', 'STOXX 50', 'Euro Stoxx 50', 1], ['SI=F', 'PRATA', 'Prata'], ['EURBRL=X', 'EURO', 'Euro'], ['ETH-USD', 'ETHER', 'Ethereum'],
   ];
   const PAIS = { USD: 'EUA', EUR: 'Zona do euro', CNY: 'China', GBP: 'Reino Unido', BRL: 'Brasil' };
+  // dicas ao abrir cada aba: uma por aba por dia, alternando entre as frases (08/11/2026)
   const DICAS = {
-    'mesa-panel': 'Mesa: tudo numa tela só. No card da curva, o botão DI mostra a curva de juros.',
-    'market-panel': 'Mercado: índices, moedas, cripto, juros e commodities. Clique num ativo para ver o histórico.',
-    'watch-panel': 'Watchlist: monte suas listas de ativos. Eu aviso aqui quando um deles se mexer forte.',
-    'heatmap-panel': 'Mapa de Calor: as cores mostram o que sobe e o que cai. Troque o período no topo.',
-    'news-panel': 'Notícias: o modo Ao Vivo traz o fluxo em tempo real, e dá para destacar numa janela.',
-    'weekly-panel': 'Resumo semanal: o que marcou a semana, num texto só.',
-    'calendar-panel': 'Calendário: eventos de alto impacto e balanços. Eu aviso 10 min antes dos principais.',
-    'analysis-panel': 'Análises: destaques no topo, comparador de ativos, Fed, fluxo na B3 e posições.',
-    'indicators-panel': 'Indicadores: dados de Brasil, EUA e Europa, como inflação, juros e balança comercial.',
-    'fund-panel': 'Fundamentos: números dos balanços das empresas.',
-    'calculator-panel': 'Calculadora: simulações rápidas de juros e investimentos.',
-    'edu-panel': 'Educação: lições curtas em trilhas. Pergunte para mim se ficar alguma dúvida.',
+    'mesa-panel': ['Mesa: tudo numa tela só. No card da curva, o botão DI mostra a curva de juros.', 'Mesa: a Temperatura do mercado mostra se o dia está com apetite ou com medo de risco.'],
+    'market-panel': ['Mercado: índices, moedas, cripto, juros e commodities. Clique num ativo para ver o histórico.', 'Mercado: os botões 1D, 5D e 3M trocam o período do gráfico de cada bloco.'],
+    'watch-panel': ['Watchlist: monte suas listas de ativos. Eu aviso aqui quando um deles se mexer forte.', 'Watchlist: clique numa linha para ver o gráfico e os números do dia.'],
+    'heatmap-panel': ['Mapa de Calor: as cores mostram o que sobe e o que cai. Troque o período no topo.', 'Mapa de Calor: dá para ver Ibovespa, S&P 500, Nasdaq 100, Dow Jones e cripto.'],
+    'news-panel': ['Notícias: o modo Ao Vivo traz o fluxo em tempo real, e dá para destacar numa janela.', 'Notícias: o Resumo da IA junta as principais manchetes num texto curto.'],
+    'weekly-panel': ['Resumo semanal: o que marcou a semana, num texto só.', 'Resumo semanal: separado em Ibovespa, juros e dólar e o que aconteceu lá fora.'],
+    'calendar-panel': ['Calendário: eventos de alto impacto e balanços. Eu aviso 10 min antes dos principais.', 'Calendário: também tem os balanços do Brasil e dos EUA, o Boletim Focus e os proventos.'],
+    'analysis-panel': ['Análises: destaques no topo, comparador de ativos, Fed, fluxo na B3 e posições.', 'Análises: veja as chances do Copom e do Fed para as próximas reuniões.'],
+    'indicators-panel': ['Indicadores: dados de Brasil, EUA e Europa, como inflação, juros e balança comercial.', 'Indicadores: o Tesouro Direto e a leitura do momento comparam com os últimos 20 anos.'],
+    'fund-panel': ['Fundamentos: números dos balanços das empresas.', 'Fundamentos: o Ranking EUA lista as 500 maiores empresas americanas por receita.'],
+    'calculator-panel': ['Calculadora: simulações rápidas de juros e investimentos.', 'Calculadora: renda fixa, juros compostos, financiamento, preço médio, inflação e moedas. O resultado sai enquanto você digita.'],
+    'options-panel': ['Opções: monte e simule estruturas com opções da B3.', 'Opções: tem cadeia teórica, volatilidade e probabilidades para estudar antes de operar.'],
+    'edu-panel': ['Educação: lições curtas em trilhas. Pergunte para mim se ficar alguma dúvida.', 'Educação: cada lição tem resumo e perguntas para fixar.'],
   };
 
   // coordenadas no espaço das camadas (326 x 302); visor interno ~ x 78-248, y 54-162
@@ -395,9 +397,9 @@
     })();
 
     // ---- balão (opcionalmente clicável) ----
-    let acaoFala = null, falaTimer = 0;
+    let acaoFala = null, falaTimer = 0, soIntro = true;
     const dizer = (html, ms, acao, longo) => {
-      clearTimeout(falaTimer);
+      clearTimeout(falaTimer); soIntro = false;
       fala.innerHTML = html; fala.classList.toggle('longo', !!longo);
       // balão comprido com o robô na metade de baixo da tela: cresce para cima, senão sai da tela
       { const r = b.getBoundingClientRect(); if (r.width) b.classList.toggle('ia-pet-baixo', r.top > innerHeight - 150 || (!!longo && r.top > innerHeight / 2)); }
@@ -677,19 +679,28 @@
     const antes = window.__onTabSwitch;
     window.__onTabSwitch = (tabId) => {
       if (antes) antes(tabId);
-      const dica = DICAS[tabId];
-      mem.abas = mem.abas || {};
-      if (!dica || (mem.abas[tabId] || 0) >= 2) return;
-      mem.abas[tabId] = (mem.abas[tabId] || 0) + 1; memSalva();
+      const lista = DICAS[tabId];
+      if (!lista || prefs().roboDicas === false) return;
+      const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+      mem.dicaDia = mem.dicaDia || {}; mem.dicaN = mem.dicaN || {};
+      if (mem.dicaDia[tabId] === hoje) return;
       setTimeout(() => {
         if (!vivo()) return;
         for (let i = fila.length - 1; i >= 0; i--) if (fila[i].chave === 'dica') fila.splice(i, 1);
         pedir(4, () => {
+          // conta só quando a dica aparece de verdade (antes contava mesmo sem mostrar)
+          const aba = document.querySelector('.tab-panel.active');
+          if (aba && aba.id !== tabId) return;
+          const n = mem.dicaN[tabId] || 0;
+          const dica = lista[n % lista.length];
+          mem.dicaDia[tabId] = hoje; mem.dicaN[tabId] = n + 1; memSalva();
+          const A = window.MMAssistente;
+          const explica = !!(A && A.explicarTela && A.gemini && A.gemini());
           cena(() => {
             s.classList.add('aponta'); travaOlhar = Date.now() + 3500; olhar(-1, -.4); classe('feliz', 1200);
-            dizer('<b>Dica</b><small>' + esc(dica) + '</small>', 6500, null, true);
+            dizer('<b>Dica</b><small>' + esc(dica) + '</small>' + (explica ? '<span class="acao">Explicar esta tela</span>' : ''), explica ? 9000 : 6500, explica ? () => A.explicarTela() : null, true);
             setTimeout(() => s.classList.remove('aponta'), 2600);
-          }, 6800);
+          }, explica ? 9300 : 6800);
         }, 'dica');
       }, 900);
     };
@@ -748,7 +759,8 @@
     const canto = () => { try { localStorage.removeItem(POS_KEY); } catch (e) { /* nada */ } limpaPos(); classe('feliz', 1200); acenar(); };
 
     // ao aparecer: acena e o balão se apresenta por alguns segundos
-    b.classList.add('ia-pet-oi'); setTimeout(() => { if (!acaoFala) b.classList.remove('ia-pet-oi'); }, 5000);
+    // (só apaga a apresentação; antes apagava também a dica ou o oi que aparecesse nesses 5 s)
+    b.classList.add('ia-pet-oi'); setTimeout(() => { if (soIntro) b.classList.remove('ia-pet-oi'); }, 5000);
     setTimeout(acenar, 700);
 
     // para conferir à mão no console: MMPet.cena('cotacao' | 'temperatura' | 'cifrao' | 'grafico' | 'pensa' | 'sono')

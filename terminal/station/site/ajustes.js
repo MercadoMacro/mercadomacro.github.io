@@ -212,6 +212,7 @@
         ${sw('roboRadar', P.roboRadar !== false, 'Radar da watchlist (o robô avisa notícia importante sobre os seus ativos)')}
         ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia da Jade (resumo da manhã, nos dias de pregão)')}
         ${sw('roboOi', P.roboOi !== false, 'Jade diz oi quando você entra no site')}
+        ${sw('roboDicas', P.roboDicas !== false, 'Dica da Jade ao abrir cada aba (uma vez por dia em cada aba)')}
         ${sw('roboQuiz', P.roboQuiz !== false, 'Pergunta do dia (das lições da aba Educação)')}
         ${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
         <p class="aj-note">Notícias urgentes, alarmes de preço e decisões do Copom e do Fed aparecem como aviso do Windows (ou do Mac) enquanto você usa outro programa. O terminal precisa ficar aberto numa aba.</p>
@@ -506,7 +507,7 @@
       if (k === 'ticker') P.ticker = P.ticker === 'off' ? 'on' : 'off';
       if (k === 'frasesTopo') { P.frasesTopo = P.frasesTopo === 'on' ? 'off' : 'on'; save(); window.__frasesSync?.(); }
       if (k === 'live') document.getElementById('live-toggle')?.click();
-      if (k === 'roboBomDia' || k === 'roboOi' || k === 'roboQuiz' || k === 'roboRadar') P[k] = P[k] === false;
+      if (k === 'roboBomDia' || k === 'roboOi' || k === 'roboDicas' || k === 'roboQuiz' || k === 'roboRadar') P[k] = P[k] === false;
       if (k === 'roboNotif') {
         if (P.roboNotif === true) P.roboNotif = false;
         else { window.MMRoboExtras?.pedirNotif().then((ok) => { if (!ok) return; P.roboNotif = true; save(); render(); toast('Pronto. Aviso no sistema quando o terminal estiver em segundo plano.'); }); return; }
