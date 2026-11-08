@@ -21,12 +21,15 @@ print(args)
 seq, ver, prot = args[0], args[1], args[2]
 url = f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo=ITR&CodigoInstituicao=1&numProtocolo={prot}&numSequencia={seq}&numVersao={ver}"
 print(url)
-import subprocess, urllib.parse
-q = urllib.parse.urlencode({"Grupo": "DFs Consolidadas", "Quadro": "Demonstração do Resultado", "NomeTipoDocumento": "ITR", "Titulo": "Demonstração do Resultado", "Empresa": "SUZANO", "DataReferencia": "30/09/2026", "Versao": "1", "CodTipoDocumento": "3", "NumeroSequencialDocumento": seq, "NumeroSequencialRegistroCvm": "", "CodigoTipoInstituicao": "1"})
-h = subprocess.run(["curl", "-sS", "--retry", "3", "-L", "https://www.rad.cvm.gov.br/ENET/frmDemonstracaoFinanceiraITR.aspx?" + q], capture_output=True).stdout.decode("utf-8", "replace")
-print("HTML", len(h)); t = re.sub(r"<[^>]+>", " ", h); t = re.sub(r"\s+", " ", t); print(t[:2500])
-subprocess.run(["curl", "-sS", "--retry", "3", "-o", "/tmp/d.zip", url]); b = open("/tmp/d.zip", "rb").read()
-print("bytes", len(b), b[:4])
+import subprocess, os
+for tent in range(6):
+    r = subprocess.run(["curl", "-sS", "--http1.1", "-C", "-", "-o", "/tmp/d.zip", "-w", "%{http_code} %{size_download}", url], capture_output=True, text=True)
+    print("curl", tent, r.returncode, r.stdout, r.stderr[:200], os.path.getsize("/tmp/d.zip") if os.path.exists("/tmp/d.zip") else 0)
+    try:
+        zipfile.ZipFile("/tmp/d.zip"); break
+    except Exception as e:
+        print("  ainda não", e)
+b = open("/tmp/d.zip", "rb").read()
 z = zipfile.ZipFile(io.BytesIO(b))
 for n in z.namelist(): print(" ", n, z.getinfo(n).file_size)
 for n in z.namelist():
