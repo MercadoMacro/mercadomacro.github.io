@@ -2,13 +2,24 @@ name: Diagnóstico RAD (temporário)
 on:
   push:
     branches: [diag-rad]
-    paths: ['terminal/balancos-br/diag_rad.py']
+    paths: ['terminal/balancos-br/gerar_agenda.py', 'terminal/balancos-br/rad.py']
 permissions:
   contents: read
 jobs:
   diag:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - run: python3 -u terminal/balancos-br/diag_rad.py
+      - run: sudo apt-get install -y -qq poppler-utils >/dev/null
+      - run: cp terminal/balancos-br/agenda.json /tmp/velho.json && python3 -u terminal/balancos-br/gerar_agenda.py terminal/balancos-br terminal/fundamentos/index.json
+      - run: |
+          python3 - <<'PY'
+          import json
+          n=json.load(open('terminal/balancos-br/agenda.json')); h='2026-11-08'
+          d=n['divulgados']; p=n['proximos']
+          t=[x for x in d if x['ref']=='2026-09-30']
+          print('3T26', len(t), 'com numeros', sum(1 for x in t if x.get('res')), 'comunicado', sum(1 for x in t if x['doc']=='comunicado'), 'atrasados', sum(1 for x in p if x['data']<h))
+          for c in (13986, 21490, 22357, 19348):
+              print(c, [ (x['data'], x['doc'], x.get('res')) for x in t if x['cvm']==c])
+          PY
