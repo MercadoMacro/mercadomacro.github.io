@@ -1,0 +1,14 @@
+name: Diagnóstico RAD (temporário)
+on:
+  push:
+    branches: [diag-rad]
+    paths: ['terminal/balancos-br/diag_rad.py']
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 terminal/balancos-br/diag_rad.py
