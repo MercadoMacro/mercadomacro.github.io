@@ -1018,7 +1018,7 @@
     if (!hp) {
       hp = document.createElement('div');
       hp.className = 'cl-hpm';
-      hp.innerHTML = `<div class="cl-hpm-box" role="dialog" aria-label="Calculadora HP12C"><div class="cl-hpm-h"><b>Calculadora HP12C</b><button type="button" class="cl-hpm-x" aria-label="Fechar calculadora">&times;</button></div><div class="cl-hpm-frame"><iframe scrolling="no" src="https://hp12c.professorlucassilva.com.br/" title="Calculadora HP12C Virtual"></iframe></div></div>`;
+      hp.innerHTML = `<div class="cl-hpm-box" role="dialog" aria-label="Calculadora HP12C"><div class="cl-hpm-h"><b>Financeira Mercado Macro · RPN</b><button type="button" class="cl-hpm-x" aria-label="Fechar calculadora">&times;</button></div><div class="cl-hpm-frame"><iframe scrolling="auto" src="hp12.html" title="Calculadora financeira Mercado Macro"></iframe></div></div>`;
       document.body.appendChild(hp);
       hp.addEventListener('click', (e) => { if (e.target === hp || e.target.closest('.cl-hpm-x')) hp.hidden = true; });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hp && !hp.hidden) hp.hidden = true; });
@@ -1220,8 +1220,8 @@
   .cl-hpm-h b { color:var(--accent-ink); font-size:15px; }
   .cl-hpm-x { width:32px; height:32px; border-radius:50%; border:0; background:color-mix(in srgb, var(--text) 10%, transparent); color:var(--text-2); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
   .cl-hpm-x:hover { background:var(--accent); color:var(--bg); }
-  .cl-hpm-frame { width:calc(465px * var(--hpk)); height:calc(295px * var(--hpk)); overflow:hidden; }
-  .cl-hpm-frame iframe { display:block; width:465px; height:295px; border:0; transform:scale(var(--hpk)); transform-origin:0 0; }
+  .cl-hpm-frame { width:min(660px, calc(100vw - 34px)); height:min(740px, calc(100dvh - 110px)); overflow:hidden; }
+  .cl-hpm-frame iframe { display:block; width:100%; height:100%; border:0; }
   @media (max-width: 1100px) { .cl-grid2, .cl-gridw { grid-template-columns:minmax(0, 1fr); } }
   @media (max-width: 640px) {
     .cl-subs { width:100%; }
