@@ -301,7 +301,7 @@ def main():
             confirmadas[cvm] = {"data": d.isoformat(), "link": l["Link_Download"], "comunicado": l["Data_Entrega"]}
     print(f"  {len(confirmadas)} datas confirmadas por comunicado")
 
-    # o arquivo de ITR/DFP da CVM é atualizado com atraso (às vezes uma semana); o IPE sai todo dia.
+    # o arquivo de ITR/DFP da CVM costuma atrasar (às vezes uma semana); o IPE sai todo dia.
     # quem já mandou a demonstração ou o release do trimestre pelo IPE conta como divulgado (08/11/2026)
     ref_alvo = alvo.isoformat()
     novos = 0

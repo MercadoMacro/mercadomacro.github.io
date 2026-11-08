@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - run: cp terminal/balancos-br/agenda.json /tmp/velho.json && python3 terminal/balancos-br/gerar_agenda.py
+      - run: cp terminal/balancos-br/agenda.json /tmp/velho.json && python3 terminal/balancos-br/gerar_agenda.py terminal/balancos-br terminal/fundamentos/index.json
       - run: |
           python3 - <<'PY'
           import json
