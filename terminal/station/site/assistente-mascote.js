@@ -136,8 +136,8 @@
     #ia-fab .ia-pet.susto .pet-tudo { animation:pet-susto .45s ease-out; }
     #ia-fab .pet-braco { transform-box:view-box; transform-origin:86px 238px; transition:transform .6s ease-in-out; }
     #ia-fab .pet-braco.acena { animation:pet-acena 1.3s ease-in-out 2; }
-    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-5deg); }
-    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-8deg); }
+    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-14deg); }
+    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-24deg); }
     #ia-fab:hover .pet-braco { animation:pet-acena 1.3s ease-in-out 2; }
     #ia-fab .pet-olhos { transform:translate(calc(var(--ex,0) * 1px), calc(var(--ey,0) * 1px)); transition:transform .18s ease-out; }
     #ia-fab .pet-olho { transform-box:fill-box; transform-origin:center; transition:transform .07s; }
@@ -217,6 +217,7 @@
   @media (max-width:900px) and (prefers-reduced-motion: reduce) { #ia-fab .mini-olho, #ia-fab .mini-braco { animation:none; } }
   @keyframes pet-mini-pisca { 0%,92%,100% { transform:scaleY(1); } 94%,96% { transform:scaleY(.1); } }
   @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-5deg); } 86% { transform:rotate(4deg); } 89% { transform:rotate(-5deg); } 92% { transform:rotate(4deg); } 95% { transform:rotate(0); } }
+  html[data-motion="off"] #ia-fab .ia-pet *, html[data-motion="off"] #ia-fab .ia-pet-mini * { animation:none !important; transition:none !important; }
   #ia-fab.ia-pet-pausado .ia-pet *,
   #ia-fab.ia-pet-pausado .ia-pet-mini * { animation-play-state:paused !important; }
   @media (prefers-reduced-motion: reduce) {
@@ -241,9 +242,10 @@
   @keyframes pet-aparece { from { opacity:0; } to { opacity:1; } }
   @keyframes pet-alerta { 0% { opacity:1; } 100% { opacity:.35; } }
   @keyframes pet-gira { to { transform:rotate(360deg); } }
-  @keyframes pet-sino { from { transform:rotate(-7deg); } to { transform:rotate(14deg); } }`;
+  @keyframes pet-sino { from { transform:rotate(-14deg); } to { transform:rotate(14deg); } }`;
 
-  const parado = () => document.documentElement.dataset.motion === 'off' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // só a preferência do sistema tira as cenas; o 'Animações' de Ajustes apenas congela o movimento (CSS abaixo)
+  const parado = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sorte = (a, b) => a + Math.random() * (b - a);
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const pct = (v) => (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
@@ -491,7 +493,7 @@
           if (!cenas[nome]()) cenas.aceno();
         }
         roteiro();
-      }, sorte(22000, 35000));
+      }, sorte(9000, 14000));
     })();
 
     // ---- cochilo ----
