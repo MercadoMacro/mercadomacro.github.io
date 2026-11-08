@@ -2008,11 +2008,20 @@ async function serieCincoDias(req, ctx) {
   } catch (e) { return json({ erro: 'Fonte indisponível.' }, 502); }
 }
 
+// destino do ?volta= só vale se continuar neste site ("/\\x", "/<tab>/x" e parecidos viram outro site no navegador)
+function voltaSegura(v, base) {
+  try {
+    const o = new URL(base).origin, d = new URL(String(v || ''), o);
+    if (!/^\/(?![\/\\])/.test(String(v || '')) || /[\u0000-\u001f\\]/.test(String(v)) || d.origin !== o) return '/';
+    return d.pathname + d.search + d.hash;
+  } catch (_) { return '/'; }
+}
+
 async function paginaEntrar(req, env, jaSemLogin) {
   if (!jaSemLogin) {
     // já logado (ativo ou com o acesso vencido): vai direto para onde o link pedia (ex.: botão Ver os planos do e-mail)
     const v = new URL(req.url).searchParams.get('volta') || '';
-    const destino = /^\/(?![\/\\])/.test(v) ? v : '/';
+    const destino = voltaSegura(v, req.url);
     if (await usuarioDaSessao(req, env)) return redirect(destino);
     if (destino !== '/' && (await contaDaSessao(req, env))) return redirect(destino);
   }

@@ -68,7 +68,9 @@
   }
   enviar(fE, 'entrar', function () {
     var v = new URLSearchParams(location.search).get('volta') || '/';
-    location.replace(/^\/(?!\/)/.test(v) ? v : '/');
+    var ok = /^\/(?![\/\\])/.test(v) && !/[\u0000-\u001f\\]/.test(v);
+    try { ok = ok && new URL(v, location.origin).origin === location.origin; } catch (e) { ok = false; }
+    location.replace(ok ? v : '/');
   });
   var emailCad = '', confirmar = false, volta = '/assinar';
   enviar(fC, 'cadastrar', function (j) {
