@@ -254,6 +254,22 @@ def main():
                 if not atual or l["DT_RECEB"] < atual["data"]:
                     entregas[k] = {"data": l["DT_RECEB"], "link": l.get("LINK_DOC", ""), "doc": tipo}
 
+    # o arquivo da CVM às vezes volta numa versão mais velha: quem já saiu como divulgado
+    # na agenda anterior continua divulgado (08/11/2026)
+    try:
+        anteriores = json.load(open(f"{saida}/agenda.json", encoding="utf-8")).get("divulgados", [])
+    except (OSError, ValueError):
+        anteriores = []
+    antigos = {}
+    mantidos = 0
+    for x in anteriores:
+        k = (int(x["cvm"]), x["ref"])
+        antigos[k] = x
+        if k[0] in empresas and k not in entregas:
+            entregas[k] = {"data": x["data"], "link": x.get("link", ""), "doc": x.get("doc", "ITR")}
+            mantidos += 1
+    print(f"  {mantidos} divulgados mantidos da agenda anterior (faltam no arquivo da CVM de hoje)")
+
     divulgados = []
     limite = (hoje - timedelta(days=150)).isoformat()
     for (cvm, ref), e in entregas.items():
@@ -261,6 +277,10 @@ def main():
             divulgados.append({"cvm": cvm, "ref": ref, "tri": tri_nome(ref), "data": e["data"], "doc": e["doc"], "link": e["link"]})
     divulgados.sort(key=lambda x: (x["data"], x["cvm"]), reverse=True)
     resultados(divulgados, zips, empresas)
+    for x in divulgados:
+        a = antigos.get((x["cvm"], x["ref"]))
+        if "res" not in x and a and a.get("res"):
+            x["res"] = a["res"]
 
     # trimestre em aberto: o último que já fechou (e o anterior, para quem ainda não entregou)
     alvo = fim_trimestre_anterior(hoje)
