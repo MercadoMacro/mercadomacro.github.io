@@ -21,7 +21,11 @@ print(args)
 seq, ver, prot = args[0], args[1], args[2]
 url = f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo=ITR&CodigoInstituicao=1&numProtocolo={prot}&numSequencia={seq}&numVersao={ver}"
 print(url)
-b = urllib.request.urlopen(url, timeout=120).read()
+import subprocess, urllib.parse
+q = urllib.parse.urlencode({"Grupo": "DFs Consolidadas", "Quadro": "Demonstração do Resultado", "NomeTipoDocumento": "ITR", "Titulo": "Demonstração do Resultado", "Empresa": "SUZANO", "DataReferencia": "30/09/2026", "Versao": "1", "CodTipoDocumento": "3", "NumeroSequencialDocumento": seq, "NumeroSequencialRegistroCvm": "", "CodigoTipoInstituicao": "1"})
+h = subprocess.run(["curl", "-sS", "--retry", "3", "-L", "https://www.rad.cvm.gov.br/ENET/frmDemonstracaoFinanceiraITR.aspx?" + q], capture_output=True).stdout.decode("utf-8", "replace")
+print("HTML", len(h)); t = re.sub(r"<[^>]+>", " ", h); t = re.sub(r"\s+", " ", t); print(t[:2500])
+subprocess.run(["curl", "-sS", "--retry", "3", "-o", "/tmp/d.zip", url]); b = open("/tmp/d.zip", "rb").read()
 print("bytes", len(b), b[:4])
 z = zipfile.ZipFile(io.BytesIO(b))
 for n in z.namelist(): print(" ", n, z.getinfo(n).file_size)
