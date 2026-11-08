@@ -58,8 +58,8 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <image class="pet-corpo" href="robo-corpo.webp${V}" width="326" height="302"/>
-      <g class="pet-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g>
+      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><image href="robo-casaco.webp${V}" width="326" height="302"/></g>
+      <g class="pet-braco"><image href="robo-braco.webp${V}" width="326" height="302"/><image href="robo-manga.webp${V}" width="326" height="302"/></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -277,8 +277,8 @@
 
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
-    <image href="robo-corpo.webp${V}" width="326" height="302"/>
-    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g>
+    <image href="robo-corpo.webp${V}" width="326" height="302"/><image href="robo-casaco.webp${V}" width="326" height="302"/>
+    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/><image href="robo-manga.webp${V}" width="326" height="302"/></g>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
     <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
