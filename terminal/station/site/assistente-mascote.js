@@ -58,7 +58,7 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <g class="pet-corpo"><g transform="translate(4 -3)"><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g><defs><clipPath id="jade-pet-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-pet-ombro)"/></g>
+      <g class="pet-corpo"><defs><clipPath id="jade-pet-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-pet-ombro)"/><g transform="translate(4 -3)"><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -280,7 +280,7 @@
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
     
-    <g transform="translate(4 -3)"><g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g></g><defs><clipPath id="jade-mini-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-mini-ombro)"/>
+    <defs><clipPath id="jade-mini-ombro"><path d="M0 0H326V302H0V260H78Q88 255 83 248Q70 246 67 231H0Z"/></clipPath></defs><image href="robo-colete-integrado.webp${V}" width="326" height="302" clip-path="url(#jade-mini-ombro)"/><g transform="translate(4 -3)"><g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><path d="M25 165H92V234Q92 246 78 246H72Q53 246 48 228L25 195Z"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g></g>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
     <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
