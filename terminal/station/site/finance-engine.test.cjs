@@ -53,3 +53,8 @@ test('ON retains all memory',()=>{const c=run(['4','2','STO','1','ON']);assert.e
 
 test('VPL rejects unset flows',()=>{const c=new Calculator();c.fin.n=12;c.press('f');c.press('PV');assert.ok(c.error);});
 test('Export preserves grouped cash flow count',()=>{const c=run(['1','CHS','g','PV','2','g','PMT']),d=new Calculator();assert.ok(d.restore(c.export()));assert.deepEqual(d.cashFlows(),[-1,2]);});
+
+test('Program GTO 00 stops before later instructions',()=>{const c=run(['f','R/S','1','g','roll','0','0','9','f','R/S','R/S']);let guard=0;while(c.running&&guard++<10)c.step();close(c.x,1);assert.equal(c.running,false);});
+test('Program forward GTO reaches the requested line',()=>{const c=run(['f','R/S','g','roll','0','3','9','2','f','R/S','R/S']);let guard=0;while(c.running&&guard++<10)c.step();close(c.x,2);});
+test('Scientific exponent entry and sign',()=>close(run(['1','EEX','2','CHS','ENTER']).x,0.01));
+test('Depreciation SOYD and DB',()=>{for(const [key,want]of [['deltaPercent',3000],['percent',4000]]){const c=new Calculator();c.fin={n:5,i:200,PV:10000,PMT:0,FV:1000,begin:false};type(c,1);run(['f',key],c);close(c.x,want);}});
