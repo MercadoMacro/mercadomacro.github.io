@@ -120,7 +120,7 @@
         else { this.s[0] = 0; this.lift = false; this.dirty = true; } return;
       }
       if (key === 'f' || key === 'g') { this.shift = this.shift === key ? '' : key; return; }
-      if (this.pending.startsWith('GTO')) { if (!/^\d$/.test(key)) throw Error('GTO: informe dois dígitos.'); this.pending += key; if (this.pending.length === 5) { const target = Number(this.pending.slice(3)); integer(target, 0, this.program.length); this.pending = ''; if (this.recording) this.dispatch('goto:' + target); else this.pc = target; } return; }
+      if (this.pending.startsWith('GTO')) { if (!/^\d$/.test(key)) throw Error('GTO: informe dois dígitos.'); this.pending += key; if (this.pending.length === 5) { const target = Number(this.pending.slice(3)); integer(target, 0, this.recording ? 99 : this.program.length); this.pending = ''; if (this.recording) this.dispatch('goto:' + target); else this.pc = target === 0 ? 0 : target - 1; } return; }
       if (this.pending.startsWith('STO') || this.pending.startsWith('RCL')) {
         if (key === '.' && !this.pending.endsWith('.')) { this.pending += '.'; return; }
         if (['+', '-', '*', '/'].includes(key) && this.pending === 'STO') { this.pending += key; return; }
