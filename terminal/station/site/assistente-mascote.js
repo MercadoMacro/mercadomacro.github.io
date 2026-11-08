@@ -58,8 +58,7 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><image href="robo-casaco.webp${V}" width="326" height="302"/></g>
-      <g class="pet-braco"><image href="robo-braco.webp${V}" width="326" height="302"/><image href="robo-manga.webp${V}" width="326" height="302"/></g>
+      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-colete)"/></svg><g class="pet-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -127,8 +126,8 @@
     #ia-fab .pet { position:absolute; left:0; top:0; width:100px; height:93px; overflow:visible; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
     #ia-fab .ia-pet-sombra { position:absolute; left:24px; bottom:0; width:54px; height:6px; border-radius:50%; background:rgba(0,0,0,.4); filter:blur(2px); animation:pet-sombra 3.2s ease-in-out infinite; }
     #ia-fab .pet-tudo { animation:pet-flutua 3.2s ease-in-out infinite; }
-    #ia-fab .pet-corpo { transform-box:view-box; transform-origin:163px 300px; animation:pet-respira 3.2s ease-in-out infinite; }
-    #ia-fab .ia-pet.humor-off .pet-corpo { animation-duration:1.9s; }
+    #ia-fab .pet-corpo { transform-box:view-box; transform-origin:163px 300px; animation:pet-respira 4.8s ease-in-out infinite; }
+    #ia-fab .ia-pet.humor-off .pet-corpo { animation-duration:3.8s; }
     #ia-fab .ia-pet.humor-on .pet-tudo, #ia-fab .ia-pet.humor-on .ia-pet-sombra { animation-duration:4.2s; }
     #ia-fab .pet-cabeca { transform-box:view-box; transform-origin:163px 186px; transform:rotate(var(--hr,0deg)) translate(var(--hx,0px),0); transition:transform .5s cubic-bezier(.3,1.4,.5,1); }
     #ia-fab .pet-cabeca-in { transform-box:view-box; transform-origin:163px 186px; animation:pet-balanca 6.4s ease-in-out infinite; }
@@ -136,10 +135,10 @@
     #ia-fab .ia-pet.nega .pet-cabeca-in { animation:pet-nao .5s ease-in-out 3; }
     #ia-fab .ia-pet.susto .pet-tudo { animation:pet-susto .45s ease-out; }
     #ia-fab .pet-braco { transform-box:view-box; transform-origin:62px 246px; transition:transform .45s cubic-bezier(.3,1.4,.5,1); }
-    #ia-fab .pet-braco.acena { animation:pet-acena .55s ease-in-out 4; }
-    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-16deg) translateY(-6px); }
-    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-38deg); }
-    #ia-fab:hover .pet-braco { animation:pet-acena .55s ease-in-out infinite; }
+    #ia-fab .pet-braco.acena { animation:pet-acena .9s ease-in-out 2; }
+    #ia-fab .ia-pet.mao-alto .pet-braco { transform:rotate(-9deg) translateY(-2px); }
+    #ia-fab .ia-pet.aponta .pet-braco { transform:rotate(-16deg); }
+    #ia-fab:hover .pet-braco { animation:pet-acena 1s ease-in-out 2; }
     #ia-fab .pet-olhos { transform:translate(calc(var(--ex,0) * 1px), calc(var(--ey,0) * 1px)); transition:transform .18s ease-out; }
     #ia-fab .pet-olho { transform-box:fill-box; transform-origin:center; transition:transform .07s; }
     #ia-fab .pet-olho .feliz, #ia-fab .pet-olho .cifrao, #ia-fab .pet-pensa, #ia-fab .pet-tela, #ia-fab .pet-zz text, #ia-fab .pet-suor { opacity:0; }
@@ -217,19 +216,22 @@
   }
   @media (max-width:900px) and (prefers-reduced-motion: reduce) { #ia-fab .mini-olho, #ia-fab .mini-braco { animation:none; } }
   @keyframes pet-mini-pisca { 0%,92%,100% { transform:scaleY(1); } 94%,96% { transform:scaleY(.1); } }
-  @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-14deg); } 86% { transform:rotate(8deg); } 89% { transform:rotate(-14deg); } 92% { transform:rotate(8deg); } 95% { transform:rotate(0); } }
+  @keyframes pet-mini-acena { 0%,80%,100% { transform:rotate(0); } 83% { transform:rotate(-7deg); } 86% { transform:rotate(5deg); } 89% { transform:rotate(-7deg); } 92% { transform:rotate(5deg); } 95% { transform:rotate(0); } }
+  #ia-fab.ia-pet-pausado .ia-pet *,
+  #ia-fab.ia-pet-pausado .ia-pet-mini * { animation-play-state:paused !important; }
   @media (prefers-reduced-motion: reduce) {
+    #ia-fab .ia-pet *, #ia-fab .ia-pet-mini * { animation:none !important; transition:none !important; }
     #ia-fab .pet-tudo, #ia-fab .pet-corpo, #ia-fab .ia-pet-sombra, #ia-fab .pet-cabeca-in, #ia-fab .pet-braco { animation:none !important; }
     #ia-fab .pet-cabeca, #ia-fab .pet-olhos { transition:none; }
   }
-  @keyframes pet-flutua { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+  @keyframes pet-flutua { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
   @keyframes pet-sombra { 0%,100% { transform:scaleX(1); opacity:1; } 50% { transform:scaleX(.82); opacity:.65; } }
-  @keyframes pet-respira { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.012,.985); } }
-  @keyframes pet-balanca { 0%,100% { transform:rotate(0); } 25% { transform:rotate(-2.2deg); } 50% { transform:rotate(0); } 75% { transform:rotate(1.8deg); } }
-  @keyframes pet-acena { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-13deg); } 70% { transform:rotate(9deg); } }
+  @keyframes pet-respira { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.004,.995); } }
+  @keyframes pet-balanca { 0%,100% { transform:rotate(0); } 25% { transform:rotate(-1deg); } 50% { transform:rotate(0); } 75% { transform:rotate(.8deg); } }
+  @keyframes pet-acena { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-7deg); } 70% { transform:rotate(5deg); } }
   @keyframes pet-sim { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(5px) rotate(1deg); } }
   @keyframes pet-nao { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-5deg); } 70% { transform:rotate(5deg); } }
-  @keyframes pet-susto { 0% { transform:translateY(0); } 40% { transform:translateY(-9px) scale(1.03); } 100% { transform:translateY(0); } }
+  @keyframes pet-susto { 0% { transform:translateY(0); } 40% { transform:translateY(-3px) scale(1.01); } 100% { transform:translateY(0); } }
   @keyframes pet-cochila { 0%,100% { transform:rotate(-4deg) translateY(2px); } 50% { transform:rotate(-7deg) translateY(5px); } }
   @keyframes pet-zz { 0% { opacity:0; transform:translate(0,0); } 30% { opacity:1; } 100% { opacity:0; transform:translate(10px,-18px); } }
   @keyframes pet-suor { 0% { opacity:0; transform:translateY(0); } 15% { opacity:.9; } 60% { opacity:.9; transform:translateY(14px); } 75%,100% { opacity:0; transform:translateY(20px); } }
@@ -239,9 +241,9 @@
   @keyframes pet-aparece { from { opacity:0; } to { opacity:1; } }
   @keyframes pet-alerta { 0% { opacity:1; } 100% { opacity:.35; } }
   @keyframes pet-gira { to { transform:rotate(360deg); } }
-  @keyframes pet-sino { from { transform:rotate(-14deg); } to { transform:rotate(14deg); } }`;
+  @keyframes pet-sino { from { transform:rotate(-7deg); } to { transform:rotate(14deg); } }`;
 
-  const parado = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const parado = () => document.documentElement.dataset.motion === 'off' || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sorte = (a, b) => a + Math.random() * (b - a);
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const pct = (v) => (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
@@ -277,8 +279,8 @@
 
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
-    <image href="robo-corpo.webp${V}" width="326" height="302"/><image href="robo-casaco.webp${V}" width="326" height="302"/>
-    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/><image href="robo-manga.webp${V}" width="326" height="302"/></g>
+    <image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-mini-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-colete)"/></svg>
+    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
     <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
@@ -323,6 +325,9 @@
     const mini = document.createElement('span'); mini.className = 'ia-pet-mini'; mini.innerHTML = MINI;
     b.prepend(mini);
     b.classList.add('ia-pet-on');
+    const pausa = () => b.classList.toggle('ia-pet-pausado', document.hidden);
+    document.addEventListener('visibilitychange', pausa);
+    pausa();
     b.title = 'Jade, a assistente IA do Mercado Macro';
     const fala = s.querySelector('.ia-pet-fala');
     const braco = s.querySelector('.pet-braco');
@@ -486,7 +491,7 @@
           if (!cenas[nome]()) cenas.aceno();
         }
         roteiro();
-      }, sorte(8000, 13000));
+      }, sorte(22000, 35000));
     })();
 
     // ---- cochilo ----
