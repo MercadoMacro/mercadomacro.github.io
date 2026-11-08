@@ -122,9 +122,9 @@
     #ia-fab.ia-pet-on { padding:0; gap:0; border:0; background:transparent; box-shadow:none; border-radius:0; overflow:visible; }
     #ia-fab.ia-pet-on:hover { transform:none; }
     #ia-fab.ia-pet-on .ia-marca, #ia-fab.ia-pet-on .ia-fab-txt { display:none; }
-    #ia-fab .ia-pet { display:block; position:relative; width:100px; height:100px; }
-    #ia-fab .pet { position:absolute; left:0; top:0; width:100px; height:93px; overflow:visible; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
-    #ia-fab .ia-pet-sombra { position:absolute; left:24px; bottom:0; width:54px; height:6px; border-radius:50%; background:rgba(0,0,0,.4); filter:blur(2px); animation:pet-sombra 3.2s ease-in-out infinite; }
+    #ia-fab .ia-pet { display:block; position:relative; width:calc(100px * var(--jt, 1.15)); height:calc(100px * var(--jt, 1.15)); }
+    #ia-fab .pet { position:absolute; left:0; top:0; width:calc(100px * var(--jt, 1.15)); height:calc(93px * var(--jt, 1.15)); overflow:visible; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
+    #ia-fab .ia-pet-sombra { position:absolute; left:calc(24px * var(--jt, 1.15)); bottom:0; width:calc(54px * var(--jt, 1.15)); height:6px; border-radius:50%; background:rgba(0,0,0,.4); filter:blur(2px); animation:pet-sombra 3.2s ease-in-out infinite; }
     #ia-fab .pet-tudo { animation:pet-flutua 3.2s ease-in-out infinite; }
     #ia-fab .pet-corpo { transform-box:view-box; transform-origin:163px 294px; animation:pet-respira 4.8s ease-in-out infinite; }
     #ia-fab .ia-pet.humor-off .pet-corpo { animation-duration:3.8s; }
@@ -327,6 +327,10 @@
     const mini = document.createElement('span'); mini.className = 'ia-pet-mini'; mini.innerHTML = MINI;
     b.prepend(mini);
     b.classList.add('ia-pet-on');
+    // tamanho escolhido em Ajustes (pequeno, normal, grande, muito grande)
+    const TAM = { p: .9, m: 1.15, g: 1.35, gg: 1.6 };
+    const tamanho = () => b.style.setProperty('--jt', String(TAM[prefs().roboTam] || TAM.m));
+    tamanho();
     const pausa = () => b.classList.toggle('ia-pet-pausado', document.hidden);
     document.addEventListener('visibilitychange', pausa);
     pausa();
@@ -748,7 +752,7 @@
     setTimeout(acenar, 700);
 
     // para conferir à mão no console: MMPet.cena('cotacao' | 'temperatura' | 'cifrao' | 'grafico' | 'pensa' | 'sono')
-    window.MMPet = { canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
+    window.MMPet = { tamanho, canto, falar, cena: (n) => (n === 'sono' ? (s.classList.add('m-sono'), true) : cenas[n] && cenas[n]()), checar: () => { olhaNoticias(); olhaAgenda(); olhaWatchlist(); olhaPregao(); humor(); },
       // usado pelo robo-extras.js (bom dia, alarmes, decisões, pergunta do dia, janela flutuante)
       api: { el: s, botao: b, pedir, cena, dizer, calar, tela, classe, acenar, olhar, vivo, mostraAtivo, ocupado: () => ocupado || fila.length > 0,
         txt: (l1, l2, cls) => { const x = $('.pet-txt'); const aperta = (e, t, max, w) => { e.textContent = t; if (String(t).length > max) { e.setAttribute('textLength', w); e.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } else { e.removeAttribute('textLength'); e.removeAttribute('lengthAdjust'); } }; aperta(x.querySelector('.txt-1'), l1, 10, '150'); aperta(x.querySelector('.txt-2'), l2, 6, '150'); x.classList.toggle('sobe', cls === 'sobe'); x.classList.toggle('cai', cls === 'cai'); } } };
