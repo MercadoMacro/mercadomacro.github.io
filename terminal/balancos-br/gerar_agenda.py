@@ -60,7 +60,11 @@ def eh_release(l, alvo):
         return False
     if "ADICIONAIS" in tipo:  # versão em inglês ou IFRS extra, vem junto com a principal
         return False
+    if "ANUA" in tipo and alvo.month != 12:  # DFP atrasada do ano anterior
+        return False
     t = gf_norm(f"{l.get('Assunto', '')} {l.get('Especie', '')}")
+    if "PREVIA" in t:  # prévia operacional sai antes do balanço
+        return False
     n = (alvo.month + 2) // 3
     aa = alvo.strftime("%y")
     # se o assunto cita um trimestre, tem de ser o do alvo (evita ITR atrasado do trimestre anterior)
@@ -72,9 +76,11 @@ def eh_release(l, alvo):
             citados.add((num, aa))
     if alvo.month == 12 and re.search(r"\b(ANUA|EXERCICIO|4T)", t):
         citados.add((4, aa))
-    if citados and (n, aa) not in citados:
-        return False
-    return True
+    if citados:
+        return "citado" if (n, aa) in citados else False
+    if tipo == "PRESS-RELEASE" and not re.search(r"RESULTADO|RELEASE|EARNINGS|DESEMPENHO|TRIMESTR|ITR\b", t):
+        return False  # boletim, prévia operacional etc.
+    return "generico"
 
 
 def gf_norm(t):
@@ -278,7 +284,10 @@ def main():
                 continue
             if cvm not in empresas or l.get("Data_Entrega", "") <= alvo.isoformat():
                 continue
-            if eh_release(l, alvo):
+            tipo_rel = eh_release(l, alvo)
+            # sem citar o trimestre, só vale para quem já entregou o trimestre anterior
+            # (quem está atrasado pode estar mandando o anterior agora)
+            if tipo_rel == "citado" or (tipo_rel and (cvm, alvos[1].isoformat()) in entregas):
                 r = releases.get(cvm)
                 if not r or l["Data_Entrega"] < r["data"]:
                     releases[cvm] = {"data": l["Data_Entrega"], "link": l.get("Link_Download", "")}
