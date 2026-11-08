@@ -1,71 +1,75 @@
 # diagnóstico temporário: lê ITR direto do RAD da CVM (não vai para o main)
-import json, urllib.request, io, zipfile, re
+import json, urllib.request, re, struct, zlib, time, sys, unicodedata
+import xml.etree.ElementTree as ET
+sys.path.insert(0, "terminal/cvm"); import gerar_fundamentos as gf
+CVMS = {int(c) for c in open("terminal/balancos-br/cvms.txt").read().split(",")}
 U = "https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx/ListarDocumentos"
-def lista(cat, de="01/11/2026", ate="08/11/2026"):
+def lista(cat, de, ate):
     corpo = {"dataDe": de, "dataAte": ate, "empresa": "", "setorAtividade": "-1", "categoriaEmissor": "-1",
              "situacaoEmissor": "-1", "tipoParticipante": "-1", "dataReferencia": "", "categoria": cat,
              "periodo": "2", "horaIni": "", "horaFim": "", "palavraChave": "", "ultimaDtRef": "false",
              "tipoEmpresa": "0", "token": "", "versaoCaptcha": ""}
     r = urllib.request.Request(U, data=json.dumps(corpo).encode(), headers={"Content-Type": "application/json; charset=utf-8"})
-    return json.loads(urllib.request.urlopen(r, timeout=90).read())["d"]["dados"]
-d = lista("EST_3")
-linhas = d.split("&*")
-print(len(linhas), "linhas")
-alvo = [l for l in linhas if "SUZANO" in l.upper() or "ALUPAR" in l.upper()]
-for l in alvo[:2]:
-    print(l[:3000]); print("-----")
-m = re.search(r"OpenDownloadDocumentos\(([^)]*)\)", alvo[0]) or re.search(r"OpenPopUpVer\(([^)]*)\)", alvo[0])
-print("args", m and m.group(1))
-args = [a.strip("' ") for a in m.group(1).split(",")]
-print(args)
-seq, ver, prot = args[0], args[1], args[2]
-url = f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo=ITR&CodigoInstituicao=1&numProtocolo={prot}&numSequencia={seq}&numVersao={ver}"
-print(url)
-import subprocess, os, struct, zlib
-ok = False
-for tent in range(4):
-    if os.path.exists("/tmp/d.zip"): os.remove("/tmp/d.zip")
-    r = subprocess.run(["curl", "-sS", "--http1.1", "-o", "/tmp/d.zip", "-w", "%{http_code} %{size_download}", url], capture_output=True, text=True)
-    print("curl", tent, r.returncode, r.stdout, r.stderr[:120])
+    d = json.loads(urllib.request.urlopen(r, timeout=90).read())["d"]["dados"]
+    out = []
+    for l in d.split("&*"):
+        c = l.split("$&")
+        m = re.search(r"OpenDownloadDocumentos\('(\d+)','(\d+)','([^']+)','(\w+)'\)", l)
+        if len(c) < 7 or not m:
+            continue
+        ref = re.search(r"(\d{2})/(\d{2})/(\d{4})", c[5]); rec = re.search(r"(\d{2})/(\d{2})/(\d{4})", c[6])
+        out.append({"cvm": int(re.sub(r"\D", "", c[0])[:-1]), "nome": c[1], "ref": f"{ref[3]}-{ref[2]}-{ref[1]}",
+                    "receb": f"{rec[3]}-{rec[2]}-{rec[1]}", "seq": m[1], "ver": m[2], "prot": m[3], "tipo": m[4]})
+    return out
+def xml_doc(d):
+    url = (f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo={d['tipo']}&CodigoInstituicao=1"
+           f"&numProtocolo={d['prot']}&numSequencia={d['seq']}&numVersao={d['ver']}")
+    with urllib.request.urlopen(url, timeout=120) as r:
+        h = r.read(30)
+        if h[:4] != b"PK\x03\x04":
+            return None
+        fl, met, _, _, crc, csz, usz, nl, xl = struct.unpack("<HHHHIIIHH", h[6:30])
+        nome = r.read(nl).decode("cp437"); r.read(xl)
+        if not nome.lower().endswith(".xml") or fl & 8:
+            print("   primeira entrada", nome, fl); return None
+        b = b""
+        while len(b) < csz:
+            p = r.read(min(1 << 20, csz - len(b)))
+            if not p: break
+            b += p
+    return zlib.decompress(b, -15) if met == 8 else b
+def dres(x):
+    raiz = ET.fromstring(x)
+    esc = raiz.findtext(".//EscalaMoeda")
+    mult = 1000 if esc == "2" else 1
+    blocos = []
+    for pai in raiz.iter():
+        for dr in pai.findall("DemonstracaoResultado"):
+            contas = {}
+            for c in dr.iter("Conta"):
+                cod = c.findtext("CodigoConta"); ds = gf.norm(c.findtext("DescricaoConta") or "")
+                def v(t):
+                    s = c.findtext(t)
+                    try: return float(s) * mult
+                    except (TypeError, ValueError): return None
+                contas[cod] = (ds, v("TrimestreAtual"), v("TrimestreAnterior"), v("AcumuladoExercicioAtual"), v("AcumuladoExercicioAnterior"))
+            blocos.append((pai.tag, contas))
+    return esc, blocos
+t0 = time.time()
+docs = [d for d in lista("EST_3", "01/10/2026", "08/11/2026") if d["ref"] == "2026-09-30"]
+print(len(docs), "ITR 3T26 no RAD;", len({d['cvm'] for d in docs}), "empresas;", len([d for d in docs if d['cvm'] in CVMS]), "das nossas por comunicado")
+for d in [d for d in docs if d["cvm"] in CVMS][:60]:
     try:
-        zipfile.ZipFile("/tmp/d.zip"); ok = True; break
+        x = xml_doc(d)
     except Exception as e:
-        print("  incompleto", e)
-b = open("/tmp/d.zip", "rb").read()
-# zip cortado: lê as entradas locais em sequência
-pos = 0; ents = {}
-while b[pos:pos+4] == b"PK\x03\x04":
-    fl, met, _, _, crc, csz, usz, nl, xl = struct.unpack("<HHHHIIIHH", b[pos+6:pos+30])
-    nome = b[pos+30:pos+30+nl].decode("cp437"); ini = pos+30+nl+xl
-    print("  entrada", nome, met, csz, usz, fl)
-    if fl & 8 or ini+csz > len(b): print("  (para aqui)"); break
-    ents[nome] = zlib.decompress(b[ini:ini+csz], -15) if met == 8 else b[ini:ini+csz]
-    pos = ini+csz
-for n, dado in ents.items():
-    if n.lower().endswith(".xml"):
-        x = dado.decode("utf-8", "replace")
-        print("XML", len(x)); print(x[:1500])
-        tags = {}
-        for t in re.findall(r"<(\w+)[ >]", x): tags[t] = tags.get(t, 0) + 1
-        print(sorted(tags.items(), key=lambda a: -a[1])[:60])
-        for cod in ("<CodigoConta>3.01<", "<CodigoConta>3.11<"):
-            k = x.find(cod); print(cod, k); print(x[max(0, k-1500):k+2500] if k >= 0 else "")
-    if n.lower().endswith((".itr", ".dfp")):
-        z2 = zipfile.ZipFile(io.BytesIO(dado))
-        for n2 in z2.namelist(): print("   ", n2, z2.getinfo(n2).file_size)
-        for n2 in z2.namelist():
-            if "InfoFinaDFin" in n2:
-                x = z2.read(n2).decode("utf-8", "replace")
-                k = x.find("<CodigoConta>3.01"); print(x[max(0, k-1200):k+1800])
-raise SystemExit
-z = zipfile.ZipFile(io.BytesIO(b))
-for n in z.namelist(): print(" ", n, z.getinfo(n).file_size)
-for n in z.namelist():
-    if n.lower().endswith((".itr", ".dfp")):
-        z2 = zipfile.ZipFile(io.BytesIO(z.read(n)))
-        for n2 in z2.namelist(): print("   ", n2, z2.getinfo(n2).file_size)
-        for n2 in z2.namelist():
-            if "InfoFinaDFin" in n2:
-                x = z2.read(n2).decode("utf-8", "replace")
-                i = x.find("3.01")
-                print(x[max(0, i-1500):i+1500])
+        print(d["cvm"], d["nome"], "ERRO", e); continue
+    if not x:
+        print(d["cvm"], d["nome"], "sem xml"); continue
+    esc, bl = dres(x)
+    res = []
+    for tag, c in bl:
+        dre_u = {k: (v[0], v[1]) for k, v in c.items() if v[1] is not None}
+        dre_p = {k: (v[0], v[2]) for k, v in c.items() if v[2] is not None}
+        u = gf.metricas(dre_u, {}, {}, {}, False); p = gf.metricas(dre_p, {}, {}, {}, False)
+        res.append(f"{tag}: rec {u['receita']} ({p['receita']}) luc {u['lucro']} ({p['lucro']})")
+    print(d["cvm"], d["nome"][:30], d["receb"], f"{len(x)//1000}k esc{esc}", " | ".join(res), f"{time.time()-t0:.0f}s")
