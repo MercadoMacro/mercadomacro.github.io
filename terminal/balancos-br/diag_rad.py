@@ -21,15 +21,35 @@ print(args)
 seq, ver, prot = args[0], args[1], args[2]
 url = f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo=ITR&CodigoInstituicao=1&numProtocolo={prot}&numSequencia={seq}&numVersao={ver}"
 print(url)
-import subprocess, os
-for tent in range(6):
-    r = subprocess.run(["curl", "-sS", "--http1.1", "-C", "-", "-o", "/tmp/d.zip", "-w", "%{http_code} %{size_download}", url], capture_output=True, text=True)
-    print("curl", tent, r.returncode, r.stdout, r.stderr[:200], os.path.getsize("/tmp/d.zip") if os.path.exists("/tmp/d.zip") else 0)
+import subprocess, os, struct, zlib
+ok = False
+for tent in range(4):
+    if os.path.exists("/tmp/d.zip"): os.remove("/tmp/d.zip")
+    r = subprocess.run(["curl", "-sS", "--http1.1", "-o", "/tmp/d.zip", "-w", "%{http_code} %{size_download}", url], capture_output=True, text=True)
+    print("curl", tent, r.returncode, r.stdout, r.stderr[:120])
     try:
-        zipfile.ZipFile("/tmp/d.zip"); break
+        zipfile.ZipFile("/tmp/d.zip"); ok = True; break
     except Exception as e:
-        print("  ainda não", e)
+        print("  incompleto", e)
 b = open("/tmp/d.zip", "rb").read()
+# zip cortado: lê as entradas locais em sequência
+pos = 0; ents = {}
+while b[pos:pos+4] == b"PK\x03\x04":
+    fl, met, _, _, crc, csz, usz, nl, xl = struct.unpack("<HHHHIIIHH", b[pos+6:pos+30])
+    nome = b[pos+30:pos+30+nl].decode("cp437"); ini = pos+30+nl+xl
+    print("  entrada", nome, met, csz, usz, fl)
+    if fl & 8 or ini+csz > len(b): print("  (para aqui)"); break
+    ents[nome] = zlib.decompress(b[ini:ini+csz], -15) if met == 8 else b[ini:ini+csz]
+    pos = ini+csz
+for n, dado in ents.items():
+    if n.lower().endswith((".itr", ".dfp")):
+        z2 = zipfile.ZipFile(io.BytesIO(dado))
+        for n2 in z2.namelist(): print("   ", n2, z2.getinfo(n2).file_size)
+        for n2 in z2.namelist():
+            if "InfoFinaDFin" in n2:
+                x = z2.read(n2).decode("utf-8", "replace")
+                k = x.find("<CodigoConta>3.01"); print(x[max(0, k-1200):k+1800])
+raise SystemExit
 z = zipfile.ZipFile(io.BytesIO(b))
 for n in z.namelist(): print(" ", n, z.getinfo(n).file_size)
 for n in z.namelist():
