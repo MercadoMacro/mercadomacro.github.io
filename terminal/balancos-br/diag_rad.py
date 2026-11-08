@@ -1,18 +1,36 @@
 # diagnóstico temporário: lê ITR direto do RAD da CVM (não vai para o main)
-import json, urllib.request, io, zipfile, re, sys
+import json, urllib.request, io, zipfile, re
 U = "https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx/ListarDocumentos"
-def lista(cat, cvm="", de="01/11/2026", ate="08/11/2026"):
-    corpo = {"dataDe": de, "dataAte": ate, "empresa": cvm, "setorAtividade": "-1", "categoriaEmissor": "-1",
+def lista(cat, de="01/11/2026", ate="08/11/2026"):
+    corpo = {"dataDe": de, "dataAte": ate, "empresa": "", "setorAtividade": "-1", "categoriaEmissor": "-1",
              "situacaoEmissor": "-1", "tipoParticipante": "-1", "dataReferencia": "", "categoria": cat,
              "periodo": "2", "horaIni": "", "horaFim": "", "palavraChave": "", "ultimaDtRef": "false",
              "tipoEmpresa": "0", "token": "", "versaoCaptcha": ""}
     r = urllib.request.Request(U, data=json.dumps(corpo).encode(), headers={"Content-Type": "application/json; charset=utf-8"})
-    try:
-        t = urllib.request.urlopen(r, timeout=60).read().decode("utf-8", "replace")
-    except Exception as e:
-        print(cat, cvm, "ERRO", e, getattr(e, "read", lambda: b"")()[:300]); return None
-    print(cat, cvm, len(t), t[:600].replace("\\n", " "))
-    return t
-for cat in ("EST_3", "EST_4", "IPE_-1_-1_-1"):
-    lista(cat)
-t = lista("EST_3", "013986")
+    return json.loads(urllib.request.urlopen(r, timeout=90).read())["d"]["dados"]
+d = lista("EST_3")
+linhas = d.split("&*")
+print(len(linhas), "linhas")
+alvo = [l for l in linhas if "SUZANO" in l.upper() or "ALUPAR" in l.upper()]
+for l in alvo[:2]:
+    print(l[:3000]); print("-----")
+m = re.search(r"OpenDownloadDocumentos\(([^)]*)\)", alvo[0]) or re.search(r"OpenPopUpVer\(([^)]*)\)", alvo[0])
+print("args", m and m.group(1))
+args = [a.strip("' ") for a in m.group(1).split(",")]
+print(args)
+seq, ver, prot = args[0], args[1], args[2]
+url = f"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext&descTipo=ITR&CodigoInstituicao=1&numProtocolo={prot}&numSequencia={seq}&numVersao={ver}"
+print(url)
+b = urllib.request.urlopen(url, timeout=120).read()
+print("bytes", len(b), b[:4])
+z = zipfile.ZipFile(io.BytesIO(b))
+for n in z.namelist(): print(" ", n, z.getinfo(n).file_size)
+for n in z.namelist():
+    if n.lower().endswith((".itr", ".dfp")):
+        z2 = zipfile.ZipFile(io.BytesIO(z.read(n)))
+        for n2 in z2.namelist(): print("   ", n2, z2.getinfo(n2).file_size)
+        for n2 in z2.namelist():
+            if "InfoFinaDFin" in n2:
+                x = z2.read(n2).decode("utf-8", "replace")
+                i = x.find("3.01")
+                print(x[max(0, i-1500):i+1500])
