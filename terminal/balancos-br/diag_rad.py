@@ -42,6 +42,14 @@ while b[pos:pos+4] == b"PK\x03\x04":
     ents[nome] = zlib.decompress(b[ini:ini+csz], -15) if met == 8 else b[ini:ini+csz]
     pos = ini+csz
 for n, dado in ents.items():
+    if n.lower().endswith(".xml"):
+        x = dado.decode("utf-8", "replace")
+        print("XML", len(x)); print(x[:1500])
+        tags = {}
+        for t in re.findall(r"<(\w+)[ >]", x): tags[t] = tags.get(t, 0) + 1
+        print(sorted(tags.items(), key=lambda a: -a[1])[:60])
+        for cod in ("<CodigoConta>3.01<", "<CodigoConta>3.11<"):
+            k = x.find(cod); print(cod, k); print(x[max(0, k-1500):k+2500] if k >= 0 else "")
     if n.lower().endswith((".itr", ".dfp")):
         z2 = zipfile.ZipFile(io.BytesIO(dado))
         for n2 in z2.namelist(): print("   ", n2, z2.getinfo(n2).file_size)
