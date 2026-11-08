@@ -58,7 +58,7 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-colete)"/></svg><g class="pet-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g></g>
+      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-colete)"/></svg><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><rect x="25" y="165" width="67" height="92"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -280,7 +280,7 @@
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
     <image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-mini-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-colete)"/></svg>
-    <g class="mini-braco"><image href="robo-braco.webp${V}" width="326" height="302"/></g>
+    <g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><rect x="25" y="165" width="67" height="92"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
     <rect class="mini-olho" x="199.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
