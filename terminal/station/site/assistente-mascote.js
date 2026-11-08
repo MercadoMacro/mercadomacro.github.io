@@ -58,7 +58,7 @@
       <clipPath id="petVisor"><rect x="80" y="56" width="166" height="104" rx="32"/></clipPath>
     </defs>
     <g class="pet-tudo">
-      <g class="pet-corpo"><image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-colete)"/></svg><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><rect x="25" y="165" width="67" height="92"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g>
+      <g class="pet-corpo"><image href="robo-colete-integrado.webp${V}" width="326" height="302"/><g class="pet-braco"><defs><clipPath id="jade-braco-limpo"><rect x="25" y="165" width="67" height="92"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-braco-limpo)"/></g></g>
       <g class="pet-cabeca"><g class="pet-cabeca-in">
         <image href="robo-cabeca.webp${V}" width="326" height="302"/>
         <g class="pet-rosto" filter="url(#petLuz)" clip-path="url(#petVisor)">
@@ -126,7 +126,7 @@
     #ia-fab .pet { position:absolute; left:0; top:0; width:100px; height:93px; overflow:visible; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
     #ia-fab .ia-pet-sombra { position:absolute; left:24px; bottom:0; width:54px; height:6px; border-radius:50%; background:rgba(0,0,0,.4); filter:blur(2px); animation:pet-sombra 3.2s ease-in-out infinite; }
     #ia-fab .pet-tudo { animation:pet-flutua 3.2s ease-in-out infinite; }
-    #ia-fab .pet-corpo { transform-box:view-box; transform-origin:163px 300px; animation:pet-respira 4.8s ease-in-out infinite; }
+    #ia-fab .pet-corpo { transform-box:view-box; transform-origin:163px 294px; animation:pet-respira 4.8s ease-in-out infinite; }
     #ia-fab .ia-pet.humor-off .pet-corpo { animation-duration:3.8s; }
     #ia-fab .ia-pet.humor-on .pet-tudo, #ia-fab .ia-pet.humor-on .ia-pet-sombra { animation-duration:4.2s; }
     #ia-fab .pet-cabeca { transform-box:view-box; transform-origin:163px 186px; transform:rotate(var(--hr,0deg)) translate(var(--hx,0px),0); transition:transform .5s cubic-bezier(.3,1.4,.5,1); }
@@ -226,7 +226,7 @@
   }
   @keyframes pet-flutua { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
   @keyframes pet-sombra { 0%,100% { transform:scaleX(1); opacity:1; } 50% { transform:scaleX(.82); opacity:.65; } }
-  @keyframes pet-respira { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.004,.995); } }
+  @keyframes pet-respira { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.009,1.012); } }
   @keyframes pet-balanca { 0%,100% { transform:rotate(0); } 25% { transform:rotate(-1deg); } 50% { transform:rotate(0); } 75% { transform:rotate(.8deg); } }
   @keyframes pet-acena { 0%,100% { transform:rotate(0); } 30% { transform:rotate(-7deg); } 70% { transform:rotate(5deg); } }
   @keyframes pet-sim { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(5px) rotate(1deg); } }
@@ -279,7 +279,7 @@
 
   // robô pequeno (celular e tablet): mesmas camadas, olhos simples, sem filtro
   const MINI = `<svg viewBox="0 0 326 302" aria-hidden="true">
-    <image href="robo-corpo.webp${V}" width="326" height="302"/><svg x="0" y="0" width="326" height="302"><defs><clipPath id="jade-mini-colete"><path d="M105 179H222L229 212L222 246L200 269L198 292H99L101 234Z"/></clipPath></defs><image href="robo-casaco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-colete)"/></svg>
+    <image href="robo-colete-integrado.webp${V}" width="326" height="302"/>
     <g class="mini-braco"><defs><clipPath id="jade-mini-braco-limpo"><rect x="25" y="165" width="67" height="92"/></clipPath></defs><image href="robo-braco.webp${V}" width="326" height="302" clip-path="url(#jade-mini-braco-limpo)"/></g>
     <image href="robo-cabeca.webp${V}" width="326" height="302"/>
     <rect class="mini-olho" x="107.5" y="89.5" width="17.5" height="34.3" rx="8.7" fill="#ffd86e"/>
