@@ -1877,6 +1877,20 @@ function newsBusca(list) {
   return list.filter(n => newsSemAcento([n.titulo, n.tituloOriginal, n.trecho, n.trechoPt, n.resumo, n.fonte, n.veiculo].join(' ')).includes(q));
 }
 
+// "Novas desde a sua última visita" (09/11/2026): guarda neste aparelho quando a pessoa viu a aba Notícias pela última vez.
+// Na sessão vale o horário da visita anterior; o novo horário é gravado ao sair da página ou depois de 30 s com a aba aberta.
+const NEWS_VISTO_KEY = 'mm_news_visto_v1';
+let newsVistoSessao;
+function newsVistoAntes() {
+  if (newsVistoSessao === undefined) {
+    let v = 0; try { v = Number(localStorage.getItem(NEWS_VISTO_KEY)) || 0; } catch (e) { /* sem armazenamento */ }
+    newsVistoSessao = v;
+    const grava = () => { try { if (document.getElementById('news-panel')?.classList.contains('active')) localStorage.setItem(NEWS_VISTO_KEY, String(Date.now())); } catch (e) { /* sem armazenamento */ } };
+    setInterval(grava, 30000);
+    window.addEventListener('pagehide', grava);
+  }
+  return newsVistoSessao;
+}
 function renderNewsView() {
   const view = document.getElementById('news-view');
   if (!view) return;
@@ -1903,7 +1917,16 @@ function renderNewsView() {
   const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
   // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
   let criticos = 0;
-  view.innerHTML = '<div class="nc-grid">' + destaques.map((n, idx) => {
+  // Divisórias por horário (09/11/2026): Última hora, Hoje, Ontem e Antes, mantendo a ordem de relevância dentro de cada uma
+  const diaBrt = (t) => new Date(t - 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const hojeBrt = diaBrt(Date.now()), ontemBrt = diaBrt(Date.now() - 86400000);
+  const grupoDe = (n) => Date.now() - n.data < 60 * 60 * 1000 ? 0 : diaBrt(n.data) === hojeBrt ? 1 : diaBrt(n.data) === ontemBrt ? 2 : 3;
+  const GRUPOS = ['Última hora', 'Hoje', 'Ontem', 'Antes'];
+  const ordem = destaques.map((n, idx) => [n, idx]).sort((a, b) => grupoDe(a[0]) - grupoDe(b[0]) || a[1] - b[1]);
+  const usados = new Set(ordem.map(([n]) => grupoDe(n)));
+  const visto = newsVistoAntes();
+  let grupoAtual = -1;
+  const cartao = ([n, idx]) => {
     let nivel = n.nivel.toLowerCase();
     if (nivel === 'critico' && ++criticos > 5) nivel = 'alto';
     const impactBadge = nivel === 'critico' ? '<span class="nc-impact critico">Alto impacto</span>'
@@ -1921,12 +1944,18 @@ function renderNewsView() {
       ? `<img class="nc-img" src="${escapeHTML(n.imagem)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
     const mins = newsReadMins(n);
     const read = AppState.readArticles.has(n.link) ? ' read' : '';
-    return `
-      <a href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer" class="nc-card ${nivel}${isLead ? ' nc-lead' : ''}${img ? ' com-img' : ''}${read}" data-id="${escapeHTML(n.id)}">
+    const novo = !read && visto && n.data > visto ? ' nc-novo' : '';
+    const veic = n.veiculo && n.veiculo !== srcName ? `<span class="nc-veic">${escapeHTML(n.veiculo)}</span>` : '';
+    const hora = new Date(n.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const g = grupoDe(n);
+    const sep = usados.size > 1 && g !== grupoAtual ? `${grupoAtual === -1 ? '' : '</div>'}<div class="nc-sep">${GRUPOS[g]}</div><div class="nc-grid">` : '';
+    grupoAtual = g;
+    return `${sep}
+      <a href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer" class="nc-card ${nivel}${isLead ? ' nc-lead' : ''}${img ? ' com-img' : ''}${read}${novo}" data-id="${escapeHTML(n.id)}">
         ${img}
         <div class="nc-top">
           <span class="nc-source" style="${newsSourceBadgeStyle(n.fonte)}">${escapeHTML(srcName)}</span>
-          <span class="nc-time">${timeAgoShort(n.data)}</span>
+          <span class="nc-time" title="${escapeHTML(new Date(n.data).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}">${hora} · ${timeAgoShort(n.data)}</span>
           ${mins ? `<span class="nc-mins" title="Tempo de leitura do texto disponível">${mins} min</span>` : ''}
           <button class="nc-star${picked.has(n.id) ? ' on' : ''}" data-id="${escapeHTML(n.id)}" title="Mandar ao cliente (entra nos Destaques do resumo)">★</button>
         </div>
@@ -1934,13 +1963,14 @@ function renderNewsView() {
         <div class="nc-title">${escapeHTML(n.titulo)}</div>
         ${exc ? `<p class="nc-excerpt">${escapeHTML(exc)}</p>` : ''}${falas}
         <div class="nc-footer">
-          ${impactBadge}
+          ${veic}${impactBadge}
           ${(n.tags || []).map(t => `<span class="nc-tag ${t.toLowerCase()}">${t}</span>`).join('')}
           ${rel}${tr}
           <span class="nc-readhere">${n.resumo ? 'Ler aqui' : 'Ver'} <i class="fas fa-arrow-right"></i></span>
         </div>
       </a>`;
-  }).join('') + '</div>';
+  };
+  view.innerHTML = (usados.size > 1 ? '' : '<div class="nc-grid">') + ordem.map(cartao).join('') + '</div>';
 
 }
 

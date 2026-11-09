@@ -67,8 +67,16 @@
       const v = cont[b.dataset.source] || 0;
       if (c.textContent !== String(v)) c.textContent = v;
       b.classList.toggle('nw2-vazio', !v);
+      b.dataset.nw2n = v;
       const dot = b.querySelector('.ns-dot');
       if (dot && !dot.style.getPropertyValue('--c')) dot.style.setProperty('--c', dot.style.backgroundColor || '#64748b');
+    });
+    // fontes sem notícia vão para o fim de cada grupo (09/11/2026); entre as com notícia, a ordem original
+    sb.querySelectorAll('.ns-sub-list').forEach((lista) => {
+      const bs = [...lista.querySelectorAll(':scope > .ns-sub-bubble')];
+      bs.forEach((b, i) => { if (!b.dataset.nw2o) b.dataset.nw2o = i; });
+      const ord = [...bs].sort((a, b) => (!+a.dataset.nw2n - !+b.dataset.nw2n) || (a.dataset.nw2o - b.dataset.nw2o));
+      if (ord.some((b, i) => b !== bs[i])) ord.forEach((b) => lista.append(b));
     });
     if (!abriu && window.matchMedia('(min-width: 901px)').matches) { abriu = true; newsOpenCategory = 'br'; updateNewsCategoryUI(); }
     const tot = $('#nw2-total'); if (tot) tot.textContent = newsAll.length || '';
@@ -79,7 +87,7 @@
   const encurta = () => {
     if (!info) return;
     const m = info.textContent.match(/(\d{2}:\d{2})(:\d{2})?/);
-    const curto = m ? `Última atualiz.: ${m[1]}${m[2] || ''}` : null;
+    const curto = m ? `Atualizado ${m[1]}` : null;
     const alvo = info.querySelector('.nw2-hora');
     if (curto && (!alvo || alvo.textContent !== curto)) {
       info.title = info.textContent.trim();
