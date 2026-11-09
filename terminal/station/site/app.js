@@ -130,6 +130,9 @@ const NEWS_SOURCES = {
   'CNBC':             { letter: 'C',   color: '#a78bfa', scope: 'int', name: 'CNBC' },
   'WSJ':              { letter: 'WS',  color: '#cbd5e1', scope: 'int', name: 'WSJ Markets' },
   'CoinDesk':         { letter: 'CD',  color: '#3b82f6', scope: 'int', name: 'CoinDesk' },
+  'Proactive Investors': { letter: 'PI', color: '#0d9488', scope: 'int', name: 'Proactive Investors' },
+  'Nasdaq':           { letter: 'NQ',  color: '#0ea5e9', scope: 'int', name: 'Nasdaq' },
+  'Seeking Alpha':    { letter: 'SA',  color: '#f97316', scope: 'int', name: 'Seeking Alpha' },
   'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' },
   'Invezz':           { letter: 'IZ',  color: '#2dd4bf', scope: 'int', name: 'Invezz' }
 };
@@ -1184,7 +1187,7 @@ function newsRank(n) {
   return (n.finalScore || 0) - ageH * 4;
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
-const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance', 'WSJ', 'CoinDesk']);
+const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance', 'WSJ', 'CoinDesk', 'Proactive Investors', 'Nasdaq', 'Seeking Alpha']);
 const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha',
   'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
 // Política fica desligada até a pessoa ligar (botão na lateral das Notícias); escolha guardada neste aparelho

@@ -15,6 +15,11 @@ const FEEDS = [
   // Seeking Alpha barram leitura automática (403 / "Just a moment...") e ficaram de fora
   { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9 },
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss', source: 'CoinDesk', weight: 6 },
+  // em teste (09/11/2026, pedido do Severino): do GitHub vieram barrados; lidos daqui com identificação honesta.
+  // Se seguirem barrados, a fonte fica com 0 na lista e sai na próxima revisão (nada de driblar o bloqueio)
+  { name: 'Proactive Investors', url: 'https://www.proactiveinvestors.com.au/rss.xml', source: 'Proactive Investors', weight: 5, honesto: true },
+  { name: 'Nasdaq Markets', url: 'https://www.nasdaq.com/feed/rssoutbound?category=Markets', source: 'Nasdaq', weight: 6, honesto: true },
+  { name: 'Seeking Alpha', url: 'https://seekingalpha.com/tag/wall-st-breakfast.xml', source: 'Seeking Alpha', weight: 6, honesto: true },
 
   // ============ BRASIL ============
   { name: 'Valor', url: 'https://www.valor.com.br/rss', source: 'Valor Econômico', weight: 8 },
@@ -204,7 +209,8 @@ async function fetchOneFeed(feed, fresco) {
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     const response = await fetch(feed.url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      // feeds em teste (honesto): o site se identifica como Mercado Macro, sem se passar por navegador
+      headers: { 'User-Agent': feed.honesto ? 'MercadoMacro/1.0 (+https://mercadomacro.com.br)' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       signal: controller.signal,
       // fresco: lê direto da fonte, sem a cópia de 90 s guardada na borda (notícias em tempo real, 07/11/2026)
       ...(fresco ? { cache: 'no-store' } : { cf: { cacheTtl: 90, cacheEverything: true } })
