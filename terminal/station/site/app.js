@@ -1211,7 +1211,53 @@ function newsAplicaTraducao(n) {
   if (t[1]) n.trechoPt = t[1];
 }
 // tira notícias velhas, o "FinancialJuice:" do começo e aplica as traduções já guardadas
+// Notícias Agrícolas lidas no navegador do leitor (09/11/2026): o site deles passou a barrar leitura automática
+// pelo servidor ("Just a moment..."), então o widget público deles (feito para outros sites colarem) é carregado
+// aqui, num quadro escondido, e as manchetes viram cartões como as outras fontes. Falhou: só essa fonte fica de fora.
+const NEWS_NA_URL = 'https://www.noticiasagricolas.com.br/widgets/noticias?subsecao=163,14,80,84,32,213,218,164,117,118,214&qtd=30&output=js';
+let newsNa = [], newsNaEm = 0;
+function newsNaLe(doc) {
+  const itens = []; let dia = null;
+  doc.querySelectorAll('.na_dia, li').forEach(el => {
+    const t = (el.textContent || '').trim();
+    if (el.classList.contains('na_dia')) { const m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); dia = m ? m[3] + '-' + m[2] + '-' + m[1] : null; return; }
+    const a = el.querySelector('a[href]'), h = t.match(/^(\d{1,2}):(\d{2})\s*\|/);
+    if (!dia || !a || !h) return;
+    const link = String(a.getAttribute('href') || '').replace(/\?utm_[^#]*$/, '');
+    if (!/^https:\/\/www\.noticiasagricolas\.com\.br\//.test(link)) return;
+    const i = a.querySelector('i'), veiculo = i ? (i.textContent.match(/^\s*\(([^)]{1,60})\)\s*$/) || [])[1] || '' : '';
+    const titulo = Array.from(a.childNodes).filter(n => n.nodeName !== 'I').map(n => n.textContent).join('').replace(/\s+/g, ' ').trim();
+    const data = Date.parse(dia + 'T' + h[1].padStart(2, '0') + ':' + h[2] + ':00-03:00');
+    if (!titulo || !Number.isFinite(data) || data > Date.now() + 10 * 60 * 1000) return;
+    itens.push({ titulo, link, resumo: '', palavras: 0, trecho: '', fonte: 'Notícias Agrícolas', veiculo, data, impactScore: 0, finalScore: 5, nivel: 'NORMAL', tags: [], imagem: null });
+  });
+  return itens;
+}
+function newsNaCarrega() {
+  if (Date.now() - newsNaEm < 5 * 60 * 1000 || !document.body) return;
+  newsNaEm = Date.now();
+  const f = document.createElement('iframe');
+  f.hidden = true; f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1;
+  const fim = setTimeout(() => f.remove(), 20000);
+  f.onload = () => {
+    clearTimeout(fim);
+    let itens = [];
+    try { itens = newsNaLe(f.contentDocument); } catch (e) { /* widget fora do ar: só essa fonte fica de fora */ }
+    f.remove();
+    if (!itens.length) return;
+    newsNa = itens;
+    if (newsBruto.length) newsApplyUpdate(newsBruto, true);
+  };
+  f.srcdoc = '<!doctype html><meta charset="utf-8"><body><script src="' + NEWS_NA_URL.replace(/&/g, '&amp;') + '"><\/script></body>';
+  document.body.appendChild(f);
+}
+function newsNaJunta(list) {
+  if (!newsNa.length || !Array.isArray(list)) return list;
+  const links = new Set(list.map(n => String(n && n.link || '').replace(/&amp;/g, '&').replace(/\?utm_[^#]*$/, '')));
+  return list.concat(newsNa.filter(n => !links.has(n.link)).map(n => ({ ...n })));
+}
 function newsPrepara(list) {
+  list = newsNaJunta(list);
   const agora = Date.now();
   const out = newsFixIds(list).filter(n => n && n.titulo && n.data && agora - n.data < NEWS_MAX_IDADE);
   out.forEach(n => {
@@ -1702,6 +1748,7 @@ async function fetchNewsOnce(silent = false) {
   const info = document.getElementById('news-info');
   if (info && !silent) info.classList.add('loading');
   const seq = ++newsFetchSeq, streamRevision = newsStreamRevision; // se outra busca começar depois, esta é descartada
+  newsNaCarrega();
 
   try {
     const preferLive = newsCurrentMode === 'live' && !!document.getElementById('news-panel')?.classList.contains('active');
