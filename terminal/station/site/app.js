@@ -115,6 +115,7 @@ const NEWS_SOURCES = {
   'Suno':             { letter: 'SU',  color: '#84cc16', scope: 'br', name: 'Suno' },
   'BMC News':         { letter: 'BM',  color: '#14b8a6', scope: 'br', name: 'BMC News' },
   'Notícias Agrícolas': { letter: 'NA', color: '#65a30d', scope: 'br', name: 'Notícias Agrícolas' },
+  'Folha':            { letter: 'FO',  color: '#0284c7', scope: 'br', name: 'Folha Mercado' },
   'O Antagonista':    { letter: 'OA',  color: '#dc2626', scope: 'pol', name: 'O Antagonista' },
   'Poder360':         { letter: 'P3',  color: '#2563eb', scope: 'pol', name: 'Poder360' },
   'G1 Política':      { letter: 'G1',  color: '#c4170c', scope: 'pol', name: 'G1 Política' },
@@ -127,6 +128,8 @@ const NEWS_SOURCES = {
   'FX Markets':       { letter: 'FX',  color: '#8b5cf6', scope: 'int', name: 'FX Markets' },
   'ING Think':        { letter: 'ING', color: '#f97316', scope: 'int', name: 'ING Think' },
   'CNBC':             { letter: 'C',   color: '#a78bfa', scope: 'int', name: 'CNBC' },
+  'WSJ':              { letter: 'WS',  color: '#cbd5e1', scope: 'int', name: 'WSJ Markets' },
+  'CoinDesk':         { letter: 'CD',  color: '#3b82f6', scope: 'int', name: 'CoinDesk' },
   'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' },
   'Invezz':           { letter: 'IZ',  color: '#2dd4bf', scope: 'int', name: 'Invezz' }
 };
@@ -1181,8 +1184,8 @@ function newsRank(n) {
   return (n.finalScore || 0) - ageH * 4;
 }
 // fontes que chegam em inglês (o worker de notícias não consegue mais traduzir: o Google recusa pedidos vindos de servidores)
-const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance']);
-const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas',
+const NEWS_EN = new Set(['Bloomberg', 'Financial Juice', 'ForexLive', 'Zero Hedge', 'FXStreet', 'FX Markets', 'ING Think', 'CNBC', 'MarketWatch', 'Yahoo Finance', 'WSJ', 'CoinDesk']);
+const NEWS_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha',
   'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
 // Política fica desligada até a pessoa ligar (botão na lateral das Notícias); escolha guardada neste aparelho
 const NEWS_POL_KEY = 'news_politica_v1';
