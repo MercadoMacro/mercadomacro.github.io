@@ -1,0 +1,62 @@
+/* Aba Notícias, melhorias de 09/11/2026 (noticias3.js). Por cima do bloco "NOTÍCIAS NO MODELO DO SEVERINO". */
+
+/* barra de cima: uma linha só no computador */
+#nw3-fontes { display:none; gap:6px; }
+#nw3-fontes .nw3-n { min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--accent); color:#1a1205; font:700 10.5px 'JetBrains Mono', monospace; display:inline-flex; align-items:center; justify-content:center; }
+#nw3-fontes .nw3-n[hidden] { display:none; }
+body.nw3 .nw3-acoes { display:contents; }
+@media (min-width: 1200px) {
+  body.nw3 #news-panel .news-toolbar { flex-wrap:nowrap; }
+  body.nw3 .news-toolbar .news-search { flex:1 1 200px; min-width:150px; }
+  body.nw3 .news-toolbar .btn-sm { white-space:nowrap; flex:none; }
+}
+
+/* cartões: selo da fonte discreto, veículo e horário exato */
+body.nw3 .nc-source { text-transform:none !important; letter-spacing:0 !important; font-size:11.5px !important; font-weight:700 !important;
+  background:transparent !important; border:0 !important; padding:0 !important; display:inline-flex !important; align-items:center; gap:6px; }
+body.nw3 .nc-source::before { content:''; flex:none; width:7px; height:7px; border-radius:50%; background:currentColor; }
+body.nw3 .nc-top .nc-source { flex:none; max-width:none !important; }
+body.nw3 .nc-veic { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:var(--text-3); white-space:nowrap; }
+body.nw3 .nc-veic::before { content:'via '; }
+body.nw3 .nc-top { gap:8px; }
+body.nw3 .nc-top .nc-time { flex:none; margin-left:auto; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--text-3); white-space:nowrap; }
+body.nw3 .nc-footer { padding-top:10px; }
+
+/* lidas mais apagadas; novas desde a última visita com um ponto */
+body.nw3 .nc-card.read { opacity:.62; }
+body.nw3 .nc-card.read:hover { opacity:1; }
+body.nw3 .nc-card.nc-novo .nc-title::before { content:''; display:inline-block; width:7px; height:7px; margin:0 7px 2px 0; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); vertical-align:middle; }
+
+/* divisórias por horário */
+body.nw3 .nc-sep { display:flex; align-items:center; gap:12px; margin:22px 0 12px; font-size:10.5px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--text-3); }
+body.nw3 .nc-sep::after { content:''; flex:1; height:1px; background:var(--line); }
+body.nw3 #news-view > .nc-sep:first-child { margin-top:2px; }
+
+/* celular: notícias primeiro; fontes num painel que sobe de baixo */
+@media (max-width: 900px) {
+  #nw3-fontes { display:inline-flex; order:4; height:40px; }
+  body.nw3 #news-panel .news-toolbar { gap:6px; padding:8px; margin-bottom:12px; }
+  body.nw3 .news-toolbar .news-search { order:3; flex:1 1 0; min-width:0; }
+  body.nw3 .news-toolbar .news-search { height:40px; }
+  /* botões menores numa faixa que rola de lado, abaixo da busca */
+  body.nw3 .nw3-acoes { order:5; flex:1 0 100%; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -8px -2px; padding:0 8px 2px; }
+  body.nw3 .nw3-acoes::-webkit-scrollbar { display:none; }
+  body.nw3 .nw3-acoes .btn-sm { flex:none; height:32px; padding:0 10px; font-size:12px; white-space:nowrap; }
+  body.nw3 .nw3-acoes #news-refresh-btn { width:32px; padding:0; }
+  body.nw3 .news-layout { display:block; }
+  body.nw3 #source-sidebar { display:none; }
+  body.nw3.nw3-fontes #source-sidebar { display:flex; position:fixed; z-index:2100; left:0; right:0; bottom:0; top:auto;
+    max-height:78vh; overflow-y:auto; margin:0; border-radius:16px 16px 0 0; border:1px solid var(--line-2); border-bottom:0;
+    background:var(--surface); box-shadow:0 -12px 40px rgba(0,0,0,.45); padding:14px 14px calc(14px + env(safe-area-inset-bottom)); }
+  body.nw3.nw3-fontes #source-sidebar::before { content:''; align-self:center; width:40px; height:4px; border-radius:2px; background:var(--line-2); margin:-4px 0 4px; }
+  #nw3-fundo { position:fixed; inset:0; z-index:2090; background:rgba(3,6,12,.55); }
+  #nw3-fundo[hidden] { display:none; }
+  body.nw3-fontes { overflow:hidden; }
+  .nw3-fechar { flex:1 0 100%; position:sticky; bottom:0; margin-top:6px; height:44px; border:0; border-radius:10px; background:var(--accent); color:#1a1205; font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
+  body.nw3 .news-assets { margin-bottom:10px; }
+  body.nw3 .nc-sep { margin:16px 0 10px; }
+}
+@media (min-width: 901px) { .nw3-fechar, #nw3-fundo { display:none !important; } }
+body.nw3-fontes .aba-borda, body.nw3-fontes #ia-fab, body.nw3-fontes #fab-summary { visibility:hidden; }
