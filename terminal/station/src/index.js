@@ -213,8 +213,10 @@ export default {
       out.headers.set('Cache-Control', 'private, no-cache');
       out.headers.set('X-Content-Type-Options', 'nosniff');
       if ((out.headers.get('Content-Type') || '').includes('text/html')) {
-        out.headers.set('X-Frame-Options', 'DENY');
-        out.headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+        // A Macro 12 abre em um iframe do próprio terminal, após validar a sessão.
+        const macro12 = r.ok && (p === '/hp12' || p === '/hp12.html');
+        out.headers.set('X-Frame-Options', macro12 ? 'SAMEORIGIN' : 'DENY');
+        out.headers.set('Content-Security-Policy', macro12 ? "frame-ancestors 'self'" : "frame-ancestors 'none'");
         out.headers.set('Referrer-Policy', 'same-origin');
       }
       return out;
