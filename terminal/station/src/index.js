@@ -511,7 +511,7 @@ async function noticiasDasAcoes(tickers) {
 }
 // principais notícias do dia: as de maior nota da aba Notícias (worker news, mesmas fontes e mesma nota do site),
 // publicadas nas últimas 16 horas, sem repetir assunto e só em português (título traduzido ou fonte brasileira)
-const FONTES_PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
+const FONTES_PT = new Set(['Folha', 'Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News']);
 async function noticiasDoDia() {
   // usa a lista do site se estiver no cache (ler os 25 feeds aqui passaria do limite de pedidos do fechamento)
   const lista = await listaNoticias();

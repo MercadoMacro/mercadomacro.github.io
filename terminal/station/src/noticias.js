@@ -11,10 +11,16 @@ const FEEDS = [
   { name: 'FX Markets', url: 'https://www.fx-markets.com/feeds/rss', source: 'FX Markets', weight: 7 },
   { name: 'ING Think', url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', source: 'ING Think', weight: 7 },
   { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC', weight: 7 },
+  // 09/11/2026, sugestões do Severino testadas: WSJ Markets e CoinDesk respondem; Proactive Investors, Nasdaq e
+  // Seeking Alpha barram leitura automática (403 / "Just a moment...") e ficaram de fora
+  { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9 },
+  { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss', source: 'CoinDesk', weight: 6 },
 
   // ============ BRASIL ============
   { name: 'Valor', url: 'https://www.valor.com.br/rss', source: 'Valor Econômico', weight: 8 },
   { name: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', source: 'InfoMoney', weight: 8 },
+  // Folha Mercado (09/11/2026): o feed vem em ISO-8859-1; lerFeed() converte para os acentos saírem certos
+  { name: 'Folha Mercado', url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml', source: 'Folha', weight: 8 },
   { name: 'Investing BR', url: 'https://br.investing.com/rss/news.rss', source: 'Investing.com BR', weight: 7 },
   { name: 'ADVFN BR', url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', source: 'ADVFN BR', weight: 6 },
   { name: 'Notícia Brasil', url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', source: 'Notícia Brasil', weight: 5 },
@@ -176,6 +182,22 @@ export function widgetNaParaRss(js, agora = Date.now()) {
   return out;
 }
 
+// Feeds em ISO-8859-1/Windows-1252 (ex.: Folha) viram texto com os acentos certos; o resto segue em UTF-8
+const CP1252 = { 0x80: 0x20ac, 0x82: 0x201a, 0x83: 0x192, 0x84: 0x201e, 0x85: 0x2026, 0x86: 0x2020, 0x87: 0x2021, 0x88: 0x2c6, 0x89: 0x2030, 0x8a: 0x160, 0x8b: 0x2039, 0x8c: 0x152, 0x8e: 0x17d,
+  0x91: 0x2018, 0x92: 0x2019, 0x93: 0x201c, 0x94: 0x201d, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014, 0x98: 0x2dc, 0x99: 0x2122, 0x9a: 0x161, 0x9b: 0x203a, 0x9c: 0x153, 0x9e: 0x17e, 0x9f: 0x178 };
+export function decodificaFeed(bytes, contentType = '') {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const cabeca = String.fromCharCode(...u8.subarray(0, 200));
+  const cs = ((String(contentType).match(/charset=([\w-]+)/i) || cabeca.match(/encoding=["']([\w-]+)["']/i) || [])[1] || 'utf-8').toLowerCase();
+  if (!/^(iso-8859-1|latin1|windows-1252|cp1252)$/.test(cs)) return new TextDecoder('utf-8').decode(u8);
+  let out = '';
+  for (let i = 0; i < u8.length; i += 8192) out += String.fromCharCode(...Array.from(u8.subarray(i, i + 8192), (b) => CP1252[b] || b));
+  return out;
+}
+async function lerFeed(response) {
+  return decodificaFeed(new Uint8Array(await response.arrayBuffer()), response.headers.get('Content-Type') || '');
+}
+
 async function fetchOneFeed(feed, fresco) {
   try {
     const controller = new AbortController();
@@ -190,7 +212,7 @@ async function fetchOneFeed(feed, fresco) {
 
     if (!response.ok) { clearTimeout(timeout); return []; }
     // o tempo limite também vale para o corpo: um feed travado não segura a resposta inteira
-    const bruto = await response.text().finally(() => clearTimeout(timeout));
+    const bruto = await lerFeed(response).finally(() => clearTimeout(timeout));
     const xmlText = feed.widget === 'na' ? widgetNaParaRss(bruto) : bruto;
     const noticias = [];
     const itemRegex = /<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/g;
