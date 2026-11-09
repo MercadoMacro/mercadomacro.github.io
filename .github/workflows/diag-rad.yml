@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, sparse-checkout: terminal/station/src }
       - run: |
-          for i in 1 2 3 4 5 6; do
-            curl -sS -o /tmp/n.json -D /tmp/h.txt -w "pedido $i: HTTP %{http_code} em %{time_total}s, %{size_download} bytes, " https://news.cota-cotacao10.workers.dev/
-            grep -i '^x-cache' /tmp/h.txt | tr -d '\r'; echo " itens: $(jq length /tmp/n.json 2>/dev/null)"
-            sleep 3
-          done
-          sleep 35
-          curl -sS -o /dev/null -D /tmp/h.txt -w "depois de 35s: %{time_total}s " https://news.cota-cotacao10.workers.dev/; grep -i '^x-cache' /tmp/h.txt
-          curl -sS -o /dev/null -D /tmp/h.txt -w "logo em seguida: %{time_total}s " https://news.cota-cotacao10.workers.dev/; grep -i '^x-cache' /tmp/h.txt
+          U='https://www.noticiasagricolas.com.br/widgets/noticias?subsecao=163,14,80,84,32,213,218,164,117,118,214&qtd=30&output=js'
+          curl -sS -o /tmp/na.js -w "HTTP %{http_code} %{size_download} bytes\n" "$U"
+          head -c 2500 /tmp/na.js; echo; echo ----
+          grep -o 'na_dia[^<]*<' /tmp/na.js | head
+          printf '%s\n' "import { widgetNaParaRss } from './terminal/station/src/noticias.js';" "import fs from 'fs';" "const x = widgetNaParaRss(fs.readFileSync('/tmp/na.js','utf8'));" "const it = [...x.matchAll(/<pubDate>([^<]*)<\/pubDate>/g)].map(m=>m[1]);" "console.log('itens', it.length, 'primeiro', it[0], 'ultimo', it[it.length-1]);" > t.mjs
+          node t.mjs
