@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id), C = MMFinance.Calculator, calc = new C(), storageKey = 'mercadomacro_macro12_v2';
-  const fmt = (x, decimals = calc.decimals) => Math.abs(x) >= 1e10 || (x !== 0 && Math.abs(x) < 10 ** -Math.max(decimals, 7)) ? x.toExponential(6).replace('.', ',') : x.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const fmt = (x, decimals = calc.decimals) => calc.scientific ? x.toExponential(6).replace('.', ',') : Math.abs(x) >= 1e10 || (x !== 0 && Math.abs(x) < 10 ** -Math.max(decimals, 7)) ? x.toExponential(6).replace('.', ',') : x.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   const compact = x => x.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
   const keys = [
     ['n','n','AMORT','12×'],['i','i','INT','12÷'],['PV','PV','NPV','CF₀'],['PMT','PMT','RND','CFj'],['FV','FV','IRR','Nj'],['CHS','CHS','','DATE'],['7','7','','BEG'],['8','8','','END'],['9','9','','MEM'],['/','÷','',''],
@@ -15,7 +15,7 @@
   keys.forEach(([key, label, f, g], index) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'key' + (/^\d$/.test(key) ? ' num' : '') + (key === 'ENTER' ? ' enter' : '') + (key === 'ON' ? ' on' : '') + (key === 'f' || key === 'g' ? ' shift-' + key : ''); b.dataset.key = key;
     if (index >= 30) { b.style.gridRow = 4; b.style.gridColumn = index < 35 ? index - 29 : index - 28; }
-    const top = document.createElement('span'); top.className = 'flabel' + (f === 'PRICE' || f === 'YTM' ? ' muted' : ''); top.textContent = f;
+    const top = document.createElement('span'); top.className = 'flabel'; top.textContent = f;
     const center = document.createElement('span'); center.textContent = label;
     const bottom = document.createElement('span'); bottom.className = 'glabel'; bottom.textContent = g;
     b.append(top, center, bottom); b.setAttribute('aria-label', label + (f ? '; f: ' + f : '') + (g ? '; g: ' + g : '')); b.onclick = () => press(key); buttons.set(key, b); $('keys').appendChild(b);
@@ -25,19 +25,19 @@
   function element(tag, text, cls) { const x = document.createElement(tag); x.textContent = text; if (cls) x.className = cls; return x; }
   function register(label, value, cls) { const div = element('div', '', 'reg' + (cls ? ' ' + cls : '')); div.append(element('b', label), document.createTextNode(compact(value))); return div; }
   function draw() {
-    $('display').textContent = calc.off ? '' : calc.error ? 'Erro' : calc.editing ? calc.entry.replace('.', ',').replace('e', ' E') : fmt(calc.s[0]);
-    $('status').textContent = calc.off ? 'OFF' : [calc.fin.begin ? 'BEGIN' : 'END', calc.dateFormat === 'DMY' ? 'D.MY' : 'M.DY', calc.shift, calc.pending, calc.recording ? 'PRGM ' + String(calc.pc).padStart(2, '0') : '', calc.running ? 'RUN ' + String(calc.pc).padStart(2, '0') : ''].filter(Boolean).join(' · ');
+    $('display').textContent = calc.off ? '' : calc.error ? (/Error \d/.exec(calc.error)?.[0] || 'Erro') : calc.recording ? calc.programDisplay() : calc.special ? calc.special : calc.editing ? calc.entry.replace('.', ',').replace('e', ' E') : fmt(calc.s[0]);
+    $('status').textContent = calc.off ? 'OFF' : [calc.fin.begin ? 'BEGIN' : 'END', calc.fin.compound ? 'C' : '', calc.dateFormat === 'DMY' ? 'D.MY' : 'M.DY', calc.shift, calc.pending, calc.recording ? 'PRGM ' + String(calc.pc).padStart(2, '0') : '', calc.running ? 'RUN ' + String(calc.pc).padStart(2, '0') : ''].filter(Boolean).join(' · ');
     $('stack').textContent = calc.off ? '' : 'Y ' + compact(calc.s[1]) + ' · Z ' + compact(calc.s[2]) + ' · T ' + compact(calc.s[3]);
     $('note').textContent = calc.error || calc.message; $('note').classList.toggle('error', !!calc.error);
     buttons.get('f').classList.toggle('selected', calc.shift === 'f'); buttons.get('g').classList.toggle('selected', calc.shift === 'g');
     $('registers').replaceChildren(...['n','i','PV','PMT','FV'].map(k => register(k + (k === 'i' ? ' (%)' : ''), calc.fin[k])));
-    $('mem-grid').replaceChildren(...calc.mem.map((v, i) => register('R' + (i > 9 ? '.' + (i - 10) : i), v, 'memory')));
+    $('mem-grid').replaceChildren(...calc.mem.slice(0,calc.availableRegisters()).map((v, i) => register('R' + (i > 9 ? '.' + (i - 10) : i), v, 'memory')));
     $('steps').replaceChildren(...calc.history.slice(-10).reverse().map(h => { const li = element('li', names[h.key] || h.key); li.append(element('span', fmt(h.x))); return li; }));
     if (!calc.history.length) $('steps').append(element('li', 'Nenhuma operação.'));
-    const count = calc.cashCount, flows = [];
-    for (let j = 0; j <= count; j++) { const tr = document.createElement('tr'); tr.append(element('td', 'CF' + j), element('td', fmt(j === 20 ? calc.fin.FV : calc.mem[j])), element('td', j === 0 ? '1' : String(calc.repeats[j]))); flows.push(tr); }
+    const count = Math.min(calc.cashCount, calc.availableRegisters()), flows = [];
+    for (let j = 0; j <= count; j++) { const tr = document.createElement('tr'); tr.append(element('td', 'CF' + j), element('td', fmt(j === calc.availableRegisters() ? calc.fin.FV : calc.mem[j])), element('td', j === 0 ? '1' : String(calc.repeats[j]))); flows.push(tr); }
     $('flows-body').replaceChildren(...flows);
-    $('program').replaceChildren(...calc.program.map((p, i) => element('li', String(i + 1).padStart(2, '0') + '  ' + (names[p] || p))));
+    $('program').replaceChildren(...calc.program.map((p, i) => element('li', String(i + 1).padStart(2, '0') + '  ' + calc.programCode(i) + '  ·  ' + (names[p] || p))));
     if (!calc.program.length) $('program').append(element('li', 'Nenhuma instrução gravada.'));
   }
   let timer = null, iterations = 0;
@@ -58,14 +58,16 @@
   $('memory-file').onchange = async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 100000) throw Error('Arquivo de memória grande demais.'); const fresh = new C(); if (!fresh.restore(JSON.parse(await file.text()))) throw Error('Arquivo de memória inválido.'); clearTimeout(timer); timer = null; Object.assign(calc, fresh); calc.message = 'Memória importada.'; save(); } catch (e) { calc.error = e.message; } draw(); event.target.value = ''; };
   const parse = s => { s = s.trim(); if (!s || !/^[+-]?[\d.,]+$/.test(s)) throw Error('Valor inválido no fluxo de caixa.'); const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); return MMFinance.number(n); };
   $('apply-flows').onclick = () => {
-    try { const lines = $('flow-input').value.trim().split(/\n/); if (lines.length < 2 || lines.length > 21) throw Error('Informe CF₀ e de 1 a 20 grupos de fluxos.'); const flows = lines.map((line, j) => { const parts = line.split(';'); if (parts.length > 2) throw Error('Use valor;repetições em cada linha.'); const value = parse(parts[0]), count = parts.length > 1 ? parse(parts[1]) : 1; if (!Number.isInteger(count) || count < 1 || count > 99 || (j === 0 && count !== 1)) throw Error('Repetições: 1 a 99; CF₀ deve ter uma.'); return { value, count }; });
-      if (calc.recording || calc.running) throw Error('Encerre o programa antes de editar os fluxos.'); calc.mem.fill(0); calc.repeats.fill(1); flows.forEach((f,j) => { if (j === 20) calc.fin.FV = f.value; else calc.mem[j] = f.value; calc.repeats[j] = f.count; }); calc.cashCount = flows.length - 1; calc.fin.n = calc.cashCount; calc.dirty = false; calc.message = 'Fluxos aplicados. Cadastre a taxa em i e use f PV para o VPL.'; calc.error = ''; save();
+    try { const lines = $('flow-input').value.trim().split(/\n/); if (lines.length < 1 || lines.length > calc.availableRegisters()+1) throw Error('Informe CF₀ e até ' + calc.availableRegisters() + ' grupos de fluxos.'); const flows = lines.map((line, j) => { const parts = line.split(';'); if (parts.length > 2) throw Error('Use valor;repetições em cada linha.'); const value = parse(parts[0]), count = parts.length > 1 ? parse(parts[1]) : 1; if (!Number.isInteger(count) || count < 0 || count > 99 || (j === 0 && count !== 1)) throw Error('Repetições: 0 a 99; CF₀ deve ter uma.'); return { value, count }; });
+      if (calc.recording || calc.running) throw Error('Encerre o programa antes de editar os fluxos.'); calc.mem.fill(0); calc.repeats.fill(1); flows.forEach((f,j) => { if (j === calc.availableRegisters()) calc.fin.FV = f.value; else calc.mem[j] = f.value; calc.repeats[j] = f.count; }); calc.cashCount = flows.length - 1; calc.fin.n = calc.cashCount; calc.dirty = false; calc.message = 'Fluxos aplicados. Cadastre a taxa em i e use f PV para o VPL.'; calc.error = ''; save();
     } catch (e) { calc.error = e.message; } draw();
   };
   const examples = {
     compound: { keys: ['f','CLX','1','2','n','1','i','1','0','0','0','CHS','PV','0','PMT','FV'], caption: '12 n · 1 i · 1000 CHS PV · 0 PMT · FV → 1.126,83' },
     loan: { keys: ['f','CLX','1','2','n','1','i','1','0','0','0','0','PV','0','FV','PMT'], caption: '12 n · 1 i · 10000 PV · 0 FV · PMT → −888,49 por mês (END).' },
     cash: { keys: ['f','CLX','1','0','0','0','CHS','g','PV','6','0','0','g','PMT','2','g','FV','1','0','i','f','PV'], caption: 'CF₀ −1.000 · CFj 600 · Nj 2 · i 10% → VPL 41,32. Agora f FV → TIR 13,07%.' },
+    bond: { keys: ['f','CLX','8','.','2','5','i','6','.','7','5','PMT','g','4','2','8','.','0','4','2','0','0','4','ENTER','4','.','0','6','2','0','1','8','f','power'], caption: 'Cupom 6,75% · YTM 8,25% · 28/04/2004 a 04/06/2018 → PRICE 87,62 por 100 de face. x↔y mostra os juros acumulados.' },
+    odd: { keys: ['f','CLX','3','6','.','5','n','1','.','2','5','i','4','5','0','0','PV','0','FV','PMT'], caption: '36,5 períodos · i 1,25% · PV 4.500 → PMT; STO EEX alterna o indicador C. Recalcule PMT após mudar o modo.' },
     date: { keys: ['f','CLX','g','4','8','.','1','1','2','0','2','6','ENTER','8','.','1','2','2','0','2','6','g','EEX'], caption: '08/11/2026 ENTER 08/12/2026 · g EEX → 30 dias corridos.' }
   };
   document.querySelectorAll('[data-example]').forEach(b => { b.onclick = () => { clearTimeout(timer); timer = null; calc.running = false; calc.recording = false; calc.off = false; calc.pending = ''; calc.shift = ''; const ex = examples[b.dataset.example]; calc.fin.begin = false; ex.keys.forEach(key => calc.press(key)); $('example-caption').textContent = ex.caption; save(); draw(); }; });
