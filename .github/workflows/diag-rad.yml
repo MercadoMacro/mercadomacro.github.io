@@ -10,12 +10,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, sparse-checkout: terminal/station/src }
       - run: |
-          U='https://www.noticiasagricolas.com.br/widgets/noticias?subsecao=163,14,80,84,32,213,218,164,117,118,214&qtd=30&output=js'
-          curl -sS -o /tmp/na.js -w "HTTP %{http_code} %{size_download} bytes\n" "$U"
-          head -c 2500 /tmp/na.js; echo; echo ----
-          grep -o 'na_dia[^<]*<' /tmp/na.js | head
-          printf '%s\n' "import { widgetNaParaRss } from './terminal/station/src/noticias.js';" "import fs from 'fs';" "const x = widgetNaParaRss(fs.readFileSync('/tmp/na.js','utf8'));" "const it = [...x.matchAll(/<pubDate>([^<]*)<\/pubDate>/g)].map(m=>m[1]);" "console.log('itens', it.length, 'primeiro', it[0], 'ultimo', it[it.length-1]);" > t.mjs
-          node t.mjs
+          for U in 'http://feeds.folha.uol.com.br/mercado/rss091.xml' 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain' 'https://www.proactiveinvestors.com.au/rss.xml' 'https://www.nasdaq.com/feed/rssoutbound?category=Markets' 'https://seekingalpha.com/tag/wall-st-breakfast.xml' 'https://www.coindesk.com/arc/outboundfeeds/rss'; do
+            echo "=== $U"
+            curl -sSL -m 20 -o /tmp/f.xml -D /tmp/h.txt -w "HTTP %{http_code} %{size_download} bytes %{time_total}s\n" "$U" || echo "falhou"
+            grep -i "^content-type" /tmp/h.txt | tail -1
+            head -c 200 /tmp/f.xml | tr '\n' ' '; echo
+            echo "itens: $(grep -o '<item' /tmp/f.xml | wc -l)"
+            grep -o '<pubDate>[^<]*' /tmp/f.xml | head -3
+            grep -o '<title>[^<]*' /tmp/f.xml | sed -n '2,5p'
+            grep -o '<description>' /tmp/f.xml | wc -l | sed 's/^/descricoes: /'
+            grep -o 'media:content\|<enclosure' /tmp/f.xml | sort | uniq -c
+          done
