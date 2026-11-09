@@ -1222,12 +1222,19 @@ function newsNaLe(doc) {
     const t = (el.textContent || '').trim();
     if (el.classList.contains('na_dia')) { const m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); dia = m ? m[3] + '-' + m[2] + '-' + m[1] : null; return; }
     const a = el.querySelector('a[href]'), h = t.match(/^(\d{1,2}):(\d{2})\s*\|/);
-    if (!dia || !a || !h) return;
+    if (!a || !h) return;
+    let d = dia;
+    if (!d) { // as de hoje vêm sem cabeçalho de data (só os dias anteriores têm): hoje em Brasília, ou ontem se o horário ainda não chegou
+      const b = new Date(Date.now() - 3 * 3600 * 1000);
+      let t = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
+      if (t + ((+h[1] + 3) * 60 + +h[2]) * 60000 > Date.now() + 10 * 60 * 1000) t -= 86400000;
+      d = new Date(t).toISOString().slice(0, 10);
+    }
     const link = String(a.getAttribute('href') || '').replace(/\?utm_[^#]*$/, '');
     if (!/^https:\/\/www\.noticiasagricolas\.com\.br\//.test(link)) return;
     const i = a.querySelector('i'), veiculo = i ? (i.textContent.match(/^\s*\(([^)]{1,60})\)\s*$/) || [])[1] || '' : '';
     const titulo = Array.from(a.childNodes).filter(n => n.nodeName !== 'I').map(n => n.textContent).join('').replace(/\s+/g, ' ').trim();
-    const data = Date.parse(dia + 'T' + h[1].padStart(2, '0') + ':' + h[2] + ':00-03:00');
+    const data = Date.parse(d + 'T' + h[1].padStart(2, '0') + ':' + h[2] + ':00-03:00');
     if (!titulo || !Number.isFinite(data) || data > Date.now() + 10 * 60 * 1000) return;
     itens.push({ titulo, link, resumo: '', palavras: 0, trecho: '', fonte: 'Notícias Agrícolas', veiculo, data, impactScore: 0, finalScore: 5, nivel: 'NORMAL', tags: [], imagem: null });
   });
