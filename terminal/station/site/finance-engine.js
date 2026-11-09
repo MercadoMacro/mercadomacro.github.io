@@ -236,6 +236,7 @@
         case 'power': this.binary((y, x) => Math.pow(y, x)); break;
         case 'reciprocal': this.unary(x => 1 / x); break;
         case 'sqrt': this.unary(Math.sqrt); break;
+        case 'square': this.unary(x => x * x); break;
         case 'ln': this.unary(Math.log); break;
         case 'exp': this.unary(Math.exp); break;
         case 'frac': this.unary(x => x - Math.trunc(x)); break;
@@ -346,7 +347,7 @@
     }
   }
   Calculator.fMap = { n: 'amort', i: 'simpleInterest', PV: 'NPV', PMT: 'round', FV: 'IRR', power: 'PRICE', reciprocal: 'YTM', percentTotal: 'SL', deltaPercent: 'SOYD', percent: 'DB', 'R/S': 'record', SST: 'clearStats', roll: 'clearProgram', swap: 'clearFin', CLX: 'clearReg', ENTER: 'prefix', '.': 'scientific' };
-  Calculator.gMap = { n: 'times12', i: 'divide12', PV: 'CF0', PMT: 'CFj', FV: 'Nj', CHS: 'DATE', '7': 'begin', '8': 'end', '9': 'memory', power: 'sqrt', reciprocal: 'exp', percentTotal: 'ln', deltaPercent: 'frac', percent: 'int', EEX: 'days', '4': 'DMY', '5': 'MDY', '6': 'weighted', 'R/S': 'pause', SST: 'BST', roll: 'GTO', swap: 'xLEy', CLX: 'xEQ0', ENTER: 'lastX', '1': 'estimateX', '2': 'estimateY', '3': 'factorial', '0': 'mean', '.': 'std', sigmaPlus: 'sigmaMinus' };
+  Calculator.gMap = { '*': 'square', n: 'times12', i: 'divide12', PV: 'CF0', PMT: 'CFj', FV: 'Nj', CHS: 'DATE', '7': 'begin', '8': 'end', '9': 'memory', power: 'sqrt', reciprocal: 'exp', percentTotal: 'ln', deltaPercent: 'frac', percent: 'int', EEX: 'days', '4': 'DMY', '5': 'MDY', '6': 'weighted', 'R/S': 'pause', SST: 'BST', roll: 'GTO', swap: 'xLEy', CLX: 'xEQ0', ENTER: 'lastX', '1': 'estimateX', '2': 'estimateY', '3': 'factorial', '0': 'mean', '.': 'std', sigmaPlus: 'sigmaMinus' };
   const api = { Calculator, solve, npv, irr, decodeDate, encodeDate, number, bondPrice, bondYield, bondSchedule, precision };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.MMFinance = api;
 })(typeof globalThis === 'object' ? globalThis : this);

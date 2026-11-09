@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Calculator, solve, npv, irr, decodeDate, encodeDate } = require('./finance-engine.js');
+const { Calculator, solve, npv, irr, decodeDate, encodeDate } = require('../site/finance-engine.js');
 const close = (a,b,t=1e-7) => assert.ok(Math.abs(a-b)<=t, `${a} != ${b}`);
 function run(keys, c=new Calculator()) { keys.forEach(k=>{c.press(k); assert.equal(c.error,'',`Key ${k}: ${c.error}`);}); return c; }
 function type(c,x){for(const k of String(x))c.press(k==='-'?'CHS':k);}
@@ -60,7 +60,7 @@ test('Scientific exponent entry and sign',()=>close(run(['1','EEX','2','CHS','EN
 test('Depreciation SOYD and DB',()=>{for(const [key,want]of [['deltaPercent',3000],['percent',4000]]){const c=new Calculator();c.fin={n:5,i:200,PV:10000,PMT:0,FV:1000,begin:false};type(c,1);run(['f',key],c);close(c.x,want);}});
 
 // Convenções e exemplos do manual oficial, edição 4 (HP 0012C-900012).
-const F = require('./finance-engine.js');
+const F = require('../site/finance-engine.js');
 const enterNumber = (c,value) => {const negative=value<0;for(const key of String(Math.abs(value)))c.press(key);if(negative)c.press('CHS');assert.equal(c.error,'');};
 test('PRICE matches official bond example, including accrued interest',()=>{const b=F.bondPrice(8.25,6.75,4.282004,6.042018,'MDY');close(b.price,87.62,0.005);close(b.price+b.accrued,90.31,0.005);});
 test('YTM matches official bond yield example',()=>close(F.bondYield(88.375,6.75,4.282004,6.042018,'MDY'),8.15,0.005));
@@ -116,3 +116,5 @@ test('Long maturity bond yield solver tolerates large intermediate prices',()=>{
 test('Fractional useful life is accepted for straight-line depreciation',()=>{const c=new Calculator();c.fin={n:2.5,i:200,PV:1000,PMT:0,FV:0,begin:false};enterNumber(c,1);run(['f','percentTotal'],c);close(c.x,400);});
 
 test('RND rounds decimal ties away from zero',()=>{for(const [keys,want]of [[['1','.','0','0','5'],1.01],[['1','.','0','0','5','CHS'],-1.01]]){const c=run([...keys,'f','2','f','PMT']);close(c.x,want);}});
+test('g × eleva X ao quadrado e guarda LSTx',()=>{const c=run(['3','g','*']);close(c.x,9);close(c.lastX,3);});
+test('g × gravado em programa',()=>{const c=run(['f','R/S','g','*','f','R/S','4','R/S']);while(c.running)c.step();close(c.x,16);});
