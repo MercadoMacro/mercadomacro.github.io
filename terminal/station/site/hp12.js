@@ -6,7 +6,7 @@
   const compact = x => x.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
   const keys = [
     ['n','n','AMORT','12×'],['i','i','INT','12÷'],['PV','PV','NPV','CF₀'],['PMT','PMT','RND','CFj'],['FV','FV','IRR','Nj'],['CHS','CHS','','DATE'],['7','7','','BEG'],['8','8','','END'],['9','9','','MEM'],['/','÷','',''],
-    ['power','yˣ','PRICE','√x'],['reciprocal','1/x','YTM','eˣ'],['percentTotal','%T','SL','LN'],['deltaPercent','Δ%','SOYD','FRAC'],['percent','%','DB','INTG'],['EEX','EEX','','ΔDYS'],['4','4','','D.MY'],['5','5','','M.DY'],['6','6','','x̄w'],['*','×','',''],
+    ['power','yˣ','PRICE','√x'],['reciprocal','1/x','YTM','eˣ'],['percentTotal','%T','SL','LN'],['deltaPercent','Δ%','SOYD','FRAC'],['percent','%','DB','INTG'],['EEX','EEX','','ΔDYS'],['4','4','','D.MY'],['5','5','','M.DY'],['6','6','','x̄w'],['*','×','','x²'],
     ['R/S','R/S','P/R','PSE'],['SST','SST','CLEAR Σ','BST'],['roll','R↓','PRGM','GTO'],['swap','x↔y','FIN','x≤y'],['CLX','CLx','REG','x=0'],['ENTER','ENTER','PREFIX','LST x'],['1','1','','x̂,r'],['2','2','','ŷ,r'],['3','3','','n!'],['-','−','',''],
     ['ON','ON','',''],['f','f','',''],['g','g','',''],['STO','STO','',''],['RCL','RCL','',''],['0','0','','x̄'],['.','•','','s'],['sigmaPlus','Σ+','','Σ−'],['+','+','','']
   ];

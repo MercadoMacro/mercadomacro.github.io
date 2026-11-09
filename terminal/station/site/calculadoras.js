@@ -918,7 +918,7 @@
       it('IPCA 12m', ok(M.ipca) ? pct(M.ipca) : (M.ipcaSrc ? '—' : '…'), M.ipcaSrc) +
       (ok(M.cdi) && ok(M.ipca) ? it('Juro real', pct((1 + M.cdi) / (1 + M.ipca) - 1), 'CDI descontado o IPCA 12 meses') : '') +
       `<em>Banco Central${M.cdiSrc && M.cdiSrc !== 'indisponível' ? ' · ' + esc(M.cdiSrc.replace('BCB ', '')) : ''}</em>` +
-      '<button type="button" class="cl-hp" data-act="hp" title="Calculadora HP 12C"><span>HP</span>12C</button>';
+      '<button type="button" class="cl-hp" data-act="hp" title="Calculadora financeira Macro 12"><span>Macro</span>12</button>';
   }
   function moveBar() {
     const btn = $c(`.cl-subs [data-sub="${S.sub}"]`), bar = $c('.cl-subs-bar');
