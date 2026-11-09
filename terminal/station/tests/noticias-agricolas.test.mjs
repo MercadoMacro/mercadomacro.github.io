@@ -18,5 +18,13 @@ test('widget do Notícias Agrícolas vira itens com data de Brasília, sem utm e
 
 test('resposta fora do formato não inventa notícia', () => {
   assert.equal(widgetNaParaRss('<html>erro</html>'), '');
-  assert.equal(widgetNaParaRss('document.write("<li> 10:00 | <a href=\\"https://x\\">sem dia</a></li>");'), '');
+});
+
+test('notícias de hoje vêm sem cabeçalho de data e ficam com a data de Brasília', () => {
+  const agora = Date.UTC(2026, 10, 9, 22, 30); // 19:30 em Brasília, 09/11
+  const hoje = 'document.write(' + JSON.stringify('<ul> <li> 18:48 | <a href="https://www.noticiasagricolas.com.br/noticias/a.html?utm_source=widgets" target="_blank"> Hoje <i>(Reuters)</i> </a> </li> <li> 21:00 | <a href="https://www.noticiasagricolas.com.br/noticias/b.html"> Ontem à noite </a> </li> <div class="na_dia">06/11/2026</div> <li> 18:38 | <a href="https://www.noticiasagricolas.com.br/noticias/c.html"> Sexta </a> </li></ul>') + ');';
+  const it = widgetNaParaRss(hoje, agora).match(/<pubDate>[^<]*<\/pubDate>/g);
+  assert.deepEqual(it, ['<pubDate>2026-11-09T18:48:00-03:00</pubDate>', '<pubDate>2026-11-08T21:00:00-03:00</pubDate>', '<pubDate>2026-11-06T18:38:00-03:00</pubDate>']);
+  // logo depois da meia-noite em Brasília, o das 21:00 ainda é de ontem
+  assert.match(widgetNaParaRss(hoje, Date.UTC(2026, 10, 10, 3, 5)), /2026-11-09T21:00:00-03:00/);
 });

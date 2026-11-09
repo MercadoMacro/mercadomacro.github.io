@@ -149,7 +149,15 @@ function parseDate(raw) {
 
 // Widget do Notícias Agrícolas: document.write("<div class=na_dia>06/11/2026</div> <li> 18:38 | <a href=...> Título <i>(Reuters)</i></a></li>...")
 // vira itens no formato RSS (horário de Brasília); o veículo entre parênteses vai em <category>
-export function widgetNaParaRss(js) {
+// As notícias do dia de hoje vêm SEM o cabeçalho de data (só os dias anteriores têm "na_dia", visto em 09/11/2026):
+// antes do primeiro cabeçalho vale a data de hoje em Brasília; um horário mais de 10 min à frente do relógio é de ontem.
+export function diaNaHoje(hh, mm, agora = Date.now()) {
+  const brt = new Date(agora - 3 * 3600 * 1000);
+  let d = new Date(Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate()));
+  if (Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +hh + 3, +mm) > agora + 10 * 60 * 1000) d = new Date(+d - 86400000);
+  return d.toISOString().slice(0, 10);
+}
+export function widgetNaParaRss(js, agora = Date.now()) {
   const m = String(js).match(/document\.write\(("(?:[^"\\]|\\.)*")\)/);
   if (!m) return '';
   let h;
@@ -159,11 +167,11 @@ export function widgetNaParaRss(js) {
   let x;
   while ((x = re.exec(h)) !== null) {
     if (x[1]) { dia = x[3] + '-' + x[2] + '-' + x[1]; continue; }
-    if (!dia) continue;
+    const d = dia || diaNaHoje(x[4], x[5], agora);
     const link = x[6].replace(/\?utm_[^"]*$/, '').replace(/&/g, '&amp;');
     const veic = (x[7].match(/<i>\(([^)]{1,60})\)<\/i>/) || [])[1] || '';
     const titulo = x[7].replace(/<i>[\s\S]*?<\/i>/g, '').replace(/<[^>]+>/g, '').trim();
-    out += `<item><title>${titulo}</title><link>${link}</link><pubDate>${dia}T${x[4].padStart(2, '0')}:${x[5]}:00-03:00</pubDate>${veic ? `<category>${veic}</category>` : ''}</item>`;
+    out += `<item><title>${titulo}</title><link>${link}</link><pubDate>${d}T${x[4].padStart(2, '0')}:${x[5]}:00-03:00</pubDate>${veic ? `<category>${veic}</category>` : ''}</item>`;
   }
   return out;
 }
