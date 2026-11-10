@@ -83,11 +83,15 @@
           const meta = chart?.chart?.result?.[0]?.meta || {};
           v.currency = meta.currency || '';
           // dados do dia para o painel do ativo (watchlist-table.js); sem dado, fica "—"
-          const op = (chart?.chart?.result?.[0]?.indicators?.quote?.[0]?.open || []).find((x) => x != null && isFinite(x));
-          v.dia = { abertura: op ?? null, max: meta.regularMarketDayHigh ?? null, min: meta.regularMarketDayLow ?? null, ant: meta.chartPreviousClose ?? meta.previousClose ?? null };
+          const iq = chart?.chart?.result?.[0]?.indicators?.quote?.[0] || {};
+          const op = (iq.open || []).find((x) => x != null && isFinite(x));
+          // o Yahoo às vezes manda máxima, mínima e volume zerados (ações da B3): aí vale o que as barras de 5 min do dia somam
+          const num = (x) => (typeof x === 'number' && isFinite(x) && x > 0 ? x : null);
+          const barras = (k) => (iq[k] || []).filter((x) => typeof x === 'number' && isFinite(x) && x > 0);
+          const hs = barras('high'), ls = barras('low'), vs = barras('volume');
+          v.dia = { abertura: num(op), max: num(meta.regularMarketDayHigh) ?? (hs.length ? Math.max(...hs) : null), min: num(meta.regularMarketDayLow) ?? (ls.length ? Math.min(...ls) : null), ant: num(meta.chartPreviousClose) ?? num(meta.previousClose) };
           // volume do dia e faixa de 52 semanas (tabela da Watchlist, 10/11/2026); sem o dado, a tela mostra "—"
-          const num = (x) => (typeof x === 'number' && isFinite(x) ? x : null);
-          v.vol = num(meta.regularMarketVolume); v.max52 = num(meta.fiftyTwoWeekHigh); v.min52 = num(meta.fiftyTwoWeekLow);
+          v.vol = num(meta.regularMarketVolume) ?? (vs.length ? vs.reduce((a, b) => a + b, 0) : null); v.max52 = num(meta.fiftyTwoWeekHigh); v.min52 = num(meta.fiftyTwoWeekLow);
           out[sym] = { v, name: meta.shortName || meta.longName || '' };
         } catch (e) { /* sem dados para esse ativo */ }
       });
