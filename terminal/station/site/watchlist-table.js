@@ -181,13 +181,16 @@
   let mostrado = {};
 
   /* ---------------- colunas extras: tendência de 5 dias, volume relativo e faixa de 52 semanas ---------------- */
-  const S5 = {}, VM = {}; // símbolo -> { c, em } (5 dias, de 30 em 30 min) | { media, em } (volume médio diário de 3 meses)
+  const S5 = {}, VM = {}, F52 = {}; // F52: mínima/máxima de 52 semanas pelos fechamentos de 1 ano, quando o Yahoo manda zero (ações da B3)
+  const lo52 = (r) => r.quote?.min52 ?? F52[r.symbol]?.lo ?? null, hi52 = (r) => r.quote?.max52 ?? F52[r.symbol]?.hi ?? null;
+  // símbolo -> { c, em } (5 dias, de 30 em 30 min) | { media, em } (volume médio diário de 3 meses)
   let extrasPedindo = false;
   async function pedeExtras() {
     if (extrasPedindo || !user || prefs.mode !== 'table' || !panel.classList.contains('active')) return;
     const syms = state.rows.map(r => r.symbol).filter(s => !/^[@]/.test(s));
     const falta5 = syms.filter(s => !S5[s] || Date.now() - S5[s].em > 15 * 60000), faltaV = syms.filter(s => !VM[s] || Date.now() - VM[s].em > 6 * 3600000);
-    if (!falta5.length && !faltaV.length) return;
+    const falta52 = state.rows.filter(r => r.quote && (!core.number(r.quote.min52) || !core.number(r.quote.max52)) && (!F52[r.symbol] || Date.now() - F52[r.symbol].em > 6 * 3600000)).map(r => r.symbol);
+    if (!falta5.length && !faltaV.length && !falta52.length) return;
     extrasPedindo = true; // falhas também ficam guardadas (com valor vazio), então não há repetição em sequência
     const lote = async (lista, extra, fn) => { for (let i = 0; i < lista.length; i += 45) {
       const part = lista.slice(i, i + 45);
@@ -196,6 +199,7 @@
     } };
     await Promise.all([
       lote(falta5, '&r=5d', (s, v) => { S5[s] = { c: Array.isArray(v?.c) && v.c.length > 1 ? v.c : null, em: Date.now() }; }),
+      lote(falta52, '&r=1y', (s, v) => { const c = Array.isArray(v?.c) ? v.c.filter(x => core.number(x) && x > 0) : []; F52[s] = { lo: c.length > 100 ? Math.min(...c) : null, hi: c.length > 100 ? Math.max(...c) : null, em: Date.now() }; }),
       lote(faltaV, '&vol=1', (s, v) => {
         // média dos dias completos (o último pode ser o pregão de hoje, ainda pela metade)
         const vs = Array.isArray(v?.v) ? v.v.slice(0, -1).filter(x => core.number(x) && x > 0) : [];
@@ -219,7 +223,7 @@
     return core.number(m) && m > 0 ? `${abrev(v)} (${(v / m).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)` : abrev(v);
   }
   function faixa52(td, r, q) {
-    const lo = r.quote?.min52, hi = r.quote?.max52, v = q?.value;
+    const lo = lo52(r), hi = hi52(r), v = q?.value;
     if (!core.number(lo) || !core.number(hi) || hi <= lo || !core.number(v)) { td.textContent = '—'; return; }
     const p = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
     td.innerHTML = `<span class="wt-52" role="img" aria-label="Preço a ${Math.round(p * 100)}% entre a mínima e a máxima de 52 semanas"><i style="left:${(p * 100).toFixed(1)}%"></i></span>`;
@@ -237,7 +241,7 @@
     }
     const n = (v, d = 4) => (core.number(v) ? v.toFixed(d) : '');
     const linhas = [['Ativo', 'Nome', 'Grupo', 'Ultimo', 'Moeda', 'Var dia %', 'Volume', 'Volume medio 3M', 'Min 52 sem', 'Max 52 sem']];
-    for (const r of rows) { const q = r.quote || {}; linhas.push([nice(r.symbol), r.name || '', r.grupo || '', n(q.value), q.currency || '', n(q.change, 2), n(q.vol, 0), n(VM[r.symbol]?.media, 0), n(q.min52), n(q.max52)]); }
+    for (const r of rows) { const q = r.quote || {}; linhas.push([nice(r.symbol), r.name || '', r.grupo || '', n(q.value), q.currency || '', n(q.change, 2), n(q.vol, 0), n(VM[r.symbol]?.media, 0), n(lo52(r)), n(hi52(r))]); }
     const csv = '\ufeff' + linhas.map(l => l.map(x => /[;"\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : x).join(';')).join('\r\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -328,7 +332,7 @@
     }
     const vm = VM[r.symbol]?.media, vh = r.quote?.vol;
     const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant],
-      ['Volume de hoje', vh, 'vol'], ['Volume médio (3 meses)', vm, 'vol'], ['Mínima de 52 semanas', r.quote?.min52], ['Máxima de 52 semanas', r.quote?.max52]];
+      ['Volume de hoje', vh, 'vol'], ['Volume médio (3 meses)', vm, 'vol'], ['Mínima de 52 semanas', lo52(r)], ['Máxima de 52 semanas', hi52(r)]];
     side.querySelector(':scope > .wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
     side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = !core.number(v) || (linhas[i][2] === 'vol' && v <= 0) ? '—' : linhas[i][2] === 'vol' ? abrev(v) : fmt(v, r.quote); });
     pintaComex(r.symbol);
