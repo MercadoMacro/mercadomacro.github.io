@@ -11,12 +11,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          for U in https://www.barchart.com/news/rss/financials https://www.barchart.com/news/rss/commodities https://www.barchart.com/news/rss/stocks; do
-            curl -sSL -m 20 -o /tmp/g.xml -D /tmp/h.txt -w "$U: HTTP %{http_code} %{size_download} bytes, " "$U" || echo falhou
-            echo "itens $(grep -o '<item' /tmp/g.xml | wc -l)"
+          for U in https://capital.com/en-int/news https://capital.com/en-int/news/rss https://capital.com/rss https://capital.com/en-int/analysis/rss; do
+            curl -sSL -m 20 -o /tmp/g.html -D /tmp/h.txt -w "$U: HTTP %{http_code} %{size_download} bytes\n" "$U" || echo falhou
             grep -i "^content-type" /tmp/h.txt | tail -1
-            head -c 160 /tmp/g.xml | tr '\n' ' '; echo
-            grep -o '<pubDate>[^<]*' /tmp/g.xml | head -2
-            grep -o '<title>[^<]*' /tmp/g.xml | sed -n '2,3p'
-            grep -o '<description>' /tmp/g.xml | wc -l | sed 's/^/descricoes /'
+            grep -oiE '<link[^>]+(rss|atom)[^>]*>' /tmp/g.html | head -3
+            grep -oE '"(https?:)?//[a-z0-9.-]*capital\.com/[^"]*(api|news|feed)[^"]*"' /tmp/g.html | sort -u | head -15
+            grep -oE '<item' /tmp/g.html | wc -l | sed 's/^/itens /'
+            grep -o 'Reuters News' /tmp/g.html | wc -l | sed 's/^/reuters /'
+            grep -oE '__NEXT_DATA__|window\.__[A-Z_]+' /tmp/g.html | sort -u | head
           done
