@@ -1172,7 +1172,14 @@ document.addEventListener('keydown', (e) => {
    NOVO SISTEMA DE NOTÍCIAS
    ========================================================= */
 let newsAll = [];
-let newsActiveSources = new Set();
+// fontes escolhidas nas Notícias ficam guardadas neste aparelho (09/11/2026, pedido do Severino: F5 não apaga a escolha)
+const NEWS_FONTES_KEY = 'mm_news_fontes_v1';
+let newsActiveSources = new Set((() => {
+  try { const a = JSON.parse(localStorage.getItem(NEWS_FONTES_KEY) || '[]'); return Array.isArray(a) ? a.filter(k => typeof k === 'string' && NEWS_SOURCES[k]) : []; } catch (e) { return []; }
+})());
+function newsSalvaFontes() {
+  try { if (newsActiveSources.size) localStorage.setItem(NEWS_FONTES_KEY, JSON.stringify([...newsActiveSources])); else localStorage.removeItem(NEWS_FONTES_KEY); } catch (e) { /* sem armazenamento */ }
+}
 let newsOpenCategory = null;
 let newsCurrentMode = 'news';
 let newsLastSeenIds = new Set();
@@ -1200,6 +1207,7 @@ function toggleNewsPolitica() {
   newsPolitica = !newsPolitica;
   try { localStorage.setItem(NEWS_POL_KEY, newsPolitica ? '1' : '0'); } catch (e) { /* silencioso */ }
   if (!newsPolitica) Object.keys(NEWS_SOURCES).forEach(k => { if (NEWS_SOURCES[k].scope === 'pol') newsActiveSources.delete(k); });
+  newsSalvaFontes();
   newsAll = newsBruto.filter(n => newsPolitica || !newsEhPolitica(n));
   buildNewsSidebar();
   updateNewsBubbleStates();
@@ -1623,6 +1631,7 @@ function toggleNewsSource(source) {
     if (newsActiveSources.has(source)) newsActiveSources.delete(source);
     else newsActiveSources.add(source);
   }
+  newsSalvaFontes();
   updateNewsBubbleStates();
   if (source !== 'ALL') closeNewsCategories();
   renderNewsView();
@@ -3492,6 +3501,7 @@ if (liveMode) {
 }
 
 buildNewsSidebar();
+updateNewsBubbleStates(); // fontes guardadas de visitas anteriores
 showNewsSkeleton();
 
 const newsCached = loadNewsFromCache();
