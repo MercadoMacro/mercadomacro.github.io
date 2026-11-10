@@ -205,6 +205,7 @@
     wl3mEnsure().then(wlDecorate);
   }
   async function wlAdd(raw, name, quiet) {
+    if (listsStore.prontaAtiva) { say('Esta é uma lista pronta e não muda. Para montar a sua, escolha ou crie outra lista no menu ⋯.', 'info'); return; }
     if (!listsStore.writable) { say(listsStore.migrating ? 'Preparando suas listas na conta. Aguarde a sincronização.' : 'Aguarde a identificação da conta. Se necessário, reabra o painel.', 'warning'); return; }
     const s = normSym(raw), targetOwner = wlUser, targetList = wlListId;
     if (!s) return;
@@ -232,6 +233,7 @@
   }
   function wlRemove(s) {
     if (!listsStore.writable) return;
+    if (listsStore.prontaAtiva) { say('Esta é uma lista pronta e não muda. Para montar a sua, escolha ou crie outra lista no menu ⋯.', 'info'); return; }
     const it = wl.find((x) => x.s === s);
     wl = wl.filter((x) => x.s !== s);
     wlSave(); wlRender();

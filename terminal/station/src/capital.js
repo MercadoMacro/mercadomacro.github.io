@@ -36,6 +36,11 @@ const ATIVOS = {
   '^GSPC': { indice: ['US500'], busca: 'US 500' },
   '^DJI': { indice: ['US30'], busca: 'US 30' },
 };
+// ETFs dos EUA da lista pronta da Watchlist (10/11/2026, Severino); a mesma lista está em site/watchlists-core.js.
+// A Capital dá as ações e ETFs americanos pelo próprio código (SPY, QQQ...). Os que ela não tiver ficam com o Yahoo.
+export const ETFS_EUA = ['SPY', 'VOO', 'QQQ', 'DIA', 'IWM', 'VTI', 'XLK', 'SMH', 'XLF', 'XLE', 'XLV', 'EWZ', 'EEM', 'EFA', 'TLT', 'IEF', 'LQD', 'HYG', 'GLD', 'SLV', 'USO', 'VNQ'];
+for (const t of ETFS_EUA) ATIVOS[t] = { acao: t };
+const POR_CONEXAO = 40; // a Capital aceita até 40 mercados por conexão de streaming; acima disso abre outra
 const MESES = 'FGHJKMNQUVXZ';
 const vencimento = (epic, pre) => {
   const m = new RegExp('^' + pre + '([' + MESES + '])(20\\d\\d)$').exec(epic);
@@ -46,7 +51,8 @@ export class CapitalRelay {
   constructor(state, env) {
     this.env = env;
     this.clientes = new Set();
-    this.up = null;          // conexão com a Capital
+    this.up = null;          // conexão com a Capital (a primeira; as outras, acima de 40 mercados, ficam em extras)
+    this.extras = [];
     this.ses = null;         // { base, cst, sec }
     this.mapa = null;        // símbolo Yahoo -> [epics]
     this.ultimo = {};        // epic -> { b, o, t, st }
@@ -135,8 +141,8 @@ export class CapitalRelay {
     this.geracao++;
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
-    if (this.up) { try { this.up.close(); } catch (_) {} }
-    this.up = null; this.ses = null;
+    for (const sk of [this.up, ...(this.extras || [])]) { if (sk && sk !== 'abrindo') { try { sk.close(); } catch (_) {} } }
+    this.up = null; this.extras = []; this.ses = null;
   }
 
   async config() {
@@ -168,6 +174,14 @@ export class CapitalRelay {
     const mapa = {};
     for (const [sym, a] of Object.entries(ATIVOS)) {
       if (a.fixo) { mapa[sym] = [a.fixo]; continue; }
+      if (a.acao) {
+        // ETF: só o código exato (outra coisa com nome parecido não serve)
+        const j = await this.rest('/api/v1/markets?searchTerm=' + encodeURIComponent(a.acao)).catch(() => ({}));
+        const m = (j.markets || []).find((x) => String(x.epic || '').toUpperCase() === a.acao);
+        if (m) mapa[sym] = [m.epic];
+        await new Promise((ok) => setTimeout(ok, 120));
+        continue;
+      }
       const j = await this.rest('/api/v1/markets?searchTerm=' + encodeURIComponent(a.busca)).catch(() => ({}));
       if (a.indice) {
         // índice: o código conhecido; se a Capital trocar o código, o mercado de índice com o mesmo nome
@@ -187,9 +201,13 @@ export class CapitalRelay {
 
   // preço e situação (aberto/fechado) de todos os contratos, a cada 5 min; também mantém a sessão viva
   async foto() {
-    const eps = [...new Set(Object.values(this.mapa).flat())];
-    const j = await this.rest('/api/v1/markets?epics=' + eps.join(','));
-    for (const m of j.marketDetails || []) {
+    const eps = [...new Set(Object.values(this.mapa).flat())], det = [];
+    // a Capital aceita até 50 mercados por pedido
+    for (let i = 0; i < eps.length; i += 50) {
+      const j = await this.rest('/api/v1/markets?epics=' + eps.slice(i, i + 50).join(','));
+      det.push(...(j.marketDetails || []));
+    }
+    for (const m of det) {
       const s = m.snapshot || {}, e = m.instrument?.epic || m.epic;
       if (!e) continue;
       const v = this.ultimo[e] || {};
@@ -210,30 +228,36 @@ export class CapitalRelay {
       await this.foto().catch(() => {});
       if (g !== this.geracao) return;
       this.avisa({ tipo: 'mapa', mapa: this.mapa, precos: this.ultimo });
-      const ws = new WebSocket(STREAM);
-      this.up = ws;
-      ws.addEventListener('open', () => {
-        this.tentativa = 0;
-        const eps = [...new Set(Object.values(this.mapa).flat())].slice(0, 40);
-        ws.send(JSON.stringify({ destination: 'marketData.subscribe', correlationId: '1', cst: this.ses.cst, securityToken: this.ses.sec, payload: { epics: eps } }));
-      });
-      ws.addEventListener('message', (ev) => {
-        let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
-        if (m.destination !== 'quote' || !m.payload?.epic) return;
-        const p = m.payload, v = this.ultimo[p.epic] || {};
-        const q = { b: p.bid, o: p.ofr ?? p.offer, t: p.timestamp || Date.now(), st: v.st };
-        this.ultimo[p.epic] = q;
-        this.avisa({ tipo: 'q', e: p.epic, ...q });
-      });
+      // uma conexão a cada 40 mercados (os da Mesa vêm primeiro, os ETFs depois); se uma cair, todas fecham e reabrem juntas
+      const todos = [...new Set(Object.values(this.mapa).flat())], grupos = [];
+      for (let i = 0; i < todos.length; i += POR_CONEXAO) grupos.push(todos.slice(i, i + POR_CONEXAO));
+      const socks = grupos.map(() => new WebSocket(STREAM));
+      this.up = socks[0];
+      this.extras = socks.slice(1);
+      const ws = socks[0];
       const caiu = () => {
         if (this.up !== ws) return;
         this.desligar();
         if (this.clientes.size && !this.novaTentativa) this.novaTentativa = setTimeout(() => { this.novaTentativa = null; if (this.clientes.size && !this.up) this.tentarLigar(); }, 10000);
       };
-      ws.addEventListener('close', caiu);
-      ws.addEventListener('error', caiu);
-      // a Capital pede um ping a cada menos de 10 min
-      this.timers.push(setInterval(() => { try { ws.send(JSON.stringify({ destination: 'ping', correlationId: '2', cst: this.ses.cst, securityToken: this.ses.sec })); } catch (_) {} }, 5 * 60000));
+      socks.forEach((sk, i) => {
+        sk.addEventListener('open', () => {
+          if (i === 0) this.tentativa = 0;
+          sk.send(JSON.stringify({ destination: 'marketData.subscribe', correlationId: '1', cst: this.ses.cst, securityToken: this.ses.sec, payload: { epics: grupos[i] } }));
+        });
+        sk.addEventListener('message', (ev) => {
+          let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+          if (m.destination !== 'quote' || !m.payload?.epic) return;
+          const p = m.payload, v = this.ultimo[p.epic] || {};
+          const q = { b: p.bid, o: p.ofr ?? p.offer, t: p.timestamp || Date.now(), st: v.st };
+          this.ultimo[p.epic] = q;
+          this.avisa({ tipo: 'q', e: p.epic, ...q });
+        });
+        sk.addEventListener('close', caiu);
+        sk.addEventListener('error', caiu);
+      });
+      // a Capital pede um ping a cada menos de 10 min, em cada conexão
+      this.timers.push(setInterval(() => { for (const sk of socks) { try { sk.send(JSON.stringify({ destination: 'ping', correlationId: '2', cst: this.ses.cst, securityToken: this.ses.sec })); } catch (_) {} } }, 5 * 60000));
       this.timers.push(setInterval(() => this.foto().catch(() => {}), 5 * 60000));
     } catch (e) {
       if (g === this.geracao) this.up = null;

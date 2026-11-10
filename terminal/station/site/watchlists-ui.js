@@ -25,16 +25,22 @@
   }
   function render() {
     picker.replaceChildren();
-    for (const list of state.lists) { const o = document.createElement('option'); o.value = list.id; o.textContent = list.name + ' · ' + list.count; picker.append(o); }
+    const opt = (list) => { const o = document.createElement('option'); o.value = list.id; o.textContent = list.name + ' · ' + list.count; return o; };
+    const minhas = state.lists.filter(l => !l.pronta), prontas = state.lists.filter(l => l.pronta);
+    for (const list of minhas) picker.append(opt(list));
+    if (prontas.length) { const g = document.createElement('optgroup'); g.label = 'Listas prontas'; prontas.forEach(l => g.append(opt(l))); picker.append(g); }
+    document.body.classList.toggle('wls-pronta', !!state.pronta);
     picker.value = state.active; picker.disabled = !state.ready;
     for (const b of root.querySelectorAll('button[data-wls], .wls-form button')) {
       b.disabled = !state.writable;
       if (b.dataset.wls === 'cancel') b.disabled = false;
       if (b.dataset.wls === 'retry') { b.disabled = false; b.hidden = !state.error; }
     }
-    root.querySelector('[data-wls="new"]').disabled = !state.writable || state.lists.length >= 10;
-    root.querySelector('[data-wls="delete"]').disabled = !state.writable || state.lists.length <= 1;
-    status.textContent = state.error || (state.migrating ? 'Preparando suas listas na conta…' : !state.ready ? 'Confirmando a conta…' : '');
+    root.querySelector('[data-wls="new"]').disabled = !state.writable || minhas.length >= 10;
+    root.querySelector('[data-wls="delete"]').disabled = !state.writable || minhas.length <= 1 || !!state.pronta;
+    root.querySelector('[data-wls="rename"]').disabled = !state.writable || !!state.pronta;
+    status.textContent = state.error || (state.migrating ? 'Preparando suas listas na conta…' : !state.ready ? 'Confirmando a conta…'
+      : state.pronta ? 'Lista pronta do Mercado Macro: os maiores e mais negociados ETFs dos EUA. Para montar a sua, use Nova lista no menu ⋯.' : '');
   }
   function edit(kind) {
     if (!state.writable) return;
@@ -52,7 +58,7 @@
     if (kind === 'menu') { const show = menu.hidden; close(); menu.hidden = !show; b.setAttribute('aria-expanded',String(show)); return; }
     if (kind === 'cancel') { close(); picker.focus(); return; }
     if (kind === 'retry') { close(); action({type:'retry'}); return; }
-    if (kind === 'delete' && state.lists.length > 1) {
+    if (kind === 'delete' && state.lists.filter(l => !l.pronta).length > 1 && !state.pronta) {
       close(); editId = state.active; confirm.hidden = false;
       confirm.querySelector('span').textContent = `Excluir “${current().name}” e seus ${current().count} ativos desta lista?`;
       confirm.querySelector('[data-wls="cancel"]').focus(); return;
