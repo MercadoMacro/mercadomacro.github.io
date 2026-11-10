@@ -106,3 +106,51 @@ html[data-motion="off"] .wn-side { animation:none; }
 .wn-cap:hover { color:var(--text); border-color:var(--line-2); }
 .wn-cap svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .wn-cap[hidden] { display:none; }
+
+/* ===== Watchlist profissional (10/11/2026, modelo do Severino): colunas, grupos, badges, tick ===== */
+.wt th:first-child, .wt td:first-child { width:auto; min-width:200px; }
+.wt th, .wt td { padding:11px 12px; }
+.wt td:nth-child(2), .wt th:nth-child(2), .wt td:nth-child(3), .wt th:nth-child(3) { text-align:right; }
+.wt-c-x, .wt-c-vol { text-align:right; }
+.wt-c-sp, .wt-c-52 { text-align:center !important; }
+.wt-preco { transition:background-color .6s; border-radius:6px; }
+.wt-preco.wt-tick-up { animation:wtTickUp 1.1s ease-out; }
+.wt-preco.wt-tick-dn { animation:wtTickDn 1.1s ease-out; }
+@keyframes wtTickUp { from { background:color-mix(in srgb, var(--pos) 26%, transparent); } to { background:transparent; } }
+@keyframes wtTickDn { from { background:color-mix(in srgb, var(--neg) 26%, transparent); } to { background:transparent; } }
+html[data-motion="off"] .wt-preco { animation:none !important; }
+.wt-ext { display:block; margin-top:3px; font-size:11.5px; font-weight:500; white-space:nowrap; }
+.wt-badge { display:inline-block; min-width:66px; text-align:center; padding:4px 8px; border-radius:7px; font-weight:600; font-size:13.5px;
+  background:color-mix(in srgb, var(--text) 7%, transparent); color:var(--text-2); }
+.wt-badge.up { background:rgba(34,197,94,.15); color:var(--pos-ink, var(--pos)); }
+.wt-badge.dn { background:rgba(239,68,68,.15); color:var(--neg); }
+.wt-spark { display:block; margin:0 auto; overflow:visible; }
+.wt-spark.up { color:var(--pos); } .wt-spark.dn { color:var(--neg); }
+.wt-vazio { color:var(--text-3); }
+.wt-52 { position:relative; display:inline-block; width:96px; height:4px; border-radius:2px; background:var(--line-2, var(--line)); vertical-align:middle; }
+.wt-52 i { position:absolute; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:var(--text); box-shadow:0 0 0 2px var(--surface); }
+.wt-grupo td { padding:0 !important; background:color-mix(in srgb, var(--text) 3%, transparent); cursor:default; }
+.wt tbody tr.wt-grupo:hover { background:color-mix(in srgb, var(--text) 3%, transparent); }
+.wt-grupo button { display:flex; align-items:center; gap:8px; width:100%; padding:10px 12px; border:0; background:none; color:var(--text); font:inherit; font-size:13px; font-weight:700; cursor:pointer; text-align:left; }
+.wt-grupo button small { font-weight:500; color:var(--text-3); }
+.wt-grupo svg { width:15px; height:15px; fill:none; stroke:var(--text-3); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .15s; }
+.wt-grupo.fechado svg { transform:rotate(-90deg); }
+.wls-bar .wt-modes .wt-grp-bt[hidden] { display:none; }
+.wls-bar .wt-modes .wt-grp-bt { white-space:nowrap; }
+/* painel: preço fora do pregão e mais períodos */
+.wn-ext { margin:-6px 0 0; display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 10px; padding:9px 12px; border-radius:10px; background:color-mix(in srgb, var(--text) 4%, transparent); font-size:13px; }
+.wn-ext[hidden] { display:none; }
+.wn-ext em { font-style:normal; font-weight:700; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink, var(--accent)); }
+.wn-ext b { font-size:15px; color:var(--text); font-variant-numeric:tabular-nums; }
+.wn-ext span { font-weight:600; font-variant-numeric:tabular-nums; }
+.wn-ext small { flex-basis:100%; color:var(--text-3); font-size:11.5px; }
+.wn-faixas { flex-wrap:wrap; gap:6px; }
+.wn-faixas button { min-width:0; padding:6px 9px; }
+/* colunas somem em telas menores: primeiro faixa 52 s., depois volume, var. em US$ e tendência */
+@media (max-width:1650px) { .wn.wn-com-painel .wt-c-52 { display:none; } }
+@media (max-width:1500px) { .wn.wn-com-painel .wt-c-vol { display:none; } }
+@media (max-width:1380px) { .wn.wn-com-painel .wt-c-x { display:none; } .wt-c-52 { display:none; } }
+@media (max-width:1300px) { .wn.wn-com-painel .wt-c-sp { display:none; } }
+@media (max-width:1180px) { .wt-c-vol { display:none; } }
+@media (max-width:900px) { .wt-c-x, .wt-c-sp { display:none; } .wt-badge { min-width:0; padding:3px 6px; font-size:12.5px; } .wt-ext { font-size:11px; }
+  .wt th:first-child, .wt td:first-child { min-width:0; } .wt th, .wt td { padding:10px 8px; } }

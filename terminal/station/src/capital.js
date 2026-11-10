@@ -38,8 +38,8 @@ const ATIVOS = {
 };
 // ETFs das listas prontas da Watchlist (ETFs dos EUA e ETFs globais) (10/11/2026, Severino); a mesma lista está em site/watchlists-core.js.
 // A Capital dá as ações e ETFs americanos pelo próprio código (SPY, QQQ...). Os que ela não tiver ficam com o Yahoo.
-export const ETFS_EUA = ['SPY', 'VOO', 'QQQ', 'DIA', 'IWM', 'VTI', 'XLK', 'SMH', 'XLF', 'XLE', 'XLV', 'EWZ', 'EEM', 'EFA', 'TLT', 'IEF', 'LQD', 'HYG', 'GLD', 'SLV', 'USO', 'VNQ',
-  'ONEQ', 'VGK', 'EWG', 'EWU', 'EPP', 'EWJ', 'EWY', 'EWT', 'EWA', 'BKF', 'FXI', 'INDA']; // + ETFs globais
+export const ETFS_EUA = ['SPY', 'VOO', 'QQQ', 'DIA', 'IWM', 'VTI', 'EEM', 'EFA', 'EWZ', 'FXI', 'SHY', 'IEF', 'TLT', 'LQD', 'HYG', 'GLD', 'SLV', 'USO', 'DBC',
+  'SMH', 'XLK', 'XLF', 'XLE', 'XLV', 'VNQ', 'ONEQ', 'VGK', 'EWG', 'EWU', 'EWJ', 'EWA', 'EPP', 'EWY', 'EWT', 'INDA', 'BKF'];
 for (const t of ETFS_EUA) ATIVOS[t] = { acao: t };
 const POR_CONEXAO = 40; // a Capital aceita até 40 mercados por conexão de streaming; acima disso abre outra
 const MESES = 'FGHJKMNQUVXZ';

@@ -3,7 +3,9 @@ globalThis.MMWatchTable = (() => {
   function preferences(value) {
     const p = value && typeof value === 'object' ? value : {};
     return { mode: p.mode === 'cards' ? 'cards' : 'table', sort: ['symbol', 'price', 'change'].includes(p.sort) ? p.sort : 'change',
-      direction: p.direction === 1 ? 1 : -1 };
+      direction: p.direction === 1 ? 1 : -1,
+      // listas com grupos (as prontas): agrupado por tema ou lista simples; grupos recolhidos por nome
+      grupos: p.grupos !== false, fechados: Array.isArray(p.fechados) ? p.fechados.filter(x => typeof x === 'string').slice(0, 40) : [] };
   }
   function sorted(rows, prefs) {
     return [...rows].sort((a, b) => {

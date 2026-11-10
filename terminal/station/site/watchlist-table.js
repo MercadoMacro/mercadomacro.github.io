@@ -24,12 +24,16 @@
 
   const root = document.createElement('div'); root.className = 'wt';
   root.innerHTML = `<div class="wt-toolbar"><div class="wt-modes" role="group" aria-label="Visualização da watchlist">
-    <button type="button" class="btn-sm" data-wt-mode="table">Tabela</button><button type="button" class="btn-sm" data-wt-mode="cards">Cards</button></div>
+    <button type="button" class="btn-sm" data-wt-mode="table">Tabela</button><button type="button" class="btn-sm" data-wt-mode="cards">Cards</button><button type="button" class="btn-sm wt-grp-bt" data-wt-grupos hidden title="Agrupar por tema ou ver em lista simples">Temas</button></div>
     </div>
     <div class="wt-table-wrap"><table aria-label="Minha watchlist"><thead><tr>
       <th scope="col" data-wt-col="symbol"><button type="button" data-wt-sort="symbol">Ativo</button></th>
       <th scope="col" data-wt-col="price"><button type="button" data-wt-sort="price" title="Ordenação numérica; moedas diferentes não são convertidas">Preço</button></th>
       <th scope="col" data-wt-col="change"><button type="button" data-wt-sort="change">Var. dia</button></th>
+      <th scope="col" class="wt-c-x">Var. dia (US$)</th>
+      <th scope="col" class="wt-c-sp">Tendência (5D)</th>
+      <th scope="col" class="wt-c-vol" title="Volume de hoje e quantas vezes ele é a média diária dos últimos 3 meses">Volume (x média)</th>
+      <th scope="col" class="wt-c-52">Faixa 52 semanas</th>
       <th scope="col"><span class="wt-sr">Ações</span></th>
     </tr></thead><tbody></tbody></table></div><div class="wt-status" role="status"></div>
     <p class="wn-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Atualização automática a cada 5 min com a aba aberta</p>`;
@@ -67,6 +71,10 @@
   function cot(r) {
     const q = r?.quote, l = vivo(r?.symbol || '');
     if (!l) return q;
+    // ações e ETFs americanos com a bolsa fechada: o preço e a variação ficam os oficiais do pregão; o preço em tempo real
+    // aparece à parte (pré-mercado, after-hours ou fora do pregão), com a variação sobre o último fechamento (10/11/2026)
+    const pg = /^[A-Z][A-Z.-]{0,9}$/.test(r.symbol) ? pregao(r.symbol) : null;
+    if (pg && !pg.on && core.number(q?.value) && q.value > 0) return { ...q, ext: { v: l.v, c: (l.v / q.value - 1) * 100, rot: sessaoEstendida() } };
     const base = core.number(q?.value) && core.number(q?.change) ? q.value / (1 + q.change / 100) : null;
     return { ...(q || {}), value: l.v, change: base ? (l.v / base - 1) * 100 : q?.change, src: l.src };
   }
@@ -101,7 +109,7 @@
     for (const h of root.querySelectorAll('[data-wt-col]')) {
       const active = h.dataset.wtCol === prefs.sort;
       if (active) h.setAttribute('aria-sort', prefs.direction === 1 ? 'ascending' : 'descending'); else h.removeAttribute('aria-sort');
-      h.querySelector('button').textContent = ({ symbol: 'Ativo', price: 'Preço', change: 'Var. dia' })[h.dataset.wtCol] + (active ? prefs.direction === 1 ? ' ↑' : ' ↓' : '');
+      h.querySelector('button').textContent = ({ symbol: 'Ativo', price: 'Último', change: 'Var. dia (%)' })[h.dataset.wtCol] + (active ? prefs.direction === 1 ? ' ↑' : ' ↓' : '');
     }
     const n = state.rows.length;
     sub.textContent = user ? `${n} ${n === 1 ? 'ativo' : 'ativos'}${atualizadaEm ? ` · Atualizada às ${new Date(atualizadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}` : '';
@@ -109,17 +117,49 @@
     body.replaceChildren();
     if (!user || window.__mmLoggingOut) { status.textContent = 'Aguardando a identificação da conta.'; return; }
     status.textContent = n ? state.loading ? 'Atualizando cotações…' : '' : 'Adicione ativos à sua watchlist no campo acima.';
-    for (const r of core.sorted(state.rows, prefs)) {
+    const temGrupos = state.rows.some(r => r.grupo), agrupar = temGrupos && prefs.grupos && prefs.mode === 'table';
+    const bg = modes.querySelector('[data-wt-grupos]');
+    if (bg) { bg.hidden = !temGrupos; bg.setAttribute('aria-pressed', String(agrupar)); bg.textContent = agrupar ? 'Temas' : 'Lista'; }
+    const ordem = core.sorted(state.rows, prefs), blocos = [];
+    if (agrupar) { for (const r of ordem) { let b = blocos.find(x => x.g === (r.grupo || 'Outros')); if (!b) blocos.push(b = { g: r.grupo || 'Outros', rows: [] }); b.rows.push(r); } blocos.sort((a, b) => primeiro(a.g) - primeiro(b.g)); }
+    else blocos.push({ g: '', rows: ordem });
+    const vistos = {};
+    for (const b of blocos) {
+    if (b.g) {
+      const fechado = prefs.fechados.includes(b.g), trg = document.createElement('tr'); trg.className = 'wt-grupo' + (fechado ? ' fechado' : '');
+      const td = document.createElement('td'); td.colSpan = 8;
+      const bt = document.createElement('button'); bt.type = 'button'; bt.setAttribute('aria-expanded', String(!fechado));
+      bt.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+      bt.append(text('span', b.g), text('small', String(b.rows.length)));
+      bt.addEventListener('click', () => { prefs.fechados = fechado ? prefs.fechados.filter(x => x !== b.g) : [...prefs.fechados, b.g]; save(); render(); });
+      td.append(bt); trg.append(td); body.append(trg);
+      if (fechado) continue;
+    }
+    for (const r of b.rows) {
       const q = cot(r), tr = document.createElement('tr'), name = document.createElement('td');
       tr.dataset.s = r.symbol; if (r.symbol === sel && !side.hidden) tr.classList.add('on');
       const open = text('button', nice(r.symbol), 'wt-symbol'); open.type = 'button';
       open.setAttribute('aria-label', 'Ver ' + nice(r.symbol) + ' no painel');
-      if (q?.src) open.classList.add('rt');
+      if (q?.src || q?.ext) open.classList.add('rt');
       if (r.name && r.name !== nice(r.symbol)) { const nm = text('span', r.name, 'wt-name'); if (!open.title) open.title = r.name; open.append(nm); }
       name.append(open);
       if (!r.fresh && r.quote) name.append(text('span', 'Salvo', 'wt-saved'));
       else if (!core.number(r.quote?.value)) name.append(text('span', state.loading ? 'Carregando' : 'Sem dados', 'wt-saved'));
-      tr.append(name, text('td', core.price(q), 'wt-number'), text('td', core.change(q), 'wt-number ' + (core.number(q?.change) ? q.change > 0 ? 'wt-up' : q.change < 0 ? 'wt-down' : '' : '')));
+      const tdP = text('td', core.price(q), 'wt-number wt-preco');
+      if (q?.ext) { const e = text('small', `${q.ext.rot} ${fmt(q.ext.v, q)} · ${core.change({ change: q.ext.c })}`, 'wt-ext ' + (q.ext.c > 0 ? 'wt-up' : q.ext.c < 0 ? 'wt-down' : '')); e.title = `${q.ext.rot}: preço em tempo real fora do pregão; a variação é sobre o último fechamento`; tdP.append(e); }
+      // pisca quando o preço muda (atualização ao vivo ou nova consulta)
+      const ant = mostrado[r.symbol], agora = core.number(q?.ext?.v) ? q.ext.v : q?.value;
+      if (core.number(ant) && core.number(agora) && ant !== agora) tdP.classList.add(agora > ant ? 'wt-tick-up' : 'wt-tick-dn');
+      vistos[r.symbol] = agora;
+      const tdC = document.createElement('td'); tdC.className = 'wt-number';
+      if (core.number(q?.change)) tdC.append(text('span', core.change(q), 'wt-badge ' + (q.change > 0 ? 'up' : q.change < 0 ? 'dn' : '')));
+      else tdC.textContent = '—';
+      const dx = core.number(q?.change) && core.number(q?.value) ? q.value - q.value / (1 + q.change / 100) : null;
+      const tdX = text('td', core.number(dx) ? `${dx > 0 ? '+' : dx < 0 ? '−' : ''}${Math.abs(dx).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', 'wt-number wt-c-x ' + (dx > 0 ? 'wt-up' : dx < 0 ? 'wt-down' : ''));
+      const tdS = document.createElement('td'); tdS.className = 'wt-c-sp'; tdS.innerHTML = spark(r.symbol);
+      const tdV = text('td', volume(r), 'wt-number wt-c-vol');
+      const tdF = document.createElement('td'); tdF.className = 'wt-c-52'; faixa52(tdF, r, q);
+      tr.append(name, tdP, tdC, tdX, tdS, tdV, tdF);
       const actions = document.createElement('td'); actions.className = 'wn-act';
       const more = document.createElement('button'); more.type = 'button'; more.className = 'wn-more';
       more.setAttribute('aria-label', 'Mais ações para ' + nice(r.symbol)); more.setAttribute('aria-haspopup', 'menu');
@@ -129,15 +169,91 @@
       tr.addEventListener('click', (e) => { if (!e.target.closest('.wn-act')) selecionar(r.symbol); });
       body.append(tr);
     }
+    }
+    mostrado = vistos;
+    pedeExtras();
   }
+  // ordem dos grupos: a da lista
+  function primeiro(g) { const i = state.rows.findIndex(r => (r.grupo || 'Outros') === g); return i < 0 ? 999 : i; }
+  let mostrado = {};
+
+  /* ---------------- colunas extras: tendência de 5 dias, volume relativo e faixa de 52 semanas ---------------- */
+  const S5 = {}, VM = {}; // símbolo -> { c, em } (5 dias, de 30 em 30 min) | { media, em } (volume médio diário de 3 meses)
+  let extrasPedindo = false;
+  async function pedeExtras() {
+    if (extrasPedindo || !user || prefs.mode !== 'table' || !panel.classList.contains('active')) return;
+    const syms = state.rows.map(r => r.symbol).filter(s => !/^[@]/.test(s));
+    const falta5 = syms.filter(s => !S5[s] || Date.now() - S5[s].em > 15 * 60000), faltaV = syms.filter(s => !VM[s] || Date.now() - VM[s].em > 6 * 3600000);
+    if (!falta5.length && !faltaV.length) return;
+    extrasPedindo = true; // falhas também ficam guardadas (com valor vazio), então não há repetição em sequência
+    const lote = async (lista, extra, fn) => { for (let i = 0; i < lista.length; i += 45) {
+      const part = lista.slice(i, i + 45);
+      try { const r = await fetchT(`${PROXY}/history?symbols=${encodeURIComponent(part.join(','))}${extra}`, {}, 25000); const j = r.ok ? await r.json() : {}; for (const s of part) fn(s, j?.[s]); }
+      catch { for (const s of part) fn(s, null); }
+    } };
+    await Promise.all([
+      lote(falta5, '&r=5d', (s, v) => { S5[s] = { c: Array.isArray(v?.c) && v.c.length > 1 ? v.c : null, em: Date.now() }; }),
+      lote(faltaV, '&vol=1', (s, v) => {
+        // média dos dias completos (o último pode ser o pregão de hoje, ainda pela metade)
+        const vs = Array.isArray(v?.v) ? v.v.slice(0, -1).filter(x => core.number(x) && x > 0) : [];
+        VM[s] = { media: vs.length >= 20 ? vs.reduce((a, b) => a + b, 0) / vs.length : null, em: Date.now() };
+      }),
+    ]);
+    extrasPedindo = false;
+    render(); if (!side.hidden) pintaTopo();
+  }
+  function spark(s) {
+    const c = S5[s]?.c; if (!c) return '<span class="wt-vazio">—</span>';
+    const lo = Math.min(...c), hi = Math.max(...c), sp = hi - lo || 1, w = 96, h = 26;
+    const pts = c.map((v, i) => `${(i / (c.length - 1) * w).toFixed(1)},${(2 + (1 - (v - lo) / sp) * (h - 4)).toFixed(1)}`).join(' ');
+    const sobe = c[c.length - 1] >= c[0];
+    return `<svg class="wt-spark ${sobe ? 'up' : 'dn'}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Tendência de 5 dias: ${sobe ? 'alta' : 'queda'}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+  const abrev = (v) => !core.number(v) ? '—' : v >= 1e9 ? (v / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' bi' : v >= 1e6 ? (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi' : v >= 1e3 ? (v / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil' : v.toLocaleString('pt-BR');
+  function volume(r) {
+    const v = r.quote?.vol, m = VM[r.symbol]?.media;
+    if (!core.number(v) || v <= 0) return '—';
+    return core.number(m) && m > 0 ? `${abrev(v)} (${(v / m).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)` : abrev(v);
+  }
+  function faixa52(td, r, q) {
+    const lo = r.quote?.min52, hi = r.quote?.max52, v = q?.value;
+    if (!core.number(lo) || !core.number(hi) || hi <= lo || !core.number(v)) { td.textContent = '—'; return; }
+    const p = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+    td.innerHTML = `<span class="wt-52" role="img" aria-label="Preço a ${Math.round(p * 100)}% entre a mínima e a máxima de 52 semanas"><i style="left:${(p * 100).toFixed(1)}%"></i></span>`;
+    td.title = `Mínima de 52 semanas: ${fmt(lo, r.quote)} · Máxima: ${fmt(hi, r.quote)}`;
+  }
+
+  /* ---------------- exportar: copiar os códigos ou baixar CSV (menu ⋯ das listas) ---------------- */
+  window.addEventListener('mm-watchlist-exportar', async (e) => {
+    const rows = core.sorted(state.rows, prefs); if (!rows.length) return;
+    const avisa = (m, t) => { try { typeof showToast === 'function' ? showToast(m, t) : alert(m); } catch { /* sem aviso */ } };
+    if (e.detail === 'copiar') {
+      const txt = rows.map(r => nice(r.symbol)).join(', ');
+      try { await navigator.clipboard.writeText(txt); avisa(`${rows.length} códigos copiados`, 'success'); } catch { prompt('Copie os códigos:', txt); }
+      return;
+    }
+    const n = (v, d = 4) => (core.number(v) ? v.toFixed(d) : '');
+    const linhas = [['Ativo', 'Nome', 'Grupo', 'Ultimo', 'Moeda', 'Var dia %', 'Volume', 'Volume medio 3M', 'Min 52 sem', 'Max 52 sem']];
+    for (const r of rows) { const q = r.quote || {}; linhas.push([nice(r.symbol), r.name || '', r.grupo || '', n(q.value), q.currency || '', n(q.change, 2), n(q.vol, 0), n(VM[r.symbol]?.media, 0), n(q.min52), n(q.max52)]); }
+    const csv = '\ufeff' + linhas.map(l => l.map(x => /[;"\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : x).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
   modes.querySelectorAll('[data-wt-mode]').forEach(b => b.addEventListener('click', () => { prefs.mode = b.dataset.wtMode; save(); render(); }));
+  modes.querySelector('[data-wt-grupos]')?.addEventListener('click', () => { prefs.grupos = !prefs.grupos; save(); render(); });
   root.querySelectorAll('[data-wt-sort]').forEach(b => b.addEventListener('click', () => {
     const sort = b.dataset.wtSort; prefs.direction = prefs.sort === sort ? -prefs.direction : sort === 'symbol' ? 1 : -1;
     prefs.sort = sort; save(); render();
   }));
 
+  // nome da sessão fora do pregão regular de Nova York (horário de lá)
+  function sessaoEstendida() {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+    const m = +p.hour * 60 + +p.minute, util = !['Sat', 'Sun'].includes(p.weekday);
+    return util && m >= 240 && m < 570 ? 'Pré-mercado' : util && m >= 960 && m < 1200 ? 'After-hours' : 'Fora do pregão';
+  }
   /* ---------------- painel do ativo ---------------- */
-  const FAIXAS = [['1d', '1D'], ['5d', '5D'], ['1mo', '1M'], ['1y', '1A']];
+  const FAIXAS = [['1d', '1D'], ['5d', '5D'], ['1mo', '1M'], ['ytd', 'No ano'], ['1y', '1A'], ['5y', '5A'], ['max', 'Máx']];
   let faixa = '1d';
   const G = {}; // `${faixa}|${símbolo}` -> { t, c, em }
   const fmt = (v, q) => core.price({ value: v, currency: q?.currency });
@@ -164,6 +280,7 @@
     <header class="wn-side-head"><div><h3 class="wn-sym"></h3><p class="wn-nome"></p></div><button type="button" class="wn-x" aria-label="Fechar painel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
     <div class="wn-preco"><b></b><span></span></div>
     <p class="wn-pregao"><i></i><span></span></p>
+    <p class="wn-ext" hidden><em></em><b></b><span></span><small>em tempo real, sobre o último fechamento</small></p>
     <div class="wn-graf"></div>
     <div class="wn-faixas" role="group" aria-label="Período do gráfico">${FAIXAS.map(([k, t]) => `<button type="button" data-f="${k}">${t}</button>`).join('')}</div>
     <h4>Detalhes do ativo</h4>
@@ -197,10 +314,20 @@
     const pg = pregao(r.symbol), pe = side.querySelector('.wn-pregao');
     pe.hidden = !pg && !q?.src;
     pe.classList.toggle('on', !!pg?.on);
+    pe.hidden = !pg && !q?.src && !q?.ext;
     pe.querySelector('span').textContent = [pg?.t, q?.src ? rotuloVivo(q.src).toLowerCase() : ''].filter(Boolean).join(' · ');
-    const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant]];
+    const ex = side.querySelector('.wn-ext');
+    ex.hidden = !q?.ext;
+    if (q?.ext) {
+      ex.querySelector('em').textContent = q.ext.rot;
+      ex.querySelector('b').textContent = fmt(q.ext.v, r.quote);
+      const c = ex.querySelector('span'); c.textContent = core.change({ change: q.ext.c }); c.className = q.ext.c > 0 ? 'wt-up' : q.ext.c < 0 ? 'wt-down' : '';
+    }
+    const vm = VM[r.symbol]?.media, vh = r.quote?.vol;
+    const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant],
+      ['Volume de hoje', vh, 'vol'], ['Volume médio (3 meses)', vm, 'vol'], ['Mínima de 52 semanas', r.quote?.min52], ['Máxima de 52 semanas', r.quote?.max52]];
     side.querySelector(':scope > .wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
-    side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = core.number(v) ? fmt(v, r.quote) : '—'; });
+    side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = !core.number(v) || (linhas[i][2] === 'vol' && v <= 0) ? '—' : linhas[i][2] === 'vol' ? abrev(v) : fmt(v, r.quote); });
     pintaComex(r.symbol);
     const cap = side.querySelector('.wn-cap'), pg2 = CAP_PAGINA[r.symbol];
     cap.hidden = !pg2;
