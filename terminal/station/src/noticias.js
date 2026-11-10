@@ -15,10 +15,14 @@ const FEEDS = [
   // Seeking Alpha barram leitura automática (403 / "Just a moment...") e ficaram de fora
   { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9 },
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss', source: 'CoinDesk', weight: 6 },
+  // RTTNews (10/11/2026, achado do Severino): é quem escreve as notícias de mercado do Nasdaq.com e tem RSS aberto
+  // (o feed do Nasdaq barra leitura automática). Últimas, economia e câmbio; mesma fonte "RTTNews" na lista
+  { name: 'RTTNews Últimas', url: 'https://www.rttnews.com/RSS/breakingnews.xml', source: 'RTTNews', weight: 7 },
+  { name: 'RTTNews Economia', url: 'https://www.rttnews.com/RSS/EconomicNews.xml', source: 'RTTNews', weight: 7 },
+  { name: 'RTTNews Câmbio', url: 'https://www.rttnews.com/RSS/ForexTopStory.xml', source: 'RTTNews', weight: 6 },
   // em teste (09/11/2026, pedido do Severino): do GitHub vieram barrados; lidos daqui com identificação honesta.
   // Se seguirem barrados, a fonte fica com 0 na lista e sai na próxima revisão (nada de driblar o bloqueio)
   { name: 'Proactive Investors', url: 'https://www.proactiveinvestors.com.au/rss.xml', source: 'Proactive Investors', weight: 5, honesto: true },
-  { name: 'Nasdaq Markets', url: 'https://www.nasdaq.com/feed/rssoutbound?category=Markets', source: 'Nasdaq', weight: 6, honesto: true },
   { name: 'Seeking Alpha', url: 'https://seekingalpha.com/tag/wall-st-breakfast.xml', source: 'Seeking Alpha', weight: 6, honesto: true },
 
   // ============ BRASIL ============
