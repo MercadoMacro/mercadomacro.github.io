@@ -11,15 +11,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          U='https://www.rttnews.com/rss/rssarticlelist.aspx'
-          curl -sSL -m 20 -o /tmp/f.html -D /tmp/h.txt -w "HTTP %{http_code} %{size_download} bytes\n" "$U" || echo falhou
-          grep -i "^content-type" /tmp/h.txt | tail -1
-          head -c 400 /tmp/f.html | tr '\n' ' '; echo
-          echo "itens: $(grep -o '<item' /tmp/f.html | wc -l)"
-          grep -o '<pubDate>[^<]*' /tmp/f.html | head -3
-          grep -o '<title>[^<]*' /tmp/f.html | sed -n '1,5p'
-          grep -oiE "(href|onclick|value)=[\"'][^\"']*([Rr][Ss][Ss]|xml|feed)[^\"']*[\"']" /tmp/f.html | sort -u | head -80
-          grep -oiE 'https?://[^"<> ]*(rss|xml|feed)[^"<> ]*' /tmp/f.html | sort -u | head -40
-          F=$(grep -oiE 'https?://[^"<> ]*rss[^"<> ]*\.(xml|aspx)[^"<> ]*' /tmp/f.html | grep -v rssarticlelist | head -1)
-          echo "primeiro feed: $F"
-          [ -n "$F" ] && curl -sSL -m 20 -o /tmp/g.xml -w "HTTP %{http_code} %{size_download}\n" "$F" && head -c 300 /tmp/g.xml && echo && grep -o '<pubDate>[^<]*' /tmp/g.xml | head -3 && echo "itens $(grep -o '<item' /tmp/g.xml | wc -l)"
+          for N in breakingnews Todaystop USMarketUpdate EconomicNews ForexTopStory Earnings HotStocks; do
+            U="https://www.rttnews.com/RSS/$N.xml"
+            curl -sSL -m 20 -o /tmp/g.xml -D /tmp/h.txt -w "$N: HTTP %{http_code} %{size_download} bytes, " "$U" || echo falhou
+            echo "itens $(grep -o '<item' /tmp/g.xml | wc -l)"
+            grep -o '<pubDate>[^<]*' /tmp/g.xml | head -2
+            grep -o '<title>[^<]*' /tmp/g.xml | sed -n '2,3p'
+            grep -o '<description>' /tmp/g.xml | wc -l | sed 's/^/descricoes /'
+          done
