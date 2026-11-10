@@ -11,38 +11,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          curl -sSL -m 30 https://capital.com/sitemap-en-int-instruments-0.xml | grep -oE '<loc>[^<]+' | sed 's#<loc>https://capital.com/en-int/markets/##' > /tmp/u.txt
-          k() { echo "== $1"; grep -iE "$2" /tmp/u.txt | head -4; }
-          k SPY 's-p-500-etf-trust|spdr-s-p-500'
-          k VOO 'vanguard-s-p-500|vanguard-500'
-          k ONEQ 'nasdaq-composite'
-          k DIA 'dow-jones-industrial-average-etf|spdr-dow'
-          k IWM 'russell-2000'
-          k VTI 'total-stock-market'
-          k XLK 'technology-select'
-          k SMH 'semiconductor-etf'
-          k XLF 'financial-select'
-          k XLE 'energy-select'
-          k XLV 'health-care-select'
-          k EWZ 'msci-brazil'
-          k EEM 'msci-emerging-markets-etf|msci-emerging-markets-share'
-          k EFA 'msci-eafe'
-          k TLT '20-year-treasury'
-          k IEF '7-10-year-treasury'
-          k LQD 'iboxx.*investment-grade'
-          k HYG 'iboxx.*high-yield'
-          k GLD 'spdr-gold'
-          k SLV 'ishares-silver'
-          k USO 'united-states-oil'
-          k VNQ 'vanguard-real-estate'
-          k VGK 'vanguard-ftse-europe|ftse-europe-etf'
-          k EWG 'msci-germany'
-          k EWU 'msci-united-kingdom'
-          k EPP 'pacific-ex-japan'
-          k EWJ 'msci-japan-etf|msci-japan-share'
-          k EWY 'msci-south-korea'
-          k EWT 'msci-taiwan'
-          k EWA 'msci-australia'
-          k BKF 'bric'
-          k FXI 'china-large-cap|china-largecap'
-          k INDA 'msci-india'
+          for P in spdr-s-p-500-etf-share-price-1 ishares-msci-brazil-capped-etf-share-price; do
+            curl -sSL -m 20 -o /tmp/p.html -w "$P %{http_code}\n" "https://capital.com/en-int/markets/shares/$P"
+            grep -oE '<title>[^<]*' /tmp/p.html
+            echo "news words: $(grep -oiE 'Reuters|GlobeNewswire|Latest news|related news' /tmp/p.html | sort | uniq -c | tr '\n' ' ')"
+          done
