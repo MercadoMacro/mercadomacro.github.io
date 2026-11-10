@@ -11,8 +11,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          for P in spdr-s-p-500-etf-share-price-1 ishares-msci-brazil-capped-etf-share-price; do
-            curl -sSL -m 20 -o /tmp/p.html -w "$P %{http_code}\n" "https://capital.com/en-int/markets/shares/$P"
-            grep -oE '<title>[^<]*' /tmp/p.html
-            echo "news words: $(grep -oiE 'Reuters|GlobeNewswire|Latest news|related news' /tmp/p.html | sort | uniq -c | tr '\n' ' ')"
-          done
+          curl -sS -m 20 -o /tmp/y.json -w "yahoo %{http_code}\n" "https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=5m&range=1d"
+          jq -c '.chart.result[0].meta | {regularMarketVolume, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketDayHigh, longName, shortName, currentTradingPeriod: .currentTradingPeriod.pre}' /tmp/y.json
+          jq -c '.chart.result[0].indicators.quote[0].volume | length' /tmp/y.json
+          curl -sS -m 20 -o /tmp/w.json -w "5y %{http_code}\n" "https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1wk&range=5y"; jq -c '.chart.result[0].timestamp|length' /tmp/w.json
+          curl -sS -m 20 -o /tmp/m.json -w "max %{http_code}\n" "https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1mo&range=max"; jq -c '.chart.result[0].timestamp|length' /tmp/m.json
+          curl -sS -m 20 -o /tmp/t.json -w "ytd %{http_code}\n" "https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=ytd"; jq -c '.chart.result[0].timestamp|length' /tmp/t.json
