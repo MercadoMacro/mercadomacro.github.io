@@ -21,7 +21,7 @@ globalThis.MMWatchlistsStore = class {
     const allowed = this.ready && !this.loggingOut;
     return { user: allowed ? this.user : null, ready: allowed, writable: this.writable, migrating: allowed && this.migrating,
       active: this.active, error: this.error,
-      pronta: allowed && this.prontaAtiva,
+      pronta: allowed && this.prontaAtiva, prontaNota: allowed ? this.core.pronta?.(this.active)?.nota || '' : '',
       lists: allowed ? [...this.doc.lists.map(l => ({ id: l.id, name: l.name, count: l.items.length })),
         ...(this.core.PRONTAS || []).map(l => ({ id: l.id, name: l.name, count: l.items.length, pronta: true }))] : [] };
   }

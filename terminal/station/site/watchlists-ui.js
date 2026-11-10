@@ -40,7 +40,7 @@
     root.querySelector('[data-wls="delete"]').disabled = !state.writable || minhas.length <= 1 || !!state.pronta;
     root.querySelector('[data-wls="rename"]').disabled = !state.writable || !!state.pronta;
     status.textContent = state.error || (state.migrating ? 'Preparando suas listas na conta…' : !state.ready ? 'Confirmando a conta…'
-      : state.pronta ? 'Lista pronta do Mercado Macro: os maiores e mais negociados ETFs dos EUA. Para montar a sua, use Nova lista no menu ⋯.' : '');
+      : state.pronta ? (state.prontaNota || 'Lista pronta do Mercado Macro.') + ' Para montar a sua, use Nova lista no menu ⋯.' : '');
   }
   function edit(kind) {
     if (!state.writable) return;
