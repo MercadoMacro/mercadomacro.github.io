@@ -37,7 +37,7 @@ globalThis.MMForexLive = (() => {
   // Capital.com (repasse do servidor do site em /api/capital/ws): USD/BRL, VIX, futuros e, desde 04/11/2026, índices à vista (CFD)
   const CAPITAL = Object.freeze(['BRL=X', '^VIX', 'GC=F', 'SI=F', 'HG=F', 'BZ=F', 'CL=F', 'NG=F', 'KC=F', 'ES=F', 'NQ=F', 'YM=F', 'RTY=F',
     '^N225', '^HSI', '^AXJO', '^GDAXI', '^FTSE', '^FCHI', '^STOXX50E', '^GSPC', '^DJI',
-    // ETFs dos EUA da lista pronta da Watchlist (10/11/2026); só valem com a bolsa americana aberta
+    // ETFs dos EUA da lista pronta da Watchlist (10/11/2026); valem também fora do pregão, enquanto a Capital negociar
     'SPY', 'VOO', 'QQQ', 'DIA', 'IWM', 'VTI', 'XLK', 'SMH', 'XLF', 'XLE', 'XLV', 'EWZ', 'EEM', 'EFA', 'TLT', 'IEF', 'LQD', 'HYG', 'GLD', 'SLV', 'USO', 'VNQ']);
   const CAP_VELHO = 10 * 60000; // preço da Capital parado há 10 min deixa de valer
   const POLL_VELHO = 3 * 60000; // lote do Yahoo não renovado há 3 min (aba parada): a Mesa volta aos dados dela
