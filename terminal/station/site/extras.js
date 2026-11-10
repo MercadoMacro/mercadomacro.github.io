@@ -28,10 +28,13 @@
      1. MINHA WATCHLIST
      ========================================================= */
   const WL3_KEY = 'watch_3m_v1', WL_MAX = 30;
-  let wlUser = null, wlReady = false, wl = [], wlListId = 'main';
+  let wlUser = null, wlReady = false, wl = [], wlListId = 'main', wlProprios = [];
   const listsStore = new window.MMWatchlistsStore({
     changed: state => {
       wlUser = state.user; wlReady = state.ready; wl = state.items; wlListId = state.active;
+      // a Jade só olha as listas do assinante: com a lista pronta (ETFs dos EUA) aberta, segue a última lista dele (10/11/2026)
+      if (!state.pronta) wlProprios = state.items;
+      else if (!wlProprios.length) wlProprios = listsStore.doc?.lists?.[0]?.items || []; // abriu o site já na lista pronta
       wlRender(); wlStars();
       if (state.quotes && document.getElementById('watch-panel')?.classList.contains('active')) {
         if (typeof wlLast !== 'undefined') wlLast = 0;
@@ -46,7 +49,7 @@
   };
   const wlSync = () => listsStore.sync();
   // o mascote do Assistente olha a watchlist para avisar de movimentos fortes (só leitura; atualizar = 1 chamada em lote)
-  window.MMWatchRobo = { itens: () => (wlReady ? wl.map((x) => x.s) : []), cot: (s) => wlMemo[s] || null, ultimo: () => wlLast, atualizar: () => wlRefresh(), nome: (s) => nice(s) };
+  window.MMWatchRobo = { itens: () => (wlReady ? wlProprios.map((x) => x.s) : []), cot: (s) => wlMemo[s] || null, ultimo: () => wlLast, atualizar: () => wlRefresh(), nome: (s) => nice(s) };
   const inWl = (s) => wl.some((x) => x.s === s);
   const grid = document.getElementById('grid-watch');
   const ALIAS = {
