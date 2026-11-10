@@ -30,7 +30,7 @@
       <th scope="col" data-wt-col="symbol"><button type="button" data-wt-sort="symbol">Ativo</button></th>
       <th scope="col" data-wt-col="price"><button type="button" data-wt-sort="price" title="Ordenação numérica; moedas diferentes não são convertidas">Preço</button></th>
       <th scope="col" data-wt-col="change"><button type="button" data-wt-sort="change">Var. dia</button></th>
-      <th scope="col" class="wt-c-x">Var. dia (US$)</th>
+      <th scope="col" class="wt-c-x">Var. dia (valor)</th>
       <th scope="col" class="wt-c-sp">Tendência (5D)</th>
       <th scope="col" class="wt-c-vol" title="Volume de hoje e quantas vezes ele é a média diária dos últimos 3 meses">Volume (x média)</th>
       <th scope="col" class="wt-c-52">Faixa 52 semanas</th>
@@ -120,6 +120,9 @@
     const temGrupos = state.rows.some(r => r.grupo), agrupar = temGrupos && prefs.grupos && prefs.mode === 'table';
     const bg = modes.querySelector('[data-wt-grupos]');
     if (bg) { bg.hidden = !temGrupos; bg.setAttribute('aria-pressed', String(agrupar)); bg.textContent = agrupar ? 'Temas' : 'Lista'; }
+    // título da coluna de variação em dinheiro conforme a moeda dos ativos da lista
+    const moedas = new Set(state.rows.map(r => r.quote?.currency).filter(Boolean)), thx = root.querySelector('th.wt-c-x');
+    if (thx) thx.textContent = moedas.size === 1 ? `Var. dia (${{ BRL: 'R$', USD: 'US$', EUR: '€' }[[...moedas][0]] || [...moedas][0]})` : 'Var. dia (valor)';
     const ordem = core.sorted(state.rows, prefs), blocos = [];
     if (agrupar) { for (const r of ordem) { let b = blocos.find(x => x.g === (r.grupo || 'Outros')); if (!b) blocos.push(b = { g: r.grupo || 'Outros', rows: [] }); b.rows.push(r); } blocos.sort((a, b) => primeiro(a.g) - primeiro(b.g)); }
     else blocos.push({ g: '', rows: ordem });
