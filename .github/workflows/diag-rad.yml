@@ -11,14 +11,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          for U in 'http://feeds.folha.uol.com.br/mercado/rss091.xml' 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain' 'https://www.proactiveinvestors.com.au/rss.xml' 'https://www.nasdaq.com/feed/rssoutbound?category=Markets' 'https://seekingalpha.com/tag/wall-st-breakfast.xml' 'https://www.coindesk.com/arc/outboundfeeds/rss'; do
-            echo "=== $U"
-            curl -sSL -m 20 -o /tmp/f.xml -D /tmp/h.txt -w "HTTP %{http_code} %{size_download} bytes %{time_total}s\n" "$U" || echo "falhou"
-            grep -i "^content-type" /tmp/h.txt | tail -1
-            head -c 200 /tmp/f.xml | tr '\n' ' '; echo
-            echo "itens: $(grep -o '<item' /tmp/f.xml | wc -l)"
-            grep -o '<pubDate>[^<]*' /tmp/f.xml | head -3
-            grep -o '<title>[^<]*' /tmp/f.xml | sed -n '2,5p'
-            grep -o '<description>' /tmp/f.xml | wc -l | sed 's/^/descricoes: /'
-            grep -o 'media:content\|<enclosure' /tmp/f.xml | sort | uniq -c
-          done
+          U='https://www.rttnews.com/rss/rssarticlelist.aspx'
+          curl -sSL -m 20 -o /tmp/f.html -D /tmp/h.txt -w "HTTP %{http_code} %{size_download} bytes\n" "$U" || echo falhou
+          grep -i "^content-type" /tmp/h.txt | tail -1
+          head -c 400 /tmp/f.html | tr '\n' ' '; echo
+          echo "itens: $(grep -o '<item' /tmp/f.html | wc -l)"
+          grep -o '<pubDate>[^<]*' /tmp/f.html | head -3
+          grep -o '<title>[^<]*' /tmp/f.html | sed -n '1,5p'
+          grep -oi 'href="[^"]*rss[^"]*"' /tmp/f.html | sort -u | head -60
