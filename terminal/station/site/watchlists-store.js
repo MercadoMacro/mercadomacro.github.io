@@ -11,7 +11,8 @@ globalThis.MMWatchlistsStore = class {
   get key() { return 'trader_watchlists_v1:' + this.user; }
   get tsKey() { return 'trader_watchlists_ts_v1:' + this.user; }
   get activeKey() { return 'trader_watchlists_active_v1:' + this.user; }
-  get items() { return this.doc?.lists.find(l => l.id === this.active)?.items || []; }
+  get items() { const p = this.core.pronta?.(this.active); return p ? p.items.map(x => ({ ...x })) : this.doc?.lists.find(l => l.id === this.active)?.items || []; }
+  get prontaAtiva() { return !!this.core.pronta?.(this.active); }
   read(key, fallback = null) { try { const s = localStorage.getItem(key); return s == null ? fallback : JSON.parse(s); } catch { return fallback; } }
   write(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* A conta ainda pode guardar a alteração. */ } }
   stamp(key) { const n = Number(this.read(key, 0)); return Number.isSafeInteger(n) && n > 0 ? n : 0; }
@@ -20,10 +21,12 @@ globalThis.MMWatchlistsStore = class {
     const allowed = this.ready && !this.loggingOut;
     return { user: allowed ? this.user : null, ready: allowed, writable: this.writable, migrating: allowed && this.migrating,
       active: this.active, error: this.error,
-      lists: allowed ? this.doc.lists.map(l => ({ id: l.id, name: l.name, count: l.items.length })) : [] };
+      pronta: allowed && this.prontaAtiva,
+      lists: allowed ? [...this.doc.lists.map(l => ({ id: l.id, name: l.name, count: l.items.length })),
+        ...(this.core.PRONTAS || []).map(l => ({ id: l.id, name: l.name, count: l.items.length, pronta: true }))] : [] };
   }
   emit(quotes = false) { this.changed({ ...this.state(), items: this.ready && !this.loggingOut ? this.items : [], quotes }); }
-  choose(id) { this.active = this.doc.lists.some(l => l.id === id) ? id : this.doc.lists[0].id; this.write(this.activeKey, this.active); }
+  choose(id) { this.active = this.doc.lists.some(l => l.id === id) || this.core.pronta?.(id) ? id : this.doc.lists[0].id; this.write(this.activeKey, this.active); }
   requireWrite() {
     if (!this.writable) throw new Error(this.migrating ? 'Preparando suas listas na conta. Aguarde a sincronização.' : 'Confirme sua conta antes de alterar as listas.');
   }
@@ -64,6 +67,8 @@ globalThis.MMWatchlistsStore = class {
     }
   }
   saveItems(items, sync = true) {
+    // lista pronta não muda (nomes que chegam com as cotações também não são gravados)
+    if (this.prontaAtiva) { if (sync) throw new Error('Esta é uma lista pronta e não muda. Para montar a sua, escolha ou crie outra lista no menu ⋯.'); return; }
     if (sync) this.requireWrite();
     else if (!this.ready || this.loggingOut) return;
     const next = this.core.clone(this.doc), list = next.lists.find(l => l.id === this.active);
@@ -74,7 +79,7 @@ globalThis.MMWatchlistsStore = class {
     this.persist(); if (sync) this.schedule();
   }
   select(id) {
-    if (!this.ready || this.loggingOut || !this.doc.lists.some(l => l.id === id)) return;
+    if (!this.ready || this.loggingOut || !(this.doc.lists.some(l => l.id === id) || this.core.pronta?.(id))) return;
     this.choose(id); this.emit(true);
   }
   create(name, id) {

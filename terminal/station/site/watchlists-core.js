@@ -43,5 +43,17 @@ globalThis.MMWatchlists = (() => {
     if (!next.lists.some(l => l.id === id)) throw new Error('A lista mudou. Tente novamente.');
     next.lists = next.lists.filter(l => l.id !== id); return next;
   }
-  return { MAX_LISTS, MAX_ITEMS, valid, clone, migrate, create, rename, remove };
+  // listas prontas (10/11/2026, Severino): aparecem para todos no seletor, só leitura, fora do limite de 10 listas.
+  // ETFs dos EUA: os maiores e mais negociados, por grupo. A mesma lista está no servidor (src/capital.js, ETFS_EUA).
+  const PRONTAS = Object.freeze([{ id: 'pronta-etfs-eua', name: 'ETFs dos EUA', items: Object.freeze([
+    ['SPY', 'S&P 500 · SPDR'], ['VOO', 'S&P 500 · Vanguard'], ['QQQ', 'Nasdaq 100 · Invesco'], ['DIA', 'Dow Jones · SPDR'],
+    ['IWM', 'Russell 2000 (small caps) · iShares'], ['VTI', 'Mercado total dos EUA · Vanguard'],
+    ['XLK', 'Setor: tecnologia'], ['SMH', 'Setor: semicondutores'], ['XLF', 'Setor: financeiro'], ['XLE', 'Setor: energia'], ['XLV', 'Setor: saúde'],
+    ['EWZ', 'Brasil · iShares'], ['EEM', 'Emergentes · iShares'], ['EFA', 'Desenvolvidos fora dos EUA · iShares'],
+    ['TLT', 'Treasuries 20+ anos · iShares'], ['IEF', 'Treasuries 7-10 anos · iShares'], ['LQD', 'Crédito grau de investimento · iShares'], ['HYG', 'Crédito high yield · iShares'],
+    ['GLD', 'Ouro · SPDR'], ['SLV', 'Prata · iShares'], ['USO', 'Petróleo WTI · USCF'], ['VNQ', 'Imóveis (REITs) · Vanguard']
+  ].map(([s, n]) => Object.freeze({ s, n }))) }]);
+  const pronta = (id) => PRONTAS.find(l => l.id === id) || null;
+  const ETFS_EUA = Object.freeze(PRONTAS[0].items.map(x => x.s));
+  return { MAX_LISTS, MAX_ITEMS, valid, clone, migrate, create, rename, remove, PRONTAS, pronta, ETFS_EUA };
 })();
