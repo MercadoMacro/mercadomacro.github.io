@@ -20,6 +20,9 @@ const FEEDS = [
   { name: 'RTTNews Últimas', url: 'https://www.rttnews.com/RSS/breakingnews.xml', source: 'RTTNews', weight: 7 },
   { name: 'RTTNews Economia', url: 'https://www.rttnews.com/RSS/EconomicNews.xml', source: 'RTTNews', weight: 7 },
   { name: 'RTTNews Câmbio', url: 'https://www.rttnews.com/RSS/ForexTopStory.xml', source: 'RTTNews', weight: 6 },
+  // Barchart (10/11/2026, sugestão do Severino): mercado financeiro e commodities (milho, soja, café, boi)
+  { name: 'Barchart Financeiro', url: 'https://www.barchart.com/news/rss/financials', source: 'Barchart', weight: 6 },
+  { name: 'Barchart Commodities', url: 'https://www.barchart.com/news/rss/commodities', source: 'Barchart', weight: 6 },
   // em teste (09/11/2026, pedido do Severino): do GitHub vieram barrados; lidos daqui com identificação honesta.
   // Se seguirem barrados, a fonte fica com 0 na lista e sai na próxima revisão (nada de driblar o bloqueio)
   { name: 'Proactive Investors', url: 'https://www.proactiveinvestors.com.au/rss.xml', source: 'Proactive Investors', weight: 5, honesto: true },
