@@ -243,8 +243,9 @@
   const HORARIO = { '^HSI': { id: 'x-hk', tz: 'Asia/Hong_Kong', ab: '09:30', fe: '16:00' }, '^AXJO': { id: 'x-au', tz: 'Australia/Sydney', ab: '10:00', fe: '16:00' } };
   window.MMMercadoAberto = (s) => {
     if (HORARIO[s]) return situacao(HORARIO[s]).aberto;
-    const r = REGIOES.find((x) => [...x.linhas, ...x.mais].some((l) => l[0] === s)) || (/=F$/.test(s) ? REGIOES.find((x) => x.id === 'co') : null)
-      || (window.MMWatchlists?.ETFS_EUA?.includes(s) ? REGIOES.find((x) => x.id === 'us') : null); // ETFs dos EUA: pregão de Nova York
+    // ETFs dos EUA (10/11/2026, Severino): o preço da Capital vale também fora do pregão de Nova York, enquanto ela negociar
+    if (window.MMWatchlists?.ETFS_EUA?.includes(s)) return null;
+    const r = REGIOES.find((x) => [...x.linhas, ...x.mais].some((l) => l[0] === s)) || (/=F$/.test(s) ? REGIOES.find((x) => x.id === 'co') : null);
     return r ? situacao(r).aberto : null;
   };
   window.MMDicaCfd = DICA_CFD;
