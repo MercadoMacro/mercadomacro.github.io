@@ -11,12 +11,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          for U in https://capital.com/en-int/news https://capital.com/en-int/news/rss https://capital.com/rss https://capital.com/en-int/analysis/rss; do
-            curl -sSL -m 20 -o /tmp/g.html -D /tmp/h.txt -w "$U: HTTP %{http_code} %{size_download} bytes\n" "$U" || echo falhou
-            grep -i "^content-type" /tmp/h.txt | tail -1
-            grep -oiE '<link[^>]+(rss|atom)[^>]*>' /tmp/g.html | head -3
-            grep -oE '"(https?:)?//[a-z0-9.-]*capital\.com/[^"]*(api|news|feed)[^"]*"' /tmp/g.html | sort -u | head -15
-            grep -oE '<item' /tmp/g.html | wc -l | sed 's/^/itens /'
-            grep -o 'Reuters News' /tmp/g.html | wc -l | sed 's/^/reuters /'
-            grep -oE '__NEXT_DATA__|window\.__[A-Z_]+' /tmp/g.html | sort -u | head
+          curl -sSL -m 20 -o /tmp/n.html https://capital.com/en-int/news
+          grep -oE 'href="/en-int/markets/[^"]+"' /tmp/n.html | sort -u | head -40
+          curl -sSL -m 20 -o /tmp/s.xml https://capital.com/sitemap.xml -w "sitemap %{http_code}\n"; head -c 600 /tmp/s.xml; echo
+          for U in https://capital.com/en-int/markets/etfs https://capital.com/en-int/markets/shares/spy-share-price https://capital.com/en-int/markets/etfs/spy https://capital.com/en-int/markets/etfs/spy-etf-price; do
+            curl -sSL -m 20 -o /tmp/g.html -w "$U %{http_code} %{url_effective}\n" "$U"
+            grep -oE 'href="/en-int/markets/[^"]*(spy|qqq|ewz|etf)[^"]*"' -i /tmp/g.html | sort -u | head -15
           done
