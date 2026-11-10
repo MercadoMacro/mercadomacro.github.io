@@ -54,6 +54,9 @@ body.nw3 #news-view > .nc-sep:first-child { margin-top:2px; }
   #nw3-fundo { position:fixed; inset:0; z-index:2090; background:rgba(3,6,12,.55); }
   #nw3-fundo[hidden] { display:none; }
   body.nw3-fontes { overflow:hidden; }
+  /* a animação de entrada da aba deixa um transform na .news-wrap, que prende o painel atrás do fundo escuro
+     (os toques caíam no fundo e nada respondia, 09/11/2026); com o painel aberto ela sai */
+  body.nw3-fontes #news-panel > .news-wrap { animation:none !important; transform:none !important; }
   .nw3-fechar { flex:1 0 100%; position:sticky; bottom:0; margin-top:6px; height:44px; border:0; border-radius:10px; background:var(--accent); color:#1a1205; font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
   body.nw3 .news-assets { margin-bottom:10px; }
   body.nw3 .nc-sep { margin:16px 0 10px; }
