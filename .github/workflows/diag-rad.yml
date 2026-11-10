@@ -11,10 +11,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: |
-          curl -sSL -m 20 -o /tmp/n.html https://capital.com/en-int/news
-          grep -oE 'href="/en-int/markets/[^"]+"' /tmp/n.html | sort -u | head -40
-          curl -sSL -m 20 -o /tmp/s.xml https://capital.com/sitemap.xml -w "sitemap %{http_code}\n"; head -c 600 /tmp/s.xml; echo
-          for U in https://capital.com/en-int/markets/etfs https://capital.com/en-int/markets/shares/spy-share-price https://capital.com/en-int/markets/etfs/spy https://capital.com/en-int/markets/etfs/spy-etf-price; do
-            curl -sSL -m 20 -o /tmp/g.html -w "$U %{http_code} %{url_effective}\n" "$U"
-            grep -oE 'href="/en-int/markets/[^"]*(spy|qqq|ewz|etf)[^"]*"' -i /tmp/g.html | sort -u | head -15
+          curl -sSL -m 20 https://capital.com/sitemap.xml | grep -oE 'https://capital.com/sitemap-en-int-instruments-[0-9]+\.xml' | sort -u > /tmp/l.txt; cat /tmp/l.txt
+          for S in $(cat /tmp/l.txt); do curl -sSL -m 30 "$S"; done > /tmp/all.xml
+          grep -oE '<loc>[^<]+' /tmp/all.xml | sed 's/<loc>//' > /tmp/u.txt; wc -l /tmp/u.txt
+          for T in spy qqq oneq dia iwm vti voo xlk smh xlf xle xlv ewz eem efa tlt ief lqd hyg gld slv uso vnq vgk ewg ewu epp ewj ewy ewt ewa bkf fxi inda; do
+            echo "== $T: $(grep -iE "/(${T}|.*-${T})(-[a-z-]*)?$" /tmp/u.txt | grep -iE "share|etf" | head -2 | tr '\n' ' ')"
           done
+          grep -iE "s-p-500-etf|spdr" /tmp/u.txt | head -8
