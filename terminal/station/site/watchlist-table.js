@@ -351,7 +351,6 @@
     <h4>Detalhes do ativo</h4>
     <dl class="wn-dl"></dl>
     <div class="wn-cx" hidden></div>
-    <a class="wn-cap" target="_blank" rel="noopener" hidden>Notícias deste ETF na Capital.com <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
     <button type="button" class="wn-full">Ver análise completa <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;
   const fundo = document.createElement('div'); fundo.className = 'wn-fundo'; fundo.hidden = true; document.body.append(fundo);
   function fecharPainel() { side.hidden = true; fundo.hidden = true; lay.classList.remove('wn-com-painel'); document.body.classList.remove('wn-sheet-on'); sel = largo() ? sel : null; render(); }
@@ -398,28 +397,7 @@
       if ((t === 'pc' || t === 'dx') && core.number(v)) dd.className = v > 0 ? 'wt-up' : v < 0 ? 'wt-down' : ''; });
     side.querySelector(':scope > .wn-dl').classList.add('wn-dl2');
     pintaComex(r.symbol);
-    const cap = side.querySelector('.wn-cap'), pg2 = CAP_PAGINA[r.symbol];
-    cap.hidden = !pg2;
-    if (pg2) cap.href = 'https://capital.com/en-int/markets/shares/' + pg2;
   }
-  // página do ETF na Capital.com, que traz as notícias relacionadas (10/11/2026, Severino: opção 2).
-  // Só um link: o conteúdo é deles (Reuters etc.) e não é copiado para o site. Endereços conferidos no sitemap da Capital;
-  // EWG, EPP, EWT, BKF e INDA não têm página lá.
-  const CAP_PAGINA = {
-    SPY: 'spdr-s-p-500-etf-share-price-1', VOO: 'vanguard-s-p-500-etf-share-price', QQQ: 'invesco-qqq-trust-share-price',
-    ONEQ: 'fidelity-nasdaq-composite-index-tracking-stock-fund-share-price-1', DIA: 'spdr-dow-jones-industrial-average-etf-share-price',
-    IWM: 'ishares-russell-2000-etf-share-price', VTI: 'vanguard-total-stock-market-index-fund-etf-shares-share-price-1',
-    XLK: 'technology-select-sector-spdr-fund-share-price-1', SMH: 'vaneck-vectors-semiconductor-etf-share-price',
-    XLF: 'financial-select-sector-spdr-fund-share-price-1', XLE: 'energy-select-sector-spdr-fund-share-price-1',
-    XLV: 'health-care-select-sector-spdr-fund-share-price', EWZ: 'ishares-msci-brazil-capped-etf-share-price',
-    EEM: 'ishares-msci-emerging-markets-etf-share-price', EFA: 'ishares-msci-eafe-etf-share-price-1',
-    TLT: 'ishares-20-year-treasury-bond-etf-share-price-1', IEF: 'ishares-7-10-year-treasury-bond-etf-share-price-2',
-    LQD: 'ishares-iboxx-usd-investment-grade-corporate-bond-etf-share-price', HYG: 'ishares-iboxx-high-yield-corporate-bond-etf-share-price',
-    GLD: 'spdr-gold-shares-share-price-1', SLV: 'ishares-silver-trust-share-price-1', USO: 'united-states-oil-fund-share-price',
-    VNQ: 'vanguard-real-estate-index-fund-etf-shares-share-price-1', VGK: 'vanguard-ftse-europe-index-fund-etf-shares-share-price',
-    EWU: 'ishares-msci-united-kingdom-etf-share-price', EWJ: 'ishares-msci-japan-etf-share-price', EWY: 'ishares-msci-south-korea-etf-share-price',
-    EWA: 'ishares-msci-australia-etf-share-price', FXI: 'ishares-china-large-cap-etf-share-price-1'
-  };
   // exportação da commodity ligada à empresa (Comex Stat, pelo comex.js da aba Indicadores)
   const COMMODITY = { VALE3: 'minerio', CMIN3: 'minerio', VALE: 'minerio', PETR3: 'petroleo', PETR4: 'petroleo', PRIO3: 'petroleo', BRAV3: 'petroleo', RECV3: 'petroleo', PBR: 'petroleo', SUZB3: 'celulose', KLBN11: 'celulose', KLBN4: 'celulose', JBSS3: 'bovina', JBS: 'bovina', MRFG3: 'bovina', MBRF3: 'bovina', BEEF3: 'bovina', BRFS3: 'frango', SLCE3: 'soja', AGRO3: 'soja', CSAN3: 'acucar', RAIZ4: 'acucar', JALL3: 'acucar', SMTO3: 'acucar' };
   let comexPedido = false;
