@@ -460,16 +460,19 @@ async function handleIndBundle(url, env, ctx, cors) {
 // Devolve { "<símbolo>": { t: [segundos], c: [fechamentos], off } | { error } }. Cache de borda de 6 h (1d: 2 min, 5d: 15 min).
 // =========================================================
 const HIST_TTL = 6 * 3600;
-const HIST_FAIXAS = { '3mo': { iv: '1d', ttl: HIST_TTL }, '1d': { iv: '5m', ttl: 120 }, '5d': { iv: '30m', ttl: 900 }, '1mo': { iv: '1d', ttl: 3600 }, '1y': { iv: '1d', ttl: HIST_TTL } };
+// ytd, 5y e max (10/11/2026): painel do ativo na Watchlist. &vol=1 devolve também os volumes (v), para o volume médio de 3 meses.
+const HIST_FAIXAS = { '3mo': { iv: '1d', ttl: HIST_TTL }, '1d': { iv: '5m', ttl: 120 }, '5d': { iv: '30m', ttl: 900 }, '1mo': { iv: '1d', ttl: 3600 }, '1y': { iv: '1d', ttl: HIST_TTL },
+  'ytd': { iv: '1d', ttl: 3600 }, '5y': { iv: '1wk', ttl: HIST_TTL }, 'max': { iv: '1mo', ttl: HIST_TTL } };
 async function handleHistory(url, ctx, cors) {
   const faixa = HIST_FAIXAS[url.searchParams.get('r')] ? url.searchParams.get('r') : '3mo';
   const { iv, ttl: faixaTtl } = HIST_FAIXAS[faixa];
+  const comVol = url.searchParams.get('vol') === '1';
   const symbols = [...new Set((url.searchParams.get('symbols') || '').split(',').map((s) => s.trim()).filter(Boolean))].sort();
   if (!symbols.length) return json({ error: 'Parâmetro symbols ausente' }, 400, cors);
   if (symbols.length > MAX_SYMBOLS) return json({ error: `Máximo de ${MAX_SYMBOLS} símbolos por chamada` }, 400, cors);
   if (!symbols.every((s) => SYMBOL_RE.test(s))) return json({ error: 'Símbolo inválido' }, 400, cors);
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.local/history-v1?symbols=' + encodeURIComponent(symbols.join(',')) + (faixa === '3mo' ? '' : '&r=' + faixa));
+  const cacheKey = new Request('https://cache.local/history-v1?symbols=' + encodeURIComponent(symbols.join(',')) + (faixa === '3mo' ? '' : '&r=' + faixa) + (comVol ? '&vol=1' : ''));
   const hit = await cache.match(cacheKey);
   if (hit) return new Response(hit.body, { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${Math.min(1800, faixaTtl)}`, 'X-Cache': 'HIT', ...cors } });
   const serie = async (sym, range) => {
@@ -478,10 +481,10 @@ async function handleHistory(url, ctx, cors) {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const res = (await r.json())?.chart?.result?.[0];
-    const ts = res?.timestamp || [], cl = res?.indicators?.quote?.[0]?.close || [];
-    const t = [], c = [];
-    for (let i = 0; i < ts.length; i++) if (cl[i] != null && isFinite(cl[i])) { t.push(ts[i]); c.push(+cl[i].toPrecision(7)); }
-    return { t, c, off: res?.meta?.gmtoffset || 0 };
+    const ts = res?.timestamp || [], cl = res?.indicators?.quote?.[0]?.close || [], vo = res?.indicators?.quote?.[0]?.volume || [];
+    const t = [], c = [], v = [];
+    for (let i = 0; i < ts.length; i++) if (cl[i] != null && isFinite(cl[i])) { t.push(ts[i]); c.push(+cl[i].toPrecision(7)); v.push(vo[i] != null && isFinite(vo[i]) ? vo[i] : null); }
+    return comVol ? { t, c, v, off: res?.meta?.gmtoffset || 0 } : { t, c, off: res?.meta?.gmtoffset || 0 };
   };
   const entries = await Promise.all(symbols.map(async (sym) => {
     try {
@@ -493,12 +496,11 @@ async function handleHistory(url, ctx, cors) {
         if (w.c.length >= 2) {
           const dia = (x) => Math.floor((x + w.off) / 86400), ult = dia(w.t[w.t.length - 1]);
           const i0 = w.t.findIndex((x) => dia(x) === ult);
-          s = { t: w.t.slice(i0), c: w.c.slice(i0), off: w.off };
+          s = { ...w, t: w.t.slice(i0), c: w.c.slice(i0), ...(w.v ? { v: w.v.slice(i0) } : {}) };
         }
       }
-      const { t, c, off } = s;
-      if (c.length < 2) throw new Error('sem histórico');
-      return [sym, { t, c, off }];
+      if (s.c.length < 2) throw new Error('sem histórico');
+      return [sym, s];
     } catch (err) {
       return [sym, { error: String(err.message || err) }];
     }

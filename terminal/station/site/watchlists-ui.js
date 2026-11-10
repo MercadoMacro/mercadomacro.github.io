@@ -5,7 +5,7 @@
   root.innerHTML = `<div class="wls-bar"><label for="wls-select">Lista</label><select id="wls-select" aria-label="Lista de ativos"></select>
     
     <button type="button" class="btn-sm" data-wls="menu" aria-label="Gerenciar lista atual" aria-expanded="false" aria-controls="wls-menu">⋯</button></div>
-    <div id="wls-menu" class="wls-menu" hidden><button type="button" class="btn-sm" data-wls="new">Nova lista</button><button type="button" class="btn-sm" data-wls="rename">Renomear lista</button><button type="button" class="btn-sm" data-wls="delete">Excluir lista</button></div>
+    <div id="wls-menu" class="wls-menu" hidden><button type="button" class="btn-sm" data-wls="new">Nova lista</button><button type="button" class="btn-sm" data-wls="rename">Renomear lista</button><button type="button" class="btn-sm" data-wls="delete">Excluir lista</button><button type="button" class="btn-sm" data-wls="copiar">Copiar os códigos</button><button type="button" class="btn-sm" data-wls="csv">Exportar CSV</button></div>
     <form class="wls-form" hidden><label for="wls-name">Nome da lista</label><input id="wls-name" maxlength="30" required autocomplete="off"><button type="submit" class="btn-sm">Salvar</button><button type="button" class="btn-sm" data-wls="cancel">Cancelar</button></form>
     <div class="wls-confirm" hidden><span></span><button type="button" class="btn-sm" data-wls="confirm-delete">Excluir</button><button type="button" class="btn-sm" data-wls="cancel">Cancelar</button></div>
     <div class="wls-status" role="status"></div><button type="button" class="btn-sm" data-wls="retry" hidden>Tentar novamente</button>`;
@@ -36,6 +36,7 @@
       if (b.dataset.wls === 'cancel') b.disabled = false;
       if (b.dataset.wls === 'retry') { b.disabled = false; b.hidden = !state.error; }
     }
+    for (const k of ['copiar', 'csv']) root.querySelector(`[data-wls="${k}"]`).disabled = !state.ready || !current()?.count;
     root.querySelector('[data-wls="new"]').disabled = !state.writable || minhas.length >= 10;
     root.querySelector('[data-wls="delete"]').disabled = !state.writable || minhas.length <= 1 || !!state.pronta;
     root.querySelector('[data-wls="rename"]').disabled = !state.writable || !!state.pronta;
@@ -55,6 +56,7 @@
     const kind = b.dataset.wls;
     if (kind === 'new') return edit('create');
     if (kind === 'rename') return edit('rename');
+    if (kind === 'copiar' || kind === 'csv') { close(); window.dispatchEvent(new CustomEvent('mm-watchlist-exportar', { detail: kind })); return; }
     if (kind === 'menu') { const show = menu.hidden; close(); menu.hidden = !show; b.setAttribute('aria-expanded',String(show)); return; }
     if (kind === 'cancel') { close(); picker.focus(); return; }
     if (kind === 'retry') { close(); action({type:'retry'}); return; }

@@ -85,6 +85,9 @@
           // dados do dia para o painel do ativo (watchlist-table.js); sem dado, fica "—"
           const op = (chart?.chart?.result?.[0]?.indicators?.quote?.[0]?.open || []).find((x) => x != null && isFinite(x));
           v.dia = { abertura: op ?? null, max: meta.regularMarketDayHigh ?? null, min: meta.regularMarketDayLow ?? null, ant: meta.chartPreviousClose ?? meta.previousClose ?? null };
+          // volume do dia e faixa de 52 semanas (tabela da Watchlist, 10/11/2026); sem o dado, a tela mostra "—"
+          const num = (x) => (typeof x === 'number' && isFinite(x) ? x : null);
+          v.vol = num(meta.regularMarketVolume); v.max52 = num(meta.fiftyTwoWeekHigh); v.min52 = num(meta.fiftyTwoWeekLow);
           out[sym] = { v, name: meta.shortName || meta.longName || '' };
         } catch (e) { /* sem dados para esse ativo */ }
       });
@@ -100,7 +103,7 @@
   function wlTablePublish() {
     const allowed = wlReady && !window.__mmLoggingOut;
     const rows = allowed ? wl.map(it => ({
-      symbol: it.s, name: it.n || nice(it.s),
+      symbol: it.s, name: it.n || nice(it.s), grupo: it.g || '',
       quote: wlTableOwner === wlUser ? wlMemo[it.s] || null : null,
       fresh: wlTableOwner === wlUser && wlTableFresh.has(it.s)
     })) : [];

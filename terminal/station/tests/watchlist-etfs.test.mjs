@@ -23,7 +23,7 @@ test('mesmos ETFs no servidor (Capital), no navegador (forex-live) e na lista pr
 test('lista pronta aparece, é só leitura e não vai para a conta',async()=>{
  const w=setup();await w.store.sync();
  const st=w.store.state();
- const eua=st.lists.find(l=>l.id==='pronta-etfs-eua'),glob=st.lists.find(l=>l.id==='pronta-etfs-globais');assert.equal(eua.pronta,true);assert.equal(eua.count,22);assert.equal(glob.pronta,true);assert.equal(glob.count,19);
+ const eua=st.lists.find(l=>l.id==='pronta-etfs-eua'),glob=st.lists.find(l=>l.id==='pronta-etfs-globais');assert.equal(eua.pronta,true);assert.equal(eua.count,25);assert.equal(glob.pronta,true);assert.equal(glob.count,19);
  w.store.select('pronta-etfs-eua');
  assert.equal(w.store.state().pronta,true);assert.equal(w.store.items[0].s,'SPY');
  assert.throws(()=>w.store.saveItems([{s:'X'}]),/lista pronta/);

@@ -44,23 +44,31 @@ globalThis.MMWatchlists = (() => {
     next.lists = next.lists.filter(l => l.id !== id); return next;
   }
   // listas prontas (10/11/2026, Severino): aparecem para todos no seletor, só leitura, fora do limite de 10 listas.
-  // ETFs dos EUA: os maiores e mais negociados, por grupo. A mesma lista está no servidor (src/capital.js, ETFS_EUA).
-  const PRONTAS = Object.freeze([{ id: 'pronta-etfs-eua', name: 'ETFs dos EUA', nota: 'Lista pronta do Mercado Macro: os maiores e mais negociados ETFs dos EUA.', items: Object.freeze([
-    ['SPY', 'S&P 500 · SPDR'], ['VOO', 'S&P 500 · Vanguard'], ['QQQ', 'Nasdaq 100 · Invesco'], ['DIA', 'Dow Jones · SPDR'],
-    ['IWM', 'Russell 2000 (small caps) · iShares'], ['VTI', 'Mercado total dos EUA · Vanguard'],
-    ['XLK', 'Setor: tecnologia'], ['SMH', 'Setor: semicondutores'], ['XLF', 'Setor: financeiro'], ['XLE', 'Setor: energia'], ['XLV', 'Setor: saúde'],
-    ['EWZ', 'Brasil · iShares'], ['EEM', 'Emergentes · iShares'], ['EFA', 'Desenvolvidos fora dos EUA · iShares'],
-    ['TLT', 'Treasuries 20+ anos · iShares'], ['IEF', 'Treasuries 7-10 anos · iShares'], ['LQD', 'Crédito grau de investimento · iShares'], ['HYG', 'Crédito high yield · iShares'],
-    ['GLD', 'Ouro · SPDR'], ['SLV', 'Prata · iShares'], ['USO', 'Petróleo WTI · USCF'], ['VNQ', 'Imóveis (REITs) · Vanguard']
-  ].map(([s, n]) => Object.freeze({ s, n }))) },
-  // ETFs globais (10/11/2026, Severino, a partir da tela "Global" da Barchart): bolsas por país e região, negociados em Nova York
-  { id: 'pronta-etfs-globais', name: 'ETFs globais', nota: 'Lista pronta do Mercado Macro: bolsas de vários países e regiões por meio de ETFs negociados em Nova York.', items: Object.freeze([
-    ['SPY', 'EUA: S&P 500 · SPDR'], ['QQQ', 'EUA: Nasdaq 100 · Invesco'], ['ONEQ', 'EUA: Nasdaq Composite · Fidelity'], ['DIA', 'EUA: Dow Jones · SPDR'],
-    ['IWM', 'EUA: Russell 2000 · iShares'], ['EFA', 'Desenvolvidos fora dos EUA (EAFE) · iShares'], ['VGK', 'Europa · Vanguard'],
-    ['EWG', 'Alemanha · iShares'], ['EWU', 'Reino Unido · iShares'], ['EPP', 'Pacífico sem o Japão · iShares'], ['EWJ', 'Japão · iShares'],
-    ['EWY', 'Coreia do Sul · iShares'], ['EWT', 'Taiwan · iShares'], ['EWA', 'Austrália · iShares'], ['EEM', 'Emergentes · iShares'],
-    ['BKF', 'BRIC · iShares'], ['FXI', 'China (grandes empresas) · iShares'], ['EWZ', 'Brasil · iShares'], ['INDA', 'Índia · iShares']
-  ].map(([s, n]) => Object.freeze({ s, n }))) }]);
+  // Cada lista tem grupos temáticos (a tabela pode mostrar agrupado ou em lista simples). Os mesmos códigos estão no
+  // servidor (src/capital.js, ETFS_EUA) e no forex-live.js (preço ao vivo da Capital.com).
+  const lista = (grupos) => Object.freeze(grupos.flatMap(([g, itens]) => itens.map(([s, n]) => Object.freeze({ s, n, g }))));
+  const PRONTAS = Object.freeze([
+    { id: 'pronta-etfs-eua', name: 'ETFs dos EUA', nota: 'Lista pronta do Mercado Macro: os maiores e mais negociados ETFs dos EUA, por tema.', items: lista([
+      ['Índices dos EUA', [['SPY', 'S&P 500 · SPDR'], ['VOO', 'S&P 500 · Vanguard'], ['QQQ', 'Nasdaq 100 · Invesco'], ['DIA', 'Dow Jones · SPDR'],
+        ['IWM', 'Russell 2000 (small caps) · iShares'], ['VTI', 'Mercado total dos EUA · Vanguard']]],
+      ['Global e emergentes', [['EEM', 'Emergentes · iShares'], ['EFA', 'Desenvolvidos fora dos EUA · iShares'], ['EWZ', 'Brasil · iShares'],
+        ['FXI', 'China (grandes empresas) · iShares']]],
+      ['Renda fixa e juros', [['SHY', 'Treasuries 1-3 anos · iShares'], ['IEF', 'Treasuries 7-10 anos · iShares'], ['TLT', 'Treasuries 20+ anos · iShares'],
+        ['LQD', 'Crédito grau de investimento · iShares'], ['HYG', 'Crédito high yield · iShares']]],
+      ['Commodities e proteção', [['GLD', 'Ouro · SPDR'], ['SLV', 'Prata · iShares'], ['USO', 'Petróleo WTI · USCF'], ['DBC', 'Cesta de commodities · Invesco']]],
+      ['Setores e temas', [['SMH', 'Semicondutores · VanEck'], ['XLK', 'Tecnologia · SPDR'], ['XLF', 'Financeiro · SPDR'], ['XLE', 'Energia · SPDR'],
+        ['XLV', 'Saúde · SPDR'], ['VNQ', 'Imóveis (REITs) · Vanguard']]],
+    ]) },
+    // ETFs globais (a partir da tela "Global" da Barchart que o Severino mandou): bolsas por país e região, negociados em Nova York
+    { id: 'pronta-etfs-globais', name: 'ETFs globais', nota: 'Lista pronta do Mercado Macro: bolsas de vários países e regiões por meio de ETFs negociados em Nova York.', items: lista([
+      ['Estados Unidos', [['SPY', 'S&P 500 · SPDR'], ['QQQ', 'Nasdaq 100 · Invesco'], ['ONEQ', 'Nasdaq Composite · Fidelity'], ['DIA', 'Dow Jones · SPDR'],
+        ['IWM', 'Russell 2000 · iShares']]],
+      ['Desenvolvidos', [['EFA', 'Desenvolvidos fora dos EUA (EAFE) · iShares'], ['VGK', 'Europa · Vanguard'], ['EWG', 'Alemanha · iShares'],
+        ['EWU', 'Reino Unido · iShares'], ['EWJ', 'Japão · iShares'], ['EWA', 'Austrália · iShares'], ['EPP', 'Pacífico sem o Japão · iShares']]],
+      ['Ásia emergente', [['EWY', 'Coreia do Sul · iShares'], ['EWT', 'Taiwan · iShares'], ['FXI', 'China (grandes empresas) · iShares'], ['INDA', 'Índia · iShares']]],
+      ['Emergentes e Brasil', [['EEM', 'Emergentes · iShares'], ['BKF', 'BRIC · iShares'], ['EWZ', 'Brasil · iShares']]],
+    ]) },
+  ]);
   const pronta = (id) => PRONTAS.find(l => l.id === id) || null;
   // todos os ETFs das listas prontas, sem repetir (o servidor busca esses na Capital)
   const ETFS_EUA = Object.freeze([...new Set(PRONTAS.flatMap(l => l.items.map(x => x.s)))]);
