@@ -5,7 +5,9 @@ globalThis.MMWatchTable = (() => {
     return { mode: p.mode === 'cards' ? 'cards' : 'table', sort: ['symbol', 'price', 'change'].includes(p.sort) ? p.sort : 'change',
       direction: p.direction === 1 ? 1 : -1,
       // listas com grupos (as prontas): agrupado por tema ou lista simples; grupos recolhidos por nome
-      grupos: p.grupos !== false, fechados: Array.isArray(p.fechados) ? p.fechados.filter(x => typeof x === 'string').slice(0, 40) : [] };
+      grupos: p.grupos !== false, fechados: Array.isArray(p.fechados) ? p.fechados.filter(x => typeof x === 'string').slice(0, 40) : [],
+      // colunas extras escolhidas no botão Colunas; null = automático (somem conforme a largura da tela)
+      cols: Array.isArray(p.cols) ? p.cols.filter(x => ['x', 'sp', '5', 'vol', '52'].includes(x)) : null };
   }
   function sorted(rows, prefs) {
     return [...rows].sort((a, b) => {

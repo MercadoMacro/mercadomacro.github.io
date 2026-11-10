@@ -146,11 +146,37 @@ html[data-motion="off"] .wt-preco { animation:none !important; }
 .wn-ext small { flex-basis:100%; color:var(--text-3); font-size:11.5px; }
 .wn-faixas { flex-wrap:wrap; gap:6px; }
 .wn-faixas button { min-width:0; padding:6px 9px; }
-/* colunas somem em telas menores: primeiro faixa 52 s., depois volume, var. em US$ e tendência */
-@media (max-width:1650px) { .wn.wn-com-painel .wt-c-52 { display:none; } }
-@media (max-width:1500px) { .wn.wn-com-painel .wt-c-vol { display:none; } }
-@media (max-width:1380px) { .wn.wn-com-painel .wt-c-x { display:none; } .wt-c-52 { display:none; } }
-@media (max-width:1300px) { .wn.wn-com-painel .wt-c-sp { display:none; } }
-@media (max-width:1180px) { .wt-c-vol { display:none; } }
-@media (max-width:900px) { .wt-c-x, .wt-c-sp { display:none; } .wt-badge { min-width:0; padding:3px 6px; font-size:12.5px; } .wt-ext { font-size:11px; }
+/* modo automático: o JS esconde colunas (52 s., volume, var. em valor, 5 pregões, tendência) até a tabela caber */
+.wt.wt-auto-52 .wt-c-52, .wt.wt-auto-vol .wt-c-vol, .wt.wt-auto-x .wt-c-x, .wt.wt-auto-5 .wt-c-5, .wt.wt-auto-sp .wt-c-sp { display:none; }
+@media (max-width:900px) { .wt:not(.wt-livre) .wt-c-x, .wt:not(.wt-livre) .wt-c-sp { display:none; } .wt-badge { min-width:0; padding:3px 6px; font-size:12.5px; } .wt-ext { font-size:11px; }
   .wt th:first-child, .wt td:first-child { min-width:0; } .wt th, .wt td { padding:10px 8px; } }
+/* modelo de 10/11/2026: faixa de resumo, 5 pregões, botão Colunas, eixos do gráfico e detalhes em duas colunas */
+.wt-resumo { display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; margin:0 0 10px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; background:var(--surface); font-size:13.5px; color:var(--text-2); }
+.wt-resumo[hidden] { display:none; }
+.wt-res-cont { padding-right:18px; border-right:1px solid var(--line); }
+.wt-res-cont i { font-style:normal; color:var(--text-3); margin:0 4px; }
+.wt-res-it b { color:var(--text); } .wt-res-it em { font-style:normal; font-weight:600; font-variant-numeric:tabular-nums; }
+.wt-c-5 { text-align:right; }
+.wls-bar .wt-modes { position:relative; }
+.wls-bar .wt-modes .wt-col-bt[hidden] { display:none; }
+.wt-col-pop { position:absolute; top:calc(100% + 6px); right:0; z-index:30; min-width:240px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 10px 30px rgba(0,0,0,.35); display:flex; flex-direction:column; gap:8px; font-size:13.5px; }
+.wt-col-pop p { margin:0 0 2px; font-weight:600; color:var(--text); }
+.wt-col-pop label { display:flex; align-items:center; justify-content:flex-start; gap:10px; color:var(--text); cursor:pointer; white-space:nowrap; text-align:left; }
+.wt-col-pop input[type="checkbox"] { width:16px; height:16px; min-width:0; flex:none; margin:0; padding:0; accent-color:var(--accent); }
+.wt-col-pop small { color:var(--text-3); font-size:11.5px; line-height:1.4; white-space:normal; }
+.wt-col-pop [hidden] { display:none; }
+.wt.wt-sem-x .wt-c-x, .wt.wt-sem-sp .wt-c-sp, .wt.wt-sem-5 .wt-c-5, .wt.wt-sem-vol .wt-c-vol, .wt.wt-sem-52 .wt-c-52 { display:none !important; }
+.wt.wt-livre .wt-table-wrap { overflow-x:auto; }
+.wn-graf { height:auto; padding:0 52px 22px 0; }
+.wn-graf .wn-ey { position:absolute; top:0; right:0; width:48px; height:150px; pointer-events:none; }
+.wn-graf .wn-ey span, .wn-graf .wn-ex span { position:absolute; font-size:10.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wn-graf .wn-ey span { right:0; transform:translateY(-50%); }
+.wn-graf .wn-ex { position:absolute; left:0; right:52px; bottom:0; height:16px; pointer-events:none; }
+.wn-graf .wn-ex span { transform:translateX(-50%); }
+.wn-graf .wn-ex span:first-child { transform:none; } .wn-graf .wn-ex span:last-child { transform:translateX(-100%); }
+.wn-graf .wn-fb { position:absolute; right:56px; transform:translateY(-120%); font-style:normal; font-size:10.5px; color:var(--text-2); background:color-mix(in srgb, var(--surface) 80%, transparent); padding:0 4px; border-radius:4px; pointer-events:none; font-variant-numeric:tabular-nums; }
+.wn-dl.wn-dl2 { display:grid; grid-template-columns:1fr 1fr; column-gap:22px; }
+.wn-dl.wn-dl2 > div { flex-direction:column; justify-content:flex-start; gap:2px; font-size:14px; padding:9px 0; }
+.wn-dl.wn-dl2 dt { font-size:12px; color:var(--text-3); }
+@media (max-width:380px) { .wn-dl.wn-dl2 { grid-template-columns:1fr; } }
+@media (max-width:900px) { .wls-bar .wt-modes .wt-col-bt { display:none; } .wt-res-cont { border-right:0; padding-right:0; flex-basis:100%; } }

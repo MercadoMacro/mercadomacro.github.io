@@ -24,14 +24,16 @@
 
   const root = document.createElement('div'); root.className = 'wt';
   root.innerHTML = `<div class="wt-toolbar"><div class="wt-modes" role="group" aria-label="Visualização da watchlist">
-    <button type="button" class="btn-sm" data-wt-mode="table">Tabela</button><button type="button" class="btn-sm" data-wt-mode="cards">Cards</button><button type="button" class="btn-sm wt-grp-bt" data-wt-grupos hidden title="Agrupar por tema ou ver em lista simples">Temas</button></div>
+    <button type="button" class="btn-sm" data-wt-mode="table">Tabela</button><button type="button" class="btn-sm" data-wt-mode="cards">Cards</button><button type="button" class="btn-sm wt-grp-bt" data-wt-grupos hidden title="Agrupar por tema ou ver em lista simples">Temas</button><button type="button" class="btn-sm wt-col-bt" data-wt-colunas aria-haspopup="true" aria-expanded="false" title="Escolher as colunas da tabela">Colunas</button></div>
     </div>
+    <div class="wt-resumo" hidden></div>
     <div class="wt-table-wrap"><table aria-label="Minha watchlist"><thead><tr>
       <th scope="col" data-wt-col="symbol"><button type="button" data-wt-sort="symbol">Ativo</button></th>
       <th scope="col" data-wt-col="price"><button type="button" data-wt-sort="price" title="Ordenação numérica; moedas diferentes não são convertidas">Preço</button></th>
       <th scope="col" data-wt-col="change"><button type="button" data-wt-sort="change">Var. dia</button></th>
       <th scope="col" class="wt-c-x">Var. dia (valor)</th>
       <th scope="col" class="wt-c-sp">Tendência (5D)</th>
+      <th scope="col" class="wt-c-5" title="Variação desde o fechamento de 5 pregões atrás">5 pregões (%)</th>
       <th scope="col" class="wt-c-vol" title="Volume de hoje e quantas vezes ele é a média diária dos últimos 3 meses">Volume (x média)</th>
       <th scope="col" class="wt-c-52">Faixa 52 semanas</th>
       <th scope="col"><span class="wt-sr">Ações</span></th>
@@ -123,6 +125,7 @@
     // título da coluna de variação em dinheiro conforme a moeda dos ativos da lista
     const moedas = new Set(state.rows.map(r => r.quote?.currency).filter(Boolean)), thx = root.querySelector('th.wt-c-x');
     if (thx) thx.textContent = moedas.size === 1 ? `Var. dia (${{ BRL: 'R$', USD: 'US$', EUR: '€' }[[...moedas][0]] || [...moedas][0]})` : 'Var. dia (valor)';
+    pintaResumo(); aplicaColunas();
     const ordem = core.sorted(state.rows, prefs), blocos = [];
     if (agrupar) { for (const r of ordem) { let b = blocos.find(x => x.g === (r.grupo || 'Outros')); if (!b) blocos.push(b = { g: r.grupo || 'Outros', rows: [] }); b.rows.push(r); } blocos.sort((a, b) => primeiro(a.g) - primeiro(b.g)); }
     else blocos.push({ g: '', rows: ordem });
@@ -130,7 +133,7 @@
     for (const b of blocos) {
     if (b.g) {
       const fechado = prefs.fechados.includes(b.g), trg = document.createElement('tr'); trg.className = 'wt-grupo' + (fechado ? ' fechado' : '');
-      const td = document.createElement('td'); td.colSpan = 8;
+      const td = document.createElement('td'); td.colSpan = 9;
       const bt = document.createElement('button'); bt.type = 'button'; bt.setAttribute('aria-expanded', String(!fechado));
       bt.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
       bt.append(text('span', b.g), text('small', String(b.rows.length)));
@@ -160,9 +163,11 @@
       const dx = core.number(q?.change) && core.number(q?.value) ? q.value - q.value / (1 + q.change / 100) : null;
       const tdX = text('td', core.number(dx) ? `${dx > 0 ? '+' : dx < 0 ? '−' : ''}${Math.abs(dx).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', 'wt-number wt-c-x ' + (dx > 0 ? 'wt-up' : dx < 0 ? 'wt-down' : ''));
       const tdS = document.createElement('td'); tdS.className = 'wt-c-sp'; tdS.innerHTML = spark(r.symbol);
+      const p5 = cinco(r, q), td5 = document.createElement('td'); td5.className = 'wt-number wt-c-5';
+      if (core.number(p5)) td5.append(text('span', core.change({ change: p5 }), p5 > 0 ? 'wt-up' : p5 < 0 ? 'wt-down' : '')); else td5.textContent = '—';
       const tdV = text('td', volume(r), 'wt-number wt-c-vol');
       const tdF = document.createElement('td'); tdF.className = 'wt-c-52'; faixa52(tdF, r, q);
-      tr.append(name, tdP, tdC, tdX, tdS, tdV, tdF);
+      tr.append(name, tdP, tdC, tdX, tdS, td5, tdV, tdF);
       const actions = document.createElement('td'); actions.className = 'wn-act';
       const more = document.createElement('button'); more.type = 'button'; more.className = 'wn-more';
       more.setAttribute('aria-label', 'Mais ações para ' + nice(r.symbol)); more.setAttribute('aria-haspopup', 'menu');
@@ -174,8 +179,18 @@
     }
     }
     mostrado = vistos;
+    ajustaLargura();
     pedeExtras();
   }
+  // automático: esconde colunas extras, na ordem de menor importância, até a tabela caber na largura
+  const AUTO = ['52', 'vol', 'x', '5', 'sp'];
+  function ajustaLargura() {
+    for (const k of AUTO) root.classList.remove('wt-auto-' + k);
+    if (Array.isArray(prefs.cols) || prefs.mode !== 'table' || wrap.hidden || !wrap.clientWidth) return;
+    for (const k of AUTO) { if (wrap.scrollWidth <= wrap.clientWidth + 1) break; root.classList.add('wt-auto-' + k); }
+  }
+  let largW = 0;
+  try { new ResizeObserver(() => { if (wrap.clientWidth !== largW) { largW = wrap.clientWidth; ajustaLargura(); } }).observe(wrap); } catch { /* navegador antigo: fica tudo */ }
   // ordem dos grupos: a da lista
   function primeiro(g) { const i = state.rows.findIndex(r => (r.grupo || 'Outros') === g); return i < 0 ? 999 : i; }
   let mostrado = {};
@@ -203,7 +218,9 @@
       lote(faltaV, '&vol=1', (s, v) => {
         // média dos dias completos (o último pode ser o pregão de hoje, ainda pela metade)
         const vs = Array.isArray(v?.v) ? v.v.slice(0, -1).filter(x => core.number(x) && x > 0) : [];
-        VM[s] = { media: vs.length >= 20 ? vs.reduce((a, b) => a + b, 0) / vs.length : null, em: Date.now() };
+        // fechamento de 5 pregões atrás (o último ponto é o pregão de hoje ou o último que houve)
+        const cs = Array.isArray(v?.c) ? v.c : [], c5 = cs.length > 6 ? cs[cs.length - 6] : null;
+        VM[s] = { media: vs.length >= 20 ? vs.reduce((a, b) => a + b, 0) / vs.length : null, c5: core.number(c5) && c5 > 0 ? c5 : null, em: Date.now() };
       }),
     ]);
     extrasPedindo = false;
@@ -230,6 +247,47 @@
     td.title = `Mínima de 52 semanas: ${fmt(lo, r.quote)} · Máxima: ${fmt(hi, r.quote)}`;
   }
 
+  // variação de 5 pregões: preço mostrado sobre o fechamento de 5 pregões atrás
+  function cinco(r, q) { const c5 = VM[r.symbol]?.c5, v = q?.value; return core.number(c5) && core.number(v) ? (v / c5 - 1) * 100 : null; }
+
+  /* ---------------- faixa de resumo: quantos sobem e caem, maior alta e maior baixa ---------------- */
+  const resumo = root.querySelector('.wt-resumo');
+  function pintaResumo() {
+    const vs = state.rows.map(r => ({ s: r.symbol, c: cot(r)?.change })).filter(x => core.number(x.c));
+    resumo.hidden = !user || prefs.mode !== 'table' || vs.length < 2;
+    if (resumo.hidden) return;
+    const sobe = vs.filter(x => x.c > 0).length, cai = vs.filter(x => x.c < 0).length;
+    const ord = [...vs].sort((a, b) => b.c - a.c), alta = ord[0], baixa = ord[ord.length - 1];
+    const parte = (rot, x, cls) => `<span class="wt-res-it">${rot}: <b>${nice(x.s)}</b> <em class="${cls}">${core.change({ change: x.c })}</em></span>`;
+    resumo.innerHTML = `<span class="wt-res-cont"><b class="wt-up">${sobe} em alta</b> <i>/</i> <b class="wt-down">${cai} em baixa</b>${vs.length - sobe - cai ? ` <i>/</i> <b>${vs.length - sobe - cai} estáveis</b>` : ''}</span>`
+      + (alta.c > 0 ? parte('Maior alta', alta, 'wt-up') : '') + (baixa.c < 0 ? parte('Maior baixa', baixa, 'wt-down') : '');
+  }
+
+  /* ---------------- botão Colunas: a pessoa escolhe as colunas extras da tabela ---------------- */
+  const COLS = [['x', 'Var. dia (valor)'], ['sp', 'Tendência (5D)'], ['5', '5 pregões (%)'], ['vol', 'Volume (x média)'], ['52', 'Faixa 52 semanas']];
+  function aplicaColunas() {
+    const livre = Array.isArray(prefs.cols);
+    root.classList.toggle('wt-livre', livre);
+    for (const [k] of COLS) root.classList.toggle('wt-sem-' + k, livre && !prefs.cols.includes(k));
+    const b = modes.querySelector('[data-wt-colunas]'); if (b) b.hidden = prefs.mode !== 'table';
+  }
+  let colPop = null;
+  function fechaColunas() { colPop?.remove(); colPop = null; modes.querySelector('[data-wt-colunas]')?.setAttribute('aria-expanded', 'false'); }
+  modes.querySelector('[data-wt-colunas]')?.addEventListener('click', (e) => {
+    e.stopPropagation(); if (colPop) return fechaColunas();
+    const bt = e.currentTarget, on = Array.isArray(prefs.cols) ? prefs.cols : null;
+    colPop = document.createElement('div'); colPop.className = 'wt-col-pop'; colPop.setAttribute('role', 'dialog'); colPop.setAttribute('aria-label', 'Colunas da tabela');
+    colPop.innerHTML = `<p>Colunas da tabela</p>${COLS.map(([k, t]) => `<label><input type="checkbox" value="${k}"${!on || on.includes(k) ? ' checked' : ''}> ${t}</label>`).join('')}
+      <small>${on ? 'Sua escolha vale em qualquer tela; se não couber, a tabela rola para o lado.' : 'Automático: quando a tela é estreita, as colunas menos importantes somem para a tabela caber.'}</small>
+      <button type="button" class="btn-sm" data-auto${on ? '' : ' hidden'}>Voltar ao automático</button>`;
+    colPop.addEventListener('click', (ev) => ev.stopPropagation());
+    colPop.addEventListener('change', () => { prefs.cols = [...colPop.querySelectorAll('input:checked')].map(i => i.value); save(); render(); fechaColunas(); });
+    colPop.querySelector('[data-auto]').addEventListener('click', () => { prefs.cols = null; save(); render(); fechaColunas(); });
+    bt.after(colPop); bt.setAttribute('aria-expanded', 'true'); colPop.querySelector('input').focus();
+  });
+  document.addEventListener('click', () => { if (colPop) fechaColunas(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && colPop) fechaColunas(); });
+
   /* ---------------- exportar: copiar os códigos ou baixar CSV (menu ⋯ das listas) ---------------- */
   window.addEventListener('mm-watchlist-exportar', async (e) => {
     const rows = core.sorted(state.rows, prefs); if (!rows.length) return;
@@ -240,8 +298,8 @@
       return;
     }
     const n = (v, d = 4) => (core.number(v) ? v.toFixed(d) : '');
-    const linhas = [['Ativo', 'Nome', 'Grupo', 'Ultimo', 'Moeda', 'Var dia %', 'Volume', 'Volume medio 3M', 'Min 52 sem', 'Max 52 sem']];
-    for (const r of rows) { const q = r.quote || {}; linhas.push([nice(r.symbol), r.name || '', r.grupo || '', n(q.value), q.currency || '', n(q.change, 2), n(q.vol, 0), n(VM[r.symbol]?.media, 0), n(lo52(r)), n(hi52(r))]); }
+    const linhas = [['Ativo', 'Nome', 'Grupo', 'Ultimo', 'Moeda', 'Var dia %', '5 pregoes %', 'Volume', 'Volume medio 3M', 'Min 52 sem', 'Max 52 sem']];
+    for (const r of rows) { const q = r.quote || {}; linhas.push([nice(r.symbol), r.name || '', r.grupo || '', n(q.value), q.currency || '', n(q.change, 2), n(cinco(r, q), 2), n(q.vol, 0), n(VM[r.symbol]?.media, 0), n(lo52(r)), n(hi52(r))]); }
     const csv = '\ufeff' + linhas.map(l => l.map(x => /[;"\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : x).join(';')).join('\r\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = `watchlist-${new Date().toISOString().slice(0, 10)}.csv`; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -331,10 +389,14 @@
       const c = ex.querySelector('span'); c.textContent = core.change({ change: q.ext.c }); c.className = q.ext.c > 0 ? 'wt-up' : q.ext.c < 0 ? 'wt-down' : '';
     }
     const vm = VM[r.symbol]?.media, vh = r.quote?.vol;
-    const linhas = [['Abertura', d.abertura], ['Máxima', d.max], ['Mínima', d.min], ['Fechamento anterior', d.ant],
-      ['Volume de hoje', vh, 'vol'], ['Volume médio (3 meses)', vm, 'vol'], ['Mínima de 52 semanas', lo52(r)], ['Máxima de 52 semanas', hi52(r)]];
+    const dx = core.number(q?.change) && core.number(q?.value) && !q?.ext ? q.value - q.value / (1 + q.change / 100) : null;
+    const linhas = [['Abertura', d.abertura], ['Fech. anterior', d.ant], ['Máxima', d.max], ['Volume hoje', vh, 'vol'], ['Mínima', d.min], ['Vol. médio 3m', vm, 'vol'],
+      ['Mín. 52 sem.', lo52(r)], ['Máx. 52 sem.', hi52(r)], ['Var. dia', dx, 'dx'], ['5 pregões', cinco(r, q), 'pc']];
     side.querySelector(':scope > .wn-dl').innerHTML = linhas.map(([k]) => `<div><dt>${k}</dt><dd></dd></div>`).join('');
-    side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; dd.textContent = !core.number(v) || (linhas[i][2] === 'vol' && v <= 0) ? '—' : linhas[i][2] === 'vol' ? abrev(v) : fmt(v, r.quote); });
+    side.querySelectorAll(':scope > .wn-dl dd').forEach((dd, i) => { const v = linhas[i][1]; const t = linhas[i][2];
+      dd.textContent = !core.number(v) || (t === 'vol' && v <= 0) ? '—' : t === 'vol' ? abrev(v) : t === 'pc' ? core.change({ change: v }) : t === 'dx' ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${core.price({ value: Math.abs(v), currency: r.quote?.currency }).replace(/(,\d\d)\d+/, '$1')}` : fmt(v, r.quote);
+      if ((t === 'pc' || t === 'dx') && core.number(v)) dd.className = v > 0 ? 'wt-up' : v < 0 ? 'wt-down' : ''; });
+    side.querySelector(':scope > .wn-dl').classList.add('wn-dl2');
     pintaComex(r.symbol);
     const cap = side.querySelector('.wn-cap'), pg2 = CAP_PAGINA[r.symbol];
     cap.hidden = !pg2;
@@ -413,12 +475,25 @@
       ${faixa === '1d' ? `<line x1="0" x2="${W}" y1="${y(base).toFixed(1)}" y2="${y(base).toFixed(1)}" class="wn-base"/>` : ''}
       <path d="M${pts.join('L')}L${W},${H}L0,${H}Z" fill="url(#wn-gr)"/>
       <polyline points="${pts.join(' ')}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-    </svg><div class="wn-tip" hidden></div>`;
+    </svg>${eixos(vals, g.t, lo, hi, y, faixa === '1d' ? base : null, q)}<div class="wn-tip" hidden></div>`;
     box._g = { t: g.t, c: vals };
+  }
+  // eixo de preço à direita, horários/datas embaixo e o rótulo do fechamento anterior (modelo de 10/11/2026)
+  function eixos(vals, t, lo, hi, y, base, q) {
+    const casas = hi - lo < 1 ? 3 : hi < 1000 ? 2 : 0, n = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+    const ys = [0, 1, 2, 3].map(i => hi - (hi - lo) * i / 3).map(v => `<span style="top:${(y(v) / H * 100).toFixed(1)}%">${n(v)}</span>`).join('');
+    const fmtT = (sec) => { const d = new Date(sec * 1000), tz = 'America/Sao_Paulo';
+      return faixa === '1d' ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: tz })
+        : faixa === '5y' || faixa === 'max' ? d.toLocaleDateString('pt-BR', { month: '2-digit', year: '2-digit', timeZone: tz })
+        : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: tz }); };
+    const tt = Array.isArray(t) && t.length > 1 ? t : null;
+    const xs = tt ? [0, 1, 2, 3, 4].map(i => { const k = Math.round(i / 4 * (vals.length - 1)); return `<span style="left:${(i * 25)}%">${fmtT(tt[Math.min(k, tt.length - 1)])}</span>`; }).join('') : '';
+    const fb = core.number(base) ? `<em class="wn-fb" style="top:${(y(base) / H * 100).toFixed(1)}%">Fech. ant. ${n(base)}</em>` : '';
+    return `<div class="wn-ey" aria-hidden="true">${ys}</div><div class="wn-ex" aria-hidden="true">${xs}</div>${fb}`;
   }
   side.querySelector('.wn-graf').addEventListener('pointermove', (e) => {
     const box = e.currentTarget, g = box._g, tip = box.querySelector('.wn-tip'); if (!g || !tip) return;
-    const rc = box.getBoundingClientRect(), k = Math.max(0, Math.min(g.c.length - 1, Math.round(((e.clientX - rc.left) / rc.width) * (g.c.length - 1))));
+    const rc = (box.querySelector('svg') || box).getBoundingClientRect(), k = Math.max(0, Math.min(g.c.length - 1, Math.round(((e.clientX - rc.left) / rc.width) * (g.c.length - 1))));
     const d = new Date(g.t[Math.min(k, g.t.length - 1)] * 1000), r = linha(sel);
     const quando = faixa === '1d' || faixa === '5d' ? d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Sao_Paulo' });
     tip.hidden = false; tip.textContent = `${fmt(g.c[k], r?.quote)} · ${quando}`;
