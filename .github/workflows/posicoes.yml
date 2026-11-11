@@ -4,10 +4,16 @@
 name: Posições (CFTC e SEC 13F)
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '0 21 * * 5'    # sexta, 18h em Brasília, depois que a CFTC publica (15h30 em Nova York)
-    - cron: '0 12 * * 1-6'  # todo dia de manhã, para pegar 13F novos e atrasos da CFTC
+    - cron: '10 5 * * 2-7'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write

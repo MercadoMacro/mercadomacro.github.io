@@ -3,9 +3,16 @@
 name: Histórico diário
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '30 22 * * 1-5'   # segunda a sexta, 22:30 UTC = 19:30 em Brasília
-  workflow_dispatch: {}
+    - cron: '0 5 * * 2-6'
+  workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write

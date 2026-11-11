@@ -62,6 +62,8 @@ export default {
       // anterior no D1 (b3_ajuste) para a variação da curva à noite; sem isso dependia de alguém abrir a curva
       const hUtc = quando.getUTCHours(), mUtc = quando.getUTCMinutes();
       if (hUtc >= 13 && hUtc <= 18 && (mUtc === 30 || mUtc === 45) && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(guardarAjusteDI(env));
+      // robôs de dados na hora certa (o agendador do GitHub atrasava de 2 a 8 horas; 11/11/2026)
+      for (const arq of robosDaHora(quando)) ctx.waitUntil(dispararRobo(env, arq, { agendado: '1' }));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       if (quando.getUTCHours() === 12) {
@@ -1764,6 +1766,29 @@ async function avisoDoVigia(req, env) {
   if (!(c.tg_token && chat)) return json({ erro: 'Telegram não conectado.' }, 409);
   const r = await feito(await telegram(c.tg_token, 'sendMessage', { chat_id: chat, text: texto, disable_web_page_preview: true, ...(b.html ? { parse_mode: 'HTML' } : {}) }));
   return r.ok ? json({ ok: true }) : json({ erro: 'Telegram recusou.' }, 502);
+}
+
+// Robôs de dados disparados pelo relógio do site, na hora marcada (horário UTC, dias da semana em UTC como no cron).
+// Antes ficavam no agendador do GitHub, que atrasava de 2 a 8 horas (11/11/2026: Fed das 11h10 rodou às 18h39).
+// Cada robô guarda no próprio arquivo só uma passagem de reserva por dia, para o caso de o disparo falhar.
+const ROBOS_HORA = [
+  ['balancos-br.yml', '1-5', ['10:00', '23:30']], ['balancos-br.yml', '6', ['12:00']],
+  ['bce.yml', '1-5', ['10:30', '16:30']],
+  ['bea.yml', '1-5', ['14:00', '21:00']],
+  ['comex.yml', '1-5', ['13:15', '21:15']],
+  ['copom.yml', '1-5', ['13:45', '16:45', '19:45', '22:45']], ['copom.yml', '2-6', ['01:45']],
+  ['curva.yml', '1-5', ['23:30']], ['curva.yml', '2-6', ['01:45']],
+  ['fed.yml', '1-5', ['11:15', '16:15', '21:30']], ['fed.yml', '2-6', ['01:30']],
+  ['fluxo.yml', '1-5', ['08:30', '10:30', '11:00', '12:30', '14:30', '17:15', '19:15', '21:30', '23:30']],
+  ['historico.yml', '1-5', ['22:30']],
+  ['leiloes.yml', '1-5', ['11:15', '17:30', '18:30']],
+  ['posicoes.yml', '5', ['21:00']], ['posicoes.yml', '1-6', ['12:00']],
+  ['proventos.yml', '1-5', ['10:00', '22:00']],
+];
+export function robosDaHora(quando) {
+  const hm = String(quando.getUTCHours()).padStart(2, '0') + ':' + String(quando.getUTCMinutes()).padStart(2, '0'), d = quando.getUTCDay();
+  const noDia = (dias) => { const [a, b] = dias.split('-').map(Number); return b === undefined ? d === a : d >= a && d <= b; };
+  return [...new Set(ROBOS_HORA.filter(([, dias, horas]) => noDia(dias) && horas.includes(hm)).map(([arq]) => arq))];
 }
 
 // precisa do segredo GH_TOKEN no worker (token do GitHub só com Actions: leitura e escrita neste repositório).

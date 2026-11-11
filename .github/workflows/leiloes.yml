@@ -3,11 +3,16 @@
 name: Leilões do Tesouro dos EUA
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '10 11 * * 1-5'   # 8h10 em Brasília: agenda do dia
-    - cron: '20 18 * * 1-5'   # logo depois do resultado (13h em Nova York no horário de inverno)
-    - cron: '20 17 * * 1-5'   # idem no horário de verão
+    - cron: '5 5 * * 2-6'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write

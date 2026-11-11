@@ -3,10 +3,16 @@
 name: Curva de juros
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '30 23 * * 1-5'
-    - cron: '50 1 * * 2-6'
+    - cron: '45 4 * * 2-6'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -23,7 +29,7 @@ jobs:
       # a curva do pregão já foi gravada pela passagem anterior (desde as 18h de Brasília): a de reserva para aqui
       - name: Já tem a curva de hoje?
         id: hoje
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || github.event.inputs.agendado == '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

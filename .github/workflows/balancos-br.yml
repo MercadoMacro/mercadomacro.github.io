@@ -3,11 +3,16 @@
 name: Agenda de balanços (B3)
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '0 10 * * 1-5'   # 07h em Brasília
-    - cron: '30 23 * * 1-5'  # 20h30, depois dos balanços divulgados após o fechamento
-    - cron: '0 12 * * 6'     # sábado 09h: a CVM completa os arquivos no fim de semana
+    - cron: '20 4 * * 2-6'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write

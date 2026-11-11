@@ -7,8 +7,8 @@
   "main": "shrill-meadow-89c1.js",
   "compatibility_date": "2025-06-01",
   "keep_vars": true,
-  // registros guardados por 7 dias no painel da Cloudflare (Observability). Plano grátis: até 0,5 GB/dia;
-  // se passar, a Cloudflare para de guardar até 00h UTC. Para guardar menos, baixe head_sampling_rate (0 a 1).
+  // registros guardados por 7 dias no painel da Cloudflare (Observability). Plano pago (desde 11/11/2026):
+  // 20 milhões de registros por mês incluídos. Para guardar menos, baixe head_sampling_rate (0 a 1).
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   // Valores iniciais generosos para redes compartilhadas. Cada contador é por IP/região.
   // registro de quem chega sem o passe do site (tabela passe_registro): mesmo banco do site
