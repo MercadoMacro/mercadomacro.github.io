@@ -27,6 +27,11 @@ if (dados.semDados && !FORCAR) {
   console.error('\nSem cotação do Ibovespa agora. Nada enviado; o robô tenta de novo mais tarde.');
   process.exit(1);
 }
+// o próprio site (worker station, navegador da Cloudflare) já mandou o fechamento de hoje: a reserva não repete
+if (dados.jaEnviado && !FORCAR) {
+  console.log(`\nO site já mandou o fechamento de hoje (${dados.data}). Nada enviado.`);
+  process.exit(0);
+}
 if (!dados.pregao && !FORCAR) {
   console.log(`\nSem pregão hoje (${dados.data}); último Ibovespa: ${dados.pregaoDia || '—'}. Nada enviado.`);
   process.exit(0);
