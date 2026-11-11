@@ -2,6 +2,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 export { NewsRelay } from './news-relay.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
+import { apiAlarmes, checarAlarmes } from './alarmes.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
@@ -54,6 +55,8 @@ export default {
     // a cada 15 minutos: notícias de alto impacto no canal público do Telegram;
     // no minuto 15 de cada hora dispara o vigia (o agendador do GitHub chega a pular 5 a 10 horas);
     // às 12:15 UTC também roda a rotina das assinaturas e a abertura do mercado
+    // a cada minuto: alarmes de preço da Jade (avisa por push quem ligou os avisos)
+    if (ev.cron === '* * * * *') { ctx.waitUntil(checarAlarmes(env, (syms) => precosAgora(env, syms)).catch((e) => console.error('alarmes:', e.message))); return; }
     if (ev.cron === '*/15 * * * *') {
       const quando = new Date(ev.scheduledTime);
       // às 12:15 UTC a rodada já leva assinaturas, vigia e abertura; as notícias ficam para a próxima
@@ -161,6 +164,8 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      // alarmes de preço da Jade no servidor e avisos com o site fechado (11/11/2026, src/alarmes.js)
+      if (p === '/api/alarmes' || p.startsWith('/api/push/')) { const r = await apiAlarmes(req, env, u, p, mesmaOrigem, json); if (r) return r; }
       // resumo semanal (07/11/2026): o texto que o administrador salva no site vale para todos; sem ele, o site usa o resumo-semanal.txt
       if (p === '/api/resumo-semanal' && req.method === 'GET') {
         const r = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'resumo_semanal'").first().catch(() => null);
@@ -426,6 +431,13 @@ async function guardarAjusteDI(env) {
       if (!r.ok) console.error('ajuste ' + rota + ': HTTP ' + r.status);
     } catch (e) { console.error('ajuste ' + rota + ':', e.message); }
   }
+}
+// último preço de cada símbolo (servidor de dados, /quotes do Yahoo) para os alarmes
+async function precosAgora(env, syms) {
+  const j = await servidorDados(env, '/quotes?symbols=' + encodeURIComponent(syms.join(',')));
+  const out = {};
+  for (const s of syms) { const v = j?.[s]?.chart?.result?.[0]?.meta?.regularMarketPrice; if (typeof v === 'number' && isFinite(v)) out[s] = v; }
+  return out;
 }
 // pedido JSON ao servidor de dados (shrill-meadow) com o passe do site
 async function servidorDados(env, rota) {
