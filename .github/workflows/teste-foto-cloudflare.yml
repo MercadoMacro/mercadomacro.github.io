@@ -1,0 +1,28 @@
+# Teste: pede ao site a foto do cartão do fechamento tirada pelo navegador da Cloudflare
+# (rota /api/robo/fechamento-foto) e guarda a imagem como artefato deste robô. Não manda nada no Telegram.
+# Serve para comparar com a foto atual do GitHub antes de ligar cf_fechamento.
+name: Teste da foto pela Cloudflare
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  foto:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Pedir a foto ao site
+        run: |
+          TOK=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mercadomacro-vigia" | jq -r .value)
+          mkdir -p saida
+          curl -sS -D saida/cabecalhos.txt -o saida/fechamento-cloudflare.png -H "Authorization: Bearer $TOK" https://mercadomacro.com.br/api/robo/fechamento-foto
+          cat saida/cabecalhos.txt
+          file saida/fechamento-cloudflare.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fechamento-cloudflare
+          path: saida

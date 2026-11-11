@@ -58,6 +58,9 @@ jobs:
           if-no-files-found: ignore
       - name: Conferir relay de notícias no runtime local
         run: node terminal/station/tests/news-relay-runtime.mjs
+      - name: Instalar pacotes do worker (navegador na nuvem)
+        working-directory: terminal/station
+        run: npm ci --no-audit --no-fund
       - name: Montar Worker sem publicar
         working-directory: terminal/station
         run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/site-validado"
@@ -82,6 +85,9 @@ jobs:
             echo "::error::Configure CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID. O site não foi publicado."
             exit 1
           fi
+      - name: Instalar pacotes do worker (navegador na nuvem)
+        working-directory: terminal/station
+        run: npm ci --no-audit --no-fund
       - name: Publicar na Cloudflare
         uses: cloudflare/wrangler-action@v4
         with:

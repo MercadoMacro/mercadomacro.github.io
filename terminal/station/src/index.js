@@ -11,6 +11,7 @@ import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado,
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
+import { fotografarFechamento } from './foto-fechamento.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -72,7 +73,8 @@ export default {
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
         // 9h15 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
-        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(dispararRobo(env, 'abertura.yml', { site: true }));
+        // com cf_abertura = '1' em config o próprio site posta; sem isso (ou se falhar) dispara o robô do GitHub
+        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(aberturaNoSite(env));
       }
       return;
     }
@@ -80,7 +82,8 @@ export default {
     // do GitHub às vezes atrasa, e guarda o fechamento do dia para a página pública /fechamento-do-mercado
     if (ev.cron === '0 23 * * 1-5') { ctx.waitUntil(completarJuros(env, jurosTesouro).catch(() => {})); return; }
     if (ev.cron === '0 21 * * 1-5') {
-      ctx.waitUntil(dispararFechamento(env));
+      // com cf_fechamento = '1' em config o próprio site fotografa e manda; sem isso (ou se falhar) dispara o robô do GitHub
+      ctx.waitUntil(fechamentoNoSite(env));
       ctx.waitUntil(dadosFechamento(env).then((d) => salvarFechamento(env, d)).catch(() => {}));
       return;
     }
@@ -108,6 +111,7 @@ export default {
       if (p === '/api/stripe/webhook') return await webhookStripe(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/api/robo/abertura') return await roboAbertura(req, env);
+      if (p === '/api/robo/fechamento-foto') return await roboFechamentoFoto(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/favicon.ico') return Response.redirect(new URL('/icone-192.png', req.url).toString(), 301);
       if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
@@ -1817,12 +1821,88 @@ async function dispararRobo(env, arquivo, inputs) {
     if (r.status !== 204) console.error('disparo de ' + arquivo + ':', r.status, await r.text());
   } catch (e) { console.error('disparo de ' + arquivo + ':', e.message); }
 }
+/* ---------- abertura e fechamento feitos dentro da Cloudflare (sem fila do GitHub) ----------
+   Ligados por chave em config: cf_abertura = '1' e cf_fechamento = '1'. Desligados, tudo segue pelo GitHub.
+   Se o envio pelo site falhar ou passar de 60 s, dispara o robô do GitHub como reserva e registra o erro (Workers Logs).
+   Sem duplicar: o fechamento grava fech_ult (data) depois do envio ao administrador, e o robô resumo.yml
+   pula quando /api/robo/fechamento responde jaEnviado; no canal valem as chaves do dia (canal_ult_abertura,
+   canal_ult_fechamento), as mesmas que /api/vigia confere para o GitHub. */
+function comLimite(p, ms, nome) {
+  let t;
+  return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(nome + ': passou de ' + ms / 1000 + ' s')), ms); })]).finally(() => clearTimeout(t));
+}
+async function aberturaNoSite(env) {
+  const c = await config(env);
+  if (c.cf_abertura !== '1') return dispararRobo(env, 'abertura.yml', { site: true });
+  try { await comLimite(enviarAberturaNoSite(env, c), 60000, 'abertura'); }
+  catch (e) { console.error('abertura pelo site falhou, vai pela reserva do GitHub:', e.message); await dispararRobo(env, 'abertura.yml', { site: true }); }
+}
+async function enviarAberturaNoSite(env, c) {
+  if (!(c.tg_token && c.tg_canal)) { console.log('abertura: canal público não está ligado em /admin'); return; }
+  const d = await dadosAbertura(env);
+  if (feriadoB3(d.data)) { console.log('abertura: feriado na B3'); return; }
+  const chave = 'abertura-' + d.data;
+  if (c.canal_ult_abertura === chave) { console.log('abertura: já postada hoje'); return; }
+  const tc = textoCanalAbertura(d);
+  const r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_canal, text: String(tc || textoAbertura(d)).slice(0, 4000), disable_web_page_preview: true, ...(tc ? { parse_mode: 'HTML' } : {}) });
+  if (!r.ok) throw new Error('Telegram recusou a abertura: ' + (r.description || 'sem detalhe'));
+  await salvarConfig(env, { canal_ult_abertura: chave });
+  console.log('abertura postada pelo site:', chave);
+}
+async function dadosDoCartao(env, c) {
+  const d = await dadosFechamento(env);
+  return { ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), textoCanal: textoCanalFechamento(d), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' };
+}
+async function fechamentoNoSite(env) {
+  const c = await config(env);
+  if (c.cf_fechamento !== '1') return dispararFechamento(env);
+  try { await comLimite(enviarFechamentoNoSite(env, c), 60000, 'fechamento'); }
+  catch (e) { console.error('fechamento pelo site falhou, vai pela reserva do GitHub:', e.message); await dispararFechamento(env); }
+}
+async function enviarFechamentoNoSite(env, c) {
+  const dados = await dadosDoCartao(env, c);
+  // sem cotação do Ibovespa não dá para saber se houve pregão: o GitHub tenta de novo nas repescagens
+  if (dados.semDados) throw new Error('sem cotação do Ibovespa agora');
+  if (!dados.pregao) { console.log('fechamento: sem pregão hoje (' + dados.data + ')'); return; }
+  if (c.fech_ult === dados.data) { console.log('fechamento: já mandado hoje'); return; }
+  if (!(c.tg_token && c.tg_chat)) throw new Error('Telegram do administrador não conectado');
+  let r;
+  if (dados.modo === 'texto') r = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: dados.texto, disable_web_page_preview: true });
+  else {
+    // foto falhou: não manda só texto, deixa a reserva do GitHub tentar a foto
+    const t0 = Date.now();
+    const png = await fotografarFechamento(env, dados);
+    console.log('foto do fechamento:', Math.round(png.length / 1024), 'KB em', Date.now() - t0, 'ms');
+    r = await telegramFoto(env, png, dados.legenda, '');
+  }
+  if (!r.ok) throw new Error('Telegram recusou o fechamento: ' + (r.erro || r.description || 'sem detalhe'));
+  await salvarConfig(env, { fech_ult: dados.data });
+  console.log('fechamento mandado pelo site:', dados.data);
+  // canal público: só texto, uma vez por dia; falha aqui não chama a reserva (o administrador já recebeu)
+  const chave = 'fechamento-' + dados.data;
+  if (c.tg_canal && c.canal_ult_fechamento !== chave) {
+    try {
+      const rc = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_canal, text: String(dados.textoCanal || dados.texto).slice(0, 4000), disable_web_page_preview: true, ...(dados.textoCanal ? { parse_mode: 'HTML' } : {}) });
+      if (rc.ok) await salvarConfig(env, { canal_ult_fechamento: chave });
+      else console.error('fechamento no canal recusado:', rc.description || 'sem detalhe');
+    } catch (e) { console.error('fechamento no canal falhou:', e.message); }
+  }
+}
+// só para teste (robô teste-foto-cloudflare.yml): devolve a foto do cartão tirada pelo navegador da Cloudflare, sem mandar nada
+async function roboFechamentoFoto(req, env) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  // só o robô de teste pode pedir a foto; ele não está em ROBOS_AVISO, então não consegue mandar nada no Telegram
+  if (!(await tokenDoGitHub(tok, GH_AUD, ['teste-foto-cloudflare.yml']).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
+  const t0 = Date.now();
+  const png = await fotografarFechamento(env, await dadosDoCartao(env, await config(env)));
+  return new Response(png, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Tempo-Ms': String(Date.now() - t0) } });
+}
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!(await tokenDoGitHub(tok).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
   const [d, c] = await Promise.all([dadosFechamento(env), config(env)]);
   await salvarFechamento(env, d).catch(() => {}); // também vira página pública
-  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), textoCanal: textoCanalFechamento(d), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem' }, 200, { 'Cache-Control': 'no-store' });
+  return json({ ...d, texto: textoFechamento(d), legenda: textoFechamento(d, true), textoCanal: textoCanalFechamento(d), modo: c.fech_modo === 'texto' ? 'texto' : 'imagem', jaEnviado: c.fech_ult === d.data }, 200, { 'Cache-Control': 'no-store' });
 }
 
 // notícias em tempo real no canal público: só as de impacto alto ou crítico, de fontes em português,

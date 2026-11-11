@@ -1,0 +1,8 @@
+{
+  "name": "mercadomacro-station",
+  "private": true,
+  "description": "Dependências do worker station (só o navegador na nuvem; o resto do site não usa pacotes).",
+  "dependencies": {
+    "@cloudflare/puppeteer": "2.0.0"
+  }
+}

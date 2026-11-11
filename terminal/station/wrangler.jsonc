@@ -5,6 +5,10 @@
   "name": "station",
   "main": "src/index.js",
   "compatibility_date": "2025-06-01",
+  // nodejs_compat: exigido pelo @cloudflare/puppeteer (navegador na nuvem, src/foto-fechamento.js)
+  "compatibility_flags": ["nodejs_compat"],
+  // navegador na nuvem (Browser Rendering): foto do cartão do fechamento sem o GitHub. Plano pago: 10 h/mês incluídas
+  "browser": { "binding": "BROWSER" },
   "assets": {
     "directory": "./site",
     "binding": "ASSETS",
