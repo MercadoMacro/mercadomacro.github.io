@@ -5,20 +5,16 @@
 name: Fluxo de investidores (B3)
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    # A tabela em JSON da B3 costuma sair de madrugada; o PDF, no fim da manhã ou à tarde.
-    # Várias passagens curtas: sem dado novo, não grava nada. O agendador do GitHub também atrasa ou pula.
-    - cron: '30 8 * * 1-5'    # 05:30 em Brasília
-    - cron: '30 10 * * 1-5'   # 07:30
-    - cron: '0 11 * * 1-5'    # 08:00
-    - cron: '30 12 * * 1-5'   # 09:30
-    - cron: '30 14 * * 1-5'   # 11:30
-    - cron: '15 17 * * 1-5'   # 14:15
-    - cron: '15 19 * * 1-5'   # 16:15
-    - cron: '30 21 * * 1-5'   # 18:30
-    - cron: '30 23 * * 1-5'   # 20:30
+    - cron: '55 4 * * 2-6'
   workflow_dispatch:
     inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
       dias:
         description: 'Quantos dias para trás buscar (primeira carga: 300)'
         required: false
@@ -40,7 +36,7 @@ jobs:
       # (rodar à mão continua sempre buscando)
       - name: Já tem o dado de hoje?
         id: hoje
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || github.event.inputs.agendado == '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

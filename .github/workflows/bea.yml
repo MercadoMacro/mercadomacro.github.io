@@ -3,10 +3,16 @@
 name: PIB dos EUA (BEA)
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '0 14 * * 1-5'    # 11h em Brasília
-    - cron: '0 21 * * 1-5'    # 18h
+    - cron: '30 4 * * 2-6'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write

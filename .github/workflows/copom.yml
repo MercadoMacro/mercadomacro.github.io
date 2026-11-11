@@ -3,13 +3,16 @@
 name: Probabilidades do Copom
 
 on:
+  # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
+  # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '45 13 * * 1-5'
-    - cron: '45 16 * * 1-5'
-    - cron: '45 19 * * 1-5'
-    - cron: '45 22 * * 1-5'
-    - cron: '40 1 * * 2-6'
+    - cron: '40 4 * * 2-6'
   workflow_dispatch:
+    inputs:
+      agendado:
+        description: 'Disparado pelo relógio do site (1); vazio quando rodado à mão'
+        required: false
+        default: ''
 
 permissions:
   contents: write
