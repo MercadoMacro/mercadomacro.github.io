@@ -227,7 +227,87 @@
     [/\bwti\b/, 'CL=F', 'Petróleo WTI'], [/\bouro\b/, 'GC=F', 'Ouro'], [/\bprata\b/, 'SI=F', 'Prata'],
   ];
   const lerAlarmes = () => { try { const a = JSON.parse(localStorage.getItem(AL_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
-  const gravaAlarmes = (a) => { try { localStorage.setItem(AL_KEY, JSON.stringify(a.slice(0, 12))); } catch (e) { /* sem armazenamento */ } window.dispatchEvent(new Event('mm-robo-alarmes')); };
+  const gravaLocal = (a) => { try { localStorage.setItem(AL_KEY, JSON.stringify(a.slice(0, 12))); } catch (e) { /* sem armazenamento */ } window.dispatchEvent(new Event('mm-robo-alarmes')); };
+  const gravaAlarmes = (a) => { gravaLocal(a); sobeAlarmes(); };
+  // ---- alarmes no servidor (11/11/2026): a lista da conta fica no site, que confere os preços a cada minuto
+  // e avisa por push mesmo com o terminal fechado. Sem servidor, o navegador confere sozinho como antes.
+  const SYNC_KEY = 'mm_robo_alarmes_sync';
+  let servidorOk = false, putT = 0;
+  function sobeAlarmes() {
+    clearTimeout(putT);
+    putT = setTimeout(() => fetch('/api/alarmes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lista: lerAlarmes() }) })
+      .then((r) => { servidorOk = r.ok; if (r.ok) try { localStorage.setItem(SYNC_KEY, '1'); } catch (e) { /* nada */ } }).catch(() => { servidorOk = false; }), 300);
+  }
+  async function baixaAlarmes() {
+    try {
+      const r = await fetch('/api/alarmes', { cache: 'no-store' });
+      if (!r.ok) { servidorOk = false; return false; }
+      const j = await r.json(), srv = Array.isArray(j.lista) ? j.lista : [], local = lerAlarmes();
+      let ja = false; try { ja = localStorage.getItem(SYNC_KEY) === '1'; } catch (e) { /* nada */ }
+      servidorOk = true;
+      // primeira vez nesta conta: os alarmes que já estavam neste navegador sobem para o servidor
+      if (!ja && !srv.length && local.length) { sobeAlarmes(); return true; }
+      // os que sumiram do servidor e ainda estavam aqui foram disparados lá: a Jade mostra o aviso na tela
+      const disp = new Map((Array.isArray(j.disparados) ? j.disparados : []).map((x) => [x.id, x.preco]));
+      for (const a of local) if (disp.has(a.id)) avisoDisparo(a, isFinite(disp.get(a.id)) ? { value: disp.get(a.id) } : null);
+      gravaLocal(srv);
+      try { localStorage.setItem(SYNC_KEY, '1'); } catch (e) { /* nada */ }
+      return true;
+    } catch (e) { servidorOk = false; return false; }
+  }
+  function avisoDisparo(a, d) {
+    const c = casasDe(a.sym), alvo = numAlvo(a.alvo, c), agora = d ? num(d.value, c) : '';
+    const frase = `${a.nome} ${a.dir === 'acima' ? 'passou de' : 'caiu abaixo de'} ${alvo}`;
+    avisar({ chave: 'al:' + a.id, pri: 9, visor: ['ALARME', corta(a.nome.toUpperCase(), 7), a.dir === 'acima' ? 'sobe' : 'cai'],
+      html: '<span class="urg">Alarme</span><b>' + esc(frase) + '</b>' + (agora ? '<small>Agora: ' + esc(agora) + (d.date ? ' · dado de ' + esc(d.date) : '') + '</small>' : ''),
+      titulo: 'Alarme de preço', texto: frase + (agora ? '. Agora: ' + agora + '.' : '.'), voz: 'Alarme. ' + frase.replace(/\./g, ''), ms: 11000 });
+  }
+  // ---- avisos com o site fechado (Web Push)
+  const pushTem = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  async function pushInscricao() { try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; } }
+  async function pushEstado() {
+    if (!pushTem()) return /iphone|ipad/i.test(navigator.userAgent) ? 'ios' : 'sem';
+    if (await pushInscricao()) return 'ligado';
+    return Notification.permission === 'denied' ? 'negado' : 'desligado';
+  }
+  const deB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  async function pushLigar() {
+    if (!pushTem()) return 'Este navegador não recebe avisos com o site fechado.';
+    if (await Notification.requestPermission() !== 'granted') return 'O navegador não deixou mandar avisos. Libere as notificações do site nas configurações do navegador.';
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const k = await (await fetch('/api/push/chave', { cache: 'no-store' })).json();
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: deB64u(k.chave) });
+      const r = await fetch('/api/push/inscrever', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub.toJSON()) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); return j.erro || 'Não consegui ligar os avisos agora.'; }
+      return '';
+    } catch (e) { return 'Não consegui ligar os avisos agora. Tente de novo.'; }
+  }
+  async function pushDesligar() {
+    const sub = await pushInscricao();
+    if (sub) { const ep = sub.endpoint; try { await sub.unsubscribe(); } catch (e) { /* nada */ } await fetch('/api/push/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: ep }) }).catch(() => {}); }
+  }
+  async function pushTestar() { const r = await fetch('/api/push/teste', { method: 'POST' }).catch(() => null); return !!(r && r.ok); }
+  // bloco de Ajustes: liga, desliga e testa os avisos neste aparelho
+  async function pushUI(el) {
+    if (!el) return;
+    const st = await pushEstado();
+    const txt = { ligado: 'Ligados neste aparelho. Os alarmes chegam mesmo com o site fechado.', desligado: 'Desligados neste aparelho. Com o site fechado, os alarmes não chegam.',
+      negado: 'O navegador bloqueou as notificações deste site. Libere nas configurações do navegador e volte aqui.',
+      ios: 'No iPhone e no iPad, adicione o site à Tela de Início (Compartilhar > Adicionar à Tela de Início), abra por lá e ligue aqui.', sem: 'Este navegador não recebe avisos com o site fechado.' }[st];
+    el.innerHTML = `<div class="aj-row" style="margin-top:12px"><span><b>Avisos com o site fechado</b></span>${st === 'ligado' ? '<button type="button" class="btn-sm" data-push="off">Desligar</button>' : st === 'desligado' ? '<button type="button" class="btn-sm" data-push="on">Ligar</button>' : ''}</div>
+      <p class="aj-note">${esc(txt)}${st === 'ligado' ? ' <button type="button" class="btn-sm" data-push="teste">Mandar um aviso de teste</button>' : ''}</p>`;
+    el.onclick = async (e) => {
+      const b = e.target.closest('[data-push]'); if (!b) return;
+      b.disabled = true;
+      const t = (m) => { try { (window.toast || window.showToast || alert)(m); } catch (x) { /* nada */ } };
+      if (b.dataset.push === 'on') { const erro = await pushLigar(); t(erro || 'Pronto. Os alarmes da Jade vão chegar neste aparelho mesmo com o site fechado.'); if (!erro) sobeAlarmes(); }
+      if (b.dataset.push === 'off') { await pushDesligar(); t('Avisos desligados neste aparelho.'); }
+      if (b.dataset.push === 'teste') t(await pushTestar() ? 'Aviso de teste enviado. Ele chega em alguns segundos.' : 'Não consegui mandar o aviso de teste.');
+      pushUI(el);
+    };
+  }
   const ehPedido = (t) => {
     const n = norm(t);
     return /\b(meus|apag\w*|cancel\w*|remov\w*|limp\w*|list\w*)\b.*\balarmes?\b/.test(n) ||
@@ -254,6 +334,7 @@
     return null;
   }
   async function doTexto(t) {
+    if (!servidorOk) await baixaAlarmes();
     const n = norm(t);
     let lista = lerAlarmes();
     if (/\b(apag\w*|cancel\w*|remov\w*|limp\w*)\b/.test(n) && /alarmes?/.test(n)) {
@@ -282,12 +363,15 @@
     lista.unshift({ id: Date.now().toString(36), sym: at.sym, nome: at.nome, alvo, dir, criado: Date.now() });
     if (lista.length > 12) lista = lista.slice(0, 12);
     gravaAlarmes(lista);
-    return { r: `Combinado. Vou avisar quando **${at.nome}** ${dir === 'acima' ? 'passar de' : 'cair abaixo de'} **${numAlvo(alvo, c)}**. Agora está em ${num(d.value, c)}.\n\nO alarme funciona enquanto o terminal estiver aberto neste navegador. Você vê e apaga os alarmes em Ajustes > Meu painel > Jade (assistente robô).` };
+    return { r: `Combinado. Vou avisar quando **${at.nome}** ${dir === 'acima' ? 'passar de' : 'cair abaixo de'} **${numAlvo(alvo, c)}**. Agora está em ${num(d.value, c)}.\n\n${servidorOk && await pushEstado() === 'ligado' ? 'O aviso chega neste aparelho mesmo com o site fechado. ' : servidorOk ? 'Com o terminal aberto eu aviso aqui. Para receber também com o site fechado, ligue "Avisos com o site fechado" em ' : 'O alarme funciona enquanto o terminal estiver aberto neste navegador. '}${servidorOk && await pushEstado() !== 'ligado' ? 'Ajustes > Meu painel > Jade (assistente robô), onde você também vê e apaga os alarmes.' : 'Você vê e apaga os alarmes em Ajustes > Meu painel > Jade (assistente robô).'}` };
   }
   let alRodando = false;
   async function checaAlarmes() {
+    if (alRodando) return;
+    // com o servidor funcionando, quem confere é ele; aqui só buscamos a lista (o que sumiu foi disparado lá)
+    if (await baixaAlarmes()) return;
     const lista = lerAlarmes();
-    if (!lista.length || alRodando) return;
+    if (!lista.length) return;
     alRodando = true;
     try {
       const ficam = [];
@@ -295,17 +379,14 @@
         const d = await buscaCot(a.sym);
         const bateu = d && isFinite(d.value) && (a.dir === 'acima' ? d.value >= a.alvo : d.value <= a.alvo);
         if (!bateu) { ficam.push(a); continue; }
-        const c = casasDe(a.sym), alvo = numAlvo(a.alvo, c), agora = num(d.value, c);
-        const frase = `${a.nome} ${a.dir === 'acima' ? 'passou de' : 'caiu abaixo de'} ${alvo}`;
-        avisar({ chave: 'al:' + a.id, pri: 9, visor: ['ALARME', corta(a.nome.toUpperCase(), 7), a.dir === 'acima' ? 'sobe' : 'cai'],
-          html: '<span class="urg">Alarme</span><b>' + esc(frase) + '</b><small>Agora: ' + esc(agora) + (d.date ? ' · dado de ' + esc(d.date) : '') + '</small>',
-          titulo: 'Alarme de preço', texto: frase + '. Agora: ' + agora + '.', voz: 'Alarme. ' + frase.replace(/\./g, ''), ms: 11000 });
+        avisoDisparo(a, d);
       }
-      if (ficam.length !== lista.length) gravaAlarmes(ficam);
+      if (ficam.length !== lista.length) gravaLocal(ficam);
     } finally { alRodando = false; }
   }
   setInterval(() => { if (!document.hidden || prefs().roboNotif === true || janelaAberta()) checaAlarmes(); }, 60000);
   setTimeout(checaAlarmes, 20000);
+  setTimeout(baixaAlarmes, 2500);
 
   // =====================================================================
   // 4. Bom dia do robô
@@ -792,7 +873,7 @@
   setTimeout(olhaRadar, 12000);
   window.MMRadar = { termos: termosDe, watchlist: watchlistTermos, cita: citaAtivo };
 
-  window.MMRoboAlarmes = { ehPedido, doTexto, lista: lerAlarmes, apagar: (id) => gravaAlarmes(lerAlarmes().filter((a) => a.id !== id)), checar: checaAlarmes, nomeNum: (a) => numAlvo(a.alvo, casasDe(a.sym)) };
+  window.MMRoboAlarmes = { ehPedido, doTexto, lista: lerAlarmes, pushUI, pushEstado, sincronizar: baixaAlarmes, apagar: (id) => gravaAlarmes(lerAlarmes().filter((a) => a.id !== id)), checar: checaAlarmes, nomeNum: (a) => numAlvo(a.alvo, casasDe(a.sym)) };
   window.MMRoboComando = { tem: () => !!SR, escutar, executar };
   window.MMRoboExtras = { oi: () => dizerOi(true), abrirJanela, janelaAberta, bomDia: () => bomDia(true), quiz: abrirQuiz, decisoes: olhaDecisoes, juros: () => juros, pedirNotif, avisar,
     // para conferir à mão (testes): troca os dados de reuniões e roda a checagem

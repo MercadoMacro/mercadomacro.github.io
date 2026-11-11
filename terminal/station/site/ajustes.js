@@ -220,7 +220,7 @@
         ${window.MMRoboExtras ? '<button type="button" class="btn-sm aj-wide" data-act="roboJanela"><i class="far fa-window-restore"></i> Abrir o robô numa janela flutuante</button><p class="aj-note">A janela fica por cima de outros programas, com cotações, a sua watchlist e os avisos.</p>' : ''}
         ${(() => { const A = window.MMRoboAlarmes; if (!A) return ''; const l = A.lista();
           return `<p class="aj-note" style="margin-top:12px"><b>Alarmes de preço</b></p>${l.length ? l.map((a) => `<div class="aj-row"><span>${esc(a.nome)} ${a.dir === 'acima' ? 'acima de' : 'abaixo de'} ${esc(A.nomeNum(a))}</span><button type="button" class="btn-sm" data-act="roboAlarmeApaga" data-id="${esc(a.id)}">Apagar</button></div>`).join('') : ''}
-          <p class="aj-note">${l.length ? '' : 'Nenhum alarme. '}Para criar, escreva no Assistente, por exemplo: "me avisa se o dólar passar de 5,50".</p>`; })()}
+          <p class="aj-note">${l.length ? '' : 'Nenhum alarme. '}Para criar, escreva no Assistente, por exemplo: "me avisa se o dólar passar de 5,50".</p>${A.pushUI ? '<div data-push-ui></div>' : ''}`; })()}
         ${window.MMRoboComando && window.MMRoboComando.tem() ? '<p class="aj-note">Comandos de voz: toque no microfone do Assistente ou use Alt+V e fale, por exemplo, "abre o calendário", "cotação do dólar" ou "explica a tela". A voz é reconhecida pelo serviço do navegador.</p>' : ''}
       </section>
       <section class="aj-sec">
@@ -282,6 +282,7 @@
       body.append(group);
     }
     // Sair fica por último (no computador ele está no pé da barra de categorias)
+    const pu = box.querySelector('[data-push-ui]'); if (pu) window.MMRoboAlarmes?.pushUI(pu);
     if (C && C.logado) { const fim = document.createElement('div'); fim.className = 'aj-sair-fim'; fim.innerHTML = '<button type="button" class="btn-sm" data-act="sair"><i class="fas fa-sign-out-alt"></i> Sair</button>'; body.append(fim); }
     box.classList.toggle('aj-em-aparencia', selectedGroup === 'appearance');
     renderNav(C);
