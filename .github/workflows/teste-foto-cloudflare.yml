@@ -22,6 +22,8 @@ jobs:
           curl -sS -D saida/cabecalhos.txt -o saida/fechamento-cloudflare.png -H "Authorization: Bearer $TOK" https://mercadomacro.com.br/api/robo/fechamento-foto
           cat saida/cabecalhos.txt
           file saida/fechamento-cloudflare.png
+          # a imagem também vai no registro (base64), para conferir sem baixar o artefato
+          echo '---INICIO-PNG---'; base64 -w 100 saida/fechamento-cloudflare.png; echo '---FIM-PNG---'
       - uses: actions/upload-artifact@v4
         with:
           name: fechamento-cloudflare
