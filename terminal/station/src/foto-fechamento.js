@@ -3,12 +3,13 @@
 // com window.__FECHAMENTO já preenchido, espera fontes e cartão e fotografa #card em 1080 px (540 x 2).
 // Os arquivos do site saem direto do binding ASSETS (sem passar pelo porteiro nem pela internet);
 // só as fontes do Google e o html2canvas da cdnjs vêm de fora, como no navegador de quem abre a página.
-import puppeteer from '@cloudflare/puppeteer';
+// o pacote só é carregado na hora da foto: os testes do site importam index.js sem ter node_modules
 
 const LOCAL = 'http://mm.local';
 
 export async function fotografarFechamento(env, dados, limiteMs = 45000) {
   if (!env.BROWSER) throw new Error('sem binding BROWSER (navegador na nuvem)');
+  const { default: puppeteer } = await import('@cloudflare/puppeteer');
   const br = await puppeteer.launch(env.BROWSER);
   try {
     const pg = await br.newPage();
