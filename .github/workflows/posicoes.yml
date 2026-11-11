@@ -7,7 +7,7 @@ on:
   # os horários do dia são disparados pelo site (worker station, ROBOS_HORA em src/index.js, segredo GH_TOKEN),
   # porque o agendador do GitHub atrasava horas; aqui fica só uma passagem de reserva de madrugada
   schedule:
-    - cron: '10 5 * * 2-7'
+    - cron: '10 5 * * *'
   workflow_dispatch:
     inputs:
       agendado:
