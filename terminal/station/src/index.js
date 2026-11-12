@@ -213,7 +213,8 @@ export default {
       }
       if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx)).lista);
       if (p === '/api/noticias') {
-        const { lista, cache, falharam } = await noticiasCache(ctx);
+        // rapida: responde na hora com a lista guardada e renova em segundo plano (X-Cache: STALE avisa o navegador)
+        const { lista, cache, falharam } = await noticiasCache(ctx, { rapida: true });
         if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
         return new Response(JSON.stringify(lista), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
       }
