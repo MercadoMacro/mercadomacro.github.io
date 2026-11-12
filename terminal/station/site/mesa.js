@@ -43,6 +43,8 @@
     { s: 'DX-Y.NYB', n: 'Índice dólar (DXY)', d: 2, pre: '' },
     { s: 'ES=F', n: 'S&P 500 futuro', d: 2, pre: '' },
     { s: 'BZ=F', n: 'Petróleo Brent', d: 2, pre: 'US$ ' },
+    // minério na bolsa de Dalian (DCE), contrato principal, em US$/t: rota /minerio?m=dce do worker (pedido de 12/11/2026)
+    { s: '__dce', n: 'Minério (Dalian)', d: 2, pre: 'US$ ' },
     { s: '__juros', n: 'Juros: Fed e Selic' }
   ];
   const TABLES = [
@@ -120,13 +122,17 @@
   }
   async function loadExtras() {
     const fb = loadFutB3();
-    const [cds, fu, fl, se, mi] = await Promise.allSettled([
+    const [cds, fu, fl, se, mi, md] = await Promise.allSettled([
       getJSON(`${PROXY}/cds`),
       getJSON(`${PROXY}/fred/series?id=DFEDTARU&units=lin&limit=1`),
       getJSON(`${PROXY}/fred/series?id=DFEDTARL&units=lin&limit=1`),
       getJSON(`${PROXY}/bcb?c=432&q=${encodeURIComponent('/ultimos/1')}`).catch(() => getJSON('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json')),
-      getJSON(`${PROXY}/minerio`)
+      getJSON(`${PROXY}/minerio`),
+      getJSON(`${PROXY}/minerio?m=dce`)
     ]);
+    // card do minério em Dalian: só vale se veio em dólar (yuan dividido pelo câmbio); sem resposta, fica o valor anterior
+    const d = md.status === 'fulfilled' ? md.value : null;
+    if (d && d.moeda === 'USD' && d.valor != null && isFinite(d.valor)) X.dce = { v: d.valor, c: isFinite(d.variacao) ? d.variacao : null, cny: isFinite(d.valorCNY) ? d.valorCNY : null, cambio: isFinite(d.cambio) ? d.cambio : null, ts: d.ts || Date.now() };
     // minério: rota própria do worker (Investing/SGX em US$, ou Dalian em yuan); o TIO=F do Yahoo fica só de reserva
     const m = mi.status === 'fulfilled' ? mi.value : null;
     if (m && m.valor != null && isFinite(m.valor)) X.min = { v: m.valor, c: m.variacao, ts: m.ts || Date.now(), moeda: m.moeda, mercado: m.mercado, live: true };
@@ -491,6 +497,15 @@
         <div class="ms-jn" title="Próximas decisões de juros: Fed (FOMC) e Copom">FOMC ${dm(nextF)} · Copom ${dm(nextC)}</div>
       </div>`;
     }
+    if (c.s === '__dce') {
+      const m = X.dce, has = !!m;
+      const dica = 'Bolsa de Dalian (China), contrato principal do minério de ferro, convertido para US$ por tonelada' + (has && m.cny != null && m.cambio != null ? ` (¥ ${nf(m.cny, 1)} a ${nf(m.cambio, 4)} yuan por dólar)` : '') + '. A variação é a do contrato, em yuan.';
+      return `<div class="ms-card ms-dce ${has ? cls(m.c) : ''}" title="${esc(dica)}">
+        <div class="ms-ct"><span>${esc(c.n)}</span><em class="${cls(has ? m.c : null)}">${has && m.c != null ? pct(m.c) : '—'}</em></div>
+        <div class="ms-cv">${has ? esc(c.pre) + nf(m.v, c.d) : '—'}</div>
+        <div class="ms-jn">${has && m.cny != null ? `¥ ${nf(m.cny, 1)} por tonelada` : 'por tonelada'}${has ? ' · ' + hhmm(m.ts) : ''}</div>
+      </div>`;
+    }
     let q = Q[c.s];
     const fq = forexStream?.covers(c.s) ? forexStream.quote(c.s) : null;
     if (fq && fq.source !== 'Yahoo') q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), live: true };
@@ -849,7 +864,7 @@
   .ms-cr:hover { border-color:var(--line-2); }
   .ms-cr.old b { color:var(--text-3); }
 
-  .ms-cards { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+  .ms-cards { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:10px; margin-bottom:12px; }
   .ms-card { position:relative; display:flex; flex-direction:column; gap:4px; padding:11px 13px 8px; border:1px solid var(--line); border-radius:12px; background:var(--surface); cursor:pointer; min-width:0; overflow:hidden; }
   .ms-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--line-2); }
   .ms-card.up::before { background:var(--pos); } .ms-card.dn::before { background:var(--neg); }
@@ -861,7 +876,8 @@
   .ms-cv { font:600 20px 'JetBrains Mono', monospace; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-.02em; }
   .ms-card.old .ms-cv { color:var(--text-2); }
   .ms-cs { height:26px; } .ms-cs svg { width:100%; height:26px; display:block; }
-  .ms-jur { cursor:default; gap:3px; }
+  .ms-jur, .ms-dce { cursor:default; }
+  .ms-jur { gap:3px; }
   .ms-jur::before { background:var(--info); }
   .ms-jr { display:flex; align-items:baseline; gap:8px; font-family:'JetBrains Mono', monospace; }
   .ms-jr em { font:normal 11px 'Inter', sans-serif; color:var(--text-3); width:34px; flex:0 0 34px; }
@@ -950,7 +966,8 @@
   /* barra lateral aberta tira ~190px da mesa: a coluna da hora some até 2040px para o nome do ativo caber */
   @media (min-width: 1851px) and (max-width: 2040px) { body.has-side:not(.side-collapsed) .ms-tb td.tm { display:none; } body.has-side:not(.side-collapsed) .ms-tb tr.ms-fx-live td.px::before { display:inline-block; } }
   @media (max-width: 1500px) { .ms-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ms-c4 { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } }
-  @media (max-width: 1250px) { .ms-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media (max-width: 1500px) { .ms-cards { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+  @media (max-width: 1000px) { .ms-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } .ms-cards .ms-jur { grid-column:1 / -1; } }
   @media (max-width: 860px) { .ms-grid, .ms-c4 { grid-template-columns:minmax(0,1fr); display:flex; flex-direction:column; } .ms-c4 { align-items:stretch; } }
   @media (max-width: 640px) {
     .ms-wrap { padding:8px 12px 90px; }
