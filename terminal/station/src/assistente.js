@@ -1,5 +1,5 @@
 /* Assistente do site (29/10/2026): perguntas de quem está logado respondidas pelo Google Gemini.
-   A chave da API do Gemini é colada em /admin e fica só no banco D1 (config gemini_key); nunca vai para o navegador.
+   A chave da API do Gemini é colada em /admin e fica só no banco D1 (config gemini_key, cifrada pelo cofre: src/cofre.js); nunca vai para o navegador.
    Faixa grátis do Gemini: limite de pedidos por minuto e por dia (por projeto do Google) e as conversas podem
    ser usadas pelo Google para melhorar os produtos dele (a página /privacidade avisa).
    Cada conta pode fazer PERGUNTAS_DIA perguntas por dia; o administrador não tem limite. */

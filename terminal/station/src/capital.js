@@ -7,6 +7,7 @@
    se saiu, expirou ou a conta foi bloqueada, a conexão é fechada. Falha ao abrir a Capital tenta de novo com espera crescente.
    /admin chama POST /reiniciar ao trocar ou apagar a chave: a sessão com a Capital é descartada na hora. */
 
+import { abrir } from './cofre.js';
 const STREAM = 'wss://api-streaming-capital.backend-capital.com/connect';
 // símbolo do Yahoo na Mesa -> como achar na Capital.
 // fixo: código exato. futuro: prefixo do contrato (GCZ2026 = ouro, dezembro de 2026); vão os 2 vencimentos mais próximos
@@ -148,7 +149,7 @@ export class CapitalRelay {
 
   async config() {
     const r = await this.env.DB.prepare(`SELECT chave, valor FROM config WHERE chave IN ('cap_key','cap_id','cap_pw','cap_amb')`).all();
-    return Object.fromEntries(r.results.map((x) => [x.chave, x.valor]));
+    return Object.fromEntries(await Promise.all(r.results.map(async (x) => [x.chave, await abrir(this.env, x.chave, x.valor)])));
   }
   async sessao() {
     const c = await this.config();

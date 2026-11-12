@@ -12,6 +12,7 @@ import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatu
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
+import { abrir, fechar, cifrarPendentes } from './cofre.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -75,6 +76,7 @@ export default {
       if (hUtc === 11 && mUtc === 0 && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(aberturaNoSite(env));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
+      ctx.waitUntil(cifrarPendentes(env).catch((e) => console.error('cofre:', e.message))); // chaves ainda em texto puro no D1
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
       }
@@ -846,12 +848,12 @@ let chavesPasse = null;
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 async function chavesDoPasse(env) {
   if (chavesPasse) return chavesPasse;
-  let jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first())?.valor;
+  let jwk = await abrir(env, 'passe_jwk', (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first())?.valor);
   if (!jwk) {
     const par = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     // INSERT OR IGNORE: se duas instâncias gerarem ao mesmo tempo, fica a primeira e as duas leem a mesma
-    await env.DB.prepare("INSERT OR IGNORE INTO config (chave, valor) VALUES ('passe_jwk', ?)").bind(JSON.stringify(await crypto.subtle.exportKey('jwk', par.privateKey))).run();
-    jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first()).valor;
+    await env.DB.prepare("INSERT OR IGNORE INTO config (chave, valor) VALUES ('passe_jwk', ?)").bind(await fechar(env, 'passe_jwk', JSON.stringify(await crypto.subtle.exportKey('jwk', par.privateKey)))).run();
+    jwk = await abrir(env, 'passe_jwk', (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'passe_jwk'").first()).valor);
   }
   const priv = JSON.parse(jwk);
   const { d, ...pub } = priv;
@@ -1685,10 +1687,12 @@ fetch('/api/auth/nova-senha',{method:'POST',headers:{'Content-Type':'application
    (nunca no código público) e não volta para o navegador. */
 async function config(env) {
   const r = await env.DB.prepare('SELECT chave, valor FROM config').all();
-  return Object.fromEntries(r.results.map((x) => [x.chave, x.valor]));
+  return Object.fromEntries(await Promise.all(r.results.map(async (x) => [x.chave, await abrir(env, x.chave, x.valor)])));
 }
+// chaves e senhas saem cifradas pelo cofre (src/cofre.js); o resto vai como está
 async function salvarConfig(env, o) {
-  await env.DB.batch(Object.entries(o).map(([k, v]) => v == null
+  const itens = await Promise.all(Object.entries(o).map(async ([k, v]) => [k, await fechar(env, k, v)]));
+  await env.DB.batch(itens.map(([k, v]) => v == null
     ? env.DB.prepare('DELETE FROM config WHERE chave = ?').bind(k)
     : env.DB.prepare('INSERT OR REPLACE INTO config (chave, valor) VALUES (?, ?)').bind(k, v)));
 }

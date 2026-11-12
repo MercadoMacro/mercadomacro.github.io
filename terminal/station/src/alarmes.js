@@ -3,7 +3,9 @@
    Agora a lista de cada conta fica no D1 (tabela alarmes), o relógio do site confere os preços a cada minuto
    e, quando um alarme bate, manda um aviso (Web Push) para os aparelhos em que a pessoa ligou os avisos.
    O aviso vai sem conteúdo (não precisa de criptografia); o service worker busca o texto em /api/push/pendentes.
-   Chaves VAPID: geradas aqui na primeira vez e guardadas só no D1 (config vapid_jwk). */
+   Chaves VAPID: geradas aqui na primeira vez e guardadas só no D1 (config vapid_jwk), cifradas pelo cofre (cofre.js). */
+
+import { abrir, fechar } from './cofre.js';
 
 const MAX_ALARMES = 12;
 const MAX_APARELHOS = 5;
@@ -145,11 +147,11 @@ const b64uDec = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '
 let vapid = null;
 async function chavesVapid(env) {
   if (vapid) return vapid;
-  let jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'vapid_jwk'").first())?.valor;
+  let jwk = await abrir(env, 'vapid_jwk', (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'vapid_jwk'").first())?.valor);
   if (!jwk) {
     const par = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
-    await env.DB.prepare("INSERT OR IGNORE INTO config (chave, valor) VALUES ('vapid_jwk', ?)").bind(JSON.stringify(await crypto.subtle.exportKey('jwk', par.privateKey))).run();
-    jwk = (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'vapid_jwk'").first()).valor;
+    await env.DB.prepare("INSERT OR IGNORE INTO config (chave, valor) VALUES ('vapid_jwk', ?)").bind(await fechar(env, 'vapid_jwk', JSON.stringify(await crypto.subtle.exportKey('jwk', par.privateKey)))).run();
+    jwk = await abrir(env, 'vapid_jwk', (await env.DB.prepare("SELECT valor FROM config WHERE chave = 'vapid_jwk'").first()).valor);
   }
   const priv = JSON.parse(jwk);
   // chave pública "crua" (0x04 + x + y), no formato que o navegador pede em applicationServerKey
