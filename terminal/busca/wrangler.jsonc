@@ -1,0 +1,17 @@
+// Busca inteligente da Jade (AI Search). Publicado pelo .github/workflows/publicar-busca.yml.
+// Sem endereço público (workers_dev false e sem rotas): só o site chama, pelo service binding BUSCA.
+{
+  "name": "mercadomacro-busca",
+  "main": "index.js",
+  // AI Search exige 2026-03-27 ou mais nova (por isso este worker é separado do site)
+  "compatibility_date": "2026-10-13",
+  "workers_dev": false,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "ai_search_namespaces": [{ "binding": "AI_SEARCH", "namespace": "default" }],
+  // mesmo banco do site: lê noticias_hist e guarda o que já foi enviado (busca_itens)
+  "d1_databases": [
+    { "binding": "DB", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
+  ],
+  // 03:05 UTC = 00:05 em Brasília: notícias do dia que acabou e aulas alteradas
+  "triggers": { "crons": ["5 3 * * *"] }
+}
