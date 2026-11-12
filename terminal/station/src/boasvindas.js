@@ -30,7 +30,7 @@ Por onde começar:
 - Mesa: o mercado inteiro numa tela só, com índices, moedas, juros e commodities.
 - Notícias: os principais veículos num lugar só, com as de maior impacto em destaque.
 - Probabilidades do Copom e do Fed: o que o mercado espera para os juros.
-- Canal no Telegram: a abertura às 9h15 e o fechamento às 18h direto no seu celular.
+- Canal no Telegram: a abertura às 8h00 e o fechamento às 18h direto no seu celular.
 
 Se algo não funcionar, ou se você sentir falta de alguma coisa, é só responder este e-mail. Ele chega direto para nós, e cada mensagem é lida por uma pessoa.
 
