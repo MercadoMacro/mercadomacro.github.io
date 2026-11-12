@@ -1,7 +1,7 @@
 /* Organização da Mesa: IDs estáveis, preferências validadas e edição pelos Ajustes. */
 globalThis.MMDeskLayout = (() => {
   const blocks = [
-    ['crypto','Criptomoedas'],['cards','Destaques do mercado'],['am','Índices das Américas'],
+    ['crypto','Criptomoedas'],['cards','Destaques do mercado'],['grafico','Gráfico do ativo'],['noticiasv','Notícias do ativo'],['jade','Jade sobre o ativo'],['am','Índices das Américas'],
     ['eu','Índices europeus'],['as','Índices asiáticos'],['dx','Cesta do DXY'],['em','Moedas emergentes'],
     ['b3','Futuros B3'],['co','Commodities'],['ou','Futuros, juros e risco'],['curve','Curva de juros'],['news','Notícias'],
   ];
@@ -9,7 +9,9 @@ globalThis.MMDeskLayout = (() => {
   function normalize(value) {
     const v = value && typeof value === 'object' ? value : {};
     const order = Array.isArray(v.order) ? [...new Set(v.order.filter(id => ids.includes(id)))] : [];
-    for (const id of ids) if (!order.includes(id)) order.push(id);
+    // as janelas do vínculo (11/11/2026) entram logo depois dos Destaques para quem já tinha ordem própria
+    const novas = ['grafico','noticiasv','jade'];
+    for (const id of ids) if (!order.includes(id)) { const at = novas.includes(id) && order.length ? order.indexOf('cards') : -1; if (at >= 0) order.splice(at + 1 + novas.filter(n => order.includes(n)).length, 0, id); else order.push(id); }
     const hidden = Array.isArray(v.hidden) ? [...new Set(v.hidden.filter(id => ids.includes(id)))] : [];
     return { order, hidden };
   }
@@ -47,6 +49,7 @@ globalThis.MMDeskLayout = (() => {
       ['crypto',root.querySelector('.ms-crypto')],['cards',root.querySelector('.ms-cards')],
       ...[...root.querySelectorAll('.ms-tb[data-tb]')].map(n => [n.dataset.tb,n]),
       ['curve',root.querySelector('.ms-curvebox')],['news',root.querySelector('.ms-newsbox')],
+      ...[...root.querySelectorAll('.ms-vbox[data-v]')].map(n => [n.dataset.v,n]),
     ]);
     const layout = document.createElement('div'); layout.className = 'ms-custom-layout'; oldGrid.before(layout);
     for (const id of config.order) {
@@ -56,6 +59,7 @@ globalThis.MMDeskLayout = (() => {
       layout.appendChild(node);
     }
     oldGrid.remove();
+    root.querySelectorAll('.ms-vinc').forEach(n => { if (!n.children.length) n.remove(); });
     if (config.hidden.length === ids.length) {
       const empty = document.createElement('div'); empty.className = 'ms-layout-empty';
       const p = document.createElement('p'); p.textContent = 'Todos os blocos estão ocultos.';

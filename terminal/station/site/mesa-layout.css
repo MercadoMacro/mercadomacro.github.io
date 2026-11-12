@@ -16,3 +16,34 @@
 .mj-grip{font-size:16px;color:var(--accent-ink,var(--accent))}.mj-nome{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mj-tam{font:600 11px 'JetBrains Mono',monospace;color:var(--text-3);text-transform:none}
 .mj-canto{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;z-index:2;touch-action:none;background:linear-gradient(135deg,transparent 50%,var(--accent) 50%,var(--accent) 60%,transparent 60%,transparent 70%,var(--accent) 70%,var(--accent) 80%,transparent 80%)}
 @media(max-width:899px){.ms-custom-layout.ms-janelas{grid-template-columns:minmax(0,1fr);grid-auto-rows:auto;row-gap:12px}.ms-custom-layout.ms-janelas>[data-mesa-block]{grid-column:auto!important;grid-row:auto!important;margin-bottom:0;overflow:visible}.ms-montar,[data-mj-restaurar]{display:none!important}}
+
+/* vínculo por cor (mesa-vinculo.js) */
+.ms-vinc{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:1100px){.ms-vinc{grid-template-columns:minmax(0,1fr)}}
+.ms-vbox{padding:0;overflow:hidden;min-width:0}
+.ms-vinc>.ms-vbox,.ms-custom-layout:not(.ms-janelas)>.ms-vbox{min-height:340px}
+[data-mv]{position:relative}
+[data-mv]:not(.mj-cor)::after{content:'';position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:1}
+[data-mv="ouro"]:not(.mj-cor)::after{background:#f0b90b}[data-mv="azul"]:not(.mj-cor)::after{background:#38bdf8}[data-mv="nenhum"]:not(.mj-cor)::after{border:1.5px solid var(--text-3);box-sizing:border-box}
+.mv-in[data-mv]::after,.ms-vbox[data-mv]::after,.ms-cards[data-mv]::after,.ms-crypto[data-mv]::after{display:none}
+.mv-in{display:flex;flex-direction:column;height:100%;min-height:0}
+.mv-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.mv-head .sp{flex:1}.mv-t{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-dot{width:10px;height:10px;border-radius:50%;flex:none;background:#f0b90b}
+.mv-in[data-mv="azul"] .mv-dot{background:#38bdf8}.mv-in[data-mv="nenhum"] .mv-dot{background:none;border:1.5px solid var(--text-3);box-sizing:border-box}
+.mv-in[data-mv="ouro"]{box-shadow:inset 0 0 0 1px rgba(240,185,11,.28)}.mv-in[data-mv="azul"]{box-shadow:inset 0 0 0 1px rgba(56,189,248,.28)}
+.mv-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.mv-graf{height:300px;flex:1 1 300px;min-height:220px}
+.mv-link{align-self:flex-start;margin:8px 12px 12px;font:inherit;font-size:12px;color:var(--accent);background:none;border:0;padding:6px 0;cursor:pointer}
+.mv-link:hover{text-decoration:underline}
+.mv-cot{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:14px 12px 6px}.mv-cot b{font-size:15px;color:var(--text)}.mv-cot .num{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.mv-cot .up{color:var(--up,#22c55e)}.mv-cot .dn{color:var(--down,#ef4444)}
+.mv-perg{display:flex;flex-direction:column;gap:8px;padding:8px 12px}
+.mv-chip{font:inherit;font-size:13px;text-align:left;color:var(--text);background:var(--surface-2,transparent);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:40px;cursor:pointer}
+.mv-chip:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+.mv-nota{margin:4px 12px 12px;font-size:11px;color:var(--text-3)}
+tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.ms-card.mv-sel,.ms-cr.mv-sel{outline:2px solid var(--accent);outline-offset:-2px}
+[data-mv="azul"] tr.mv-sel>td{background:rgba(56,189,248,.12)!important}[data-mv="azul"] tr.mv-sel>td:first-child{box-shadow:inset 3px 0 0 #38bdf8}
+.mj-cor{width:22px;height:22px;flex:none;border-radius:50%;border:2px solid var(--text);cursor:pointer;padding:0;background:#f0b90b}
+.mj-cor[data-mv="azul"]{background:#38bdf8}.mj-cor[data-mv="nenhum"]{background:transparent;border:2px dashed var(--text-3)}

@@ -659,6 +659,7 @@
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
+      <div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section><section class="ms-box ms-vbox" data-v="noticiasv" aria-label="Notícias do ativo vinculado"></section><section class="ms-box ms-vbox" data-v="jade" aria-label="Jade sobre o ativo vinculado"></section></div>
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
         <div class="ms-col">${col(2)}${futB3HTML()}</div>
@@ -672,10 +673,13 @@
     </div>`;
     let layout = null;
     try { layout = JSON.parse(localStorage.getItem('trader_prefs_v1') || '{}')?.mesaLayout; } catch (e) { /* padrão */ }
+    // vínculo por cor (mesa-vinculo.js) antes da grade, para as janelas novas serem medidas já com conteúdo
+    window.MMDeskLink?.montar(root, { PROXY, getJSON, quote: (s) => Q[s] || null });
     // janelas soltas (mesa-janelas.js) precisam da grade personalizada mesmo sem ordem própria nos Ajustes
     const janelas = window.MMDeskWindows && (window.MMDeskWindows.temPosicoes() || window.MMDeskWindows.editando());
     window.MMDeskLayout?.apply(root, layout || (janelas ? {} : null));
     window.MMDeskWindows?.aplicar(root);
+    window.MMDeskLink?.pintar(); // marca as cores nos blocos já com data-mesa-block
     mobileGroups();
     paintCrypto();
     paintForex();
@@ -734,8 +738,10 @@
     const go = e.target.closest('[data-go]');
     if (go) { switchTab(go.dataset.go); return; }
     const tr = e.target.closest('tr[data-sym]');
+    if (tr && window.MMDeskLink?.clicou(tr)) return;
     if (tr) { openChart(tr.dataset.sym, tr.querySelector('.nm')?.lastChild?.textContent || tr.dataset.sym, listOf(tr.dataset.tb)); return; }
     const c = e.target.closest('.ms-card[data-sym], .ms-cr[data-sym]');
+    if (c && window.MMDeskLink?.clicou(c)) return;
     if (c) {
       const group = c.classList.contains('ms-cr') ? CRYPTO.map(([s, n]) => ({ s, n })) : CARDS.filter((x) => !x.s.startsWith('__')).map((x) => ({ s: x.s, n: x.n }));
       openChart(c.dataset.sym, c.dataset.name, group);

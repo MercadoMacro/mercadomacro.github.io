@@ -27,11 +27,12 @@ globalThis.MMDeskWindows = (() => {
   // compacta para cima: cada janela vai para a linha mais alta livre; a janela "fixa" (a que está sendo
   // arrastada) fica onde a pessoa pôs e as outras se ajeitam em volta
   function arruma(itens, fixo) {
+    const fixos = new Set([].concat(fixo || []));
     const lista = Object.entries(limpa({ itens }).itens).map(([id, p]) => ({ id, ...p }));
-    lista.sort((a, b) => (a.id === fixo ? -1 : b.id === fixo ? 1 : 0) || a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : 1));
+    lista.sort((a, b) => (fixos.has(b.id) - fixos.has(a.id)) || a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : 1));
     const postos = [];
     for (const it of lista) {
-      if (it.id !== fixo) { let y = 0; while (y < MAX_Y && postos.some((p) => colide({ ...it, y }, p))) y++; it.y = y; }
+      if (!fixos.has(it.id)) { let y = 0; while (y < MAX_Y && postos.some((p) => colide({ ...it, y }, p))) y++; it.y = y; }
       postos.push(it);
     }
     return Object.fromEntries(postos.map(({ id, ...p }) => [id, p]));
@@ -119,10 +120,13 @@ globalThis.MMDeskWindows = (() => {
       const med = medir(layout, blocos);
       if (!itens) itens = med;
       else {
-        let fundo = Math.max(0, ...Object.values(itens).map((p) => p.y + p.h));
-        for (const b of faltam) { const m = med[b.dataset.mesaBlock]; itens[b.dataset.mesaBlock] = { ...m, x: 0, y: fundo }; fundo += m.h; }
+        // janela nova entra onde a grade de antes a punha (as do vínculo ficam logo abaixo dos Destaques) e empurra as outras
+        const cards = itens.cards, novas = faltam.map((b) => b.dataset.mesaBlock);
+        const VINC = { grafico: [0, 6, 44], noticiasv: [6, 3, 44], jade: [9, 3, 44] }; // coluna, largura e altura iniciais
+        for (const id of novas) { const m = med[id], v = VINC[id]; itens[id] = v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m; }
+        itens = arruma(itens, novas);
       }
-      itens = arruma(itens, null);
+      itens = arruma(itens, faltam.length ? faltam.map((b) => b.dataset.mesaBlock) : null);
       if (editando) est.dados = { v: 1, itens: { ...(salvas() || {}), ...itens } };
     }
     // só as janelas visíveis entram na grade; a posição das ocultas fica guardada
@@ -147,6 +151,8 @@ globalThis.MMDeskWindows = (() => {
       const canto = document.createElement('div');
       canto.className = 'mj-canto'; canto.setAttribute('aria-hidden', 'true');
       b.append(barra, canto);
+      // bolinha da cor do vínculo (mesa-vinculo.js); curva e notícias gerais não têm ativo para vincular
+      if (!['curve', 'news'].includes(id)) globalThis.MMDeskLink?.decorar(barra, id);
       barra.addEventListener('pointerdown', (e) => iniciar(e, layout, id, 'mover'));
       canto.addEventListener('pointerdown', (e) => iniciar(e, layout, id, 'tamanho'));
       barra.addEventListener('keydown', (e) => {
