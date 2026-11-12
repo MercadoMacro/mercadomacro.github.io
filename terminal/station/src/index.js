@@ -1318,6 +1318,15 @@ async function apiAdmin(req, env, acao, eu) {
       return json({ hoje: diaBrasilia(), nomes: ABAS_USO, linhas: [], pessoas: [] });
     }
   }
+  // perguntas feitas à Jade nos últimos 30 dias, sem nome nem conta (src/assistente.js, guardarPergunta)
+  if (acao === 'jade-perguntas' && req.method === 'GET') {
+    try {
+      const r = await env.DB.prepare('SELECT quando, dia, tela, texto FROM jade_perguntas WHERE quando >= ? ORDER BY quando DESC LIMIT 1000').bind(Date.now() - 30 * 864e5).all();
+      return json({ linhas: r.results });
+    } catch (e) {
+      return json({ linhas: [] }); // a tabela nasce na primeira pergunta
+    }
+  }
   if (acao === 'passe' && req.method === 'GET') {
     const desde = new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10);
     try {
@@ -2589,6 +2598,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
   <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">E-mails</span></button>
   <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
+  <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
 </nav>
 </aside><main>
@@ -2619,6 +2629,12 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
 <section data-p="comunicado" hidden><h2>E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="jade" hidden>
+  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
+  <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
+  <div class="ferr"><input id="jade-busca" type="search" placeholder="Filtrar perguntas" autocomplete="off" aria-label="Filtrar perguntas"></div>
+  <div id="jade-tab"><p class="vazio">Carregando…</p></div>
+</section>
 <section data-p="passe" hidden>
   <h2>Pedidos ao servidor de dados sem o passe de login</h2>
   <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
@@ -2869,7 +2885,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -2880,8 +2896,32 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     document.getElementById('sub').textContent = SUBT[n] || '';
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
+    if (n === 'jade') jade();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
   }
+  var JADE = [];
+  function jadeLista(){
+    var tab = document.getElementById('jade-tab'), q = (document.getElementById('jade-busca').value || '').trim().toLowerCase();
+    var L = q ? JADE.filter(function(l){ return (l.texto + ' ' + l.tela).toLowerCase().indexOf(q) >= 0; }) : JADE;
+    if (!JADE.length) { tab.innerHTML = '<p class="vazio">Nenhuma pergunta nos últimos 30 dias.</p>'; return; }
+    if (!L.length) { tab.innerHTML = '<p class="vazio">Nenhuma pergunta com esse filtro.</p>'; return; }
+    tab.innerHTML = '<table class="t"><thead><tr><th>Quando</th><th>Pergunta</th><th>Tela</th></tr></thead><tbody>' + L.slice(0, 500).map(function(l){
+      var d = new Date(l.quando);
+      return '<tr><td class="c" data-r="Quando">' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '</td><td data-r="Pergunta">' + esc(l.texto) + '</td><td class="c" data-r="Tela">' + esc(l.tela || '—') + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  function jade(){
+    var tab = document.getElementById('jade-tab'), res = document.getElementById('jade-res');
+    fetch('/api/admin/jade-perguntas', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
+      JADE = j.linhas || [];
+      var hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10), sete = new Date(Date.now() - 3 * 3600000 - 6 * 864e5).toISOString().slice(0, 10);
+      var n = function(f){ return JADE.filter(f).length.toLocaleString('pt-BR'); };
+      res.innerHTML = [['Hoje', n(function(l){ return l.dia === hoje; })], ['Últimos 7 dias', n(function(l){ return l.dia >= sete; })], ['Últimos 30 dias', JADE.length.toLocaleString('pt-BR')]]
+        .map(function(k){ return '<div class="kpi" style="cursor:default"><small>' + k[0] + '</small><strong>' + k[1] + '</strong></div>'; }).join('');
+      jadeLista();
+    }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar as perguntas.</p>'; });
+  }
+  document.getElementById('jade-busca').addEventListener('input', jadeLista);
   function passe(){
     var tab = document.getElementById('passe-tab'), res = document.getElementById('passe-res');
     fetch('/api/admin/passe', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
