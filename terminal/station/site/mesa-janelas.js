@@ -52,41 +52,48 @@ globalThis.MMDeskWindows = (() => {
   if (typeof document === 'undefined') return { COLS, ROW, GAP, limpa, arruma, mover, redimensionar, ordem, colide };
 
   /* ---------- navegador ---------- */
-  let est = (() => { try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); return j && typeof j === 'object' ? j : {}; } catch (e) { return {}; } })();
-  // Mesa 1 = a de sempre (padrão, nada muda); Mesa 2 = a nova, com janelas soltas e vínculo por cor (11/11/2026)
+  // Mesa 1 = a de sempre (padrão); Mesa 2 = a nova, com o gráfico vinculado por cor (11/11/2026).
+  // Cada mesa tem a própria organização: neste navegador e na conta (k=mesa1 para a 1, k=mesa para a 2).
   const MODO_KEY = 'mm_mesa_modo_v1';
+  const LOJA = { '1': { key: 'mm_mesa_janelas_m1_v1', k: 'mesa1' }, '2': { key: KEY, k: 'mesa' } };
+  const lerLocal = (m) => { try { const j = JSON.parse(localStorage.getItem(LOJA[m].key) || 'null'); return j && typeof j === 'object' ? j : {}; } catch (e) { return {}; } };
   let modo = (() => { try { return localStorage.getItem(MODO_KEY) === '2' ? '2' : '1'; } catch (e) { return '1'; } })();
-  let editando = false, conta = null, carregou = false, timer = null, arraste = null, rootAtual = null;
+  const estados = { '1': lerLocal('1'), '2': lerLocal('2') };
+  let est = estados[modo];
+  let editando = false, conta = null, timer = null, arraste = null, rootAtual = null;
+  const carregou = { '1': false, '2': false };
   const salvas = () => { const l = limpa(est.dados).itens; return Object.keys(l).length ? l : null; };
-  const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify(est)); } catch (e) { /* sem espaço */ } };
+  const guardar = (m = modo) => { try { localStorage.setItem(LOJA[m].key, JSON.stringify(estados[m])); } catch (e) { /* sem espaço */ } };
   const estreito = () => innerWidth < 900;
   const nomes = () => Object.fromEntries((globalThis.MMDeskLayout?.blocks || []).map(([id, n]) => [id, n]));
 
-  async function carregar() {
-    if (carregou) return; carregou = true;
+  async function carregar(m = modo) {
+    if (carregou[m]) return; carregou[m] = true;
     try {
-      const r = await fetch('/api/conta/dados?k=mesa', { credentials: 'same-origin', cache: 'no-store' });
+      const r = await fetch('/api/conta/dados?k=' + LOJA[m].k, { credentials: 'same-origin', cache: 'no-store' });
       if (!r.ok) return;
       const j = await r.json();
       if (!Number.isSafeInteger(j.usuario)) return;
       conta = j.usuario;
-      if (est.conta && est.conta !== conta) est = {}; // outra conta já usou este navegador
-      if (j.v && (j.ts || 0) > (est.ts || 0)) {
-        est = { conta, ts: j.ts, dados: limpa(j.v) }; guardar();
-        if (!editando) dispatchEvent(new Event('mesa-layout-changed'));
-      } else if (est.dados && (est.ts || 0) > (j.ts || 0)) { est.conta = conta; enviar(); }
+      let e = estados[m];
+      if (e.conta && e.conta !== conta) e = estados[m] = {}; // outra conta já usou este navegador
+      if (j.v && (j.ts || 0) > (e.ts || 0)) {
+        estados[m] = { conta, ts: j.ts, dados: limpa(j.v) }; guardar(m);
+        if (m === modo) { est = estados[m]; if (!editando) dispatchEvent(new Event('mesa-layout-changed')); }
+      } else if (e.dados && (e.ts || 0) > (j.ts || 0)) { e.conta = conta; enviar(false, m); }
     } catch (e) { /* fora da conta: fica só neste navegador */ }
   }
-  function agendar() { est.ts = Date.now(); est.conta = conta || est.conta; guardar(); clearTimeout(timer); timer = setTimeout(enviar, 1500); }
-  async function enviar(denovo) {
+  function agendar() { const m = modo; est.ts = Date.now(); est.conta = conta || est.conta; guardar(m); clearTimeout(timer); timer = setTimeout(() => enviar(false, m), 1500); }
+  async function enviar(denovo, m = modo) {
     if (!conta) return;
-    const ts = Math.max(Date.now(), (est.ts || 0) + 1);
+    const e = estados[m];
+    const ts = Math.max(Date.now(), (e.ts || 0) + 1);
     try {
       const r = await fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario: conta, k: 'mesa', v: limpa(est.dados), ts }) });
-      if (r.ok) { est.ts = ts; guardar(); return; }
-      if (r.status === 409 && !denovo) { carregou = false; await carregar(); }
-    } catch (e) { /* tenta na próxima mudança */ }
+        body: JSON.stringify({ usuario: conta, k: LOJA[m].k, v: limpa(e.dados), ts }) });
+      if (r.ok) { e.ts = ts; guardar(m); return; }
+      if (r.status === 409 && !denovo) { carregou[m] = false; await carregar(m); }
+    } catch (err) { /* tenta na próxima mudança */ }
   }
 
   // posição atual de cada bloco na grade de antes, convertida para colunas e linhas
@@ -112,7 +119,6 @@ globalThis.MMDeskWindows = (() => {
   function aplicar(root) {
     rootAtual = root;
     carregar();
-    if (modo === '1') { rotulos(); return; } // Mesa 1: a grade de sempre, sem posições montadas
     if (editando && !root.querySelector('.ms-custom-layout')) globalThis.MMDeskLayout?.apply(root, {});
     const layout = root.querySelector('.ms-custom-layout'); if (!layout) return;
     rotulos();
@@ -270,7 +276,7 @@ globalThis.MMDeskWindows = (() => {
   function trocarModo(m) {
     if (m !== '1' && m !== '2') return;
     if (editando) { desligarGrade(); editando = false; rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove()); if (salvas()) agendar(); }
-    modo = m; try { localStorage.setItem(MODO_KEY, m); } catch (e) { /* sem espaço */ }
+    modo = m; est = estados[m]; try { localStorage.setItem(MODO_KEY, m); } catch (e) { /* sem espaço */ }
     rotulos();
     dispatchEvent(new Event('mesa-layout-changed'));
   }
@@ -282,7 +288,7 @@ globalThis.MMDeskWindows = (() => {
     let g = qb.querySelector('.qb-mj');
     if (!g) {
       g = document.createElement('span'); g.className = 'qb-mj';
-      g.innerHTML = '<button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="1" title="Mesa 1: a de sempre" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="2" title="Mesa 2: janelas soltas, gráfico, notícias e Jade vinculados por cor" aria-label="Mesa 2, a nova">2</button><button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
+      g.innerHTML = '<button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="1" title="Mesa 1: a de sempre" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="2" title="Mesa 2: a nova, com o gráfico vinculado por cor" aria-label="Mesa 2, a nova">2</button><button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
       const temp = qb.querySelector('.qb-temp');
       if (temp) temp.after(g); else qb.append(g);
       rotulos();
@@ -300,8 +306,6 @@ globalThis.MMDeskWindows = (() => {
 
   function alternar() {
     if (estreito()) return;
-    // na Mesa 1 nada se mexe: montar leva para a Mesa 2, já no modo montar
-    if (modo === '1' && !editando) { modo = '2'; try { localStorage.setItem(MODO_KEY, '2'); } catch (e) { /* sem espaço */ } editando = true; rotulos(); dispatchEvent(new Event('mesa-layout-changed')); return; }
     editando = !editando;
     rotulos();
     if (editando) { if (rootAtual) aplicar(rootAtual); }
@@ -314,7 +318,7 @@ globalThis.MMDeskWindows = (() => {
   }
   function restaurar() {
     if (grade) { try { grade.destroy(false); } catch (e) { /* redesenha */ } grade = null; }
-    est = { conta: est.conta, ts: Date.now(), dados: { v: 1, itens: {} } }; guardar(); enviar();
+    est = estados[modo] = { conta: est.conta, ts: Date.now(), dados: { v: 1, itens: {} } }; guardar(); enviar();
     editando = false; rotulos();
     dispatchEvent(new Event('mesa-layout-changed'));
   }
@@ -326,5 +330,5 @@ globalThis.MMDeskWindows = (() => {
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && editando && !arraste && document.getElementById('mesa-panel')?.classList.contains('active')) alternar(); });
 
-  return { COLS, ROW, GAP, limpa, arruma, mover, redimensionar, ordem, colide, aplicar, restaurar, editando: () => editando, temPosicoes: () => modo === '2' && !!salvas(), modo: () => modo, trocarModo };
+  return { COLS, ROW, GAP, limpa, arruma, mover, redimensionar, ordem, colide, aplicar, restaurar, editando: () => editando, temPosicoes: () => !!salvas(), modo: () => modo, trocarModo };
 })();

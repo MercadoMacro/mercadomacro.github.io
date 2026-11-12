@@ -949,6 +949,8 @@ const CHAVES_DADOS = {
     const e = Object.entries(v.itens), n = (x, a, b) => Number.isInteger(x) && x >= a && x <= b;
     return e.length <= 30 && e.every(([id, p]) => /^[a-z0-9]{2,12}$/.test(id) && p && n(p.w, 2, 12) && n(p.x, 0, 12 - p.w) && n(p.y, 0, 2000) && n(p.h, 8, 240));
   },
+  // organização da Mesa 1 (a de sempre), no mesmo formato da Mesa 2 (chave mesa)
+  mesa1: v => CHAVES_DADOS.mesa(v),
   // progresso da aba Educação: lições feitas, respostas do quiz e a última aberta
   edu: v => {
     const id = k => /^[a-z0-9-]{1,40}$/.test(k), obj = o => o && typeof o === 'object' && !Array.isArray(o);
@@ -985,7 +987,7 @@ async function apiDados(req, env, u) {
     if (migrated) return json({ erro: 'Suas listas usam uma versão mais nova. Recarregue o painel.' }, 409);
   }
   const cleanItems = items => items.map(x => x.n ? { s: x.s, n: x.n } : { s: x.s });
-  const v = b.k === 'mesa' ? { v: 1, itens: Object.fromEntries(Object.entries(b.v.itens).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }])) }
+  const v = b.k === 'mesa' || b.k === 'mesa1' ? { v: 1, itens: Object.fromEntries(Object.entries(b.v.itens).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }])) }
     : b.k === 'edu' ? { feitas: b.v.feitas, quiz: b.v.quiz, ultima: b.v.ultima || null }
     : b.k === 'watchlists'
     ? { version: 1, lists: b.v.lists.map(l => ({ id: l.id, name: l.name.trim().replace(/\s+/g, ' '), items: cleanItems(l.items) })) }
@@ -1001,7 +1003,7 @@ async function apiDados(req, env, u) {
     ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
     .bind(u.id, b.k, JSON.stringify(v), ts).run();
   // nada gravado: a conta já tem uma versão mais nova (de outro aparelho); o site deve recarregar a da conta
-  if (res.meta?.changes === 0) return json({ erro: b.k === 'edu' ? 'Seu progresso mudou em outro aparelho.' : b.k === 'mesa' ? 'Sua mesa mudou em outro aparelho.' : 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
+  if (res.meta?.changes === 0) return json({ erro: b.k === 'edu' ? 'Seu progresso mudou em outro aparelho.' : b.k === 'mesa' || b.k === 'mesa1' ? 'Sua mesa mudou em outro aparelho.' : 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
   return json({ ok: true });
 }
 
