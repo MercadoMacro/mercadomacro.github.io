@@ -18,7 +18,7 @@
       risk-on, tenso (gota de suor) no risk-off; às vezes mostra a nota no visor.
    6. Sino do pregão: abertura da B3 (10h) e de Nova York (9h30 NY), fora de feriado; depois das
       17h30, o Ibovespa no fim do pregão. Uma vez por dia cada.
-   7. Guia de abas: ao abrir uma aba, uma dica curta apontando com o braço (até 2 vezes por aba).
+   7. Guia de abas: ao abrir uma aba (ou ao abrir o site já nela), uma dica curta apontando com o braço (até 2 por aba por dia).
    Nada de número inventado: sem dado, a cena não acontece. Tudo pausa com a aba escondida.
    No celular (aba na borda) o botão antigo continua; com "reduzir movimento" fica parado.
    Para desfazer: tirar o <script> deste arquivo do index.html.
@@ -46,7 +46,7 @@
     'calendar-panel': ['Calendário: eventos de alto impacto e balanços. Eu aviso 10 min antes dos principais.', 'Calendário: também tem os balanços do Brasil e dos EUA, o Boletim Focus e os proventos.'],
     'analysis-panel': ['Análises: destaques no topo, comparador de ativos, Fed, fluxo na B3 e posições.', 'Análises: veja as chances do Copom e do Fed para as próximas reuniões.'],
     'indicators-panel': ['Indicadores: dados de Brasil, EUA e Europa, como inflação, juros e balança comercial.', 'Indicadores: o Tesouro Direto e a leitura do momento comparam com os últimos 20 anos.'],
-    'fund-panel': ['Fundamentos: números dos balanços das empresas.', 'Fundamentos: o Ranking EUA lista as 500 maiores empresas americanas por receita.'],
+    'fund-panel': ['Fundamentos: busque uma empresa da B3 pelo nome ou ticker (PETR4, Itaú) e veja receita, lucro, dívida e proventos ano a ano.', 'Fundamentos: P/L, P/VP, dividend yield e ROE usam os números dos últimos 12 meses com a cotação de agora.', 'Fundamentos: os balanços vêm da CVM, e dá para abrir o documento original que a empresa entregou.', 'Fundamentos: no Ranking, ordene as empresas por receita, lucro, margem ou ROE e filtre por setor.', 'Fundamentos: na opção EUA aparecem as empresas americanas (dados da SEC), e o Ranking EUA lista as 500 maiores.'],
     'calculator-panel': ['Calculadora: simulações rápidas de juros e investimentos.', 'Calculadora: renda fixa, juros compostos, financiamento, preço médio, inflação e moedas. O resultado sai enquanto você digita.'],
     'options-panel': ['Opções: monte e simule estruturas com opções da B3.', 'Opções: tem cadeia teórica, volatilidade e probabilidades para estudar antes de operar.'],
     'edu-panel': ['Educação: lições curtas em trilhas. Pergunte para mim se ficar alguma dúvida.', 'Educação: cada lição tem resumo e perguntas para fixar.'],
@@ -688,14 +688,23 @@
     setTimeout(olhaPregao, 5000);
 
     // ===== 7. guia de abas =====
+    // até DICAS_DIA dicas por aba por dia (11/11/2026: antes era uma só, e quem voltava à aba não via mais nada)
+    const DICAS_DIA = 2;
+    const vistasHoje = (tabId, hoje) => {
+      const v = mem.dicaDia[tabId];
+      if (v === hoje) return 1; // formato antigo: só a data
+      return v && v.d === hoje ? v.n || 0 : 0;
+    };
     const antes = window.__onTabSwitch;
-    window.__onTabSwitch = (tabId) => {
-      if (antes) antes(tabId);
+    window.__onTabSwitch = (tabId) => { if (antes) antes(tabId); dicaDaAba(tabId); };
+    // o site que já abre numa aba (a última usada) também mostra a dica dela
+    setTimeout(() => { const a = document.querySelector('.tab-panel.active'); if (a && !document.hidden) dicaDaAba(a.id); }, 6000);
+    function dicaDaAba(tabId) {
       const lista = DICAS[tabId];
       if (!lista || prefs().roboDicas === false) return;
       const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
       mem.dicaDia = mem.dicaDia || {}; mem.dicaN = mem.dicaN || {};
-      if (mem.dicaDia[tabId] === hoje) return;
+      if (vistasHoje(tabId, hoje) >= DICAS_DIA) return;
       setTimeout(() => {
         if (!vivo()) return;
         for (let i = fila.length - 1; i >= 0; i--) if (fila[i].chave === 'dica') fila.splice(i, 1);
@@ -705,7 +714,8 @@
           if (aba && aba.id !== tabId) return;
           const n = mem.dicaN[tabId] || 0;
           const dica = lista[n % lista.length];
-          mem.dicaDia[tabId] = hoje; mem.dicaN[tabId] = n + 1; memSalva();
+          if (vistasHoje(tabId, hoje) >= DICAS_DIA) return;
+          mem.dicaDia[tabId] = { d: hoje, n: vistasHoje(tabId, hoje) + 1 }; mem.dicaN[tabId] = n + 1; memSalva();
           const A = window.MMAssistente;
           const explica = !!(A && A.explicarTela && A.gemini && A.gemini());
           cena(() => {
@@ -715,7 +725,7 @@
           }, explica ? 9300 : 6800);
         }, 'dica');
       }, 900);
-    };
+    }
 
     // ===== arrastar: leva o robô para qualquer canto; o lugar fica salvo neste navegador =====
     const POS_KEY = 'mm_robo_pos_v1';
