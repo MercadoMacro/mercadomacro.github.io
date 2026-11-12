@@ -106,6 +106,25 @@ globalThis.MMDeskWindows = (() => {
     }
     return out;
   }
+  function medirOriginal(root) {
+    const grid = root.querySelector('.ms-grid'); if (!grid) return null;
+    const G = grid.getBoundingClientRect(), passo = (G.width - GAP * (COLS - 1)) / COLS + GAP;
+    const els = [['crypto', root.querySelector('.ms-crypto')], ['cards', root.querySelector('.ms-cards')],
+      ...[...root.querySelectorAll('.ms-vbox[data-v]')].map((n) => [n.dataset.v, n]),
+      ...[...root.querySelectorAll('.ms-tb[data-tb]')].map((n) => [n.dataset.tb, n]),
+      ['curve', root.querySelector('.ms-curvebox')], ['news', root.querySelector('.ms-newsbox')]].filter(([, n]) => n && n.offsetParent);
+    if (!els.length) return null;
+    const topo = Math.min(...els.map(([, n]) => n.getBoundingClientRect().top)), out = {};
+    for (const [id, n] of els) {
+      const r = n.getBoundingClientRect();
+      // dentro da grade de 4 colunas a posição vem da coluna (1 coluna = 3 da grade nova), sem arredondar pixels
+      const col = n.closest('.ms-grid > .ms-col'), cols = col ? [...grid.children].filter((c) => c.classList.contains('ms-col')) : [];
+      const i = col ? cols.indexOf(col) : -1, larg = cols.length ? Math.floor(COLS / cols.length) : COLS;
+      const w = i >= 0 ? larg : int((r.width + GAP) / passo, MIN_W, COLS), x = i >= 0 ? i * larg : int((r.left - G.left) / passo, 0, COLS - w);
+      out[id] = { x, y: int((r.top - topo) / ROW, 0, MAX_Y), w, h: int(Math.ceil((r.height + GAP) / ROW), MIN_H, MAX_H) };
+    }
+    return out;
+  }
   function pintar(layout, itens) {
     for (const b of layout.children) {
       const p = itens[b.dataset.mesaBlock]; if (!p) continue;
@@ -119,7 +138,10 @@ globalThis.MMDeskWindows = (() => {
   function aplicar(root) {
     rootAtual = root;
     carregar();
-    if (editando && !root.querySelector('.ms-custom-layout')) globalThis.MMDeskLayout?.apply(root, {});
+    // sem organização própria, a Mesa está na grade de sempre (4 colunas com as tabelas empilhadas): mede ali, antes
+    // de converter, para o modo montar começar exatamente do que está na tela (antes a conversão embaralhava tudo)
+    let antes = null;
+    if (editando && !root.querySelector('.ms-custom-layout')) { antes = medirOriginal(root); globalThis.MMDeskLayout?.apply(root, {}); }
     const layout = root.querySelector('.ms-custom-layout'); if (!layout) return;
     rotulos();
     const blocos = [...layout.children].filter((n) => n.dataset.mesaBlock && !n.hidden);
@@ -127,7 +149,7 @@ globalThis.MMDeskWindows = (() => {
     if (!itens && !editando) return;
     const faltam = blocos.filter((b) => !itens || !itens[b.dataset.mesaBlock]);
     if (faltam.length) {
-      const med = medir(layout, blocos);
+      const med = antes ? { ...medir(layout, blocos), ...antes } : medir(layout, blocos);
       if (!itens) itens = med;
       else {
         // janela nova entra onde a grade de antes a punha (as do vínculo ficam logo abaixo dos Destaques) e empurra as outras
