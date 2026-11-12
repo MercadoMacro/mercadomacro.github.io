@@ -3044,7 +3044,9 @@ async function generateSummary() {
   const ta = $('#summary-text');
   const my = ++summarySeq; // um clique mais novo vence o resumo que ainda estava carregando
   $$('.summary-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === summaryMode));
-  if (summaryMode === 'completo') { ta.value = buildSummaryText(); return; }
+  // rodapé com o link do site em todos os modelos (pedido do Severino, 12/11/2026)
+  const rodape = (t) => (/^Os dados ainda não/.test(t) || /mercadomacro\.com\.br\s*$/.test(t) ? t : `${t.trimEnd()}\n\nPainel completo: https://mercadomacro.com.br`);
+  if (summaryMode === 'completo') { ta.value = rodape(buildSummaryText()); return; }
   ta.value = 'Gerando…';
   let txt;
   try {
@@ -3055,7 +3057,7 @@ async function generateSummary() {
     txt = buildSummaryText();
   }
   if (my !== summarySeq) return;
-  ta.value = txt;
+  ta.value = rodape(txt);
   if (calFeedError && !(calFeed && calFeed.length)) {
     $('#summary-hint').textContent = `Agenda internacional indisponível (${calFeedError.message}). Copom e seus Compromissos continuam aparecendo.`;
   }
