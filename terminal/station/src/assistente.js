@@ -242,13 +242,13 @@ Regras:
 - Não use emojis nem negrito.`;
 
 const horaBR = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-export function manchetesParaResumo(lista, agora = Date.now()) {
+export function manchetesParaResumo(lista, agora = Date.now(), janela = RESUMO_JANELA, max = RESUMO_MAX) {
   const vistos = new Set();
   return (Array.isArray(lista) ? lista : [])
-    .filter((n) => n && typeof n.titulo === 'string' && n.titulo.trim() && Number.isFinite(+n.data) && agora - n.data < RESUMO_JANELA && !FONTES_POLITICA.has(n.fonte))
+    .filter((n) => n && typeof n.titulo === 'string' && n.titulo.trim() && Number.isFinite(+n.data) && agora - n.data < janela && !FONTES_POLITICA.has(n.fonte))
     .filter((n) => { const k = n.titulo.toLowerCase().replace(/[^a-z0-9à-ú]+/g, ' ').trim(); return !vistos.has(k) && vistos.add(k); })
     .sort((a, b) => ((b.finalScore || 0) - (a.finalScore || 0)) || (b.data - a.data))
-    .slice(0, RESUMO_MAX)
+    .slice(0, max)
     .sort((a, b) => b.data - a.data);
 }
 export function textoDasManchetes(ms) {
@@ -297,5 +297,76 @@ export async function apiResumoNoticias(req, env, u, gratis, lerNoticias) {
   } catch (e) {
     await soltar();
     return anterior('A IA não conseguiu resumir agora.', 503);
+  }
+}
+
+/* ---------------- texto da manhã na abertura (12/11/2026) ----------------
+   Para o post de abertura no canal e o texto de /abertura: um parágrafo "O que esperar hoje" e
+   "5 notícias para começar o dia", escritos pelo Gemini só com os números da abertura e as manchetes da noite.
+   Um texto por vez no D1 (abertura_ia, id 1), refeito se tiver mais de MANHA_MS ou for de outro dia.
+   Sem chave, com erro ou com resposta fora do formato: null, e a abertura sai como antes (Destaques). */
+const MANHA_MS = 45 * 60000;
+const INSTRUCOES_MANHA = `Você escreve o texto da manhã do Mercado Macro, um terminal financeiro brasileiro, publicado junto com os números da abertura do mercado.
+Você recebe: os números da manhã (Ásia, Europa, futuros dos EUA, Brasil, commodities), a agenda de hoje com horário de Brasília, o fluxo do investidor estrangeiro na B3 e as manchetes desde a noite anterior (algumas em inglês), cada uma com hora e fonte.
+Responda em português do Brasil, exatamente neste formato, sem nada antes ou depois:
+VISAO: um parágrafo de 3 a 5 frases dizendo como os mercados de fora chegam à abertura, quais eventos da agenda de hoje merecem atenção (com o horário) e quais notícias pesam no dia.
+NOTICIAS:
+- uma frase objetiva sobre a notícia (Fonte)
+- (mais quatro, cinco no total, da mais importante para o mercado brasileiro para a menos)
+Regras:
+- Use somente os números e as manchetes recebidos. Não acrescente números, nomes, datas ou fatos; copie os números como vieram.
+- Não preveja preço nem direção do mercado e não faça recomendação de compra ou venda. Pode dizer o que o mercado acompanha hoje.
+- Cada notícia é um assunto diferente; junte manchetes do mesmo assunto. Traduza as que estiverem em inglês. A fonte vai entre parênteses no fim.
+- Deixe de fora política partidária, fofoca, esporte e assuntos sem relação com economia, mercados ou empresas.
+- Não use emojis, negrito nem títulos.`;
+
+// números e agenda da abertura em linhas simples para o Gemini
+export function dadosParaManha(d) {
+  const f = (v, c = 2) => (v == null || !isFinite(v) ? 'sem dado' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c }));
+  const L = ['Números da manhã (variação contra o fechamento anterior):'];
+  for (const [k, c] of Object.entries(d.cards || {})) {
+    if (!c || c.v == null) continue;
+    L.push(`- ${c.nome}: ${f(c.v, k === 'tnx' || k === 'dolar' ? 3 : 2)}${c.ch != null && isFinite(c.ch) ? ` (${c.ch > 0 ? '+' : ''}${f(c.ch)}%)` : ''}${c.dia && c.dia !== d.data ? ` (dado de ${c.dia})` : ''}`);
+  }
+  if (d.fluxo) L.push(`- Investidor estrangeiro na B3 em ${d.fluxo.data}: saldo de R$ ${f((d.fluxo.dia || 0) / 1e6)} bi no dia, R$ ${f((d.fluxo.mes || 0) / 1e6)} bi no mês`);
+  const ag = d.agendaCanal && d.agendaCanal.length ? d.agendaCanal : d.agenda || [];
+  L.push('', 'Agenda de hoje (horário de Brasília):', ...(ag.length ? ag.map((a) => `- ${a.hora} ${a.pais}: ${a.titulo}${a.proj ? ` (projeção ${a.proj})` : ''}`) : ['- sem eventos importantes na agenda']));
+  return L.join('\n');
+}
+// lê a resposta no formato VISAO / NOTICIAS; null se não vier certo
+export function lerManha(texto) {
+  const t = String(texto || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\r/g, '');
+  const m = t.match(/VIS[AÃ]O:\s*([\s\S]*?)\n\s*NOT[IÍ]CIAS:\s*\n([\s\S]*)$/i);
+  if (!m) return null;
+  const visao = m[1].replace(/\s+/g, ' ').trim();
+  const noticias = m[2].split('\n').map((l) => l.trim()).filter((l) => /^[-•*]\s+/.test(l)).map((l) => l.replace(/^[-•*]\s+/, '').trim()).filter((l) => l.length > 15).slice(0, 5);
+  if (visao.length < 80 || visao.length > 1200 || noticias.length < 3) return null;
+  return { visao, noticias: noticias.map((l) => l.slice(0, 300)) };
+}
+export async function manhaIA(env, d, lista, agora = Date.now()) {
+  try {
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS abertura_ia (id INTEGER PRIMARY KEY, dia TEXT, texto TEXT, gerado INTEGER)').run();
+    const row = await env.DB.prepare('SELECT dia, texto, gerado FROM abertura_ia WHERE id = 1').first();
+    if (row && row.dia === d.data && agora - row.gerado < MANHA_MS) return JSON.parse(row.texto);
+    const c = await config(env);
+    if (!c.gemini_key) return null;
+    // manchetes desde a noite anterior (16 h antes das 9h pega o fechamento de ontem)
+    const ms = manchetesParaResumo(lista, agora, 16 * 3600000, 90);
+    if (ms.length < 5) return null;
+    const pedido = `${dadosParaManha(d)}\n\nManchetes (horário de Brasília):\n${textoDasManchetes(ms)}`;
+    let tempo;
+    const r = await Promise.race([
+      gemini(c.gemini_key, [{ role: 'user', parts: [{ text: pedido }] }], false, c.gemini_modelo, INSTRUCOES_MANHA),
+      new Promise((ok) => { tempo = setTimeout(() => ok({ ok: false, erro: 'demorou' }), 30000); }),
+    ]).finally(() => clearTimeout(tempo));
+    const manha = r.ok ? lerManha(r.texto) : null;
+    if (!manha) { console.log('texto da manhã: sem texto (' + (r.erro || 'formato') + ')'); return row && row.dia === d.data ? JSON.parse(row.texto) : null; }
+    manha.gerado = agora;
+    await env.DB.prepare('INSERT INTO abertura_ia (id, dia, texto, gerado) VALUES (1, ?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET dia = ?1, texto = ?2, gerado = ?3')
+      .bind(d.data, JSON.stringify(manha), agora).run();
+    return manha;
+  } catch (e) {
+    console.log('texto da manhã falhou:', e.message);
+    return null;
   }
 }
