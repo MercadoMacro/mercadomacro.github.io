@@ -27,14 +27,15 @@ try{
  for(const [orientation,viewport] of [['portrait',{width:390,height:844}],['landscape',{width:844,height:390}]]){
   for(const theme of ['dark','light']){
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
-   await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
-   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
-   await page.addInitScript(()=>localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
+   await ctx.addInitScript(theme=>{try{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));}catch(e){/* quadro sem armazenamento */}},theme);
+   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>{if(!/Transition was aborted because of invalid state\. Viewport size changed/.test(e.message))errors.push(e.stack||e.message);});page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
+   await page.addInitScript(()=>{try{localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
     {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
     {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
-   ]})));
+   ]}));}catch(e){/* quadro sem armazenamento */}});
    let liveWorkerCalls=0,stream=null,streamConnections=0,streamClosures=0;
-   const pushed=(title='Prévia: manchete enviada pelo WebSocket')=>({titulo:title,link:'https://example.test/push',fonte:'InfoMoney',data:Date.now(),nivel:'ALTO',impactScore:7,finalScore:70,tags:[]});
+   // o Ao Vivo abre na fonte Financial Juice (liveFonte em app.js): as manchetes de teste vêm dela
+   const pushed=(title='Prévia: manchete enviada pelo WebSocket')=>({titulo:title,link:'https://example.test/push',fonte:'Financial Juice',data:Date.now(),nivel:'ALTO',impactScore:7,finalScore:70,tags:[]});
    await page.routeWebSocket('**/api/noticias/ws',ws=>{
     stream=ws;streamConnections++;
     ws.onMessage(message=>{if(message==='ping')ws.send('pong');});
@@ -58,7 +59,7 @@ try{
     const payload=Object.fromEntries(symbols.map(symbol=>{const [v]=fixture(symbol);return [symbol,{off:0,p:v,pt:Math.floor(Date.now()/1000),t:Array.from({length:32},(_,i)=>Math.floor(Date.now()/1000)-(31-i)*3600),c:Array.from({length:32},(_,i)=>v*(.98+i*.0006+Math.sin(i)*.001))}];}));
     await route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(payload)});
    });
-   await page.addInitScript(()=>localStorage.setItem('mercado_novo_v1',JSON.stringify({as:{s:'^KS11',f:'1d'}})));
+   await page.addInitScript(()=>{try{localStorage.setItem('mercado_novo_v1',JSON.stringify({as:{s:'^KS11',f:'1d'}}));}catch(e){/* quadro sem armazenamento */}});
 
    await page.goto(base,{waitUntil:'domcontentloaded'});
    await page.locator('#mobile-navigation').waitFor({state:'visible'});
@@ -147,7 +148,7 @@ try{
  // Ajustes no computador: categorias, persistência de controles e retorno ao mobile.
  for(const width of [1280,1920])for(const theme of ['dark','light']) {
   const ctx=await browser.newContext({viewport:{width,height:900},locale:'pt-BR',serviceWorkers:'block'});
-  await ctx.addInitScript(theme=>{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));},theme);
+  await ctx.addInitScript(theme=>{try{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));}catch(e){/* quadro sem armazenamento */}},theme);
   const page=await ctx.newPage();await page.goto(base,{waitUntil:'domcontentloaded'});
   await page.locator('.mn-root .mn-regional .mn-row.on').first().waitFor({state:'visible'});
   for(const checkWidth of [900,901,width]) {
