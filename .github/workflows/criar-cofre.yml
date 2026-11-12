@@ -1,0 +1,37 @@
+# Cria a chave-mestra do cofre (COFRE_CHAVE) nos segredos do worker station, na Cloudflare.
+# O valor é sorteado aqui e vai direto para a Cloudflare: não aparece no registro, no repositório nem para ninguém.
+# Só cria se ainda não existir (trocar a chave-mestra apagaria o acesso às chaves já cifradas no banco).
+# Ver terminal/station/src/cofre.js.
+name: Criar cofre de chaves
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: criar-cofre
+  cancel-in-progress: false
+
+jobs:
+  cofre:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Criar COFRE_CHAVE (só se ainda não existir)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          W="npx --yes wrangler@4.149.0"
+          # se a lista falhar, o passo para aqui (nunca cria uma chave nova por engano)
+          LISTA=$($W secret list --name station)
+          if printf '%s' "$LISTA" | grep -q 'COFRE_CHAVE'; then
+            echo "A COFRE_CHAVE já existe. Nada a fazer."
+            exit 0
+          fi
+          openssl rand -base64 32 | tr -d '\n' | $W secret put COFRE_CHAVE --name station
+          printf '%s' "$($W secret list --name station)" | grep -q 'COFRE_CHAVE'
+          echo "COFRE_CHAVE criada. As chaves do banco são cifradas na próxima volta do agendador (minuto 15 de cada hora)."

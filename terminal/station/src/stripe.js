@@ -1,5 +1,5 @@
 /* Assinatura com cartão pelo Stripe (30/10/2026), ao lado do Pix manual.
-   A chave secreta do Stripe é colada em /admin e fica só no D1 (config stripe_key); ao salvar, o site cria sozinho
+   A chave secreta do Stripe é colada em /admin e fica só no D1 (config stripe_key, cifrada pelo cofre: src/cofre.js); ao salvar, o site cria sozinho
    o webhook no Stripe e guarda o segredo dele (stripe_whsec). Os dados do cartão nunca passam pelo site:
    a pessoa paga na página do próprio Stripe (Checkout) e o Stripe avisa o site pelo webhook.
    Cada fatura paga (invoice.paid) soma o período do plano na validade, igual a um Pix aprovado. */
