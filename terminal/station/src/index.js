@@ -211,6 +211,13 @@ export default {
         const h = new Headers(req.headers); h.set('X-MM-Sessao', await sha256hex(lerCookie(req)));
         return env.NEWS.get(env.NEWS.idFromName('main')).fetch(new Request(req, { headers: h }));
       }
+      // texto da manhã pela IA (O que esperar hoje + 5 notícias) para o Resumo de mercado > Abertura
+      if (p === '/api/abertura/manha') {
+        if (soGratis(u)) return json({ erro: 'O texto da IA é para assinantes.', codigo: 'assinar' }, 403);
+        if (!u.admin && !(await dentroDoLimite(env, 'manha:' + u.id, 20, 600))) return json({ erro: 'Muitos pedidos seguidos.' }, 429);
+        const d = await dadosAbertura(env);
+        return json({ manha: d.manha || null }, 200, { 'Cache-Control': 'no-store' });
+      }
       if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx)).lista);
       if (p === '/api/noticias') {
         // rapida: responde na hora com a lista guardada e renova em segundo plano (X-Cache: STALE avisa o navegador)

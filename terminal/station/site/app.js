@@ -2961,7 +2961,14 @@ async function buildOpeningText() {
     sumLine('Bitcoin', y('BTC-USD'), v => `US$ ${sumNum(v, 0, 0)}`)
   ];
 
-  return joinBlocks(`*☀️ Abertura de mercado* — ${head}`, [
+  // texto da manhã pela IA (servidor, o mesmo do canal); sem ele, sai como antes com os Destaques
+  let manha = null;
+  try {
+    const r = await fetchT('/api/abertura/manha', { credentials: 'same-origin' }, 40000);
+    if (r.ok) manha = (await r.json()).manha || null;
+  } catch (e) { /* segue sem o texto da IA */ }
+  const visao = manha && manha.visao ? `\n\n*O que esperar hoje*\n${manha.visao}` : '';
+  return joinBlocks(`*☀️ Abertura de mercado* — ${head}${visao}`, [
     ['Ásia (fechamento)', asia],
     ['Europa', europa],
     ['EUA (pré-abertura)', eua],
@@ -2969,7 +2976,9 @@ async function buildOpeningText() {
     ['Commodities e cripto', commod],
     ['🗓️ Agenda de hoje (horário de Brasília)', agendaForDay(today, feed)],
     ['No radar da semana', agendaRadar(today, feed)],
-    ['Destaques', summaryNewsLines(3)]
+    manha && manha.noticias && manha.noticias.length
+      ? ['5 notícias para começar o dia', manha.noticias.map((n, i) => `${i + 1}. ${n}`)]
+      : ['Destaques', summaryNewsLines(3)]
   ]);
 }
 
