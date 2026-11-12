@@ -24,7 +24,7 @@ const SESSAO_DIAS_ADMIN = 30; // conta de administrador: sessão mais curta (aud
 // cada conta fica aberta em até 2 aparelhos; o 3º login encerra a sessão mais antiga (30/10/2026, contra senha dividida)
 const LIMITE_APARELHOS = 2;
 const ALERTA_TROCAS = 4; // trocas de aparelho em 7 dias que aparecem no /admin como possível senha dividida
-const ITER = 30000;
+const ITER = 100000; // rodadas do PBKDF2 (o máximo que a Cloudflare aceita); senhas antigas, de 30 mil, são refeitas no próximo login
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
 const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
 // ferramentas abertas ao público (sem login): endereço -> [arquivo na pasta vitrine, nome no contador de visitas]
@@ -94,6 +94,9 @@ export default {
     ctx.waitUntil(resumoSemanal(env));
   },
   async fetch(req, env, ctx) {
+    return protegerResposta(await this.atender(req, env, ctx));
+  },
+  async atender(req, env, ctx) {
     const url = new URL(req.url);
     const p = url.pathname;
     // Os arquivos internos continuam disponíveis ao binding ASSETS, sem expor URLs duplicadas.
@@ -1214,6 +1217,8 @@ async function apiAuth(req, env, acao, ctx) {
       return json({ erro: 'E-mail ou senha incorretos.' }, 401);
     }
     await env.DB.prepare('DELETE FROM tentativas WHERE chave IN (?, ?)').bind(chave, chaveU).run();
+    // senha guardada com menos rodadas que ITER: refaz agora, com a senha certa em mãos
+    if (Number(String(u.senha).split('$')[1]) < ITER) await env.DB.prepare('UPDATE usuarios SET senha = ? WHERE id = ?').bind(await hashSenha(senha), u.id).run();
     if (u.status === 'confirmar') return json({ erro: 'Falta confirmar seu e-mail: abra o link que enviamos quando você pediu acesso (veja também o spam). Para receber outro link, peça acesso de novo com o mesmo e-mail.' }, 403);
     // aguardando liberação ou com a validade vencida também entra, mas só vê a página de assinatura
     if (!['ativo', 'pendente', 'expirado'].includes(u.status)) return json({ erro: 'Seu acesso não está liberado.' }, 403);
@@ -2137,6 +2142,21 @@ function navegacao(req) {
 const hex = (a) => [...a].map((x) => x.toString(16).padStart(2, '0')).join('');
 const b64 = (a) => btoa(String.fromCharCode(...a));
 const deb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+/* Cabeçalhos de proteção em todas as respostas (auditoria de 12/11/2026). Cada rota pode ter posto os seus antes
+   (moldura, Referrer-Policy): aqui só entra o que faltar. Conexões ao vivo (WebSocket, 101) passam sem mexer. */
+const PROTECAO = {
+  'Strict-Transport-Security': 'max-age=31536000',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'same-origin',
+  // microfone só para a voz da Jade no próprio site (robo-extras.js); câmera, localização e afins desligados
+  'Permissions-Policy': 'camera=(), geolocation=(), payment=(), usb=(), microphone=(self)',
+};
+function protegerResposta(r) {
+  if (!r || r.status === 101 || r.webSocket) return r;
+  const out = new Response(r.body, r);
+  for (const [k, v] of Object.entries(PROTECAO)) if (!out.headers.has(k)) out.headers.set(k, v);
+  return out;
+}
 async function sha256hex(s) {
   return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
 }
