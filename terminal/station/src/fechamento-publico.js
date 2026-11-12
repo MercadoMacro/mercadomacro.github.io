@@ -98,7 +98,7 @@ function paragrafo(d) {
 
 const CSS = `
 :root{--bg:#070b14;--surface:#0e1524;--line:#1c2740;--text:#e6ecf5;--text-2:#a8b3c7;--text-3:#8591a8;--accent:#f0b90b;--pos:#16c784;--neg:#ff6b73;color-scheme:dark}
-@media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--surface:#fff;--line:#dfe5ee;--text:#0b1220;--text-2:#4a5568;--text-3:#5f6a7d;--accent:#9a6f00;--pos:#0b7a4f;--neg:#c0262f;color-scheme:light}}
+@media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--surface:#fff;--line:#dfe5ee;--text:#0b1220;--text-2:#4a5568;--text-3:#5f6a7d;--accent:#8a6300;--pos:#0b7a4f;--neg:#c0262f;color-scheme:light}.top a.cta{color:#fff}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,system-ui,-apple-system,sans-serif}
 a{color:var(--accent)}main{max-width:860px;margin:0 auto;padding:20px 16px 48px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}

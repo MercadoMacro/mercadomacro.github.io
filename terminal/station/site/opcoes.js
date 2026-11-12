@@ -377,7 +377,7 @@
             <button class="btn-sm" data-addleg><i class="fas fa-plus"></i> Perna</button>
             <button class="btn-sm" data-save><i class="fas fa-bookmark"></i> Salvar</button></div>
           ${s ? `<p class="opt-why"><b>Quando usar:</b> ${esc(s.quando)} <b>Risco:</b> ${esc(s.risco)}</p>` : ''}
-          <div class="opt-legs-wrap"><table class="opt-tbl"><thead><tr><th>Lado</th><th>Tipo</th><th>Strike</th><th>Dias</th><th>Vol %</th><th>Prêmio / preço</th><th>Qtd</th><th></th></tr></thead><tbody id="opt-legs"></tbody></table></div>
+          <div class="opt-legs-wrap"><table class="opt-tbl"><thead><tr><th>Lado</th><th>Tipo</th><th>Strike</th><th>Dias</th><th>Vol %</th><th>Prêmio / preço</th><th>Qtd</th><th><span class="sr-only">Remover</span></th></tr></thead><tbody id="opt-legs"></tbody></table></div>
           <p class="opt-note">Prêmios em <i>itálico</i> são teóricos (Black-Scholes com a vol da perna). Para operar, digite o prêmio real do book da sua corretora.</p>
         </section>
         <section class="ana-card opt-res" id="opt-res"></section></div>
@@ -759,7 +759,7 @@
       </div>
       <section class="ana-card">
         <div class="opt-h"><h3>Letras de vencimento</h3><span>a 5ª letra do código</span></div>
-        <div class="opt-mx-wrap"><table class="opt-tbl em letters"><thead><tr><th></th>${MESES.map((m) => `<th>${m.slice(0, 3)}</th>`).join('')}</tr></thead>
+        <div class="opt-mx-wrap"><table class="opt-tbl em letters"><thead><tr><th><span class="sr-only">Tipo</span></th>${MESES.map((m) => `<th>${m.slice(0, 3)}</th>`).join('')}</tr></thead>
         <tbody><tr><th class="pos">Call</th>${[...CALL_L].map((c) => `<td>${c}</td>`).join('')}</tr><tr><th class="neg">Put</th>${[...PUT_L].map((c) => `<td>${c}</td>`).join('')}</tr></tbody></table></div>
       </section>
       <div class="opt-grid2">

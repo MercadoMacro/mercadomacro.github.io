@@ -5189,7 +5189,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'fundamentos.js?v=14';
+    sc.src = 'fundamentos.js?v=15';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('fund-root');
@@ -5213,7 +5213,7 @@ function newsReadMins(n) {
     if (pedido) return;
     pedido = true;
     const sc = document.createElement('script');
-    sc.src = 'fluxo.js?v=5';
+    sc.src = 'fluxo.js?v=6';
     sc.onload = () => window.__fluxoRender && window.__fluxoRender(el);
     sc.onerror = () => { pedido = false; el.innerHTML = '<div class="ind-boot">Não foi possível carregar o arquivo <b>fluxo.js</b>.</div>'; };
     document.body.appendChild(sc);
@@ -5309,7 +5309,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'opcoes.js?v=6';
+    sc.src = 'opcoes.js?v=7';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('opt-root');

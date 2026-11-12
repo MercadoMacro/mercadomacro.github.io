@@ -2596,6 +2596,7 @@ body.nw2 .news-toolbar .btn-sm { height:34px; display:inline-flex; align-items:c
 body.nw2 .news-toolbar #news-refresh-btn { width:34px; justify-content:center; padding:0; }
 body.nw2 .nw2-n { margin-left:6px; padding:0 6px; border-radius:5px; font:600 10.5px 'JetBrains Mono', monospace; background:color-mix(in srgb, currentColor 16%, transparent); }
 body.nw2 .nw2-n:empty { display:none; }
+body.nw2:not(.light) .news-toolbar #briefing-btn #nw2-picks { color:#9cc0ff; } /* contraste 5,5:1 sobre o botão (era 4:1) */
 body.nw2 #news-picks:has(.np-dica) { display:none; }
 body.nw2 .news-assets { margin:0 0 14px; }
 body.nw2 .news-assets .ecal-chip { border-radius:99px; padding:6px 14px; font-size:12px; }

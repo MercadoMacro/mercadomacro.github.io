@@ -308,7 +308,7 @@
         <section class="fd-box">
           <div class="fd-bh"><h3>Resultados por ano</h3></div>
           <div class="fd-tbl"><table>
-            <thead><tr><th></th>${cols.map((c) => `<th class="${c.ttm ? 'ttm' : ''}">${esc(c.k)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}${docLink(c.r.doc)}</th>`).join('')}</tr></thead>
+            <thead><tr><th><span class="sr-only">Indicador</span></th>${cols.map((c) => `<th class="${c.ttm ? 'ttm' : ''}">${esc(c.k)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}${docLink(c.r.doc)}</th>`).join('')}</tr></thead>
             <tbody>${linhas.map(([n, f, cl]) => `<tr><th>${esc(n)}</th>${cols.map((c) => `<td class="${c.ttm ? 'ttm ' : ''}${cl ? cl(c.r) : ''}">${esc(f(c.r))}</td>`).join('')}</tr>`).join('')}</tbody>
           </table></div>
         </section>
