@@ -53,6 +53,9 @@ globalThis.MMDeskWindows = (() => {
 
   /* ---------- navegador ---------- */
   let est = (() => { try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); return j && typeof j === 'object' ? j : {}; } catch (e) { return {}; } })();
+  // Mesa 1 = a de sempre (padrão, nada muda); Mesa 2 = a nova, com janelas soltas e vínculo por cor (11/11/2026)
+  const MODO_KEY = 'mm_mesa_modo_v1';
+  let modo = (() => { try { return localStorage.getItem(MODO_KEY) === '2' ? '2' : '1'; } catch (e) { return '1'; } })();
   let editando = false, conta = null, carregou = false, timer = null, arraste = null, rootAtual = null;
   const salvas = () => { const l = limpa(est.dados).itens; return Object.keys(l).length ? l : null; };
   const guardar = () => { try { localStorage.setItem(KEY, JSON.stringify(est)); } catch (e) { /* sem espaço */ } };
@@ -109,6 +112,7 @@ globalThis.MMDeskWindows = (() => {
   function aplicar(root) {
     rootAtual = root;
     carregar();
+    if (modo === '1') { rotulos(); return; } // Mesa 1: a grade de sempre, sem posições montadas
     if (editando && !root.querySelector('.ms-custom-layout')) globalThis.MMDeskLayout?.apply(root, {});
     const layout = root.querySelector('.ms-custom-layout'); if (!layout) return;
     rotulos();
@@ -201,6 +205,14 @@ globalThis.MMDeskWindows = (() => {
   function rotulos() {
     document.querySelectorAll('[data-mj-montar]').forEach((b) => { b.textContent = editando ? 'Concluir' : 'Montar mesa'; b.classList.toggle('on', editando); });
     document.querySelectorAll('[data-mj-restaurar]').forEach((b) => { b.hidden = !editando; });
+    document.querySelectorAll('[data-mj-modo]').forEach((b) => { const on = b.dataset.mjModo === modo; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  }
+  function trocarModo(m) {
+    if (m !== '1' && m !== '2') return;
+    if (editando) { editando = false; rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove()); if (salvas()) agendar(); }
+    modo = m; try { localStorage.setItem(MODO_KEY, m); } catch (e) { /* sem espaço */ }
+    rotulos();
+    dispatchEvent(new Event('mesa-layout-changed'));
   }
   // no computador a barra da Mesa fica escondida e a faixa de frases ocupa o topo (como a Temperatura do mercado,
   // temperatura.js): os botões vão na ponta direita dela, só com a Mesa aberta e em tela larga
@@ -210,7 +222,7 @@ globalThis.MMDeskWindows = (() => {
     let g = qb.querySelector('.qb-mj');
     if (!g) {
       g = document.createElement('span'); g.className = 'qb-mj';
-      g.innerHTML = '<button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
+      g.innerHTML = '<button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="1" title="Mesa 1: a de sempre" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="2" title="Mesa 2: janelas soltas, gráfico, notícias e Jade vinculados por cor" aria-label="Mesa 2, a nova">2</button><button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
       const temp = qb.querySelector('.qb-temp');
       if (temp) temp.after(g); else qb.append(g);
       rotulos();
@@ -222,11 +234,14 @@ globalThis.MMDeskWindows = (() => {
   const css = document.createElement('style');
   css.textContent = '.qb-mj{flex:0 0 auto;display:inline-flex;gap:6px;margin-left:6px}.qb-mj[hidden]{display:none}.qbanner .qb-temp+.qb-mj{margin-left:6px}.qbanner>.qb-mj:not(.qb-temp+.qb-mj){margin-left:auto}'
     + '.qb-mj-b{font:inherit;font-size:11.5px;color:var(--text-2);background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap}'
-    + '.qb-mj-b:hover{color:var(--text);border-color:var(--line-2)}.qb-mj-b[hidden]{display:none}.qb-mj-b.on{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}';
+    + '.qb-mj-b:hover{color:var(--text);border-color:var(--line-2)}.qb-mj-b[hidden]{display:none}.qb-mj-b.on{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}'
+    + '.qb-mj-n{width:24px;height:24px;padding:0;display:inline-grid;place-items:center;font-weight:600;font-variant-numeric:tabular-nums}';
   document.head.append(css);
 
   function alternar() {
     if (estreito()) return;
+    // na Mesa 1 nada se mexe: montar leva para a Mesa 2, já no modo montar
+    if (modo === '1' && !editando) { modo = '2'; try { localStorage.setItem(MODO_KEY, '2'); } catch (e) { /* sem espaço */ } editando = true; rotulos(); dispatchEvent(new Event('mesa-layout-changed')); return; }
     editando = !editando;
     rotulos();
     if (editando) { if (rootAtual) aplicar(rootAtual); }
@@ -242,10 +257,12 @@ globalThis.MMDeskWindows = (() => {
     dispatchEvent(new Event('mesa-layout-changed'));
   }
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-mj-montar]')) alternar();
+    const m = e.target.closest('[data-mj-modo]');
+    if (m) trocarModo(m.dataset.mjModo);
+    else if (e.target.closest('[data-mj-montar]')) alternar();
     else if (e.target.closest('[data-mj-restaurar]')) restaurar();
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && editando && !arraste && document.getElementById('mesa-panel')?.classList.contains('active')) alternar(); });
 
-  return { COLS, ROW, GAP, limpa, arruma, mover, redimensionar, ordem, colide, aplicar, restaurar, editando: () => editando, temPosicoes: () => !!salvas() };
+  return { COLS, ROW, GAP, limpa, arruma, mover, redimensionar, ordem, colide, aplicar, restaurar, editando: () => editando, temPosicoes: () => modo === '2' && !!salvas(), modo: () => modo, trocarModo };
 })();

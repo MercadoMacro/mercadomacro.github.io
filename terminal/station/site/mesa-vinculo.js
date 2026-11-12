@@ -52,8 +52,10 @@ globalThis.MMDeskLink = (() => {
   }
 
   // chamado pelo mesa.js logo depois de redesenhar a Mesa
+  const mesa1 = () => globalThis.MMDeskWindows?.modo?.() === '1'; // Mesa 1: nada de vínculo, clique abre a tela cheia
   function montar(root, c) {
     rootAtual = root; ctx = c;
+    if (mesa1()) return;
     root.querySelectorAll('.ms-vbox[data-v]').forEach((sec) => {
       const d = no(sec.dataset.v);
       if (d.parentNode !== sec) sec.replaceChildren(d);
@@ -61,7 +63,7 @@ globalThis.MMDeskLink = (() => {
     pintar();
   }
   function pintar() {
-    if (!rootAtual) return;
+    if (!rootAtual || mesa1()) return;
     // cor de cada bloco (bolinha no canto) e seleção nas linhas
     // curva e notícias gerais não têm ativo: ficam sem bolinha
     const marca = (el, id) => { if (el && id && id !== 'curve' && id !== 'news') el.dataset.mv = corDe(est, id); };
@@ -126,6 +128,7 @@ globalThis.MMDeskLink = (() => {
 
   // clique numa linha ou card (mesa.js chama antes de abrir o gráfico em tela cheia); true = tratado aqui
   function clicou(el) {
+    if (mesa1()) return false;
     const id = blocoDe(el); if (!id) return false;
     const cor = corDe(est, id);
     if (cor === 'nenhum' || !seguidoras(cor).length) return false;
