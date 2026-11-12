@@ -876,16 +876,18 @@
   .ms-head h3 { margin:0; display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text); }
   .ms-head h3::before { content:''; flex:0 0 3px; width:3px; height:14px; border-radius:2px; background:var(--accent); }
   .ms-head .sp, .ms-curve-sub .sp { flex:1; }
-  .ms-tb table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  /* colunas do tamanho do conteúdo (12/11/2026): a cotação tinha 80 px fixos e números grandes saíam cortados
+     ("172.060,…"). Agora os números nunca cortam; quando falta espaço, quem encurta com reticências é o nome. */
+  .ms-tb table { width:100%; border-collapse:collapse; table-layout:auto; }
   .ms-tb tr { cursor:pointer; }
   .ms-tb tr:hover { background:var(--surface-2); }
   .ms-tb td { padding:5px 8px; font-size:12px; border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ms-tb tr:last-child td { border-bottom:0; }
-  .ms-tb td.nm { color:var(--text-2); padding-left:12px; }
+  .ms-tb td.nm { color:var(--text-2); padding-left:12px; width:100%; max-width:0; }
   .ms-tb td.px { text-align:right; font-family:'JetBrains Mono', monospace; color:var(--text); font-variant-numeric:tabular-nums; }
-  .ms-tb td.px { width:80px; padding-left:4px; }
-  .ms-tb td.ch { text-align:right; width:58px; padding-left:4px; padding-right:6px; font-family:'JetBrains Mono', monospace; font-size:11.5px; }
-  .ms-tb td.tm { text-align:right; width:50px; padding-left:4px; font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding-right:10px; }
+  .ms-tb td.px { width:1%; min-width:56px; padding-left:8px; overflow:visible; }
+  .ms-tb td.ch { text-align:right; width:1%; min-width:58px; overflow:visible; padding-left:8px; padding-right:6px; font-family:'JetBrains Mono', monospace; font-size:11.5px; }
+  .ms-tb td.tm { text-align:right; width:1%; min-width:50px; overflow:visible; padding-left:6px; font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); padding-right:10px; }
   .ms-tb td.tm i { font-style:normal; color:var(--accent-ink); }
   .ms-tb tr.old td.px { color:var(--text-3); }
   .ms-tb tr:not([data-sym]) { cursor:default; }
