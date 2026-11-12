@@ -59,10 +59,14 @@
     { id: 'em', col: 2, t: 'Moedas emergentes', rows: [['BRL=X', 'USD/BRL', 'BR', 4], ['MXN=X', 'USD/MXN', 'MX', 4], ['CLP=X', 'USD/CLP', 'CL'], ['COP=X', 'USD/COP', 'CO'],
       ['ARS=X', 'USD/ARS', 'AR'], ['CNY=X', 'USD/CNY', 'CN', 4], ['INR=X', 'USD/INR', 'IN'], ['ZAR=X', 'USD/ZAR', 'ZA', 4], ['TRY=X', 'USD/TRY', 'TR', 4],
       ['AUD=X', 'USD/AUD', 'AU', 4], ['EURBRL=X', 'EUR/BRL', 'BR', 4]] },
-    { id: 'co', col: 3, t: 'Commodities', rows: [['TIO=F', 'Minério de ferro', 'SG'], ['GC=F', 'Ouro (futuro)', 'US'], ['SI=F', 'Prata (futuro)', 'US'],
-      ['__xau', 'Ouro à vista', 'XAU', 2], ['__xag', 'Prata à vista', 'XAG', 3], ['__xpt', 'Platina à vista', 'XPT', 2], ['__xpd', 'Paládio à vista', 'XPD', 2], ['HG=F', 'Cobre', 'US', 3],
-      ['BZ=F', 'Petróleo Brent', 'UK'], ['CL=F', 'Petróleo WTI', 'US'], ['NG=F', 'Gás natural', 'US', 3], ['ZS=F', 'Soja', 'US'], ['ZC=F', 'Milho', 'US'],
-      ['KC=F', 'Café', 'US'], ['SB=F', 'Açúcar', 'US']] },
+    // Ordem de 12/11/2026 (pedido do Dante): em cima, o que o trader de bolsa brasileira olha primeiro; o resto fica
+    // rolando dentro do quadro (vis = quantas linhas aparecem sem rolar). Minério e petróleo vêm antes porque Vale
+    // (11,1%) e Petrobras (10,1%) são os maiores pesos do Ibovespa (B3, ago/2025); ouro, gás natural e cobre estão
+    // entre os futuros de commodities mais negociados do mundo.
+    { id: 'co', col: 3, t: 'Commodities', vis: 7, rows: [['__dce', 'Minério (Dalian, US$/t)', 'CN', 2], ['TIO=F', 'Minério (Singapura, US$/t)', 'SG'],
+      ['BZ=F', 'Petróleo Brent', 'UK'], ['CL=F', 'Petróleo WTI', 'US'], ['GC=F', 'Ouro (futuro)', 'US'], ['NG=F', 'Gás natural', 'US', 3], ['HG=F', 'Cobre', 'US', 3],
+      ['SI=F', 'Prata (futuro)', 'US'], ['__xau', 'Ouro à vista', 'XAU', 2], ['__xag', 'Prata à vista', 'XAG', 3], ['__xpt', 'Platina à vista', 'XPT', 2], ['__xpd', 'Paládio à vista', 'XPD', 2],
+      ['ZS=F', 'Soja', 'US'], ['ZC=F', 'Milho', 'US'], ['KC=F', 'Café', 'US'], ['SB=F', 'Açúcar', 'US']] },
     { id: 'ou', col: 3, t: 'Futuros, juros e risco', rows: [['ES=F', 'S&P 500 futuro', 'US'], ['NQ=F', 'Nasdaq futuro', 'US'], ['YM=F', 'Dow Jones futuro', 'US', 0],
       ['RTY=F', 'Russell 2000 futuro', 'US'], ['^IRX', 'Treasury 3 meses', 'US', 3], ['^FVX', 'Treasury 5 anos', 'US', 3], ['^TNX', 'Treasury 10 anos', 'US', 3],
       ['^TYX', 'Treasury 30 anos', 'US', 3], ['EWZ', 'EWZ (Brasil em NY)', 'BR'], ['__cds', 'CDS Brasil 5 anos', 'BR']] }
@@ -441,20 +445,22 @@
   };
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
   function rowHTML([s, n, cc, d], tid) {
-    let q = s === '__cds' ? X.cds : Q[s];
+    let q = s === '__cds' ? X.cds : s === '__dce' ? (X.dce ? { ...X.dce, live: true } : null) : Q[s];
     const fq = forexStream?.covers(s) ? forexStream.quote(s) : null;
     if (fq) {
       q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
     }
     if (s === 'TIO=F' && X.min && (X.min.live || !(q && q.live))) {
+      // a linha de cima já mostra Dalian em dólar; esta é a de Singapura. Se a fonte de Singapura cair e sobrar só
+      // Dalian em yuan, a linha avisa no nome (antes de 12/11/2026 a tabela tinha uma linha só de minério)
       q = X.min;
-      n = X.min.mercado === 'DCE' ? 'Minério de ferro (Dalian, ¥/t)' : 'Minério de ferro (US$/t)';
+      n = X.min.mercado === 'DCE' ? 'Minério de ferro (Dalian, ¥/t)' : 'Minério (Singapura, US$/t)';
       cc = X.min.mercado === 'DCE' ? 'CN' : 'SG';
     }
     const has = q && q.v != null && isFinite(q.v);
     const stale = has && !q.live;
     const fonte = fq ? '' : q?.b3 ? ' · fonte: B3, atraso de cerca de 15 min' : '';
-    const tag = s === '__cds' ? '' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
+    const tag = s === '__cds' ? '' : s === '__dce' ? ' title="Bolsa de Dalian (China), contrato principal, convertido para US$ por tonelada. A variação é a do contrato, em yuan."' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
     const fora = cfdFora(s, fq);
     return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}${fora ? ' ms-cfd-off' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${fora ? tag.replace(/ title="[^"]*"/, ` title="${esc(window.MMDicaCfd)}"`) : tag}>
       <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
@@ -481,8 +487,8 @@
     </section>`;
   }
   const tableHTML = (t) => `<section class="ms-box ms-tb" data-tb="${t.id}">
-      <div class="ms-head"><h3>${esc(t.t)}</h3></div>
-      <table><tbody>${t.rows.map((r) => rowHTML(r, t.id)).join('')}</tbody></table>
+      <div class="ms-head"><h3>${esc(t.t)}</h3>${t.vis && t.rows.length > t.vis ? `<span class="sp"></span><span class="ms-hsub ms-mais">role para ver mais ${t.rows.length - t.vis}</span>` : ''}</div>
+      ${t.vis ? `<div class="ms-tw" data-vis="${t.vis}">` : ''}<table><tbody>${t.rows.map((r) => rowHTML(r, t.id)).join('')}</tbody></table>${t.vis ? '</div>' : ''}
     </section>`;
   function cardHTML(c) {
     if (c.s === '__juros') {
@@ -660,12 +666,23 @@
     });
   }
 
+  // altura do quadro = exatamente as N primeiras linhas (as outras rolam dentro dele); devolve a rolagem de antes
+  function ajustaVis(rol) {
+    root.querySelectorAll('.ms-tw[data-vis]').forEach((t) => {
+      const linhas = t.querySelectorAll('tr'), n = +t.dataset.vis;
+      if (linhas.length > n && linhas[n - 1].offsetHeight) t.style.maxHeight = Math.round(linhas[n - 1].getBoundingClientRect().bottom - linhas[0].getBoundingClientRect().top) + 'px';
+      const antes = rol && rol[t.closest('[data-tb]')?.dataset.tb];
+      if (antes) t.scrollTop = antes;
+    });
+  }
   function render() {
     // montando a mesa (mesa-janelas.js): não redesenha no meio do arraste; ao concluir, volta a atualizar
     if (window.MMDeskWindows?.editando?.() && root.querySelector('.ms-janelas')) return;
     carimbo();
     const col = (n) => TABLES.filter((t) => t.col === n).map(tableHTML).join('');
     const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
+    // posição da rolagem de cada tabela com linhas escondidas (a Mesa redesenha a cada atualização)
+    const rolTw = {}; root.querySelectorAll('.ms-tw[data-vis]').forEach((t) => { rolTw[t.closest('[data-tb]')?.dataset.tb] = t.scrollTop; });
     root.innerHTML = `<div class="ms-wrap">
       <div class="ms-bar">
         <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
@@ -700,6 +717,7 @@
     paintCrypto();
     paintForex();
     const w = root.querySelector('.ms-wrap'); if (w) w.scrollTop = sc;
+    ajustaVis(rolTw);
     const car = root.querySelector('.ms-car'); if (car) { car.scrollLeft = cx; carSetas(); }
     requestAnimationFrame(drawCurve);
   }
@@ -908,6 +926,10 @@
   .ms-tb td.tm i { font-style:normal; color:var(--accent-ink); }
   .ms-tb tr.old td.px { color:var(--text-3); }
   .ms-tb tr:not([data-sym]) { cursor:default; }
+  /* tabela com as linhas principais à vista e o resto rolando dentro do quadro (ajustaVis acerta a altura exata) */
+  .ms-tw[data-vis] { max-height:204px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+  .ms-mais { margin-right:2px; }
+  @media (max-width: 640px) { .ms-tw[data-vis] { max-height:none !important; overflow:visible; } .ms-mais { display:none; } }
   .ms-fb3 td.nm small { margin-left:6px; font:10px 'JetBrains Mono', monospace; color:var(--text-3); }
   .ms-fb3 td.ch i.aj-ant { font-style:normal; font-size:10.5px; color:var(--text-3); }
   .ms-hsub { font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); }
