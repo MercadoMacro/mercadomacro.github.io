@@ -241,14 +241,14 @@
   function lado(janela, tipo, comp, soma) {
     const vals = TIPOS.map(([k, n, c]) => ({ k, n, c, v: soma(k) })).sort((a, b) => b.v - a.v);
     const mx = Math.max(1, ...vals.map((x) => Math.abs(x.v)));
-    let h = `<section><h4 class="fx-lt">Quem comprou e quem vendeu no período</h4>${vals.map((x) => {
+    let h = `<section><h3 class="fx-lt">Quem comprou e quem vendeu no período</h3>${vals.map((x) => {
       const w = (Math.abs(x.v) / mx * 50).toFixed(1);
       return `<button type="button" class="fx-rk${!comp && x.k === tipo ? ' on' : ''}" data-tipo="${x.k}"><span>${esc(x.n)}</span><b class="${tom(x.v)}">${brl(x.v)}</b><span class="br"><i class="${x.v >= 0 ? 'p' : 'n'}" style="${x.v >= 0 ? 'left' : 'right'}:50%;width:${w}%"></i></span></button>`;
     }).join('')}</section>`;
     if (comp || !janela.length) return h;
     const sal = janela.map((d) => d.tipos?.[tipo]?.saldo).filter(ok);
     const nPos = sal.filter((v) => v > 0).length, nNeg = sal.filter((v) => v < 0).length, tot = nPos + nNeg;
-    h += `<section><h4 class="fx-lt">Dias de compra e de venda</h4>
+    h += `<section><h3 class="fx-lt">Dias de compra e de venda</h3>
       <div class="fx-dv"><span class="fx-pos">${nPos} de compra</span><span class="fx-neg">${nNeg} de venda</span></div>
       <div class="fx-split">${tot ? `<i class="p" style="width:${(nPos / tot * 100).toFixed(1)}%"></i><i class="n" style="width:${(nNeg / tot * 100).toFixed(1)}%"></i>` : ''}</div></section>`;
     // sequência atual: pregões seguidos no mesmo sentido, contando do último para trás
@@ -257,10 +257,10 @@
       const sinal = Math.sign(dd[dd.length - 1].tipos[tipo].saldo);
       let n = 0, t = 0;
       for (let i = dd.length - 1; i >= 0 && Math.sign(dd[i].tipos[tipo].saldo) === sinal; i--) { n++; t += dd[i].tipos[tipo].saldo; }
-      h += `<section><h4 class="fx-lt">Sequência atual</h4><p class="fx-seq"><b class="${tom(sinal)}">${n} ${n === 1 ? 'pregão' : 'pregões'} de ${sinal > 0 ? 'compra' : 'venda'}</b><span>${brl(t)} desde ${dmy(dd[dd.length - n].data)}</span></p></section>`;
+      h += `<section><h3 class="fx-lt">Sequência atual</h3><p class="fx-seq"><b class="${tom(sinal)}">${n} ${n === 1 ? 'pregão' : 'pregões'} de ${sinal > 0 ? 'compra' : 'venda'}</b><span>${brl(t)} desde ${dmy(dd[dd.length - n].data)}</span></p></section>`;
     }
     const top = (fn, cmp) => janela.filter((d) => ok(d.tipos?.[tipo]?.saldo) && fn(d.tipos[tipo].saldo)).sort((a, b) => cmp(a.tipos[tipo].saldo, b.tipos[tipo].saldo)).slice(0, 3);
-    const lista = (tit, xs) => `<section><h4 class="fx-lt">${tit}</h4>${xs.length ? xs.map((d) => `<div class="fx-dia"><span>${dmyy(d.data)}</span><b class="${tom(d.tipos[tipo].saldo)}">${brl(d.tipos[tipo].saldo)}</b></div>`).join('') : '<p class="fx-mut">—</p>'}</section>`;
+    const lista = (tit, xs) => `<section><h3 class="fx-lt">${tit}</h3>${xs.length ? xs.map((d) => `<div class="fx-dia"><span>${dmyy(d.data)}</span><b class="${tom(d.tipos[tipo].saldo)}">${brl(d.tipos[tipo].saldo)}</b></div>`).join('') : '<p class="fx-mut">—</p>'}</section>`;
     h += lista('Maiores entradas', top((v) => v > 0, (a, b) => b - a));
     h += lista('Maiores saídas', top((v) => v < 0, (a, b) => a - b));
     return h;
