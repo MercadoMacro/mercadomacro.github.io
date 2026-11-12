@@ -3428,3 +3428,12 @@ html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !impor
 .lv-linha { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 12px; }
 .lv-fonte { display:flex; align-items:center; gap:8px; margin:0 0 0 auto; font-size:12px; color:var(--text-3); }
 .lv-fonte select { background:var(--bg-2, #0f1626); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:4px 8px; font:inherit; font-size:12.5px; max-width:240px; }
+
+/* Celular (12/11/2026, auditoria do mobile):
+   1. a frase do topo some e o cabeçalho recolhe ao rolar (mobile-topo.js põe body.mm-rolou);
+   2. campos com letra de 16 px: abaixo disso o Safari do iPhone dá zoom sozinho ao tocar no campo. */
+@media (max-width: 768px) {
+  html body .topbar.topbar > .qbanner { display:none !important; }
+  html body.mm-rolou > .topbar { display:none !important; }
+  html body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea) { font-size:16px !important; }
+}
