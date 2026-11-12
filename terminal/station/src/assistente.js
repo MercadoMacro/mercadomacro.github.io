@@ -28,6 +28,7 @@ Regras:
 - Cotação e notícia mudam rápido: deixe claro que é o dado do horário informado. Explique por que um ativo se mexeu só com base nas manchetes recebidas, citando a fonte, e diga quando não houver manchete que explique.
 - Explique conceitos, indicadores, termos, como ler gráficos e como funcionam produtos (ações, juros, câmbio, derivativos, opções, renda fixa).
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
+- Para explicar um conceito, use a ferramenta buscar_conteudo (onde: aulas) e, quando achar, baseie-se na aula e indique o nome dela na aba Educação. Para o que saiu nas notícias em dias anteriores, use buscar_conteudo (onde: noticias) e cite a data e a fonte.
 - Se não souber, diga que não sabe. Não use emojis.`;
 
 // modelo que respondeu "muita procura" fica de lado por uns minutos (evita uma ida e volta perdida a cada pergunta)

@@ -62,6 +62,8 @@ export default {
       const quando = new Date(ev.scheduledTime);
       // às 12:15 UTC a rodada já leva assinaturas, vigia e abertura; as notícias ficam para a próxima
       if (!(quando.getUTCHours() === 12 && quando.getUTCMinutes() === 15)) ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
+      // histórico de manchetes para a busca da Jade (noticias_hist; o worker mercadomacro-busca indexa um arquivo por dia)
+      ctx.waitUntil(guardarNoticias(env, ctx).catch((e) => console.error('histórico de notícias:', e.message)));
       // 10h30 a 15h45 (Brasília) em dia útil: pede /di e /dap ao worker de dados, que guarda o ajuste do pregão
       // anterior no D1 (b3_ajuste) para a variação da curva à noite; sem isso dependia de alguém abrir a curva
       const hUtc = quando.getUTCHours(), mUtc = quando.getUTCMinutes();
@@ -112,6 +114,7 @@ export default {
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
       if (p === '/api/robo/abertura') return await roboAbertura(req, env);
       if (p === '/api/robo/fechamento-foto') return await roboFechamentoFoto(req, env);
+      if (p === '/api/robo/busca-teste') return await roboBuscaTeste(req, env);
       if (p === '/robots.txt') return texto(ROBOTS, 'text/plain');
       if (p === '/favicon.ico') return Response.redirect(new URL('/icone-192.png', req.url).toString(), 301);
       if (p === '/sitemap.xml') return await naBorda(req, ctx, async () => texto(await sitemap(env), 'application/xml'));
@@ -184,6 +187,7 @@ export default {
       if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u), {
         // de onde o assistente tira os dados de agora (assistente-dados.js): servidor de dados, cache de notícias, fluxo da B3
         api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx)).lista, fluxo: fluxoEstrangeiro,
+        busca: (pergunta, onde) => buscaConteudo(env, pergunta, onde),
       });
       // uso das abas (04/11/2026): soma 1 por aba aberta no total e por assinante (o /admin mostra quem está em qual aba); o administrador não conta
       if (p === '/api/uso' && req.method === 'POST') {
@@ -1896,6 +1900,49 @@ async function roboFechamentoFoto(req, env) {
   const t0 = Date.now();
   const png = await fotografarFechamento(env, await dadosDoCartao(env, await config(env)));
   return new Response(png, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'X-Tempo-Ms': String(Date.now() - t0) } });
+}
+/* ---------- busca inteligente da Jade (worker mercadomacro-busca, AI Search) ----------
+   noticias_hist guarda as manchetes que passam pelo terminal (a cada 15 min), e o worker da busca manda um arquivo
+   por dia para o índice. A Jade só busca com busca_ligada = '1' em config, e cada mês tem no máximo busca_limite
+   buscas (padrão 2000; 1.000 grátis por mês, depois US$ 0,75 por mil): no limite, a Jade responde sem a busca. */
+async function guardarNoticias(env, ctx) {
+  const { lista } = await noticiasCache(ctx);
+  if (!lista || !lista.length) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS noticias_hist (link TEXT PRIMARY KEY, titulo TEXT NOT NULL, fonte TEXT, data INTEGER NOT NULL, dia TEXT NOT NULL, resumo TEXT)').run();
+  const desde = Date.now() - 6 * 3600000;
+  const novas = lista.filter((n) => n.link && n.titulo && n.data >= desde).slice(0, 400);
+  for (let i = 0; i < novas.length; i += 50) {
+    await env.DB.batch(novas.slice(i, i + 50).map((n) => env.DB.prepare('INSERT OR IGNORE INTO noticias_hist (link, titulo, fonte, data, dia, resumo) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(n.link, String(n.titulo).slice(0, 300), String(n.fonte || ''), n.data, new Date(n.data - 3 * 3600000).toISOString().slice(0, 10), n.resumo ? String(n.resumo).slice(0, 400) : null)));
+  }
+  // guarda 180 dias (o índice da busca mantém os arquivos de cada dia)
+  if (new Date().getUTCHours() === 4 && new Date().getUTCMinutes() < 15) await env.DB.prepare('DELETE FROM noticias_hist WHERE data < ?').bind(Date.now() - 180 * 86400000).run();
+}
+async function buscaConteudo(env, pergunta, onde, teste = false) {
+  if (!env.BUSCA) return { erro: 'busca não configurada' };
+  const c = await config(env);
+  if (!teste && c.busca_ligada !== '1') return { erro: 'a busca nas aulas e no histórico não está ligada; responda com o que sabe ou use a ferramenta noticias' };
+  const mes = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 7);
+  const [m, n] = String(c.busca_uso || '').split(':');
+  const usadas = m === mes ? Number(n) || 0 : 0, limite = Number(c.busca_limite) || 2000;
+  if (usadas >= limite) return { erro: 'limite de buscas do mês atingido; responda com o que sabe ou use a ferramenta noticias' };
+  const r = await env.BUSCA.fetch('https://busca/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: pergunta, onde: ['aulas', 'noticias'].includes(onde) ? onde : 'tudo', max: 5 }) });
+  const j = await r.json().catch(() => ({ erro: 'resposta inválida da busca' }));
+  await salvarConfig(env, { busca_uso: mes + ':' + (usadas + (j.buscas || 1)) }).catch(() => {});
+  if (j.erro) return { erro: j.erro };
+  if (!j.trechos?.length) return { resultado: 'nada encontrado nas aulas nem no histórico de notícias' };
+  return { trechos: j.trechos.map((t) => ({ origem: t.indice === 'aulas' ? 'Aula da aba Educação' : 'Histórico de notícias', arquivo: t.arquivo, relevancia: t.nota, texto: t.texto })) };
+}
+// só para teste (robô teste-busca.yml): sincroniza, mostra a situação dos índices ou faz uma busca, sem passar pela Jade
+async function roboBuscaTeste(req, env) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!(await tokenDoGitHub(tok, GH_AUD, ['teste-busca.yml']).catch(() => null))) return json({ erro: 'Não autorizado.' }, 401);
+  if (!env.BUSCA) return json({ erro: 'sem binding BUSCA' }, 500);
+  const u = new URL(req.url), acao = u.searchParams.get('acao') || 'situacao';
+  if (acao === 'buscar') return json(await buscaConteudo(env, u.searchParams.get('q') || '', u.searchParams.get('onde') || 'tudo', true));
+  if (acao === 'guardar') { await guardarNoticias(env, { waitUntil: () => {} }); const r = await env.DB.prepare('SELECT dia, COUNT(*) n FROM noticias_hist GROUP BY dia ORDER BY dia DESC LIMIT 5').all(); return json(r.results); }
+  const r = await env.BUSCA.fetch('https://busca/' + (acao === 'sincronizar' ? 'sincronizar' : 'situacao'), { method: acao === 'sincronizar' ? 'POST' : 'GET' });
+  return new Response(await r.text(), { status: r.status, headers: { 'Content-Type': 'application/json' } });
 }
 async function roboFechamento(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
