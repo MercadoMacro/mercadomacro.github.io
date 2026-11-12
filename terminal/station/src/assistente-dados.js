@@ -4,8 +4,8 @@
       fundamentos de empresas da B3, fluxo do estrangeiro, notícias e agenda).
    Tudo vem das mesmas fontes do site (servidor de dados shrill-meadow, arquivos dos robôs no GitHub, cache de notícias).
    Valor que falhar volta como "sem dado"; nada é inventado. */
-let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null, busca = null;
-export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; busca = u.busca || null; }
+let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null, busca = null, temAula = false;
+export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; busca = u.busca || null; temAula = !!u.temAula; }
 
 // perfil que o navegador manda (nível, watchlist com os nomes de cada ativo, assuntos frequentes): só o que é seguro
 export function limpaPerfil(p) {
@@ -298,7 +298,7 @@ export const FERRAMENTAS = [{
     { name: 'radar_watchlist', description: 'Radar da watchlist de quem pergunta: cotação de cada ativo e as manchetes recentes que citam cada um. Use para perguntas sobre "minha watchlist", "meus ativos" ou "meu radar".',
       parameters: { type: 'object', properties: { horas: { type: 'number', description: '1 a 48, padrão 24' } } } },
     { name: 'buscar_conteudo', description: 'Busca por sentido (AI Search) nas aulas da aba Educação do Mercado Macro e no histórico de notícias guardado pelo terminal (um arquivo por dia, desde 11/11/2026). Use para explicar conceitos do jeito das aulas do site (e indicar a aula) e para perguntas sobre o que saiu nas notícias em dias ou semanas anteriores. Para manchetes das últimas 48 horas, use a ferramenta noticias.',
-      parameters: { type: 'object', properties: { pergunta: { type: 'string', description: 'O que procurar, em português' }, onde: { type: 'string', enum: ['aulas', 'noticias', 'tudo'], description: 'Padrão: tudo' } }, required: ['pergunta'] } },
+      parameters: { type: 'object', properties: { pergunta: { type: 'string', description: 'O que procurar, em português' }, onde: { type: 'string', enum: ['noticias', 'aulas'], description: 'Padrão: noticias. Use aulas só para conceitos, quando a mensagem não trouxer o bloco Conteúdo do próprio Mercado Macro.' } }, required: ['pergunta'] } },
     { name: 'agenda', description: 'Agenda econômica (Brasil, EUA, Europa, China) a partir de hoje, com previsão, anterior e resultado.',
       parameters: { type: 'object', properties: { dias: { type: 'number', description: '1 a 7' }, todos: { type: 'boolean', description: 'true inclui eventos de impacto baixo e médio' } } } },
   ],
@@ -320,7 +320,10 @@ export async function executar(nome, a = {}) {
         return r && r.txt ? { atualizado: r.ts ? brt(r.ts) : null, texto: String(r.txt).slice(0, 8000) } : { erro: 'o Resumo semanal não está disponível agora' };
       }
       case 'radar_watchlist': return await radar(a.horas);
-      case 'buscar_conteudo': return busca ? await busca(a.pergunta, a.onde) : { erro: 'a busca nas aulas e no histórico não está ligada; responda com o que sabe ou use a ferramenta noticias' };
+      // uma busca por pergunta (as aulas só quando a busca por palavras do navegador não achou nenhuma)
+      case 'buscar_conteudo':
+        if (a.onde === 'aulas' && temAula) return { resultado: 'a aula sobre o assunto já veio no bloco Conteúdo do próprio Mercado Macro: use esse bloco' };
+        return busca ? await busca(a.pergunta, a.onde === 'aulas' ? 'aulas' : 'noticias') : { erro: 'a busca nas aulas e no histórico não está ligada; responda com o que sabe ou use a ferramenta noticias' };
       default: return { erro: 'ferramenta desconhecida' };
     }
   } catch (e) { return { erro: 'não foi possível buscar agora (' + String(e.message || e).slice(0, 80) + ')' }; }
