@@ -659,7 +659,7 @@
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
-      ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section><section class="ms-box ms-vbox" data-v="noticiasv" aria-label="Notícias do ativo vinculado"></section><section class="ms-box ms-vbox" data-v="jade" aria-label="Jade sobre o ativo vinculado"></section></div>` : ''}
+      ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section></div>` : ''}
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
         <div class="ms-col">${col(2)}${futB3HTML()}</div>
