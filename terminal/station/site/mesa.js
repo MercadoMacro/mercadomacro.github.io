@@ -68,7 +68,7 @@
   // datas de decisão do Fed e do Copom vêm do index.html (FOMC_DECISIONS e COPOM_DECISIONS)
   const FOMC = (typeof FOMC_DECISIONS !== 'undefined' && FOMC_DECISIONS.length) ? FOMC_DECISIONS : ['2026-10-28', '2026-12-09'];
 
-  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0])), ...(globalThis.MMMesa2?.SIMBOLOS || [])])].filter((s) => !s.startsWith('__'));
+  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
 
   /* ---------------- dados ---------------- */
   const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
@@ -658,9 +658,9 @@
         <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
-      ${window.MMDeskWindows?.modo?.() === '2' && window.MMMesa2 ? window.MMMesa2.html(Q, curveHTML) : `
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
+      ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section></div>` : ''}
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
         <div class="ms-col">${col(2)}${futB3HTML()}</div>
@@ -670,7 +670,6 @@
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
         </div>
       </div>
-      `}
       <p class="ms-note">Cotações via Yahoo Finance (podem ter atraso de até 15 min); ponto verde = ao vivo; <b>calculado</b> = DXY pela fórmula oficial com o câmbio ao vivo; <b>CFD</b> = preço de contrato que acompanha o índice ou futuro, usado só enquanto o mercado do ativo está aberto (fechado, vale o último preço oficial); Tesouro Direto, Investing (CDS), FRED e Banco Central. Clique em qualquer ativo para abrir o gráfico.</p>
     </div>`;
     let layout = null;
@@ -744,8 +743,6 @@
     if (tr) { openChart(tr.dataset.sym, tr.querySelector('.nm')?.lastChild?.textContent || tr.dataset.sym, listOf(tr.dataset.tb)); return; }
     const c = e.target.closest('.ms-card[data-sym], .ms-cr[data-sym]');
     if (c && window.MMDeskLink?.clicou(c)) return;
-    const t2 = e.target.closest('.m2-tile[data-sym]');
-    if (t2) { if (!window.MMDeskLink?.clicou(t2)) openChart(t2.dataset.sym, t2.dataset.name, [{ s: t2.dataset.sym, n: t2.dataset.name }]); return; }
     if (c) {
       const group = c.classList.contains('ms-cr') ? CRYPTO.map(([s, n]) => ({ s, n })) : CARDS.filter((x) => !x.s.startsWith('__')).map((x) => ({ s: x.s, n: x.n }));
       openChart(c.dataset.sym, c.dataset.name, group);
