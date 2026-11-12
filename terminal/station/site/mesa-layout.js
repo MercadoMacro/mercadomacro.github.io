@@ -28,7 +28,7 @@ globalThis.MMDeskLayout = (() => {
   }
   function editor(value) {
     const config = normalize(value), names = Object.fromEntries(blocks);
-    return `<p class="aj-note">Escolha os blocos e organize a ordem. Arraste pela alça no computador ou use as setas. A leitura segue da esquerda para a direita; no celular, de cima para baixo. A organização fica salva neste navegador.</p>
+    return `<p class="aj-note">Escolha os blocos e organize a ordem. Arraste pela alça no computador ou use as setas. Para arrastar e redimensionar as janelas na própria Mesa, use o botão Montar mesa (no computador); a posição montada lá vale mais que esta ordem. A leitura segue da esquerda para a direita; no celular, de cima para baixo. A organização fica salva neste navegador.</p>
       <div class="aj-mesa-list">${config.order.map((id, i) => {
         const visible = !config.hidden.includes(id), name = names[id];
         return `<div class="aj-mesa-row" data-mesa-block="${id}">

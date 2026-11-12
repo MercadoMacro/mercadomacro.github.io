@@ -475,7 +475,7 @@
     if (act === 'close') return close();
     if (act && act.startsWith('mesa-') && window.MMDeskLayout) {
       const id = b.dataset.mesaId;
-      if (act === 'mesa-reset') P.mesaLayout = null;
+      if (act === 'mesa-reset') { P.mesaLayout = null; window.MMDeskWindows?.restaurar(); }
       else if (act === 'mesa-toggle') P.mesaLayout = window.MMDeskLayout.toggle(P.mesaLayout, id);
       else if (act === 'mesa-up' || act === 'mesa-down') P.mesaLayout = window.MMDeskLayout.move(P.mesaLayout, id, act === 'mesa-up' ? -1 : 1);
       else return;
