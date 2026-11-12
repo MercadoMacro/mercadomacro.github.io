@@ -55,13 +55,13 @@ export default {
     // todo dia às 9h17 (Brasília): avisa por e-mail quem vence em 3 dias e desativa quem venceu (src/assinatura.js)
     // a cada 15 minutos: notícias de alto impacto no canal público do Telegram;
     // no minuto 15 de cada hora dispara o vigia (o agendador do GitHub chega a pular 5 a 10 horas);
-    // às 12:15 UTC também roda a rotina das assinaturas e a abertura do mercado
+    // às 12:15 UTC também roda a rotina das assinaturas; às 11:00 UTC, a abertura do mercado
     // a cada minuto: alarmes de preço da Jade (avisa por push quem ligou os avisos)
     if (ev.cron === '* * * * *') { ctx.waitUntil(checarAlarmes(env, (syms) => precosAgora(env, syms)).catch((e) => console.error('alarmes:', e.message))); return; }
     if (ev.cron === '*/15 * * * *') {
       const quando = new Date(ev.scheduledTime);
-      // às 12:15 UTC a rodada já leva assinaturas, vigia e abertura; as notícias ficam para a próxima
-      if (!(quando.getUTCHours() === 12 && quando.getUTCMinutes() === 15)) ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
+      // às 11:00 UTC a rodada leva a abertura; as notícias ficam para a próxima
+      if (!(quando.getUTCHours() === 11 && quando.getUTCMinutes() === 0)) ctx.waitUntil(noticiasNoCanal(env, ctx).catch((e) => console.error('notícias no canal:', e.message)));
       // histórico de manchetes para a busca da Jade (noticias_hist; o worker mercadomacro-busca indexa um arquivo por dia)
       ctx.waitUntil(guardarNoticias(env, ctx).catch((e) => console.error('histórico de notícias:', e.message)));
       // 10h30 a 15h45 (Brasília) em dia útil: pede /di e /dap ao worker de dados, que guarda o ajuste do pregão
@@ -70,13 +70,13 @@ export default {
       if (hUtc >= 13 && hUtc <= 18 && (mUtc === 30 || mUtc === 45) && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(guardarAjusteDI(env));
       // robôs de dados na hora certa (o agendador do GitHub atrasava de 2 a 8 horas; 11/11/2026)
       for (const arq of robosDaHora(quando)) ctx.waitUntil(dispararRobo(env, arq, { agendado: '1' }));
+      // 8h00 de Brasília em dia útil: abertura do mercado no canal público do Telegram (era 9h15 até 12/11/2026)
+      // com cf_abertura = '1' em config o próprio site posta; sem isso (ou se falhar) dispara o robô do GitHub
+      if (hUtc === 11 && mUtc === 0 && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(aberturaNoSite(env));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
-        // 9h15 de Brasília em dia útil: robô da abertura do mercado (canal público do Telegram)
-        // com cf_abertura = '1' em config o próprio site posta; sem isso (ou se falhar) dispara o robô do GitHub
-        if (quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(aberturaNoSite(env));
       }
       return;
     }
@@ -1539,7 +1539,7 @@ async function enviarEmail(env, req, { para, nome, assunto, paragrafos, botao, l
   const primeiro = String(nome || '').trim().split(/\s+/)[0] || 'olá';
   // convite para o canal do Telegram (passa por /telegram para contar o clique)
   const tg = canal && c.tg_canal ? site + '/telegram?de=email' : null;
-  const TG = 'Abertura às 9h15, fechamento às 18h e as notícias que mexem com o mercado, de graça no nosso canal do Telegram';
+  const TG = 'Abertura às 8h00, fechamento às 18h e as notícias que mexem com o mercado, de graça no nosso canal do Telegram';
   const texto = `Olá, ${primeiro}.\n\n${paragrafos.join('\n\n')}\n\n${botao}: ${link}\n\n${nota ? nota + '\n\n' : ''}${tg ? TG + ': ' + tg + '\n\n' : ''}Mercado Macro`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1f2937;max-width:520px">
 <p>Olá, ${escH(primeiro)}.</p>
@@ -3018,7 +3018,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
           + '<div class="linha"><button type="button" id="av-teste" style="' + bt + '">Enviar aviso de teste</button><a href="/abertura" style="' + bt + ';text-decoration:none;display:inline-block">Abertura do mercado (imagem)</a><a href="/fechamento" style="' + bt + ';text-decoration:none;display:inline-block">Fechamento do mercado (imagem)</a><button type="button" id="av-resumo" style="' + bt + '">Enviar resumo da semana agora</button><button type="button" id="av-off" style="' + bt + '">Desligar</button></div><p class="d" style="margin:8px 0 0">O fechamento do mercado chega sozinho em dia de pregão às 18h; o resumo da semana, toda segunda às 8h.</p>'
           + '<p style="margin:14px 0 6px"><b>Canal público (divulgação)</b></p>'
           + (j.canal
-            ? '<p class="d" style="margin:0 0 8px">Ligado em <a href="https://t.me/' + encodeURIComponent(j.canal.slice(1)) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">' + esc(j.canal) + '</a>. Em dia útil o robô posta sozinho a abertura do mercado (9h15) e o fechamento (18h), com o link do site.</p>'
+            ? '<p class="d" style="margin:0 0 8px">Ligado em <a href="https://t.me/' + encodeURIComponent(j.canal.slice(1)) + '" target="_blank" rel="noopener" style="color:var(--accent-text)">' + esc(j.canal) + '</a>. Em dia útil o robô posta sozinho a abertura do mercado (8h00) e o fechamento (18h), com o link do site.</p>'
               + '<label class="d" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px"><input type="checkbox" id="av-canal-not"' + (j.canalNoticias ? ' checked' : '') + ' style="margin-top:3px"><span>Postar também as notícias de alto impacto em tempo real (fontes em português, das 7h às 22h, no máximo 2 a cada 15 minutos e 20 por dia, sem repetir assunto).</span></label>'
               + '<div class="linha"><button type="button" id="av-canal-sair" style="' + bt + '">Desligar o canal</button></div>'
             : '<ol style="margin:0 0 8px"><li>No Telegram, crie um canal <b>público</b> (por exemplo, Mercado Macro).</li><li>Nas configurações do canal, em Administradores, adicione o robô <b>@' + esc(j.bot) + '</b>.</li><li>Escreva aqui o usuário do canal:</li></ol>'
