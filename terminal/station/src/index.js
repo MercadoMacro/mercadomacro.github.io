@@ -13,6 +13,7 @@ import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJu
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
+import { CSP_SO_AVISO, receberAvisoCsp } from './csp.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -74,6 +75,12 @@ export default {
       // 8h00 de Brasília em dia útil: abertura do mercado no canal público do Telegram (era 9h15 até 12/11/2026)
       // com cf_abertura = '1' em config o próprio site posta; sem isso (ou se falhar) dispara o robô do GitHub
       if (hUtc === 11 && mUtc === 0 && quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10))) ctx.waitUntil(aberturaNoSite(env));
+      // avisos ao administrador (Telegram): 8h30 e 18h30 confere se a abertura e o fechamento saíram no canal;
+      // 19h30 lista os robôs do GitHub que falharam nas últimas 24 horas
+      const diaUtil = quando.getUTCDay() >= 1 && quando.getUTCDay() <= 5 && !feriadoB3(new Date(quando - 3 * 3600000).toISOString().slice(0, 10));
+      if (diaUtil && mUtc === 30 && hUtc === 11) ctx.waitUntil(conferirPostagem(env, 'abertura').catch((e) => console.error('conferir abertura:', e.message)));
+      if (diaUtil && mUtc === 30 && hUtc === 21) ctx.waitUntil(conferirPostagem(env, 'fechamento').catch((e) => console.error('conferir fechamento:', e.message)));
+      if (mUtc === 30 && hUtc === 22) ctx.waitUntil(conferirRobos(env).catch((e) => console.error('conferir robôs:', e.message)));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       ctx.waitUntil(cifrarPendentes(env).catch((e) => console.error('cofre:', e.message))); // chaves ainda em texto puro no D1
@@ -114,6 +121,7 @@ export default {
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
+      if (p === '/api/csp') return await receberAvisoCsp(req, env);
       if (p === '/api/robo/passe') return await passeDoRobo(req, env);
       if (p === '/api/stripe/webhook') return await webhookStripe(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
@@ -1737,6 +1745,38 @@ async function previaCanal(env) {
   const planos = Object.entries(PLANOS).filter(([, p]) => !p.oculto && !p.soCartao).map(([id, p]) => ({ id, nome: p.nome, periodo: p.periodo, valor: p.valor, meses: p.meses || 0 }));
   return json({ canal: !!(c.tg_token && c.tg_canal), planos }, 200, { 'Cache-Control': 'public, max-age=600' });
 }
+/* ---------- avisos de falha ao administrador (12/11/2026) ----------
+   Abertura e fechamento que falham no site avisam na hora (a reserva do GitHub chega a atrasar horas).
+   Em dia útil, às 8h30 e às 18h30, confere se a postagem do dia está no canal; todo dia às 19h30, lista os robôs
+   do GitHub que falharam nas últimas 24 horas (fora os testes de alterações, que não rodam no site). */
+async function conferirPostagem(env, tipo) {
+  const c = await config(env);
+  if (!c.tg_canal) return false; // canal desligado: nada a conferir
+  const dia = diaBrasilia();
+  if (c['canal_ult_' + tipo] === tipo + '-' + dia) return false;
+  return avisar(env, (tipo === 'abertura' ? 'A abertura' : 'O fechamento') + ' de hoje não saiu no canal',
+    `Até agora a postagem de ${dia.split('-').reverse().join('/')} não chegou ao canal do Telegram. A reserva do GitHub pode postar mais tarde, com atraso; se preferir, mande pelo /admin.`);
+}
+export function resumoFalhas(runs) {
+  const por = new Map();
+  for (const x of runs || []) {
+    if (!x || x.conclusion !== 'failure' || x.event === 'pull_request') continue;
+    const l = por.get(x.name) || []; l.push(x); por.set(x.name, l);
+  }
+  const hora = (iso) => new Date(new Date(iso) - 3 * 3600000).toISOString().slice(11, 16).replace(':', 'h');
+  return [...por].map(([n, xs]) => `• ${n}: ${xs.length} falha${xs.length > 1 ? 's' : ''} (a última às ${hora(xs[0].created_at)})`);
+}
+async function conferirRobos(env) {
+  if (!env.GH_TOKEN) return false;
+  const desde = new Date(Date.now() - 864e5).toISOString().slice(0, 19) + 'Z';
+  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/runs?per_page=100&branch=main&status=failure&created=${encodeURIComponent('>=' + desde)}`, {
+    headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'User-Agent': 'mercadomacro-station', 'X-GitHub-Api-Version': '2022-11-28' },
+  });
+  if (!r.ok) { console.error('conferir robôs:', r.status); return false; }
+  const linhas = resumoFalhas((await r.json()).workflow_runs);
+  if (!linhas.length) return false;
+  return avisar(env, 'Robôs com falha nas últimas 24 horas', linhas.join('\n') + `\n\nDetalhes: https://github.com/${GH_REPO}/actions`);
+}
 async function avisar(env, titulo, texto) {
   const c = await config(env);
   if (!(c.tg_token && c.tg_chat)) return false;
@@ -1869,7 +1909,11 @@ async function aberturaNoSite(env) {
   const c = await config(env);
   if (c.cf_abertura !== '1') return dispararRobo(env, 'abertura.yml', { site: true });
   try { await comLimite(enviarAberturaNoSite(env, c), 60000, 'abertura'); }
-  catch (e) { console.error('abertura pelo site falhou, vai pela reserva do GitHub:', e.message); await dispararRobo(env, 'abertura.yml', { site: true }); }
+  catch (e) {
+    console.error('abertura pelo site falhou, vai pela reserva do GitHub:', e.message);
+    await dispararRobo(env, 'abertura.yml', { site: true });
+    await avisar(env, 'Abertura: o site não conseguiu postar', `Erro: ${e.message}.\nO robô do GitHub foi acionado como reserva, mas ele costuma atrasar. Às 8h30 eu confiro se saiu no canal.`).catch(() => {});
+  }
 }
 async function enviarAberturaNoSite(env, c) {
   if (!(c.tg_token && c.tg_canal)) { console.log('abertura: canal público não está ligado em /admin'); return; }
@@ -1891,7 +1935,11 @@ async function fechamentoNoSite(env) {
   const c = await config(env);
   if (c.cf_fechamento !== '1') return dispararFechamento(env);
   try { await comLimite(enviarFechamentoNoSite(env, c), 60000, 'fechamento'); }
-  catch (e) { console.error('fechamento pelo site falhou, vai pela reserva do GitHub:', e.message); await dispararFechamento(env); }
+  catch (e) {
+    console.error('fechamento pelo site falhou, vai pela reserva do GitHub:', e.message);
+    await dispararFechamento(env);
+    await avisar(env, 'Fechamento: o site não conseguiu enviar', `Erro: ${e.message}.\nO robô do GitHub foi acionado como reserva (tenta de novo às 18h40, 19h30 e 20h30). Às 18h30 eu confiro se saiu no canal.`).catch(() => {});
+  }
 }
 async function enviarFechamentoNoSite(env, c) {
   const dados = await dadosDoCartao(env, c);
@@ -2155,6 +2203,8 @@ function protegerResposta(r) {
   if (!r || r.status === 101 || r.webSocket) return r;
   const out = new Response(r.body, r);
   for (const [k, v] of Object.entries(PROTECAO)) if (!out.headers.has(k)) out.headers.set(k, v);
+  // regra de scripts no modo "só avisar" (src/csp.js): o navegador não bloqueia nada, só conta o que bloquearia
+  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only')) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
   return out;
 }
 async function sha256hex(s) {
