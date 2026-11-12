@@ -55,7 +55,8 @@ globalThis.MMDeskWindows = (() => {
   // Mesa 1 = a de sempre (padrão); Mesa 2 = a nova, com o gráfico vinculado por cor (11/11/2026).
   // Cada mesa tem a própria organização: neste navegador e na conta (k=mesa1 para a 1, k=mesa para a 2).
   const MODO_KEY = 'mm_mesa_modo_v1';
-  const LOJA = { '1': { key: 'mm_mesa_janelas_m1_v1', k: 'mesa1' }, '2': { key: KEY, k: 'mesa' } };
+  // Mesa 2 com o desenho Mesa Viva (11/11/2026) começa do zero: chave própria (as posições da Mesa 2 antiga ficam em k=mesa)
+  const LOJA = { '1': { key: 'mm_mesa_janelas_m1_v1', k: 'mesa1' }, '2': { key: 'mm_mesa_janelas_m2_v2', k: 'mesa2' } };
   const lerLocal = (m) => { try { const j = JSON.parse(localStorage.getItem(LOJA[m].key) || 'null'); return j && typeof j === 'object' ? j : {}; } catch (e) { return {}; } };
   let modo = (() => { try { return localStorage.getItem(MODO_KEY) === '2' ? '2' : '1'; } catch (e) { return '1'; } })();
   const estados = { '1': lerLocal('1'), '2': lerLocal('2') };
@@ -65,7 +66,8 @@ globalThis.MMDeskWindows = (() => {
   const salvas = () => { const l = limpa(est.dados).itens; return Object.keys(l).length ? l : null; };
   const guardar = (m = modo) => { try { localStorage.setItem(LOJA[m].key, JSON.stringify(estados[m])); } catch (e) { /* sem espaço */ } };
   const estreito = () => innerWidth < 900;
-  const nomes = () => Object.fromEntries((globalThis.MMDeskLayout?.blocks || []).map(([id, n]) => [id, n]));
+  const nomes = () => ({ ...Object.fromEntries((globalThis.MMDeskLayout?.blocks || []).map(([id, n]) => [id, n])), ...(modo === '2' ? globalThis.MMMesa2?.NOMES || {} : {}) });
+  const padrao2 = () => (modo === '2' && globalThis.MMMesa2 ? globalThis.MMMesa2.DEF : null); // posições do desenho
 
   async function carregar(m = modo) {
     if (carregou[m]) return; carregou[m] = true;
@@ -124,6 +126,7 @@ globalThis.MMDeskWindows = (() => {
     rotulos();
     const blocos = [...layout.children].filter((n) => n.dataset.mesaBlock && !n.hidden);
     let itens = salvas();
+    if (!itens && padrao2()) itens = { ...padrao2() }; // Mesa 2 sempre em janelas, no desenho
     if (!itens && !editando) return;
     const faltam = blocos.filter((b) => !itens || !itens[b.dataset.mesaBlock]);
     if (faltam.length) {
@@ -133,12 +136,14 @@ globalThis.MMDeskWindows = (() => {
         // janela nova entra onde a grade de antes a punha (as do vínculo ficam logo abaixo dos Destaques) e empurra as outras
         const cards = itens.cards, novas = faltam.map((b) => b.dataset.mesaBlock);
         const VINC = { grafico: [0, 6, 50] }; // coluna, largura e altura iniciais
-        for (const id of novas) { const m = med[id], v = VINC[id]; itens[id] = v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m; }
+        for (const id of novas) { const m = med[id], v = VINC[id], d = padrao2()?.[id]; itens[id] = d ? { ...d } : v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m; }
         itens = arruma(itens, novas);
       }
       itens = arruma(itens, faltam.length ? faltam.map((b) => b.dataset.mesaBlock) : null);
       if (editando) est.dados = { v: 1, itens: { ...(salvas() || {}), ...itens } };
     }
+    // montando sem nada salvo (Mesa 2 nas posições do desenho): o GridStack parte das posições calculadas
+    if (editando && !salvas()) est.dados = { v: 1, itens: { ...itens } };
     // só as janelas visíveis entram na grade; a posição das ocultas fica guardada
     const vis = Object.fromEntries(blocos.map((b) => [b.dataset.mesaBlock, itens[b.dataset.mesaBlock]]).filter(([, p]) => p));
     layout.classList.add('ms-janelas');
