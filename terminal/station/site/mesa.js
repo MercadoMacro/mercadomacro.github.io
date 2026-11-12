@@ -626,7 +626,8 @@
       if (!head || !title || section.querySelector(':scope > .ms-fold-body')) return;
       const key = section.dataset.tb || (section.classList.contains('ms-curvebox') ? 'curve' : 'news');
       const content = document.createElement('div'); content.className = 'ms-fold-body'; content.id = 'ms-fold-' + key;
-      [...section.children].filter(n => n !== head).forEach(n => content.append(n)); section.append(content);
+      // a barra e o canto do modo Montar mesa (mesa-janelas.js) ficam fora do conteúdo recolhível
+      [...section.children].filter(n => n !== head && !n.classList.contains('mj-barra') && !n.classList.contains('mj-canto')).forEach(n => content.append(n)); section.append(content);
       const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'ms-fold-toggle';
       toggle.setAttribute('aria-controls', content.id);
       const paint = () => {
