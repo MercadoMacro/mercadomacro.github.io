@@ -6,7 +6,7 @@ import { apiAlarmes, checarAlarmes } from './alarmes.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
-import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias } from './assistente.js';
+import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA } from './assistente.js';
 import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
@@ -685,6 +685,8 @@ async function dadosAbertura(env) {
   }
   out.agendaOk = Array.isArray(cal);
   [out.noticias, out.fluxo] = await Promise.all([noticiasDoDia().catch(() => []), fluxoEstrangeiro()]);
+  // texto da manhã pela IA (O que esperar hoje + 5 notícias); sem ele, a abertura sai como antes
+  out.manha = await manhaIA(env, out, await listaNoticias().catch(() => []));
   return out;
 }
 function textoAbertura(d, curto) {
@@ -706,7 +708,8 @@ function textoAbertura(d, curto) {
       '', l('brent', (v) => 'US$ ' + n2(v)), l('ouro', (v) => 'US$ ' + n0(v)), l('btc', (v) => 'US$ ' + n0(v)),
       `Treasury 10 anos: ${c.tnx.v != null ? n2(c.tnx.v) + '%' : '—'}`);
     if (d.agenda && d.agenda.length) linhas.push('', 'Agenda de hoje', ...d.agenda.map((a) => `${a.hora} ${a.pais} ${a.titulo}${a.proj ? ` (proj. ${a.proj})` : ''}`));
-    if (d.noticias && d.noticias.length) linhas.push('', 'Principais notícias', ...d.noticias.map((n) => `- ${n.t}${n.f ? ` (${n.f})` : ''}`));
+    if (d.manha) linhas.push('', 'O que esperar hoje', d.manha.visao, '', '5 notícias para começar o dia', ...d.manha.noticias.map((n, i) => `${i + 1}. ${n}`));
+    else if (d.noticias && d.noticias.length) linhas.push('', 'Principais notícias', ...d.noticias.map((n) => `- ${n.t}${n.f ? ` (${n.f})` : ''}`));
   }
   linhas.push('', 'Painel completo: https://mercadomacro.com.br');
   return linhas.join('\n');
@@ -746,12 +749,13 @@ function textoCanalAbertura(d) {
   // (nunca se corta no meio de uma linha, o que quebraria o HTML)
   const ag = (d.agendaCanal || []).map((a) => `• ${a.hora} ${BAND[a.pais] || ''} ${e(a.titulo)}${a.proj ? ` (proj. ${e(a.proj)})` : ''}`);
   const sem = (d.semana || []).map((s) => `• ${CURTO[new Date(s.dia + 'T12:00:00Z').getUTCDay()]} ${ddmm(s.dia)}: ${s.eventos.slice(0, 3).map((x) => `${BAND[x.pais] || ''} ${e(x.titulo)}`).join(', ')}`);
-  const dest = (d.noticias || []).slice(0, 4).map((n) => `• ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}`);
+  const dest = d.manha ? d.manha.noticias.map((n, i) => `${i + 1}. ${e(n)}`) : (d.noticias || []).slice(0, 4).map((n) => `• ${e(n.t)}${n.f ? ` (${e(n.f)})` : ''}`);
+  const visao = d.manha ? ['', '<b>O que esperar hoje</b>', e(d.manha.visao)] : [];
   const fim = ['', 'Painel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>'];
-  const monta = () => [...L,
+  const monta = () => [L[0], ...visao, ...L.slice(1),
     ...(ag.length ? ['', '🗓️ <b>Agenda de hoje (horário de Brasília)</b>', ...ag] : []),
     ...(sem.length ? ['', '<b>No radar da semana</b>', ...sem] : []),
-    ...(dest.length ? ['', '<b>Destaques</b>', ...dest] : []), ...fim].join('\n');
+    ...(dest.length ? ['', d.manha ? '<b>5 notícias para começar o dia</b>' : '<b>Destaques</b>', ...dest] : []), ...fim].join('\n');
   let t = monta();
   while (t.length > 3900 && (sem.length || dest.length || ag.length)) { (sem.length ? sem : dest.length ? dest : ag).pop(); t = monta(); }
   return t;
