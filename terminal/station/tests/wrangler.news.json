@@ -2,6 +2,7 @@
  "name":"mm-news-runtime-test",
  "main":"news-relay-fixture.mjs",
  "compatibility_date":"2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
  "workers_dev":false,
  "durable_objects":{"bindings":[{"name":"NEWS","class_name":"NewsRelayFixture"}]},
  "migrations":[{"tag":"v1","new_sqlite_classes":["NewsRelayFixture"]}]

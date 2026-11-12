@@ -654,7 +654,7 @@
       <div class="ms-bar">
         <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
         <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura do mercado <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
-        <button type="button" class="ms-refresh ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-refresh" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
+        <button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
@@ -806,6 +806,9 @@
   .ms-err { color:var(--neg); }
   .ms-refresh { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
   .ms-refresh:hover { color:var(--text); }
+  .ms-mj-btn { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .ms-mj-btn:hover { color:var(--text); }
+  .ms-mj-btn[hidden] { display:none; }
   .ms-bar-acoes { display:flex; gap:8px; flex-wrap:wrap; }
   .ms-temp-btn { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
   .ms-temp-btn:hover { color:var(--text); }

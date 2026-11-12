@@ -110,9 +110,7 @@ globalThis.MMDeskWindows = (() => {
     carregar();
     if (editando && !root.querySelector('.ms-custom-layout')) globalThis.MMDeskLayout?.apply(root, {});
     const layout = root.querySelector('.ms-custom-layout'); if (!layout) return;
-    const bot = root.querySelector('[data-mj-montar]');
-    if (bot) bot.textContent = editando ? 'Concluir' : 'Montar mesa';
-    root.querySelector('[data-mj-restaurar]')?.toggleAttribute('hidden', !editando);
+    rotulos();
     const blocos = [...layout.children].filter((n) => n.dataset.mesaBlock && !n.hidden);
     let itens = salvas();
     if (!itens && !editando) return;
@@ -193,9 +191,38 @@ globalThis.MMDeskWindows = (() => {
   addEventListener('pointerup', soltar);
   addEventListener('pointercancel', soltar);
 
+  // os botões existem em dois lugares: na barra da Mesa (celular/sem a faixa) e na faixa de frases do topo (computador)
+  function rotulos() {
+    document.querySelectorAll('[data-mj-montar]').forEach((b) => { b.textContent = editando ? 'Concluir' : 'Montar mesa'; b.classList.toggle('on', editando); });
+    document.querySelectorAll('[data-mj-restaurar]').forEach((b) => { b.hidden = !editando; });
+  }
+  // no computador a barra da Mesa fica escondida e a faixa de frases ocupa o topo (como a Temperatura do mercado,
+  // temperatura.js): os botões vão na ponta direita dela, só com a Mesa aberta e em tela larga
+  function botoesNaFaixa() {
+    const qb = document.querySelector('.qbanner');
+    if (!qb) return;
+    let g = qb.querySelector('.qb-mj');
+    if (!g) {
+      g = document.createElement('span'); g.className = 'qb-mj';
+      g.innerHTML = '<button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
+      const temp = qb.querySelector('.qb-temp');
+      if (temp) temp.after(g); else qb.append(g);
+      rotulos();
+    } else if (qb.querySelector('.qb-temp') && g.previousElementSibling !== qb.querySelector('.qb-temp')) qb.querySelector('.qb-temp').after(g);
+    g.hidden = !document.getElementById('mesa-panel')?.classList.contains('active') || estreito();
+  }
+  setInterval(botoesNaFaixa, 1500);
+  setTimeout(botoesNaFaixa, 300);
+  const css = document.createElement('style');
+  css.textContent = '.qb-mj{flex:0 0 auto;display:inline-flex;gap:6px;margin-left:6px}.qb-mj[hidden]{display:none}.qbanner .qb-temp+.qb-mj{margin-left:6px}.qbanner>.qb-mj:not(.qb-temp+.qb-mj){margin-left:auto}'
+    + '.qb-mj-b{font:inherit;font-size:11.5px;color:var(--text-2);background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap}'
+    + '.qb-mj-b:hover{color:var(--text);border-color:var(--line-2)}.qb-mj-b[hidden]{display:none}.qb-mj-b.on{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}';
+  document.head.append(css);
+
   function alternar() {
     if (estreito()) return;
     editando = !editando;
+    rotulos();
     if (editando) { if (rootAtual) aplicar(rootAtual); }
     else {
       rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove());
@@ -205,7 +232,7 @@ globalThis.MMDeskWindows = (() => {
   }
   function restaurar() {
     est = { conta: est.conta, ts: Date.now(), dados: { v: 1, itens: {} } }; guardar(); enviar();
-    editando = false;
+    editando = false; rotulos();
     dispatchEvent(new Event('mesa-layout-changed'));
   }
   document.addEventListener('click', (e) => {
