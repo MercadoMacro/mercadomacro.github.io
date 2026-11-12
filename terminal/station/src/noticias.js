@@ -358,15 +358,31 @@ const CHAVE_LISTA = 'https://cache.local/noticias-v1';
 export async function noticiasSoCache() {
   try { const r = await caches.default.match(new Request(CHAVE_LISTA)); return r ? await r.json() : null; } catch (e) { return null; }
 }
-// Lista pronta para o navegador, guardada 2 minutos no cache da Cloudflare
-export async function noticiasCache(ctx) {
-  const chave = new Request(CHAVE_LISTA);
-  const hit = await caches.default.match(chave);
-  if (hit) return { lista: await hit.json(), cache: 'HIT', falharam: hit.headers.get('X-Falharam') || '' };
+// Lista pronta para o navegador. Vale como fresca por 2 minutos.
+// rapida (12/11/2026, só o /api/noticias usa): com a lista vencida, devolve na hora a que está guardada (até 6 h)
+// e renova em segundo plano. Antes, com poucas visitas, quase todo acesso caía na lista vencida e esperava a
+// leitura de todos os feeds; a Mesa ficava em "Carregando notícias…". Os outros usos (Jade, canal do Telegram,
+// abertura, histórico) continuam esperando a lista fresca, e o relógio de 15 min mantém a guardada em dia.
+const FRESCA_MS = 120000;
+let renovando = null;
+async function renovarLista(chave, ctx) {
   const { todas, falharam } = await coletarNoticias(ctx);
   if (todas.length) {
-    const r = new Response(JSON.stringify(todas), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120', 'X-Falharam': falharam.join(', ') } });
-    ctx.waitUntil(caches.default.put(chave, r));
+    await caches.default.put(chave, new Response(JSON.stringify(todas), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600', 'X-Gerado': String(Date.now()), 'X-Falharam': falharam.join(', ') } }));
   }
   return { lista: todas, cache: 'MISS', falharam: falharam.join(', ') };
+}
+export async function noticiasCache(ctx, { rapida = false } = {}) {
+  const chave = new Request(CHAVE_LISTA);
+  const hit = await caches.default.match(chave);
+  if (hit) {
+    const idade = Date.now() - (Number(hit.headers.get('X-Gerado')) || 0);
+    if (idade < FRESCA_MS || rapida) {
+      const lista = await hit.json(), falharam = hit.headers.get('X-Falharam') || '';
+      if (idade < FRESCA_MS) return { lista, cache: 'HIT', falharam };
+      if (!renovando) { renovando = renovarLista(chave, ctx).catch(() => null).finally(() => { renovando = null; }); ctx?.waitUntil?.(renovando); }
+      return { lista, cache: 'STALE', falharam };
+    }
+  }
+  return renovarLista(chave, ctx);
 }

@@ -1766,7 +1766,7 @@ document.addEventListener('visibilitychange', newsLiveTick);
 document.addEventListener('mm-news-visible', newsLiveTick);
 window.addEventListener('pagehide', () => newsStreamClient?.setActive(false));
 window.addEventListener('pageshow', newsLiveTick);
-let newsFetchSeq = 0;
+let newsFetchSeq = 0, newsStaleRetries = 0;
 async function fetchNewsOnce(silent = false) {
   const info = document.getElementById('news-info');
   if (info && !silent) info.classList.add('loading');
@@ -1782,6 +1782,9 @@ async function fetchNewsOnce(silent = false) {
 
     if (preferLive && streamRevision !== newsStreamRevision) return;
     newsApplyUpdate(data,silent,res.headers.get('X-Cache') || '');
+    // STALE: o servidor respondeu na hora com a lista guardada e está renovando; busca de novo em 8 s (no máximo 3 vezes)
+    if (res.headers.get('X-Cache') === 'STALE' && newsStaleRetries < 3) { newsStaleRetries++; setTimeout(() => fetchNewsFromWorker(true), 8000); }
+    else if (res.headers.get('X-Cache') !== 'STALE') newsStaleRetries = 0;
   } catch (e) {
     if (seq !== newsFetchSeq) return;
     console.warn('[News] Erro ao buscar:', e.message);
@@ -1808,6 +1811,7 @@ function newsApplyUpdate(data,silent=true,cacheHeader='') {
     const info=document.getElementById('news-info');
     newsAll = newsPrepara(data);
     window.__newsErro = false; // a Mesa usa para trocar "Carregando" pelo aviso de falha
+    window.dispatchEvent(new Event('mm-news-ok')); // a Mesa redesenha o quadro de notícias na hora (antes esperava até 60 s)
     checkNewsAlerts(newsAll);
     try {
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
@@ -5151,7 +5155,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=53';
+    sc.src = 'mesa.js?v=54';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');

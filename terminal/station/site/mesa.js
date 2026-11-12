@@ -814,6 +814,7 @@
   const redrawNews = () => { const b = root.querySelector('.ms-newsbox'); if (b) { const content = b.querySelector('.ms-fold-body'); if (content) content.innerHTML = newsHTML(); else { b.innerHTML = b.querySelector('.ms-head').outerHTML + newsHTML(); mobileGroups(); } } };
   setInterval(() => { if (active()) redrawNews(); }, 60 * 1000);
   window.addEventListener('mm-news-erro', redrawNews);
+  window.addEventListener('mm-news-ok', () => { if (active()) redrawNews(); window.MMDeskLink?.pintar?.(); });
   document.addEventListener('visibilitychange', () => { syncCrypto(); syncForex(); if (active() && Date.now() - lastTs >= 2 * 60 * 1000) refresh(); });
 
   /* ---------------- estilos ---------------- */
