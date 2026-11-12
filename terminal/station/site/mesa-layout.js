@@ -1,7 +1,7 @@
 /* Organização da Mesa: IDs estáveis, preferências validadas e edição pelos Ajustes. */
 globalThis.MMDeskLayout = (() => {
   const blocks = [
-    ['crypto','Criptomoedas'],['cards','Destaques do mercado'],['grafico','Gráfico do ativo'],['noticiasv','Notícias do ativo'],['jade','Jade sobre o ativo'],['am','Índices das Américas'],
+    ['crypto','Criptomoedas'],['cards','Destaques do mercado'],['grafico','Gráfico do ativo'],['am','Índices das Américas'],
     ['eu','Índices europeus'],['as','Índices asiáticos'],['dx','Cesta do DXY'],['em','Moedas emergentes'],
     ['b3','Futuros B3'],['co','Commodities'],['ou','Futuros, juros e risco'],['curve','Curva de juros'],['news','Notícias'],
   ];
@@ -10,7 +10,7 @@ globalThis.MMDeskLayout = (() => {
     const v = value && typeof value === 'object' ? value : {};
     const order = Array.isArray(v.order) ? [...new Set(v.order.filter(id => ids.includes(id)))] : [];
     // as janelas do vínculo (11/11/2026) entram logo depois dos Destaques para quem já tinha ordem própria
-    const novas = ['grafico','noticiasv','jade'];
+    const novas = ['grafico'];
     for (const id of ids) if (!order.includes(id)) { const at = novas.includes(id) && order.length ? order.indexOf('cards') : -1; if (at >= 0) order.splice(at + 1 + novas.filter(n => order.includes(n)).length, 0, id); else order.push(id); }
     const hidden = Array.isArray(v.hidden) ? [...new Set(v.hidden.filter(id => ids.includes(id)))] : [];
     return { order, hidden };

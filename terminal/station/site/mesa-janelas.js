@@ -126,7 +126,7 @@ globalThis.MMDeskWindows = (() => {
       else {
         // janela nova entra onde a grade de antes a punha (as do vínculo ficam logo abaixo dos Destaques) e empurra as outras
         const cards = itens.cards, novas = faltam.map((b) => b.dataset.mesaBlock);
-        const VINC = { grafico: [0, 6, 44], noticiasv: [6, 3, 44], jade: [9, 3, 44] }; // coluna, largura e altura iniciais
+        const VINC = { grafico: [0, 6, 50] }; // coluna, largura e altura iniciais
         for (const id of novas) { const m = med[id], v = VINC[id]; itens[id] = v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m; }
         itens = arruma(itens, novas);
       }
