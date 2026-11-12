@@ -66,3 +66,13 @@ tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{bo
 .mj-gs .grid-stack-item>.ui-resizable-e,.mj-gs .grid-stack-item>.ui-resizable-w{width:10px}
 .mj-gs .grid-stack-item>.ui-resizable-s{height:10px}
 .mj-gs .grid-stack-item.ui-resizable-autohide>.ui-resizable-handle{display:block!important}
+/* Celular (12/11/2026): a Mesa volta a mostrar a hora da última atualização, o Atualizar e a Temperatura do mercado
+   (a barra ficava escondida porque esses controles foram para a faixa do topo, que não aparece no celular).
+   Os botões 1, 2 e Montar mesa continuam só no computador. */
+@media (max-width: 900px) {
+  html body #mesa-root.ms-qb .ms-bar { display:flex; align-items:center; margin-bottom:10px; }
+  html body #mesa-root .ms-bar h2 { display:none; }
+  html body #mesa-root .ms-bar :is([data-mj-modo], [data-mj-montar], [data-mj-restaurar]) { display:none !important; }
+  html body #mesa-root .ms-bar .ms-bar-acoes { display:inline-flex; gap:8px; flex-wrap:wrap; }
+  html body #mesa-root .ms-bar :is(.ms-refresh, .ms-temp-btn) { min-height:40px; }
+}
