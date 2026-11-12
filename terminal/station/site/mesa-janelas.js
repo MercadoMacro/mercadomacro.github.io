@@ -139,7 +139,61 @@ globalThis.MMDeskWindows = (() => {
     layout.classList.toggle('mj-editando', editando);
     pintar(layout, estreito() ? {} : arruma(vis, null));
     if (estreito()) { const seq = ordem(vis); for (const b of blocos) b.style.order = String(seq.indexOf(b.dataset.mesaBlock)); }
-    if (editando) moldura(layout, blocos);
+    if (editando) { moldura(layout, blocos); ligarGrade(layout, blocos); }
+  }
+
+  /* ---------- arrastar e redimensionar: GridStack.js (MIT, gridstackjs.com), só no modo Montar mesa ----------
+     O motor próprio de antes recalculava a grade inteira a cada movimento do mouse (a tela pulava, e com zoom
+     quebrava). O GridStack mostra onde a janela vai cair, anima as outras e lida com zoom e toque.
+     Fora do modo montar a Mesa continua na grade CSS de sempre (pintar), com as mesmas posições. */
+  const GS_URL = 'https://cdn.jsdelivr.net/npm/gridstack@14.1.0/dist/';
+  let gsCarregando = null, grade = null;
+  function carregarGS() {
+    // a v14 expõe a própria classe em window.GridStack (versões antigas: window.GridStack.GridStack)
+    const achar = () => (typeof globalThis.GridStack === 'function' ? globalThis.GridStack : globalThis.GridStack?.GridStack) || null;
+    if (achar()) return Promise.resolve(achar());
+    if (!gsCarregando) gsCarregando = new Promise((ok, erro) => {
+      const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = GS_URL + 'gridstack.min.css'; document.head.append(l);
+      const s = document.createElement('script'); s.src = GS_URL + 'gridstack-all.js'; s.async = true;
+      const t = setTimeout(() => erro(new Error('tempo')), 12000);
+      s.onload = () => { clearTimeout(t); achar() ? ok(achar()) : erro(new Error('sem GridStack')); };
+      s.onerror = () => { clearTimeout(t); erro(new Error('não carregou')); };
+      document.head.append(s);
+    }).catch((e) => { gsCarregando = null; console.warn('GridStack:', e.message, '(usando o arraste simples)'); return null; });
+    return gsCarregando;
+  }
+  async function ligarGrade(layout, blocos) {
+    const GS = await carregarGS();
+    if (!GS || !editando || !layout.isConnected || grade) return; // sem a biblioteca, fica o arraste simples
+    const it = salvas() || {};
+    layout.classList.add('grid-stack', 'mj-gs');
+    for (const b of blocos) {
+      const id = b.dataset.mesaBlock, p = it[id]; if (!p) continue;
+      const item = document.createElement('div'), cont = document.createElement('div');
+      item.className = 'grid-stack-item'; cont.className = 'grid-stack-item-content';
+      Object.entries({ 'gs-id': id, 'gs-x': p.x, 'gs-y': p.y, 'gs-w': p.w, 'gs-h': p.h, 'gs-min-w': MIN_W, 'gs-min-h': MIN_H, 'gs-max-h': MAX_H }).forEach(([k, v]) => item.setAttribute(k, String(v)));
+      b.style.gridColumn = b.style.gridRow = b.style.order = '';
+      b.before(item); cont.append(b); item.append(cont);
+    }
+    grade = GS.init({
+      column: COLS, cellHeight: ROW, marginTop: 0, marginBottom: GAP, marginLeft: GAP / 2, marginRight: GAP / 2,
+      float: false, animate: true, handle: '.mj-barra', resizable: { handles: 'e,se,s,sw,w', autoHide: false },
+    }, layout);
+    grade.on('change dragstop resizestop', () => ler(layout));
+    ler(layout);
+  }
+  function ler(layout) {
+    if (!grade) return;
+    const out = { ...(salvas() || {}) };
+    for (const n of grade.engine.nodes) if (n.id) out[n.id] = { x: n.x, y: n.y, w: n.w, h: n.h };
+    est.dados = { v: 1, itens: limpa({ itens: out }).itens };
+    tamanhos(layout); agendar();
+  }
+  function desligarGrade() {
+    if (!grade) return;
+    ler(grade.el);
+    try { grade.destroy(false); } catch (e) { /* a Mesa vai redesenhar do zero */ }
+    grade = null;
   }
 
   function moldura(layout, blocos) {
@@ -163,6 +217,12 @@ globalThis.MMDeskWindows = (() => {
         const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
         if (!d) return;
         e.preventDefault();
+        const item = b.closest('.grid-stack-item');
+        if (grade && item?.gridstackNode) {
+          const n = item.gridstackNode;
+          grade.update(item, e.shiftKey ? { w: Math.max(MIN_W, Math.min(COLS - n.x, n.w + d[0])), h: Math.max(MIN_H, n.h + d[1] * 4) } : { x: Math.max(0, Math.min(COLS - n.w, n.x + d[0])), y: Math.max(0, n.y + d[1] * 4) });
+          ler(layout); return;
+        }
         const it = salvas() || {};
         const novo = e.shiftKey ? redimensionar(it, id, d[0], d[1] * 4) : mover(it, id, d[0], d[1] * 4);
         est.dados = { v: 1, itens: arruma(novo, null) }; pintar(layout, est.dados.itens); tamanhos(layout); agendar();
@@ -172,12 +232,12 @@ globalThis.MMDeskWindows = (() => {
   }
   function tamanhos(layout) {
     const it = salvas() || {};
-    layout.querySelectorAll(':scope > [data-mesa-block] > .mj-barra .mj-tam').forEach((t) => {
+    layout.querySelectorAll('[data-mesa-block] > .mj-barra .mj-tam').forEach((t) => {
       const p = it[t.closest('[data-mesa-block]').dataset.mesaBlock]; t.textContent = p ? `${p.w} col` : '';
     });
   }
   function iniciar(e, layout, id, modo) {
-    if (e.button !== 0 || estreito()) return;
+    if (grade || e.button !== 0 || estreito()) return;
     e.preventDefault();
     const L = layout.getBoundingClientRect();
     arraste = { layout, id, modo, x0: e.clientX, y0: e.clientY, base: { ...(salvas() || {}) }, passo: (L.width - GAP * (COLS - 1)) / COLS + GAP };
@@ -209,7 +269,7 @@ globalThis.MMDeskWindows = (() => {
   }
   function trocarModo(m) {
     if (m !== '1' && m !== '2') return;
-    if (editando) { editando = false; rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove()); if (salvas()) agendar(); }
+    if (editando) { desligarGrade(); editando = false; rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove()); if (salvas()) agendar(); }
     modo = m; try { localStorage.setItem(MODO_KEY, m); } catch (e) { /* sem espaço */ }
     rotulos();
     dispatchEvent(new Event('mesa-layout-changed'));
@@ -246,12 +306,14 @@ globalThis.MMDeskWindows = (() => {
     rotulos();
     if (editando) { if (rootAtual) aplicar(rootAtual); }
     else {
+      desligarGrade();
       rootAtual?.querySelectorAll('.mj-barra, .mj-canto').forEach((n) => n.remove());
       if (salvas()) agendar();
       dispatchEvent(new Event('mesa-layout-changed')); // volta a atualizar as cotações
     }
   }
   function restaurar() {
+    if (grade) { try { grade.destroy(false); } catch (e) { /* redesenha */ } grade = null; }
     est = { conta: est.conta, ts: Date.now(), dados: { v: 1, itens: {} } }; guardar(); enviar();
     editando = false; rotulos();
     dispatchEvent(new Event('mesa-layout-changed'));

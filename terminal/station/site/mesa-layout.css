@@ -52,3 +52,17 @@ tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{bo
 [data-mv="azul"] tr.mv-sel>td{background:rgba(56,189,248,.12)!important}[data-mv="azul"] tr.mv-sel>td:first-child{box-shadow:inset 3px 0 0 #38bdf8}
 .mj-cor{width:22px;height:22px;flex:none;border-radius:50%;border:2px solid var(--text);cursor:pointer;padding:0;background:#f0b90b}
 .mj-cor[data-mv="azul"]{background:#38bdf8}.mj-cor[data-mv="nenhum"]{background:transparent;border:2px dashed var(--text-3)}
+
+/* modo montar com GridStack (mesa-janelas.js): a grade CSS dá lugar à da biblioteca enquanto monta */
+.ms-custom-layout.ms-janelas.mj-gs{display:block;position:relative}
+.mj-gs .grid-stack-item-content{overflow:hidden!important}
+.mj-gs [data-mesa-block]{height:100%;margin:0!important;box-sizing:border-box;overflow:hidden!important}
+.ms-janelas.mj-editando.mj-gs [data-mesa-block]{outline:1.5px dashed var(--accent-line);outline-offset:-1px;border-radius:10px;padding-top:36px;user-select:none}
+.ms-janelas.mj-editando.mj-gs [data-mesa-block]>:not(.mj-barra):not(.mj-canto){pointer-events:none}
+.mj-gs .mj-canto{display:none}
+.mj-gs .grid-stack-item.ui-draggable-dragging [data-mesa-block],.mj-gs .grid-stack-item.ui-resizable-resizing [data-mesa-block]{outline:2px solid var(--accent);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.mj-gs .grid-stack-placeholder>.placeholder-content{background:var(--accent-soft)!important;border:2px dashed var(--accent-line);border-radius:10px}
+.mj-gs .grid-stack-item>.ui-resizable-se{width:18px;height:18px;right:calc(var(--gs-item-margin-right) + 2px);bottom:calc(var(--gs-item-margin-bottom) + 2px);background:linear-gradient(135deg,transparent 50%,var(--accent) 50%,var(--accent) 60%,transparent 60%,transparent 70%,var(--accent) 70%,var(--accent) 80%,transparent 80%);transform:none}
+.mj-gs .grid-stack-item>.ui-resizable-e,.mj-gs .grid-stack-item>.ui-resizable-w{width:10px}
+.mj-gs .grid-stack-item>.ui-resizable-s{height:10px}
+.mj-gs .grid-stack-item.ui-resizable-autohide>.ui-resizable-handle{display:block!important}
