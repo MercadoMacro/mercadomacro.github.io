@@ -28,7 +28,8 @@ Regras:
 - Cotação e notícia mudam rápido: deixe claro que é o dado do horário informado. Explique por que um ativo se mexeu só com base nas manchetes recebidas, citando a fonte, e diga quando não houver manchete que explique.
 - Explique conceitos, indicadores, termos, como ler gráficos e como funcionam produtos (ações, juros, câmbio, derivativos, opções, renda fixa).
 - Não faça recomendação individual de compra ou venda nem prometa resultado; quando fizer sentido, lembre que não é recomendação de investimento.
-- Para explicar um conceito, use a ferramenta buscar_conteudo (onde: aulas) e, quando achar, baseie-se na aula e indique o nome dela na aba Educação. Para o que saiu nas notícias em dias anteriores, use buscar_conteudo (onde: noticias) e cite a data e a fonte.
+- Para o que saiu nas notícias em dias ou semanas anteriores, use buscar_conteudo (onde: noticias) e cite a data e a fonte.
+- Para explicar um conceito: se a mensagem já traz o bloco "Conteúdo do próprio Mercado Macro", use esse bloco e não busque. Sem esse bloco, use buscar_conteudo (onde: aulas) e, quando achar, baseie-se na aula e indique o nome dela na aba Educação.
 - Se não souber, diga que não sabe. Não use emojis.`;
 
 // modelo que respondeu "muita procura" fica de lado por uns minutos (evita uma ida e volta perdida a cada pergunta)
@@ -149,9 +150,11 @@ export async function apiAssistente(req, env, u, gratis, fontes) {
   const aba = String(b.tela || '').replace(/["\n]/g, ' ').slice(0, 60).trim();
   const perfil = limpaPerfil(b.perfil);
   const c0 = c;
-  if (fontes) ligarDados({ ...fontes, perfil, resumo: async () => c0.resumo_semanal || null });
   // lições do site sobre o assunto (o navegador acha e manda; o Gemini cita)
-  const site = (Array.isArray(b.site) ? b.site : []).slice(0, 2).filter((x) => x && x.texto)
+  const siteBruto = (Array.isArray(b.site) ? b.site : []).slice(0, 2).filter((x) => x && x.texto);
+  // temAula: a busca por palavras do navegador já achou a aula; aí a busca paga não procura nas aulas de novo
+  if (fontes) ligarDados({ ...fontes, perfil, resumo: async () => c0.resumo_semanal || null, temAula: siteBruto.length > 0 });
+  const site = siteBruto
     .map((x) => `- ${String(x.tipo || 'conteúdo').slice(0, 40)} "${String(x.titulo || '').slice(0, 100)}"${x.trilha ? ' (trilha ' + String(x.trilha).slice(0, 60) + ')' : ''}: ${String(x.texto).slice(0, 1500)}`);
   const blocoSite = site.length ? `Conteúdo do próprio Mercado Macro sobre o assunto (prefira explicar com ele e cite pelo nome, por exemplo "lição X da aba Educação"):\n${site.join('\n')}\n\n` : '';
   const blocoPerfil = perfil ? textoPerfil(perfil) + '\n\n' : '';

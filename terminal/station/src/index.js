@@ -1926,7 +1926,7 @@ async function buscaConteudo(env, pergunta, onde, teste = false) {
   const [m, n] = String(c.busca_uso || '').split(':');
   const usadas = m === mes ? Number(n) || 0 : 0, limite = Number(c.busca_limite) || 2000;
   if (usadas >= limite) return { erro: 'limite de buscas do mês atingido; responda com o que sabe ou use a ferramenta noticias' };
-  const r = await env.BUSCA.fetch('https://busca/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: pergunta, onde: ['aulas', 'noticias'].includes(onde) ? onde : 'tudo', max: 5 }) });
+  const r = await env.BUSCA.fetch('https://busca/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: pergunta, onde: onde === 'aulas' || (teste && onde === 'tudo') ? onde : 'noticias', max: 5 }) });
   const j = await r.json().catch(() => ({ erro: 'resposta inválida da busca' }));
   await salvarConfig(env, { busca_uso: mes + ':' + (usadas + (j.buscas || 1)) }).catch(() => {});
   if (j.erro) return { erro: j.erro };
