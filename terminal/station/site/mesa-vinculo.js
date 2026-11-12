@@ -8,7 +8,7 @@ globalThis.MMDeskLink = (() => {
   const KEY = 'mm_mesa_vinculo_v1';
   const CORES = ['ouro', 'azul', 'nenhum'];
   const NOME_COR = { ouro: 'dourado', azul: 'azul', nenhum: 'sem vínculo' };
-  const SEGUEM = ['grafico', 'nativo', 'jade']; // janelas que seguem o ativo do grupo (Mesa 2, desenho Mesa Viva)
+  const SEGUEM = ['grafico']; // janela que segue o ativo do grupo (notícias do ativo vão dentro dela)
   const PADRAO = { ouro: { s: '^BVSP', n: 'Ibovespa' }, azul: { s: 'BRL=X', n: 'Dólar (USD/BRL)' } };
   const ID = /^[a-z0-9]{2,12}$/, SYM = /^[\w^.=\-]{1,24}$/;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,8 +80,7 @@ globalThis.MMDeskLink = (() => {
   }
 
   function desenhar(id) {
-    const d = nos[id]; if (!d) return;
-    if (id === 'nativo' || id === 'jade') return desenharOutra(id, d);
+    const d = nos[id]; if (!d || id !== 'grafico') return;
     const cor = corDe(est, id), alvo = cor === 'nenhum' ? est.sim.ouro : est.sim[cor];
     d.dataset.mv = cor;
     d.querySelector('.mv-t').textContent = alvo.n;
@@ -97,47 +96,7 @@ globalThis.MMDeskLink = (() => {
         if (r) head.insertBefore(r, head.querySelector('.mv-cheio'));
       }).catch(() => {});
     }
-    const fx = body.querySelector('.mv-faixa');
-    if (visivel(nos.nativo)) { if (fx) fx.hidden = true; } else { if (fx) fx.hidden = false; faixa(alvo, fx); }
-  }
-  const manchetes = (alvo, n) => {
-    const termos = (window.MMRadar?.termos(alvo.s) || []).concat(alvo.n.split(' (')[0]).filter((x, i, a) => x && a.indexOf(x) === i);
-    return (typeof newsAll !== 'undefined' && Array.isArray(newsAll) ? newsAll : [])
-      .filter((x) => x && x.titulo && window.MMRadar?.cita(x.titulo, termos)).sort((a, b) => b.data - a.data).slice(0, n);
-  };
-  const hora = (ms) => { const d = new Date(ms), h = new Date(); return d.toDateString() === h.toDateString() ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
-  const fonteDe = (n) => (n.fonte === 'Google News' ? (n.veiculo || n.fonte) : n.fonte || '');
-  // Notícias do ativo e Jade (Mesa 2). A Jade não chama a IA aqui: o texto sai da cotação e da manchete do terminal;
-  // o Gemini só entra quando a pessoa clica numa pergunta.
-  function desenharOutra(id, d) {
-    const cor = corDe(est, id), alvo = cor === 'nenhum' ? est.sim.ouro : est.sim[cor];
-    d.dataset.mv = cor;
-    d.querySelector('.mv-t').textContent = (id === 'jade' ? 'Jade · ' : 'Notícias · ') + alvo.n;
-    d.querySelector('.mv-cheio')?.remove();
-    const body = d.querySelector('.mv-body');
-    if (id === 'nativo') {
-      const lista = manchetes(alvo, 6), chave = alvo.s + ':' + lista.map((n) => n.link).join('|');
-      if (mostrado.nativo === chave) return; mostrado.nativo = chave;
-      body.innerHTML = lista.length
-        ? '<ul class="ms-news">' + lista.map((n) => `<li><a href="${esc(n.link || '#')}" target="_blank" rel="noopener"><span class="tt">${esc(n.titulo)}</span><span class="src">${esc(fonteDe(n))}</span><span class="hr">${hora(n.data)}</span></a></li>`).join('') + '</ul>'
-        : `<p class="mv-vazio">Nenhuma manchete recente do terminal cita ${esc(alvo.n)}.</p>`;
-      return;
-    }
-    const q = ctx?.quote?.(alvo.s), m = manchetes(alvo, 1)[0];
-    const chave = alvo.s + ':' + (q ? q.v + '/' + q.c : '-') + ':' + (m ? m.link : '');
-    if (mostrado.jade === chave) return; mostrado.jade = chave;
-    const M = globalThis.MMMesa2, valor = q && M ? M.preco(alvo.s, q.v) : '—', varp = q && M ? M.pct(q.c) : '';
-    const quando = q?.ts ? ' às ' + new Date(q.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '';
-    const mov = !q || q.c == null ? '' : q.c > 0 ? 'sobe' : q.c < 0 ? 'cai' : 'fica estável';
-    const frase = q ? `${esc(alvo.n)} ${mov} ${esc(varp)}, a ${esc(valor)}${esc(quando)}.` : `Sem cotação de ${esc(alvo.n)} agora.`;
-    const contexto = m ? ` Manchete mais recente: <a href="${esc(m.link || '#')}" target="_blank" rel="noopener">${esc(m.titulo)}</a> <span class="mv-src">(${esc(fonteDe(m))}, ${hora(m.data)})</span>.` : ' Nenhuma manchete do terminal cita o ativo agora.';
-    const nome = esc(alvo.n);
-    body.innerHTML = `<div class="mv-jade"><span class="mv-jade-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M9 12v1.5M15 12v1.5M12 3v4"/></svg></span>
-      <div><p class="mv-jade-t">${frase}${contexto}</p>
-      <div class="mv-perg"><button type="button" class="mv-chip" data-mv-pergunta="Por que ${nome} se mexeu hoje? Use as manchetes de agora.">Por que mexeu hoje?</button>
-      <button type="button" class="mv-chip" data-mv-pergunta="O que saiu nas notícias sobre ${nome} na última semana?">O que saiu na semana</button>
-      <button type="button" class="mv-chip" data-mv-pergunta="Explique de forma simples o que é ${nome} e o que costuma mexer com ele.">O que é e o que mexe</button></div>
-      <p class="mv-nota">Texto montado com a cotação e as manchetes do terminal. A Jade só responde quando você clica numa pergunta.</p></div></div>`;
+    faixa(alvo, body.querySelector('.mv-faixa'));
   }
   // notícias do ativo, discretas, embaixo do gráfico: até 3 manchetes do terminal que citam o ativo (sem chamar a Jade)
   function faixa(alvo, el) {
@@ -183,13 +142,11 @@ globalThis.MMDeskLink = (() => {
   }
 
   document.addEventListener('click', (e) => {
-    const p = e.target.closest('[data-mv-pergunta]');
-    if (p) { window.MMAssistente?.perguntarTexto ? window.MMAssistente.perguntarTexto(p.dataset.mvPergunta) : window.MMAssistente?.abrir?.(); return; }
     const ch = e.target.closest('[data-mv-cheio]');
     if (ch) { const cor = corDe(est, 'grafico'), a = cor === 'nenhum' ? est.sim.ouro : est.sim[cor]; window.openAssetChart?.(a.s, a.n, [{ s: a.s, n: a.n }], null, 'mesa'); }
   });
   // notícias novas chegam sem redesenhar a Mesa
-  setInterval(() => { if (rootAtual?.isConnected && !document.hidden) SEGUEM.forEach(desenhar); }, 60000);
+  setInterval(() => { if (rootAtual?.isConnected && !document.hidden) desenhar('grafico'); }, 60000);
 
   return { limpa, corDe, proxima, CORES, montar, pintar, clicou, decorar, trocarCor };
 })();
