@@ -129,6 +129,32 @@ function textoDoSSE(body) {
 }
 
 // /api/assistente: GET diz se está ligado; POST {pergunta, historico:[{p, r}]} responde
+/* Perguntas feitas à Jade (12/11/2026): guardadas SEM nome, e-mail ou conta, só para o administrador ver o que
+   mais perguntam (aba "Perguntas à Jade" em /admin). Antes de gravar, e-mails e números longos (CPF, telefone,
+   conta bancária) viram [e-mail] e [número]. Ficam 90 dias. Perguntas do administrador não entram.
+   A página /privacidade explica isso a quem usa. */
+const DIAS_PERGUNTAS = 90;
+let tabelaPerguntas = false;
+export function limparPergunta(t) {
+  return String(t || '')
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[e-mail]')
+    .replace(/\(?\d(?:[\d.\-\/() ]*\d)?/g, (m) => (m.replace(/\D/g, '').length >= 9 ? '[número]' : m))
+    .replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+async function guardarPergunta(env, pergunta, tela) {
+  const texto = limparPergunta(pergunta);
+  if (!texto) return;
+  if (!tabelaPerguntas) {
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS jade_perguntas (id INTEGER PRIMARY KEY, quando INTEGER NOT NULL, dia TEXT NOT NULL, tela TEXT NOT NULL, texto TEXT NOT NULL)').run();
+    tabelaPerguntas = true;
+  }
+  const agora = Date.now();
+  await env.DB.prepare('INSERT INTO jade_perguntas (quando, dia, tela, texto) VALUES (?, ?, ?, ?)')
+    .bind(agora, new Date(agora - 3 * 3600000).toISOString().slice(0, 10), String(tela || '').slice(0, 60), texto).run();
+  // de vez em quando apaga o que passou de 90 dias
+  if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM jade_perguntas WHERE quando < ?').bind(agora - DIAS_PERGUNTAS * 864e5).run();
+}
+
 export async function apiAssistente(req, env, u, gratis, fontes) {
   const c = await config(env);
   if (req.method === 'GET') return json({ ligado: !!c.gemini_key, limite: u.admin ? null : PERGUNTAS_DIA, assinante: !gratis });
@@ -149,6 +175,7 @@ export async function apiAssistente(req, env, u, gratis, fontes) {
   const ctx = String(b.contexto || '').slice(0, MAX_CONTEXTO).trim();
   const aba = String(b.tela || '').replace(/["\n]/g, ' ').slice(0, 60).trim();
   const perfil = limpaPerfil(b.perfil);
+  if (!u.admin) await guardarPergunta(env, pergunta, aba).catch((e) => console.error('perguntas da Jade:', e.message));
   const c0 = c;
   // lições do site sobre o assunto (o navegador acha e manda; o Gemini cita)
   const siteBruto = (Array.isArray(b.site) ? b.site : []).slice(0, 2).filter((x) => x && x.texto);
