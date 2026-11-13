@@ -183,3 +183,5 @@ body.light .m2-vidro::before{display:none}
 .m2 .m2-c-juros{overflow-y:auto;scrollbar-width:thin}
 @media (max-width:1300px){.m2-c-graf{height:420px}.m2-c-sel{height:420px}.m2-c-news{height:360px}}
 @media (max-width:760px){.m2>.m2-box{height:auto!important}.m2-c-graf{min-height:340px}.m2>.m2-c-sel{max-height:460px}.m2>.m2-c-juros{max-height:none;overflow:visible}}
+.m2-opc button span{text-align:left}
+.m2-opc button small{color:var(--text-3);font:600 10.5px 'JetBrains Mono',monospace;margin-left:4px}

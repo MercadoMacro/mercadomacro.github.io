@@ -1,4 +1,5 @@
 import { limitarConsumo } from './rate-limit.js';
+import { handleEuaCatalogo, handleEuaCotacoes } from './eua.js';
 // cors-proxy-worker.js  (v5: + /ind/bundle, /history)
 // Proxy com endpoint em LOTE (/quotes), cache de borda, endpoints dedicados (FRED, RSS)
 // e TRAVA DE ORIGEM: só o seu painel na Netlify (e localhost, para testes) pode usar.
@@ -967,6 +968,10 @@ const rotas = async (request, env, ctx) => {
     if (path === '/quotes') {
       return handleQuotes(url, ctx, cors);
     }
+
+    // ENDPOINT: /eua/catalogo e /eua/cotacoes (ações e ETFs americanos da Mesa 2; FXOpen com o Yahoo de reserva: eua.js)
+    if (path === '/eua/catalogo') return handleEuaCatalogo(cors);
+    if (path === '/eua/cotacoes') return handleEuaCotacoes(url, ctx, cors);
 
     // =========================================================
     // ENDPOINT: /calendar  (agenda econômica: TradingView, com ForexFactory de reserva)
