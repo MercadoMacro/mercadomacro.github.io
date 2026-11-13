@@ -1,0 +1,28 @@
+name: Teste Deriv
+on: { push: { branches: [teste-deriv] } }
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: |
+          cat > t.mjs <<'JS'
+          const pedir = (url, msg) => new Promise((ok) => {
+            const ws = new WebSocket(url); const t = setTimeout(() => { ok({ erro: 'tempo' }); try { ws.close(); } catch {} }, 20000);
+            ws.onopen = () => ws.send(JSON.stringify(msg));
+            ws.onmessage = (e) => { clearTimeout(t); ok(JSON.parse(e.data)); ws.close(); };
+            ws.onerror = (e) => { clearTimeout(t); ok({ erro: String(e.message || e.type) }); };
+          });
+          for (const url of ['wss://api.derivws.com/trading/v1/options/ws/public', 'wss://ws.derivws.com/websockets/v3?app_id=1089']) {
+            const r = await pedir(url, { active_symbols: 'brief' });
+            console.log('=== ' + url);
+            if (!r.active_symbols) { console.log(JSON.stringify(r).slice(0, 800)); continue; }
+            const l = r.active_symbols;
+            const por = {};
+            for (const a of l) { const k = (a.market || a.market_display_name) + ' / ' + (a.submarket || a.submarket_display_name); (por[k] ||= []).push(a.symbol + '=' + (a.display_name || a.underlying_symbol_name || '')); }
+            console.log('total', l.length, 'campos', Object.keys(l[0]).join(','));
+            for (const [k, v] of Object.entries(por)) console.log(k, v.length, v.slice(0, 60).join(' | '));
+          }
+          JS
+          node t.mjs
