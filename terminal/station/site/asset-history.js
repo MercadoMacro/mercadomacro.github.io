@@ -35,7 +35,7 @@ globalThis.MMAssetHistory = (() => {
     constructor(fetchHistory){this.fetchHistory=fetchHistory;this.cache=new Map();this.chart=null;this.generation=0;}
     destroy(){this.generation++;this.chart?.remove();this.chart=null;}
     async show(box,symbol,name,light,opts){
-      // opts.sutil (Mesa 2, 12/11/2026): sem grade, linha verde ou laranja conforme o período sobe ou cai
+      // opts.sutil (Mesa 2, 12/11/2026): sem grade, linha verde ou vermelha conforme o período sobe ou cai
       // opts.intraday: pontos de 5 ou 30 minutos (eixo com hora); opts.dias: quantos dias mostrar (padrão 93)
       const sutil=!!opts?.sutil,intra=!!opts?.intraday,serie=(v,o)=>intra?[...new Map(v.map(p=>[p.t+o,{time:p.t+o,value:p.c}])).values()].sort((a,b)=>a.time-b.time):seriesData(v,o);
       this.destroy();const generation=this.generation;box.innerHTML='<div class="wlc-load" role="status">Carregando histórico do ativo…</div>';
@@ -83,7 +83,7 @@ globalThis.MMAssetHistory = (() => {
           const subset=serie(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
           if(subset.length<2)throw Error('Sem dados suficientes para este período');
           shown=subset;line.setData(subset);this.chart.timeScale().fitContent();describe(shown.at(-1));
-          if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#34d399':'#fb923c';line.applyOptions({lineColor:c,topColor:sobe?'rgba(52,211,153,.16)':'rgba(251,146,60,.16)',bottomColor:'rgba(0,0,0,0)'});}
+          if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#22c55e':'#ef4444';line.applyOptions({lineColor:c,topColor:sobe?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',bottomColor:'rgba(0,0,0,0)'});}
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
         };
         box.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{try{render(+b.dataset.days);}catch{box.querySelector('.wlh-note').textContent='Sem dados suficientes para este período.';}}));
