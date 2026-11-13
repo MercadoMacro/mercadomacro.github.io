@@ -1,0 +1,27 @@
+# Teste da API pública da FXOpen (TickTrader), 13/11/2026: só leitura, sem chave. Roda ao enviar o ramo teste-fxopen.
+name: Teste FXOpen
+on:
+  push:
+    branches: [teste-fxopen]
+permissions:
+  contents: read
+jobs:
+  testar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Consultar endpoints públicos
+        run: |
+          B=https://ttlivewebapi.fxopen.net/api/v2/public
+          pega() { echo "=== $1"; curl -s -m 20 -D /tmp/h -o /tmp/b -w "HTTP %{http_code} · %{time_total}s · %{size_download} bytes\n" -H 'Accept: application/json' -H 'Origin: https://mercadomacro.com.br' "$B$1"; grep -i "access-control-allow-origin\|content-type\|cache-control" /tmp/h || true; head -c ${2:-1500} /tmp/b; echo; }
+          pega ""
+          pega "/symbol" 400
+          echo "--- quantos símbolos e exemplos"; python3 -c "import json;d=json.load(open('/tmp/b'));print(len(d));import collections;print(collections.Counter(x.get('MarginMode') or x.get('Type') or '?' for x in d).most_common(8));print([x.get('Symbol') for x in d][:400])" 2>&1 | head -c 6000; echo
+          pega "/tick/EURUSD%20XAUUSD%20USDBRL%20BTCUSD%20US500%20BRENT%20NGAS%20XAGUSD" 3000
+          pega "/ticker/EURUSD" 1500
+          pega "/level2/EURUSD?depth=1" 1500
+          T=$(($(date +%s)*1000))
+          pega "/quotehistory/EURUSD/M1/bars/bid?timestamp=$T&count=-5" 1500
+          pega "/quotehistory/XAUUSD/D1/bars/bid?timestamp=$T&count=-3" 1500
+          pega "/tradesession" 800
+          pega "/currency" 300
