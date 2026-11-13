@@ -14,6 +14,8 @@ const FEEDS = [
   // 09/11/2026, sugestões do Severino testadas: WSJ Markets e CoinDesk respondem; Proactive Investors, Nasdaq e
   // Seeking Alpha barram leitura automática (403 / "Just a moment...") e ficaram de fora
   { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9 },
+  // Reuters (13/11/2026, pedido do Dante): sem RSS próprio; vem pela busca do Google News (site:reuters.com, última hora)
+  { name: 'Reuters', url: 'https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A1h&hl=en-US&gl=US&ceid=US%3Aen', source: 'Reuters', weight: 9, gn: true },
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss', source: 'CoinDesk', weight: 6 },
   // RTTNews (10/11/2026, achado do Severino): é quem escreve as notícias de mercado do Nasdaq.com e tem RSS aberto
   // (o feed do Nasdaq barra leitura automática). Últimas, economia e câmbio; mesma fonte "RTTNews" na lista
@@ -258,9 +260,9 @@ async function fetchOneFeed(feed, fresco) {
 
       // Google News: "Manchete - Veículo" -> separa o veículo
       let veiculo = '';
-      if (feed.source === 'Google News') {
+      if (feed.source === 'Google News' || feed.gn) {
         const gm = titulo.match(/^(.*\S)\s+[-–—]\s+([^-–—]{2,60})$/);
-        if (gm) { titulo = gm[1]; veiculo = gm[2].trim(); }
+        if (gm) { titulo = gm[1]; veiculo = feed.gn ? '' : gm[2].trim(); }
       }
       if (feed.widget) veiculo = decodeEntities((itemContent.match(/<category>([^<]*)<\/category>/) || [])[1] || '');
 
