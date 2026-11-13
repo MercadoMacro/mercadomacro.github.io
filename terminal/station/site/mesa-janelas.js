@@ -296,7 +296,8 @@ globalThis.MMDeskWindows = (() => {
 
   // os botões existem em dois lugares: na barra da Mesa (celular/sem a faixa) e na faixa de frases do topo (computador)
   function rotulos() {
-    document.querySelectorAll('[data-mj-montar]').forEach((b) => { b.textContent = editando ? 'Concluir' : 'Montar mesa'; b.classList.toggle('on', editando); });
+    // a Mesa 2 (mesa2.js, 12/11/2026) tem painel próprio, sem janelas soltas: "Montar mesa" só aparece na Mesa 1
+    document.querySelectorAll('[data-mj-montar]').forEach((b) => { b.textContent = editando ? 'Concluir' : 'Montar mesa'; b.classList.toggle('on', editando); b.hidden = modo === '2'; });
     document.querySelectorAll('[data-mj-restaurar]').forEach((b) => { b.hidden = !editando; });
     document.querySelectorAll('[data-mj-modo]').forEach((b) => { const on = b.dataset.mjModo === modo; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
   }
