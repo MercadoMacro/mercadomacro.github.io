@@ -4,20 +4,18 @@ jobs:
   t:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
       - run: |
-          git fetch -q origin main && git show origin/main:terminal/fundamentos/index.json > /tmp/fund.json
-          python3 terminal/insiders/gerar_insiders.py /tmp/ins /tmp/fund.json
+          pip install -q pandas
+          for a in 2024 2025 2026; do curl -sSfLO https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/VLMO/DADOS/vlmo_cia_aberta_$a.zip && unzip -oq vlmo_cia_aberta_$a.zip; done
           python3 - <<'PY'
-          import json
-          d = json.load(open('/tmp/ins/insiders.json'))
-          print('meses', d['meses'][:2], d['meses'][-3:], 'parciais', d['parciais'], 'entregas', d['entregas'][-4:])
-          print('ibov', d['ibov'][-4:])
-          for g in ('ctl','adm'):
-              print(g, 'ultimos', d['tot'][g][-6:], 'soma liq bi', round(sum(c-v for c,v in d['tot'][g])/1e6,1))
-          print('setores', d['setores'])
-          e = d['emp']; print('emp', len(e), e[:3])
-          print('ops', d['ops'][:5])
+          import pandas as pd
+          pd.set_option('display.width', 250); pd.set_option('display.max_columns', 40)
+          d = pd.concat([pd.read_csv(f'vlmo_cia_aberta_con_{a}.csv', sep=';', encoding='latin1', dtype=str) for a in (2024, 2025, 2026)])
+          n = d[d['Tipo_Cargo'].isna()]
+          print('NaN cargo', len(n), n['Tipo_Movimentacao'].value_counts().to_dict(), n['Tipo_Empresa'].value_counts().to_dict())
+          print('empresas com NaN', n['Nome_Companhia'].nunique())
+          for c in d['Tipo_Cargo'].dropna().unique(): print('cargo:', c)
+          x = d[d['Tipo_Movimentacao'].str.contains('Recompra|Tesour|Cancel', case=False, na=False)]
+          print('movs recompra/tesouraria', x['Tipo_Movimentacao'].value_counts().to_dict())
+          print(x.head(3).T.to_string())
           PY
-      - uses: actions/upload-artifact@v4
-        with: { name: insiders, path: /tmp/ins/insiders.json }
