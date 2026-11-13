@@ -155,7 +155,12 @@ globalThis.MMDeskWindows = (() => {
         // janela nova entra onde a grade de antes a punha (as do vínculo ficam logo abaixo dos Destaques) e empurra as outras
         const cards = itens.cards, novas = faltam.map((b) => b.dataset.mesaBlock);
         const VINC = { grafico: [0, 6, 50] }; // coluna, largura e altura iniciais
-        for (const id of novas) { const m = med[id], v = VINC[id]; itens[id] = v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m; }
+        for (const id of novas) {
+          const m = med[id], v = VINC[id];
+          // tabela Cripto (Mesa 2, 12/11/2026): entra logo abaixo de "Futuros, juros e risco", na mesma coluna
+          if (id === 'cr' && itens.ou) { itens[id] = { x: itens.ou.x, w: itens.ou.w, h: 36, y: itens.ou.y + itens.ou.h }; continue; }
+          itens[id] = v ? { x: v[0], w: v[1], h: v[2], y: cards ? cards.y + cards.h : m.y } : m;
+        }
         itens = arruma(itens, novas);
       }
       itens = arruma(itens, faltam.length ? faltam.map((b) => b.dataset.mesaBlock) : null);
