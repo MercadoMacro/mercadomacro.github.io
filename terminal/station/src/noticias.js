@@ -3,19 +3,19 @@
    porque o Google recusa pedidos de tradução vindos de servidores. */
 const FEEDS = [
   // ============ INTERNACIONAIS PREMIUM ============
-  { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg', weight: 10 },
+  { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg', weight: 10, rapida: true },
   { name: 'Financial Juice', url: 'https://www.financialjuice.com/feed.ashx?xy=rss', source: 'Financial Juice', weight: 9 },
-  { name: 'ForexLive', url: 'https://www.forexlive.com/feed', source: 'ForexLive', weight: 9 },
+  { name: 'ForexLive', url: 'https://www.forexlive.com/feed', source: 'ForexLive', weight: 9, rapida: true },
   { name: 'Zero Hedge', url: 'https://cms.zerohedge.com/fullrss2.xml', source: 'Zero Hedge', weight: 8 },
   { name: 'FXStreet', url: 'https://www.fxstreet.com/rss/news', source: 'FXStreet', weight: 7 },
   { name: 'FX Markets', url: 'https://www.fx-markets.com/feeds/rss', source: 'FX Markets', weight: 7 },
   { name: 'ING Think', url: 'https://rss.app/feeds/9lbwhwyNi8qv0X5h.xml', source: 'ING Think', weight: 7 },
-  { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC', weight: 7 },
+  { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC', weight: 7, rapida: true },
   // 09/11/2026, sugestões do Severino testadas: WSJ Markets e CoinDesk respondem; Proactive Investors, Nasdaq e
   // Seeking Alpha barram leitura automática (403 / "Just a moment...") e ficaram de fora
-  { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9 },
+  { name: 'WSJ Markets', url: 'https://feeds.content.dowjones.io/public/rss/RSSMarketsMain', source: 'WSJ', weight: 9, rapida: true },
   // Reuters (13/11/2026, pedido do Dante): sem RSS próprio; vem pela busca do Google News (site:reuters.com, última hora)
-  { name: 'Reuters', url: 'https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A1h&hl=en-US&gl=US&ceid=US%3Aen', source: 'Reuters', weight: 9, gn: true },
+  { name: 'Reuters', url: 'https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A1h&hl=en-US&gl=US&ceid=US%3Aen', source: 'Reuters', weight: 9, gn: true, rapida: true },
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss', source: 'CoinDesk', weight: 6 },
   // RTTNews (10/11/2026, achado do Severino): é quem escreve as notícias de mercado do Nasdaq.com e tem RSS aberto
   // (o feed do Nasdaq barra leitura automática). Últimas, economia e câmbio; mesma fonte "RTTNews" na lista
@@ -31,8 +31,8 @@ const FEEDS = [
   { name: 'Seeking Alpha', url: 'https://seekingalpha.com/tag/wall-st-breakfast.xml', source: 'Seeking Alpha', weight: 6, honesto: true },
 
   // ============ BRASIL ============
-  { name: 'Valor', url: 'https://www.valor.com.br/rss', source: 'Valor Econômico', weight: 8 },
-  { name: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', source: 'InfoMoney', weight: 8 },
+  { name: 'Valor', url: 'https://www.valor.com.br/rss', source: 'Valor Econômico', weight: 8, rapida: true },
+  { name: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', source: 'InfoMoney', weight: 8, rapida: true },
   // Folha Mercado (09/11/2026): o feed vem em ISO-8859-1; lerFeed() converte para os acentos saírem certos
   { name: 'Folha Mercado', url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml', source: 'Folha', weight: 8 },
   { name: 'Investing BR', url: 'https://br.investing.com/rss/news.rss', source: 'Investing.com BR', weight: 7 },
@@ -212,7 +212,7 @@ async function lerFeed(response) {
   return decodificaFeed(new Uint8Array(await response.arrayBuffer()), response.headers.get('Content-Type') || '');
 }
 
-async function fetchOneFeed(feed, fresco) {
+async function fetchOneFeed(feed, fresco, ttl = 90) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -222,7 +222,7 @@ async function fetchOneFeed(feed, fresco) {
       headers: { 'User-Agent': feed.honesto ? 'MercadoMacro/1.0 (+https://mercadomacro.com.br)' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       signal: controller.signal,
       // fresco: lê direto da fonte, sem a cópia de 90 s guardada na borda (notícias em tempo real, 07/11/2026)
-      ...(fresco ? { cache: 'no-store' } : { cf: { cacheTtl: 90, cacheEverything: true } })
+      ...(fresco ? { cache: 'no-store' } : { cf: { cacheTtl: ttl, cacheEverything: true } })
     });
 
     if (!response.ok) { clearTimeout(timeout); return []; }
@@ -327,9 +327,14 @@ const CHAVE_ULTIMOS = 'https://cache.local/feeds-ultimos-v1';
 // Feed que falhar usa a última leitura boa (guardada num único item do cache, para não gastar pedidos).
 // Financial Juice publica manchete por manchete: o NewsRelay lê este feed direto a cada rodada (15 s),
 // sem esperar o servidor de notícias (que guarda cópias por até 2 a 3 minutos)
+// Desde 13/11/2026 também as fontes marcadas com rapida (Reuters, Bloomberg, WSJ, ForexLive, CNBC, InfoMoney, Valor),
+// com cópia de 30 s na borda (o relé roda a cada 15 s; lê cada site no máximo 2 vezes por minuto)
+export const FEEDS_RAPIDOS = FEEDS.filter((f) => f.rapida).map((f) => f.name);
 export async function noticiasRapidas() {
-  const fj = FEEDS.find((f) => f.source === 'Financial Juice');
-  return fj ? fetchOneFeed(fj, true) : [];
+  const l = await Promise.all(FEEDS.filter((f) => f.source === 'Financial Juice' || f.rapida)
+    .map((f) => fetchOneFeed(f, f.source === 'Financial Juice', 30)));
+  // 20 mais novas de cada (a lista do relé tem teto de 250)
+  return l.flatMap((x) => x.sort((a, b) => b.data - a.data).slice(0, 20));
 }
 
 export async function coletarNoticias(ctx) {

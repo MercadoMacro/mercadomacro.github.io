@@ -2,6 +2,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 export { NewsRelay } from './news-relay.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
+import { arquivarNoticias, limparArquivo, noticiasAntigas, arquivoParaJade, atrasoNoticias } from './noticias-arquivo.js';
 import { apiAlarmes, checarAlarmes } from './alarmes.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
@@ -201,6 +202,7 @@ export default {
         // de onde o assistente tira os dados de agora (assistente-dados.js): servidor de dados, cache de notícias, fluxo da B3
         api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx)).lista, fluxo: fluxoEstrangeiro,
         busca: (pergunta, onde) => buscaConteudo(env, pergunta, onde),
+        arquivo: (desde, termo) => arquivoParaJade(env, desde, termo), // manchetes guardadas da semana (noticias_hist)
       });
       // uso das abas (04/11/2026): soma 1 por aba aberta no total e por assinante (o /admin mostra quem está em qual aba); o administrador não conta
       if (p === '/api/uso' && req.method === 'POST') {
@@ -232,6 +234,12 @@ export default {
         return json({ manha: d.manha || null }, 200, { 'Cache-Control': 'no-store' });
       }
       if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx)).lista);
+      // notícias dos últimos 7 dias, aos poucos (botão "Ver notícias mais antigas" da aba Notícias)
+      if (p === '/api/noticias/antigas') {
+        const fontes = (url.searchParams.get('fontes') || '').split('|').map((f) => f.trim()).filter(Boolean);
+        const r = await noticiasAntigas(env, { antes: url.searchParams.get('antes'), termo: (url.searchParams.get('q') || '').slice(0, 80), fontes, max: 60 });
+        return json(r, 200, { 'Cache-Control': 'private, max-age=30' });
+      }
       if (p === '/api/noticias') {
         // rapida: responde na hora com a lista guardada e renova em segundo plano (X-Cache: STALE avisa o navegador)
         const { lista, cache, falharam } = await noticiasCache(ctx, { rapida: true });
@@ -1327,6 +1335,8 @@ async function apiAdmin(req, env, acao, eu) {
     }
   }
   // perguntas feitas à Jade nos últimos 30 dias, sem nome nem conta (src/assistente.js, guardarPergunta)
+  // quanto tempo cada fonte leva entre publicar e aparecer no site (últimos 7 dias, src/noticias-arquivo.js)
+  if (acao === 'noticias-atraso' && req.method === 'GET') return json(await atrasoNoticias(env));
   if (acao === 'jade-perguntas' && req.method === 'GET') {
     try {
       const r = await env.DB.prepare('SELECT quando, dia, tela, texto FROM jade_perguntas WHERE quando >= ? ORDER BY quando DESC LIMIT 1000').bind(Date.now() - 30 * 864e5).all();
@@ -2002,16 +2012,9 @@ async function roboFechamentoFoto(req, env) {
    buscas (padrão 2000; 1.000 grátis por mês, depois US$ 0,75 por mil): no limite, a Jade responde sem a busca. */
 async function guardarNoticias(env, ctx) {
   const { lista } = await noticiasCache(ctx);
-  if (!lista || !lista.length) return;
-  await env.DB.prepare('CREATE TABLE IF NOT EXISTS noticias_hist (link TEXT PRIMARY KEY, titulo TEXT NOT NULL, fonte TEXT, data INTEGER NOT NULL, dia TEXT NOT NULL, resumo TEXT)').run();
-  const desde = Date.now() - 6 * 3600000;
-  const novas = lista.filter((n) => n.link && n.titulo && n.data >= desde).slice(0, 400);
-  for (let i = 0; i < novas.length; i += 50) {
-    await env.DB.batch(novas.slice(i, i + 50).map((n) => env.DB.prepare('INSERT OR IGNORE INTO noticias_hist (link, titulo, fonte, data, dia, resumo) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(n.link, String(n.titulo).slice(0, 300), String(n.fonte || ''), n.data, new Date(n.data - 3 * 3600000).toISOString().slice(0, 10), n.resumo ? String(n.resumo).slice(0, 400) : null)));
-  }
+  if (lista && lista.length) await arquivarNoticias(env, lista, 'lista'); // src/noticias-arquivo.js (só grava as novas)
   // guarda 180 dias (o índice da busca mantém os arquivos de cada dia)
-  if (new Date().getUTCHours() === 4 && new Date().getUTCMinutes() < 15) await env.DB.prepare('DELETE FROM noticias_hist WHERE data < ?').bind(Date.now() - 180 * 86400000).run();
+  if (new Date().getUTCHours() === 4 && new Date().getUTCMinutes() < 15) await limparArquivo(env);
 }
 async function buscaConteudo(env, pergunta, onde, teste = false) {
   if (!env.BUSCA) return { erro: 'busca não configurada' };
@@ -2607,6 +2610,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">E-mails</span></button>
   <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
   <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
+  <button type="button" role="tab" data-aba="atraso" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg><span class="rot">Atraso das notícias</span></button>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
 </nav>
 </aside><main>
@@ -2642,6 +2646,11 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
   <div class="ferr"><input id="jade-busca" type="search" placeholder="Filtrar perguntas" autocomplete="off" aria-label="Filtrar perguntas"></div>
   <div id="jade-tab"><p class="vazio">Carregando…</p></div>
+</section>
+<section data-p="atraso" hidden>
+  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Quanto tempo cada fonte leva entre publicar (horário do feed) e aparecer no site, nos últimos 7 dias. Só conta o que o site viu ao vivo (com alguém conectado), porque fora disso a leitura é a cada 15 minutos. <b>Típico</b> é a mediana (metade chega mais rápido que isso); <b>Nas piores</b> é o tempo que 90% não passam.</p>
+  <div class="kpis" id="atraso-res" style="margin-bottom:14px"></div>
+  <div id="atraso-tab"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="passe" hidden>
   <h2>Pedidos ao servidor de dados sem o passe de login</h2>
@@ -2893,7 +2902,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -2905,6 +2914,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
     if (n === 'jade') jade();
+    if (n === 'atraso') atraso();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
   }
   var JADE = [];
@@ -2930,6 +2940,19 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar as perguntas.</p>'; });
   }
   document.getElementById('jade-busca').addEventListener('input', jadeLista);
+  function tempo(ms){ var s = Math.round(ms / 1000); if (s < 60) return s + ' s'; var m = Math.round(s / 60); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+  function atraso(){
+    var tab = document.getElementById('atraso-tab'), res = document.getElementById('atraso-res');
+    fetch('/api/admin/noticias-atraso', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
+      var F = j.fontes || [];
+      res.innerHTML = [['Notícias guardadas (7 dias)', (j.semana || 0).toLocaleString('pt-BR')], ['Fontes medidas', F.length]]
+        .map(function(k){ return '<div class="kpi" style="cursor:default"><small>' + k[0] + '</small><strong>' + k[1] + '</strong></div>'; }).join('');
+      if (!F.length) { tab.innerHTML = '<p class="vazio">Ainda sem medição: ela começa a contar quando alguém fica com o site aberto.</p>'; return; }
+      tab.innerHTML = '<table class="t"><thead><tr><th>Fonte</th><th style="text-align:right">Típico</th><th style="text-align:right">Nas piores</th><th style="text-align:right">Em até 2 min</th><th style="text-align:right">Notícias</th></tr></thead><tbody>' + F.map(function(l){
+        return '<tr><td data-r="Fonte">' + esc(l.fonte) + '</td><td class="c" data-r="Típico" style="text-align:right">' + tempo(l.mediana) + '</td><td class="c" data-r="Nas piores" style="text-align:right">' + tempo(l.p90) + '</td><td class="c" data-r="Em até 2 min" style="text-align:right">' + Math.round(l.ate2min * 100) + '%</td><td class="c" data-r="Notícias" style="text-align:right">' + l.n.toLocaleString('pt-BR') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar a medição.</p>'; });
+  }
   function passe(){
     var tab = document.getElementById('passe-tab'), res = document.getElementById('passe-res');
     fetch('/api/admin/passe', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){

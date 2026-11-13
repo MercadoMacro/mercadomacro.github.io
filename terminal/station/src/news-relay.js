@@ -1,5 +1,6 @@
 // Uma coleta para todos os leitores; SQLite guarda o snapshot entre hibernações.
 import { noticiasRapidas } from './noticias.js';
+import { arquivarNoticias } from './noticias-arquivo.js';
 const SOURCE = 'https://news.cota-cotacao10.workers.dev/';
 const PERIOD = 15000, MAX_AGE = 48 * 3600000;
 export function cleanNews(value, now = Date.now()) {
@@ -72,6 +73,10 @@ export class NewsRelay {
       const payload=JSON.stringify(items);
       if(payload!==JSON.stringify(this.items))this.ctx.storage.sql.exec('INSERT INTO news_snapshot(id,payload,checked) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,checked=excluded.checked',payload,now);
       else this.ctx.storage.sql.exec('UPDATE news_snapshot SET checked=? WHERE id=1',now);
+      // arquivo da semana (13/11/2026): as que o relé acabou de ver, com a hora certa (via ao_vivo mede o atraso de cada fonte);
+      // na primeira rodada depois de acordar (última conferência há mais de 1 min) tudo parece novo, então entra como 'lista' (não conta para o atraso)
+      const novas=items.filter(n=>!before.has(n.link));
+      if(novas.length&&this.env?.DB)this.ctx.waitUntil(arquivarNoticias(this.env,novas,this.items.length&&now-this.checked<60000?'ao_vivo':'lista',now).catch(e=>console.error('arquivo de notícias:',e.message)));
       this.items=items;this.checked=now;
       for(const ws of this.sockets()) {
         const a=ws.deserializeAttachment();

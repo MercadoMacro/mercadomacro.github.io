@@ -63,3 +63,19 @@ body.nw3 #news-view > .nc-sep:first-child { margin-top:2px; }
 }
 @media (min-width: 901px) { .nw3-fechar, #nw3-fundo { display:none !important; } }
 body.nw3-fontes .aba-borda, body.nw3-fontes #ia-fab, body.nw3-fontes #fab-summary { visibility:hidden; }
+/* Notícias mais antigas (noticias-antigas.js, 13/11/2026) */
+.no-box { margin:18px 0 8px; }
+.no-box > .no-abrir { display:flex; margin:0 auto; gap:8px; align-items:center; }
+.no-cab { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+.no-cab b { font-size:14px; }
+.no-dia { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-3); margin:16px 0 4px; }
+.no-lista { list-style:none; margin:0; padding:0; }
+.no-item { display:flex; align-items:baseline; gap:10px; padding:7px 4px; border-bottom:1px solid var(--line); color:var(--text); text-decoration:none; font-size:13.5px; line-height:1.45; }
+.no-item:hover { background:var(--surface-2); }
+.no-item .no-h { flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--text-3); font-size:12px; }
+.no-item .nc-source { flex:0 0 auto; }
+.no-item .no-t { flex:1 1 auto; min-width:0; }
+.no-item.no-forte .no-t { font-weight:600; }
+.no-box .no-mais { display:block; margin:14px auto 0; }
+.no-msg { text-align:center; color:var(--text-3); font-size:12.5px; margin:12px 0 0; }
+@media (max-width: 600px) { .no-item { flex-wrap:wrap; gap:4px 8px; } .no-item .no-t { flex-basis:100%; } }
