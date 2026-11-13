@@ -5,12 +5,13 @@
   const dq = document.getElementById('ana-destaques');
   if (!wrap || !dq) return;
   const SECOES = [
+    // ordem (13/11/2026): primeiro quem está comprando e vendendo, depois juros, por último a análise avançada
     ['fluxo', 'Fluxo na B3', 'fa-right-left'],
-    ['fed', 'Fed', 'flag-us'],
-    ['copom', 'Copom', 'flag-br'],
+    ['ins', 'Insiders', 'fa-user-tie'],
     ['cot', 'Especuladores', 'fa-scale-balanced'],
     ['f13', 'Grandes fundos', 'fa-briefcase'],
-    ['ins', 'Insiders', 'fa-user-tie'],
+    ['fed', 'Fed', 'flag-us'],
+    ['copom', 'Copom', 'flag-br'],
     ['mercado', 'Análise avançada', 'fa-chart-line']
   ];
   const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'fed', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13', 'ana-sec-ins': 'ins' };
