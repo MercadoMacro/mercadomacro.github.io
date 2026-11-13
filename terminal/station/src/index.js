@@ -976,6 +976,13 @@ const CHAVES_DADOS = {
   },
   // organização da Mesa 1 (a de sempre), no mesmo formato da Mesa 2 (chave mesa)
   mesa1: v => CHAVES_DADOS.mesa(v),
+  // Mesa 2 (13/11/2026): lista própria de cada aba do seletor de ativos (ordem, tirados e incluídos)
+  mesa2sel: v => {
+    if (!v || v.v !== 1 || !v.abas || typeof v.abas !== 'object' || Array.isArray(v.abas)) return false;
+    const e = Object.entries(v.abas);
+    return e.length <= 5 && e.every(([id, l]) => ['ind', 'com', 'jur', 'moe', 'cri'].includes(id) && Array.isArray(l) && l.length <= 60
+      && new Set(l).size === l.length && l.every(s => typeof s === 'string' && /^[\w^.=\-]{1,24}$/.test(s)));
+  },
   // progresso da aba Educação: lições feitas, respostas do quiz e a última aberta
   edu: v => {
     const id = k => /^[a-z0-9-]{1,40}$/.test(k), obj = o => o && typeof o === 'object' && !Array.isArray(o);
@@ -1014,6 +1021,7 @@ async function apiDados(req, env, u) {
   const cleanItems = items => items.map(x => x.n ? { s: x.s, n: x.n } : { s: x.s });
   const v = b.k === 'mesa' || b.k === 'mesa1' ? { v: 1, itens: Object.fromEntries(Object.entries(b.v.itens).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }])) }
     : b.k === 'edu' ? { feitas: b.v.feitas, quiz: b.v.quiz, ultima: b.v.ultima || null }
+    : b.k === 'mesa2sel' ? { v: 1, abas: Object.fromEntries(Object.entries(b.v.abas).map(([id, l]) => [id, l.slice()])) }
     : b.k === 'watchlists'
     ? { version: 1, lists: b.v.lists.map(l => ({ id: l.id, name: l.name.trim().replace(/\s+/g, ' '), items: cleanItems(l.items) })) }
     : cleanItems(b.v);
