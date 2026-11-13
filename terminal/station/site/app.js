@@ -4463,7 +4463,7 @@ window.__onTabSwitch = (tabId) => {
       if (on && !collapsed) return;
       document.body.classList.toggle('side-peek', on);
       document.body.classList.toggle('side-collapsed', on ? false : collapsed);
-    }, on ? 120 : 80);
+    }, on ? 120 : 2000);   // ao sair, espera 2 s para recolher (pedido do Dante, 13/11/2026): dá tempo de ir aos sub-itens
   };
   if (matchMedia('(hover: hover)').matches) {
     side.addEventListener('mouseenter', () => { if (collapsed) peek(true); });
