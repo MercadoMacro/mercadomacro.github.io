@@ -176,3 +176,10 @@ body.light .m2-vidro::before{display:none}
 .m2-at b{font-weight:600;font-size:13px}
 .m2-tb td.n{font-size:12.5px;padding-left:10px}
 .m2-tb thead th.n{padding-left:10px}
+
+/* alturas fixas (13/11/2026): trocar de aba no seletor (Juros tem menos ativos) encolhia a linha toda e o gráfico junto */
+.m2-c-graf,.m2-c-sel{height:470px;min-height:0;max-height:none}
+.m2-c-pulso,.m2-c-juros,.m2-c-news{height:410px;min-height:0}
+.m2 .m2-c-juros{overflow-y:auto;scrollbar-width:thin}
+@media (max-width:1300px){.m2-c-graf{height:420px}.m2-c-sel{height:420px}.m2-c-news{height:360px}}
+@media (max-width:760px){.m2>.m2-box{height:auto!important}.m2-c-graf{min-height:340px}.m2>.m2-c-sel{max-height:460px}.m2>.m2-c-juros{max-height:none;overflow:visible}}
