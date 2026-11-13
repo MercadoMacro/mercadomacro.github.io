@@ -596,7 +596,7 @@
     const q = s === 'BTC-BRL' ? btcReais() : cryptoView(s), has = q && q.v != null && isFinite(q.v);
     const ic = `<span class="ms-mk" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="${cor}"/><text x="8" y="${l.length > 1 ? 10.9 : 11.6}" text-anchor="middle" font-size="${l.length > 1 ? 6.6 : 9.6}" font-weight="700" fill="#fff" font-family="Arial, sans-serif">${l}</text></svg></span>`;
     const tit = s === 'BTC-BRL' ? 'Bitcoin em reais, calculado: Bitcoin em dólar × dólar em reais. A variação junta a do Bitcoin (24h) e a do dólar no dia.' : cryptoTitle(s, n, q);
-    return `<tr data-sym="${esc(s)}" data-name="${esc(n)}" data-cr="${esc(s)}" class="${has && !q.live ? 'old' : ''}" title="${esc(tit)}">
+    return `<tr data-sym="${esc(s)}" data-name="${esc(n)}" data-cr="${esc(s)}" data-fonte="${q?.stream ? 'binance' : 'yahoo'}" class="${has && !q.live ? 'old' : ''}" title="${esc(tit)}">
       <td class="nm">${ic}${esc(n)}</td>
       <td class="px">${has ? (s === 'BTC-BRL' ? 'R$ ' : '') + nf(q.v, q.v < 2 ? 4 : 2) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
@@ -604,7 +604,7 @@
     </tr>`;
   }
   function criptoTbHTML() {
-    return `<section class="ms-box ms-tb" data-tb="cr"><div class="ms-head"><h3>Cripto</h3><span class="sp"></span><span class="ms-hsub" title="Variação das últimas 24 horas. Cotações em dólar; a Binance cota em USDT, que acompanha o dólar.">em US$ · 24h</span></div>
+    return `<section class="ms-box ms-tb" data-tb="cr"><div class="ms-head"><h3>Cripto</h3><span class="sp"></span><span class="ms-hsub${cryptoEnabled ? ' ms-live-status' : ''}" title="Variação das últimas 24 horas. Cotações em dólar; a Binance cota em USDT, que acompanha o dólar.">em US$ · 24h</span></div>
       <table><tbody>${CRIPTO_TB.map(criptoLinha).join('')}</tbody></table></section>`;
   }
   function paintCrypto(event) {
@@ -617,7 +617,7 @@
       const q = brl ? btcReais() : cryptoView(def[0]), has = q && q.v != null && isFinite(q.v); if (!has) continue;
       const px = tr.querySelector('.px'), ch = tr.querySelector('.ch'), tm = tr.querySelector('.tm');
       px.textContent = (brl ? 'R$ ' : '') + nf(q.v, q.v < 2 ? 4 : 2); ch.textContent = pct(q.c); ch.className = 'ch ' + cls(q.c); tm.innerHTML = hhmm(q.ts);
-      tr.classList.remove('old'); if (!brl) tr.title = cryptoTitle(def[0], def[1], q);
+      tr.classList.remove('old'); if (!brl) { tr.title = cryptoTitle(def[0], def[1], q); tr.dataset.fonte = q.stream ? 'binance' : 'yahoo'; }
       if (event?.type === 'quote' && event.quote.direction) { px.classList.remove('ms-tick-up', 'ms-tick-down'); void px.offsetWidth; px.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down'); }
     }
     for(const [s,n]of CRYPTO){
@@ -633,7 +633,8 @@
     }
     const status=root.querySelector('.ms-live-status');if(status){
       const state=cryptoStream?.state(),count=state?.count||0;
-      status.textContent=count?'Binance · '+count+' pares em USDT · 24h · ao vivo':state?.status==='reconnecting'?'Cripto · reconectando · Yahoo periódico':state?.status==='connecting'||state?.status==='waiting'?'Cripto · conectando à Binance':'Cripto · Yahoo periódico';
+      // fica no topo da tabela Cripto: curto, para caber ao lado do título
+      status.textContent=count?'em US$ · 24h · ao vivo':state?.status==='reconnecting'?'em US$ · reconectando':state?.status==='connecting'||state?.status==='waiting'?'em US$ · conectando':'em US$ · a cada 2 min';
       status.classList.toggle('on',count>0);
     }
   }
@@ -949,6 +950,9 @@
   #mesa-root.ms-qb .ms-bar { display:none; }
   /* situação da Binance: só para leitor de tela (a barra de cima saiu em 29/10/2026) */
   .ms-live-status { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+  /* na tabela Cripto (12/11/2026) a situação aparece no topo, ao lado do título */
+  .ms-hsub.ms-live-status { position:static; width:auto; height:auto; overflow:visible; clip:auto; clip-path:none; }
+  .ms-hsub.ms-live-status.on { color:var(--pos); }
   .qb-ms { margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding-left:12px; font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .qb-ms[hidden] { display:none; }
   .qb-ms.busy .qb-mn-r svg { animation:spin 1s linear infinite; }
