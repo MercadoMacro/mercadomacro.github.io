@@ -4,8 +4,8 @@
       fundamentos de empresas da B3, fluxo do estrangeiro, notícias e agenda).
    Tudo vem das mesmas fontes do site (servidor de dados shrill-meadow, arquivos dos robôs no GitHub, cache de notícias).
    Valor que falhar volta como "sem dado"; nada é inventado. */
-let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null, busca = null, temAula = false;
-export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; busca = u.busca || null; temAula = !!u.temAula; }
+let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null, busca = null, temAula = false, arquivo = null;
+export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; busca = u.busca || null; temAula = !!u.temAula; arquivo = u.arquivo || null; }
 
 // perfil que o navegador manda (nível, watchlist com os nomes de cada ativo, assuntos frequentes): só o que é seguro
 export function limpaPerfil(p) {
@@ -265,13 +265,15 @@ async function radar(horas) {
 
 // ---------------- notícias e agenda ----------------
 async function buscaNoticias(termo, horas) {
-  const h = Math.min(Math.max(+horas || 12, 1), 48);
+  // até 48 h vem da lista ao vivo; de 49 h a 7 dias, das manchetes guardadas (13/11/2026)
+  const h = Math.min(Math.max(+horas || 12, 1), arquivo ? 168 : 48);
   const de = Date.now() - h * 3600000;
   const tira = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const pal = tira(termo).split(/\s+/).filter((w) => w.length > 2);
-  const lista = (await noticias()).filter((n) => n && n.titulo && +n.data >= de)
+  const base = h > 48 ? await arquivo(de, termo).catch(() => []) : await noticias();
+  const lista = (base || []).filter((n) => n && n.titulo && +n.data >= de)
     .filter((n) => !pal.length || pal.some((w) => tira(n.titulo + ' ' + (n.trecho || '')).includes(w)))
-    .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0) || +b.data - +a.data).slice(0, 15);
+    .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0) || +b.data - +a.data).slice(0, h > 48 ? 25 : 15);
   return { horas: h, total: lista.length, manchetes: lista.map((n) => ({ quando: brt(+n.data), fonte: n.fonte, titulo: n.titulo, trecho: n.trecho ? String(n.trecho).slice(0, 200) : undefined })) };
 }
 async function agenda(dias, todos) {
@@ -293,11 +295,11 @@ export const FERRAMENTAS = [{
       parameters: { type: 'object', properties: { ticker: { type: 'string', description: 'Código da B3, como PETR4' } }, required: ['ticker'] } },
     { name: 'fluxo_estrangeiro', description: 'Saldo do investidor estrangeiro na B3 (R$ mil): último dia disponível, mês e ano.', parameters: { type: 'object', properties: {} } },
     { name: 'noticias', description: 'Manchetes recentes do terminal, opcionalmente filtradas por palavras.',
-      parameters: { type: 'object', properties: { termo: { type: 'string', description: 'Palavras para filtrar; vazio = as mais importantes' }, horas: { type: 'number', description: '1 a 48, padrão 12' } } } },
+      parameters: { type: 'object', properties: { termo: { type: 'string', description: 'Palavras para filtrar; vazio = as mais importantes' }, horas: { type: 'number', description: '1 a 168 (7 dias), padrão 12; acima de 48 usa as manchetes guardadas' } } } },
     { name: 'resumo_semanal', description: 'O Resumo semanal escrito pela equipe do Mercado Macro (o que marcou a semana nos mercados).', parameters: { type: 'object', properties: {} } },
     { name: 'radar_watchlist', description: 'Radar da watchlist de quem pergunta: cotação de cada ativo e as manchetes recentes que citam cada um. Use para perguntas sobre "minha watchlist", "meus ativos" ou "meu radar".',
       parameters: { type: 'object', properties: { horas: { type: 'number', description: '1 a 48, padrão 24' } } } },
-    { name: 'buscar_conteudo', description: 'Busca por sentido (AI Search) nas aulas da aba Educação do Mercado Macro e no histórico de notícias guardado pelo terminal (um arquivo por dia, desde 11/11/2026). Use para explicar conceitos do jeito das aulas do site (e indicar a aula) e para perguntas sobre o que saiu nas notícias em dias ou semanas anteriores. Para manchetes das últimas 48 horas, use a ferramenta noticias.',
+    { name: 'buscar_conteudo', description: 'Busca por sentido (AI Search) nas aulas da aba Educação do Mercado Macro e no histórico de notícias guardado pelo terminal (um arquivo por dia, desde 11/11/2026). Use para explicar conceitos do jeito das aulas do site (e indicar a aula) e para perguntas sobre o que saiu nas notícias em dias ou semanas anteriores. Para manchetes dos últimos 7 dias, use a ferramenta noticias (horas até 168).',
       parameters: { type: 'object', properties: { pergunta: { type: 'string', description: 'O que procurar, em português' }, onde: { type: 'string', enum: ['noticias', 'aulas'], description: 'Padrão: noticias. Use aulas só para conceitos, quando a mensagem não trouxer o bloco Conteúdo do próprio Mercado Macro.' } }, required: ['pergunta'] } },
     { name: 'agenda', description: 'Agenda econômica (Brasil, EUA, Europa, China) a partir de hoje, com previsão, anterior e resultado.',
       parameters: { type: 'object', properties: { dias: { type: 'number', description: '1 a 7' }, todos: { type: 'boolean', description: 'true inclui eventos de impacto baixo e médio' } } } },
