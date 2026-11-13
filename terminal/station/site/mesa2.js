@@ -116,15 +116,21 @@ globalThis.MMMesa2 = (() => {
 
   // gráfico: preço grande + gráfico diário limpo (asset-history.js no modo sutil)
   // períodos do gráfico: o servidor de dados devolve 1 dia (5 min), 5 dias (30 min), 1 mês e 1 ano (diários)
-  const PERIODOS = [['1D', '1d', true, 2], ['5D', '5d', true, 8], ['1M', '1mo', false, 31], ['1A', '1y', false, 366]];
+  // (13/11/2026, como o gráfico do MSN) 3M, desde o começo do ano, 3 e 5 anos e todo o histórico; YTD conta os dias do ano
+  const diasAno = () => Math.ceil((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 1)) / 864e5) + 1;
+  const PERIODOS = [['1D', '1d', true, 2], ['5D', '5d', true, 8], ['1M', '1mo', false, 31], ['3M', '3mo', false, 93], ['YTD', 'ytd', false, 0],
+    ['1A', '1y', false, 366], ['3A', '5y', false, 1096], ['5A', '5y', false, 1827], ['Máx', 'max', false, 100000]];
+  const NOME_PER = { '1D': 'hoje', '5D': 'em 5 dias', '1M': 'em 1 mês', '3M': 'em 3 meses', YTD: 'no ano', '1A': 'em 1 ano', '3A': 'em 3 anos', '5A': 'em 5 anos', 'Máx': 'em todo o histórico' };
   const PER_KEY = 'mm_m2_per_v1';
   let per = ler(PER_KEY, '5D'); if (!PERIODOS.some((p) => p[0] === per)) per = '5D';
   const viewers = {};
   let grafNo = null, grafSym = null;
   function graficoHTML() {
     const q = api.q(sel.s);
-    return `${cab(`Gráfico · <span class="m2-gnome">${esc(sel.n)}</span>`, 'ouro', `<span class="m2-per" role="group" aria-label="Período do gráfico">${PERIODOS.map(([r]) => `<button type="button" data-m2-per="${r}" aria-pressed="${r === per}">${r}</button>`).join('')}</span><button type="button" class="m2-ic" data-m2-cheio aria-label="Abrir em tela cheia" title="Abrir em tela cheia"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`)}
-      <div class="m2-preco"><b class="num" data-m2-px="${esc(sel.s)}">${preco(sel.s, q).replace(/^(R\$|US\$) /, '')}</b><span class="m2-var ${lado(q?.c)}" data-m2-ch="${esc(sel.s)}">${seta(q?.c)} ${api.pct(q?.c)}</span><small>${esc(unidade(sel.s, sel.n))}</small></div>
+    return `${cab(`Gráfico · <span class="m2-gnome">${esc(sel.n)}</span>`, 'ouro', '<button type="button" class="m2-ic" data-m2-cheio aria-label="Abrir em tela cheia" title="Abrir em tela cheia"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>')}
+      <div class="m2-preco"><b class="num" data-m2-px="${esc(sel.s)}">${preco(sel.s, q).replace(/^(R\$|US\$) /, '')}</b><span class="m2-var ${lado(q?.c)}" data-m2-ch="${esc(sel.s)}">${seta(q?.c)} ${api.pct(q?.c)}</span><small>${esc(unidade(sel.s, sel.n))}</small>
+        <span class="m2-pervar" data-m2-pervar></span></div>
+      <div class="m2-per-linha"><span class="m2-per" role="group" aria-label="Período do gráfico">${PERIODOS.map(([r]) => `<button type="button" data-m2-per="${r}" aria-pressed="${r === per}">${r}</button>`).join('')}</span><span class="m2-hover num" data-m2-hover aria-live="off"></span></div>
       <div class="m2-graf-slot"></div>`;
   }
   function montarGrafico(box) {
@@ -139,7 +145,11 @@ globalThis.MMMesa2 = (() => {
     if (!viewers[r]) return;
     Object.entries(viewers).forEach(([k, v]) => { if (k !== r) v.destroy(); });
     const claro = document.documentElement.dataset.theme === 'light' || document.body.classList.contains('light');
-    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias }).catch(() => {});
+    const box2 = () => root?.querySelector('[data-m2="grafico"]');
+    // variação do período ao lado do preço; ao passar o mouse, a data e o valor do ponto (e quanto mudou desde o começo)
+    const aoPeriodo = (p) => { const el = box2()?.querySelector('[data-m2-pervar]'); if (el) { el.className = 'm2-pervar ' + lado(p.variacao); el.textContent = `${api.pct(p.variacao)} ${NOME_PER[per]}`; } };
+    const aoMover = (p) => { const el = box2()?.querySelector('[data-m2-hover]'); if (el) el.textContent = p ? `${p.data} · ${api.nf(p.valor, Math.abs(p.valor) >= 10000 ? 0 : api.dec(p.valor))} · ${api.pct(p.desde)} desde o início` : ''; };
+    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), aoPeriodo, aoMover }).catch(() => {});
   }
 
 

@@ -58,31 +58,45 @@ globalThis.MMAssetHistory = (() => {
         box.querySelector('.wlh-caption').textContent='Fechamentos diários · Yahoo Finance';
         box.querySelector('.wlh-note').textContent='Até '+date(all.at(-1).t,off)+' · Arraste para navegar; use o zoom para aproximar. Dados diários, sem atualização em tempo real.';
         const text=light?'#46526a':'#a7b1c3',grid=sutil?'rgba(0,0,0,0)':light?'#e5e7eb':'#1c2740',background=sutil?'rgba(0,0,0,0)':light?'#ffffff':'#0e1524';
+        // modo sutil (Mesa 2, 13/11/2026, no estilo do gráfico do MSN): escala à esquerda, só linhas horizontais tracejadas,
+        // datas em português ("mar. de 2026", "13 de out.", "14:30")
+        const MES=['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+        const quando=t=>typeof t==='number'?new Date(t*1000):typeof t==='string'?new Date(t+'T12:00:00Z'):new Date(Date.UTC(t.year,t.month-1,t.day,12));
+        const marca=(t,tipo)=>{const d=quando(t),dia=d.getUTCDate(),m=MES[d.getUTCMonth()],a=d.getUTCFullYear();
+          if(tipo===0)return String(a);if(tipo===1)return m+' de '+a;if(tipo===2)return intra||(opts?.dias||93)<=40?dia+' de '+m:String(dia);return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');};
+        const tracejado=light?'rgba(15,23,42,.09)':'rgba(255,255,255,.08)';
         this.chart=L.createChart(host,{
           autoSize:true,
           layout:{background:{type:'solid',color:background},textColor:text,attributionLogo:true},
-          grid:{vertLines:{color:grid},horzLines:{color:grid}},
-          rightPriceScale:{borderColor:grid,...(sutil?{borderVisible:false,scaleMargins:{top:.12,bottom:.04}}:{})},timeScale:{borderColor:grid,timeVisible:intra,...(sutil?{borderVisible:false}:{})},
+          grid:sutil?{vertLines:{visible:false},horzLines:{color:tracejado,style:L.LineStyle.Dashed}}:{vertLines:{color:grid},horzLines:{color:grid}},
+          rightPriceScale:{borderColor:grid,...(sutil?{visible:false}:{})},
+          ...(sutil?{leftPriceScale:{visible:true,borderVisible:false,scaleMargins:{top:.14,bottom:.06}}}:{}),
+          timeScale:{borderColor:grid,timeVisible:intra,...(sutil?{borderVisible:false,tickMarkFormatter:marca,fixLeftEdge:true,fixRightEdge:true}:{})},
           localization:{locale:'pt-BR',dateFormat:'dd/MM/yyyy',...(sutil?{priceFormatter:p=>p.toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(p)>=1000?0:Math.abs(p)>=10?2:4})}:{})},
           handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
           handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},
-          crosshair:{mode:L.CrosshairMode.Normal}
+          crosshair:sutil?{mode:L.CrosshairMode.Magnet,vertLine:{style:L.LineStyle.Dashed,labelVisible:false},horzLine:{visible:false,labelVisible:false}}:{mode:L.CrosshairMode.Normal}
         });
         const precision=all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<1)?6:all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<10)?4:2;
         const line=this.chart.addSeries(L.AreaSeries,{
           lineColor:'#4d9eff',topColor:light?'rgba(77,158,255,.18)':'rgba(77,158,255,.25)',bottomColor:'rgba(77,158,255,0)',
-          lineWidth:2,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)}
+          lineWidth:2,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)},
+          ...(sutil?{priceScaleId:'left',lastValueVisible:false,priceLineVisible:false,crosshairMarkerRadius:4}:{})
         });
         let shown=[];
         const describe=p=>{legend.textContent=p?name+' · '+displayDay(p.time)+' · '+p.value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:precision}):name;};
+        // opts.aoMover(ponto | null): o ponto sob o mouse (data e valor) e a variação desde o começo do período
+        const rotulo=t=>{const d=quando(t);return intra?d.getUTCDate()+' de '+MES[d.getUTCMonth()]+', '+marca(t,3):d.getUTCDate()+' de '+MES[d.getUTCMonth()]+' de '+d.getUTCFullYear();};
         this.chart.subscribeCrosshairMove(param=>{
           const p=param.time&&param.seriesData?.get(line);
           describe(p&&typeof p.value==='number'?{time:param.time,value:p.value}:shown.at(-1));
+          if(opts?.aoMover)opts.aoMover(p&&typeof p.value==='number'&&shown.length?{data:rotulo(param.time),valor:p.value,desde:(p.value/shown[0].value-1)*100}:null);
         });
         const render=days=>{
           const subset=serie(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
           if(subset.length<2)throw Error('Sem dados suficientes para este período');
           shown=subset;line.setData(subset);this.chart.timeScale().fitContent();describe(shown.at(-1));
+          if(opts?.aoPeriodo)opts.aoPeriodo({inicio:subset[0].value,fim:subset.at(-1).value,variacao:(subset.at(-1).value/subset[0].value-1)*100});
           if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#22c55e':'#ef4444';line.applyOptions({lineColor:c,topColor:sobe?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',bottomColor:'rgba(0,0,0,0)'});}
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
         };
