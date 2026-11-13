@@ -810,6 +810,7 @@
     const rolTw = {}; root.querySelectorAll('.ms-tw[data-vis]').forEach((t) => { rolTw[t.closest('[data-tb]')?.dataset.tb] = t.scrollTop; });
     // Mesa 2 (mesa2.js, 12/11/2026): painel próprio, sem a grade de tabelas nem as janelas da Mesa 1
     if (window.MMDeskWindows?.modo?.() === '2' && window.MMMesa2) {
+      if (window.MMMesa2.ocupado?.() && root.querySelector('.m2')) return; // editando a lista do seletor
       root.innerHTML = `<div class="ms-wrap ms-wrap-m2">${barraHTML()}${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}${window.MMMesa2.html(apiM2)}</div>`;
       window.MMMesa2.depois(root);
       const w2 = root.querySelector('.ms-wrap'); if (w2) w2.scrollTop = sc;

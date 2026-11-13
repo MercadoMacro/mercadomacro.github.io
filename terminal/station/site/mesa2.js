@@ -18,16 +18,64 @@ globalThis.MMMesa2 = (() => {
 
   /* ---------- listas ---------- */
   // abas do seletor: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo na Mesa 1)
-  function abas() {
-    const T = (ids) => api.TABLES.filter((t) => ids.includes(t.id)).flatMap((t) => t.rows.map((r) => ({ s: r[0], n: r[1], cc: r[2], d: r[3], tid: t.id })));
-    return [
-      { id: 'ind', t: 'Índices', l: T(['am', 'eu', 'as']) },
-      { id: 'com', t: 'Commodities', l: T(['co']).filter((r) => !r.s.startsWith('__x')) },
-      { id: 'jur', t: 'Juros', l: T(['ou']) },
-      { id: 'moe', t: 'Moedas', l: T(['dx', 'em']) },
-      { id: 'cri', t: 'Cripto', l: api.CRIPTO_TB.map((r) => ({ s: r[0], n: r[1], cc: '', d: 2, tid: 'cr' })) },
-    ];
+  // listas padrão de cada aba: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo
+  // na Mesa 1); a pessoa pode reordenar, tirar e pôr ativos (lista própria, guardada na conta: chave mesa2sel)
+  const ABAS = [['ind', 'Índices', ['am', 'eu', 'as']], ['com', 'Commodities', ['co']], ['jur', 'Juros', ['ou']], ['moe', 'Moedas', ['dx', 'em']], ['cri', 'Cripto', ['cr']]];
+  function catalogo() {
+    const L = [];
+    for (const t of api.TABLES) for (const r of t.rows) if (!r[0].startsWith('__x')) L.push({ s: r[0], n: r[1], cc: r[2], d: r[3], tid: t.id, grupo: t.t });
+    for (const r of api.CRIPTO_TB) L.push({ s: r[0], n: r[1], cc: '', d: 2, tid: 'cr', grupo: 'Cripto' });
+    const vistos = new Set(); return L.filter((x) => !vistos.has(x.s) && vistos.add(x.s));
   }
+  function abas() {
+    const C = catalogo(), por = new Map(C.map((x) => [x.s, x])), P = minhas.dados?.abas || {};
+    return ABAS.map(([id, t, tids]) => {
+      const padrao = C.filter((x) => tids.includes(x.tid));
+      const propria = Array.isArray(P[id]) ? P[id].map((s) => por.get(s)).filter(Boolean) : null;
+      return { id, t, l: propria || padrao, padrao, propria: !!propria };
+    });
+  }
+
+  /* ---------- lista própria do seletor: neste navegador e na conta (/api/conta/dados?k=mesa2sel), valendo a mais nova ---------- */
+  const LISTA_KEY = 'mm_m2_lista_v1', SYM = /^[\w^.=\-]{1,24}$/;
+  const limpaLista = (v) => {
+    const abasOk = {}; const src = v && v.v === 1 && v.abas && typeof v.abas === 'object' ? v.abas : {};
+    for (const [id] of ABAS) if (Array.isArray(src[id])) abasOk[id] = [...new Set(src[id].filter((s) => typeof s === 'string' && SYM.test(s)))].slice(0, 60);
+    return { v: 1, abas: abasOk };
+  };
+  let minhas = (() => { const e = ler(LISTA_KEY, null); return e && typeof e === 'object' ? { conta: e.conta || null, ts: +e.ts || 0, dados: limpaLista(e.dados) } : { conta: null, ts: 0, dados: null }; })();
+  let conta = null, listaCarregada = false, listaTimer = null;
+  async function carregarLista() {
+    if (listaCarregada) return; listaCarregada = true;
+    try {
+      const r = await fetch('/api/conta/dados?k=mesa2sel', { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) return;
+      const j = await r.json(); if (!Number.isSafeInteger(j.usuario)) return;
+      conta = j.usuario;
+      if (minhas.conta && minhas.conta !== conta) minhas = { conta, ts: 0, dados: null }; // outra conta já usou este navegador
+      if (j.v && (j.ts || 0) > (minhas.ts || 0)) { minhas = { conta, ts: j.ts, dados: limpaLista(j.v) }; gravar(LISTA_KEY, minhas); if (!editando) atualizar('seletor'); }
+      else if (minhas.dados && (minhas.ts || 0) > (j.ts || 0)) { minhas.conta = conta; enviarLista(); }
+    } catch (e) { /* fora da conta: fica só neste navegador */ }
+  }
+  async function enviarLista(denovo) {
+    if (!conta || !minhas.dados) return;
+    const ts = Math.max(Date.now(), (minhas.ts || 0) + 1);
+    try {
+      const r = await fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario: conta, k: 'mesa2sel', v: minhas.dados, ts }) });
+      if (r.ok) { minhas.ts = ts; gravar(LISTA_KEY, minhas); return; }
+      if (r.status === 409 && !denovo) { listaCarregada = false; await carregarLista(); }
+    } catch (e) { /* tenta na próxima mudança */ }
+  }
+  function salvarAba(id, syms) {
+    const d = limpaLista(minhas.dados || { v: 1, abas: {} }); d.abas[id] = syms; d.v = 1;
+    minhas = { conta: conta || minhas.conta, ts: Date.now(), dados: limpaLista(d) }; gravar(LISTA_KEY, minhas);
+    clearTimeout(listaTimer); listaTimer = setTimeout(() => enviarLista(), 1200);
+  }
+  function restaurarAba(id) {
+    const d = limpaLista(minhas.dados || { v: 1, abas: {} }); delete d.abas[id];
+    minhas = { conta: conta || minhas.conta, ts: Date.now(), dados: d }; gravar(LISTA_KEY, minhas);
+    clearTimeout(listaTimer); listaTimer = setTimeout(() => enviarLista(), 1200);
+  }
+
   // [símbolo, nome, marca: país, par de moedas ou tabela (ícone)]
   const PULSO = [['^BVSP', 'Ibovespa', 'BR'], ['^GSPC', 'S&P 500', 'US'], ['^IXIC', 'Nasdaq', 'US'], ['^DJI', 'Dow Jones', 'US'], ['BRL=X', 'Dólar', 'USD/BRL'],
     ['BZ=F', 'Brent', 'co'], ['GC=F', 'Ouro', 'co'], ['BTC-USD', 'Bitcoin', 'cr'], ['^TNX', 'Treasury 10a', 'US']];
@@ -88,18 +136,56 @@ globalThis.MMMesa2 = (() => {
   }
 
 
+  let editando = false, adicionando = false, busca = '';
+  const lapis = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>';
   function seletorHTML() {
+    carregarLista();
     const A = abas(), atual = A.find((x) => x.id === aba) || A[0];
-    return `<div class="m2-tabs" role="tablist" aria-label="Grupos de ativos">${A.map((x) => `<button type="button" role="tab" data-m2-aba="${x.id}" aria-selected="${x.id === atual.id}">${x.t}</button>`).join('')}</div>
-      <div class="m2-lista"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="sk">Hoje</th><th class="n">Dia</th></tr></thead><tbody>${atual.l.map((r) => {
-        const q = api.q(r.s), sub = r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
-        return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="0">
-          <td><span class="m2-at">${api.marca(r.s, r.n, r.cc, r.tid)}<span><b>${esc(r.n)}</b><small>${esc(sub)}</small></span></span></td>
+    const tabs = `<div class="m2-tabs" role="tablist" aria-label="Grupos de ativos">${A.map((x) => `<button type="button" role="tab" data-m2-aba="${x.id}" aria-selected="${x.id === atual.id}">${x.t}</button>`).join('')}<span class="sp"></span>
+      <button type="button" class="m2-editar${editando ? ' on' : ''}" data-m2-editar aria-pressed="${editando}" title="${editando ? 'Concluir a edição da lista' : 'Organizar esta lista: arrastar, tirar e pôr ativos'}">${editando ? 'Concluir' : lapis + '<span>Editar</span>'}</button></div>`;
+    const linhas = atual.l.map((r) => {
+      const q = api.q(r.s), sub = r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
+      return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s && !editando ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="${editando ? -1 : 0}">
+          <td><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${api.marca(r.s, r.n, r.cc, r.tid)}<span><b>${esc(r.n)}</b><small>${esc(sub)}</small></span></span></td>
           <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td>
           <td class="sk">${spark(q?.sp, q?.c)}</td>
-          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${seta(q?.c)} ${api.pct(q?.c)}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
+          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${editando ? `<button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button>` : `${seta(q?.c)} ${api.pct(q?.c)}`}</td></tr>`;
+    }).join('');
+    const vazia = !atual.l.length ? `<tr class="m2-vaziar"><td colspan="4">Lista vazia. ${editando ? 'Use "Adicionar ativo" abaixo.' : 'Clique em Editar para pôr ativos.'}</td></tr>` : '';
+    let rodape = '';
+    if (editando) {
+      const ja = new Set(atual.l.map((r) => r.s)), q = busca.trim().toLowerCase();
+      const sem = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const opc = catalogo().filter((x) => !ja.has(x.s) && (!q || sem(x.n + ' ' + x.s + ' ' + x.grupo).includes(sem(q))));
+      const grupos = [...new Set(opc.map((x) => x.grupo))];
+      rodape = `<div class="m2-ed">${adicionando ? `<div class="m2-add"><input type="search" class="m2-busca" data-m2-busca placeholder="Buscar ativo da Mesa (ex.: DAX, ouro, peso)" value="${esc(busca)}" aria-label="Buscar ativo para adicionar" autocomplete="off">
+          <div class="m2-opc">${grupos.length ? grupos.map((g) => `<div class="m2-grp">${esc(g)}</div>${opc.filter((x) => x.grupo === g).map((x) => `<button type="button" data-m2-por="${esc(x.s)}">${api.marca(x.s, x.n, x.cc, x.tid)}<span>${esc(x.n)}</span><em>+</em></button>`).join('')}`).join('') : '<p class="m2-vazio">Nada encontrado.</p>'}</div></div>` : ''}
+        <div class="m2-ed-acoes"><button type="button" class="m2-btn" data-m2-adicionar aria-expanded="${adicionando}">${adicionando ? 'Fechar a lista' : '+ Adicionar ativo'}</button>${atual.propria ? '<button type="button" class="m2-link" data-m2-restaurar>Restaurar a lista padrão</button>' : ''}</div></div>`;
+    }
+    return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="sk">Hoje</th><th class="n">${editando ? '' : 'Dia'}</th></tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
   }
+  // ordem atual das linhas na tela (depois de arrastar)
+  const ordemTela = () => [...(root?.querySelectorAll('[data-m2="seletor"] tbody tr[data-m2-sym]') || [])].map((tr) => tr.dataset.m2Sym);
+  function mudouLista(syms) { salvarAba(aba, syms); trocar('seletor', seletorHTML()); }
+  // arrastar pela alça: a linha segue o ponteiro e troca de lugar com as vizinhas
+  let arrasto = null;
+  document.addEventListener('pointerdown', (e) => {
+    const h = e.target.closest?.('[data-m2-alca]'); if (!h || !root?.contains(h)) return;
+    e.preventDefault();
+    const tr = h.closest('tr'); arrasto = { tr, id: e.pointerId }; tr.classList.add('arrastando');
+    try { h.setPointerCapture(e.pointerId); } catch (err) { /* sem captura */ }
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!arrasto || e.pointerId !== arrasto.id) return;
+    const corpo = arrasto.tr.parentElement, irmas = [...corpo.querySelectorAll('tr[data-m2-sym]')].filter((x) => x !== arrasto.tr);
+    const depois = irmas.find((x) => { const b = x.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
+    if (depois) { if (arrasto.tr.nextElementSibling !== depois) corpo.insertBefore(arrasto.tr, depois); } else if (corpo.lastElementChild !== arrasto.tr) corpo.appendChild(arrasto.tr);
+    const lista = corpo.closest('.m2-lista'), b = lista.getBoundingClientRect();
+    if (e.clientY < b.top + 30) lista.scrollTop -= 8; else if (e.clientY > b.bottom - 30) lista.scrollTop += 8;
+  });
+  const soltar = (e) => { if (!arrasto || (e && e.pointerId !== arrasto.id)) return; arrasto.tr.classList.remove('arrastando'); arrasto = null; salvarAba(aba, ordemTela()); };
+  document.addEventListener('pointerup', soltar); document.addEventListener('pointercancel', soltar);
+
 
   // Pulso global: vidro fosco sobre um fundo de luzes; o brilho de cada quadro cresce com o tamanho do movimento
   // Pulso global (13/11/2026): verde e vermelho do site, fundo levemente tingido conforme o tamanho do movimento,
@@ -264,14 +350,40 @@ globalThis.MMMesa2 = (() => {
     const pb = e.target.closest('[data-m2-per]');
     if (pb) { per = pb.dataset.m2Per; gravar(PER_KEY, per); root.querySelectorAll('[data-m2-per]').forEach((b) => b.setAttribute('aria-pressed', String(b === pb))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
     const t = e.target.closest('[data-m2-aba]');
-    if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
+    if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); adicionando = false; busca = ''; trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
+    if (e.target.closest('[data-m2-editar]')) { editando = !editando; adicionando = false; busca = ''; trocar('seletor', seletorHTML()); return; }
+    const tirar = e.target.closest('[data-m2-tirar]');
+    if (tirar) { mudouLista(ordemTela().filter((s) => s !== tirar.dataset.m2Tirar)); return; }
+    const por = e.target.closest('[data-m2-por]');
+    if (por) { mudouLista([...ordemTela(), por.dataset.m2Por]); const l = root.querySelector('[data-m2="seletor"] tbody'); l?.lastElementChild?.scrollIntoView({ block: 'nearest' }); root.querySelector('[data-m2-busca]')?.focus(); return; }
+    if (e.target.closest('[data-m2-adicionar]')) {
+      adicionando = !adicionando; busca = ''; trocar('seletor', seletorHTML());
+      if (adicionando) { const lst = root.querySelector('[data-m2="seletor"] .m2-lista'); if (lst) lst.scrollTop = lst.scrollHeight; root.querySelector('[data-m2-busca]')?.focus({ preventScroll: true }); }
+      return;
+    }
+    if (e.target.closest('[data-m2-restaurar]')) { restaurarAba(aba); trocar('seletor', seletorHTML()); return; }
+    if (editando && e.target.closest('[data-m2="seletor"] tr')) return; // editando: clicar na linha não troca o gráfico
     const linha = e.target.closest('[data-m2-sym]');
     if (linha) { escolher(linha.dataset.m2Sym, linha.dataset.name); return; }
     if (e.target.closest('[data-m2-cheio]')) window.openAssetChart?.(sel.s, sel.n, [{ s: sel.s, n: sel.n }], null, 'mesa');
   });
+  // busca do "Adicionar ativo": redesenha só a lista de opções
+  document.addEventListener('input', (e) => {
+    const b = e.target.closest?.('[data-m2-busca]'); if (!b || !root?.contains(b)) return;
+    busca = b.value; const pos = b.selectionStart; trocar('seletor', seletorHTML());
+    const lst = root.querySelector('[data-m2="seletor"] .m2-lista'); if (lst) lst.scrollTop = lst.scrollHeight; // resultados à vista
+    const n = root.querySelector('[data-m2-busca]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (err) { /* ok */ } }
+  });
   document.addEventListener('keydown', (e) => {
+    // alça com o teclado: setas para cima e para baixo mudam a ordem
+    const h = e.target.closest?.('[data-m2-alca]');
+    if (h && root?.contains(h) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault(); const L = ordemTela(), s = h.closest('tr').dataset.m2Sym, i = L.indexOf(s), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+      if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; mudouLista(L);
+      root.querySelector(`[data-m2="seletor"] tr[data-m2-sym="${CSS.escape(s)}"] [data-m2-alca]`)?.focus(); return;
+    }
     if (!root || (e.key !== 'Enter' && e.key !== ' ')) return;
-    const linha = e.target.closest?.('tr[data-m2-sym]'); if (!linha || !root.contains(linha)) return;
+    const linha = e.target.closest?.('tr[data-m2-sym]'); if (!linha || !root.contains(linha) || editando || e.target.closest('input, button')) return;
     e.preventDefault(); escolher(linha.dataset.m2Sym, linha.dataset.name);
   });
   // a cada 2 s: preços e variações ao vivo (câmbio, cripto) sem redesenhar; relógio e barra do próximo evento
@@ -284,7 +396,7 @@ globalThis.MMMesa2 = (() => {
       if (el.textContent !== novo) { el.textContent = novo; el.classList.remove('m2-pisca'); void el.offsetWidth; el.classList.add('m2-pisca'); }
     });
     root.querySelectorAll('[data-m2-ch]').forEach((el) => {
-      const q = api.q(el.dataset.m2Ch); if (!q || !ok(q.c)) return;
+      const q = api.q(el.dataset.m2Ch); if (!q || !ok(q.c) || el.querySelector('button')) return; // editando: ali fica o ✕
       el.textContent = `${seta(q.c)} ${api.pct(q.c)}`; el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
     });
     root.querySelectorAll('[data-m2-pc]').forEach((el) => {
@@ -300,5 +412,7 @@ globalThis.MMMesa2 = (() => {
 
   const PAINEIS = { grafico: graficoHTML, seletor: seletorHTML, pulso: pulsoHTML, juros: jurosHTML, noticias: noticiasHTML, radar: radarHTML, evento: eventoHTML, fluxo: fluxoHTML };
   function atualizar(id) { if (root?.isConnected && api && PAINEIS[id]) trocar(id, PAINEIS[id]()); }
-  return { html, depois, escolher, atualizar, PULSO, abas: () => (api ? abas() : []) };
+  // editando a lista: a Mesa não redesenha a cada 2 minutos (o mesa.js pergunta antes)
+  const ocupado = () => !!(editando && root?.isConnected && !document.hidden);
+  return { html, depois, escolher, atualizar, ocupado, limpaLista, PULSO, abas: () => (api ? abas() : []) };
 })();

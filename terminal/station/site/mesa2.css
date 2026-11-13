@@ -133,3 +133,32 @@ body.light .m2-vidro::before{display:none}
 .m2-colunas rect.up{fill:var(--m2-up)}.m2-colunas rect.dn{fill:var(--m2-dn)}.m2-colunas rect.eq,.m2-colunas rect.na{fill:var(--text-3)}
 
 #mesa-root .ms-wrap-m2 .ms-note{display:none}
+
+/* seletor editável (13/11/2026): Editar, arrastar pela alça, ✕ para tirar, "+ Adicionar ativo" com busca */
+.m2-tabs .sp{flex:1}
+.m2-editar{display:inline-flex;align-items:center;gap:6px;align-self:center;margin:0 4px 6px auto;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--text-2);font:600 12px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.m2-editar:hover{color:var(--text);border-color:var(--line-2)}
+.m2-editar.on{background:var(--m2-ouro);border-color:var(--m2-ouro);color:#111}
+.m2-lista.editando tbody tr{cursor:default}
+.m2-lista.editando tbody tr:hover{background:none}
+.m2-alca{display:inline-grid;place-items:center;width:22px;height:28px;margin:0 4px 0 -6px;border:0;border-radius:6px;background:none;color:var(--text-3);font-size:15px;cursor:grab;touch-action:none;flex:none}
+.m2-alca:hover,.m2-alca:focus-visible{background:var(--surface-2);color:var(--text)}
+.m2-tb tr.arrastando{background:color-mix(in srgb,var(--m2-ouro) 14%,var(--surface));box-shadow:0 6px 18px rgba(0,0,0,.28);position:relative;z-index:2}
+.m2-tb tr.arrastando .m2-alca{cursor:grabbing}
+.m2-tirar{width:26px;height:26px;border:0;border-radius:7px;background:none;color:var(--text-3);font-size:13px;cursor:pointer}
+.m2-tirar:hover{background:color-mix(in srgb,var(--neg) 16%,transparent);color:var(--neg)}
+.m2-vaziar td{padding:22px 14px;text-align:center;color:var(--text-3)}
+.m2-ed{padding:10px 12px 12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.m2-ed-acoes{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.m2-btn{padding:7px 12px;border:1px dashed color-mix(in srgb,var(--m2-ouro) 60%,var(--line));border-radius:9px;background:none;color:var(--m2-ouro);font:600 12.5px Inter,system-ui,sans-serif;cursor:pointer}
+.m2-btn:hover{background:color-mix(in srgb,var(--m2-ouro) 10%,transparent)}
+.m2-add{display:flex;flex-direction:column;gap:8px}
+.m2-busca{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--text);font:500 13px Inter,system-ui,sans-serif}
+.m2-busca:focus{outline:none;border-color:var(--m2-ouro)}
+.m2-opc{max-height:220px;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column}
+.m2-grp{padding:8px 4px 4px;font:700 10.5px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.m2-opc button{display:flex;align-items:center;gap:2px;width:100%;padding:6px 6px;border:0;border-radius:8px;background:none;color:var(--text);font:500 13px Inter,system-ui,sans-serif;text-align:left;cursor:pointer}
+.m2-opc button:hover{background:var(--surface-2)}
+.m2-opc button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m2-opc button em{font-style:normal;color:var(--m2-ouro);font-weight:700;padding:0 6px}
+@media (max-width:760px){.m2-busca{font-size:16px}}
