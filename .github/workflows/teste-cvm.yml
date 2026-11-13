@@ -9,24 +9,26 @@ jobs:
           curl -sSfLO $B/META/meta_vlmo_cia_aberta.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2026.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2025.zip
           for z in *.zip; do echo "== $z"; unzip -l $z; unzip -oq $z; done
           pip install -q pandas
+          curl -sSfLO https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/FCA/DADOS/fca_cia_aberta_2026.zip && unzip -l fca_cia_aberta_2026.zip && unzip -oq fca_cia_aberta_2026.zip
+          curl -sSfLO https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv
           cat > a.py <<'PY'
           import pandas as pd
-          pd.set_option('display.width', 250); pd.set_option('display.max_columns', 30)
-          d = pd.concat([pd.read_csv(f'vlmo_cia_aberta_con_{a}.csv', sep=';', encoding='latin1', dtype=str) for a in (2025, 2026)])
-          print('linhas', d.shape); print(d.head(4).T.to_string())
-          for c in ['Tipo_Cargo','Tipo_Movimentacao','Tipo_Operacao','Tipo_Empresa','Tipo_Ativo','Caracteristica_Valor_Mobiliario','Descricao_Movimentacao']:
-              print('--', c, d[c].value_counts(dropna=False).head(20).to_dict())
-          d['Volume'] = pd.to_numeric(d['Volume'], errors='coerce'); d['Quantidade'] = pd.to_numeric(d['Quantidade'], errors='coerce')
-          print('ref max', d['Data_Referencia'].max(), 'mov max', d['Data_Movimentacao'].max())
-          print('por mes ref (n docs empresas):', d.groupby(d['Data_Referencia'].str[:7])['CNPJ_Companhia'].nunique().tail(14).to_dict())
-          a = d[d['Tipo_Ativo'].fillna('').str.contains('A..es', regex=True)]
-          a = a.sort_values('Versao').drop_duplicates(['CNPJ_Companhia','Data_Referencia','Tipo_Cargo','Data_Movimentacao','Tipo_Movimentacao','Quantidade','Volume','Empresa'], keep='last')
-          t = a.groupby([a['Data_Referencia'].str[:7], 'Tipo_Operacao'])['Volume'].sum().unstack().fillna(0) / 1e9
-          print('volume ações R$ bi por mês e operação'); print(t.tail(14).round(2))
-          print(a.groupby(['Tipo_Cargo','Tipo_Operacao'])['Volume'].sum().div(1e9).round(2).unstack())
-          o = a[a['Data_Referencia'].str[:7] == '2026-09']
-          sg = o.assign(s=o['Volume'] * o['Tipo_Operacao'].map({'Compra':1,'Venda':-1}).fillna(0)).groupby('Nome_Companhia')['s'].sum().sort_values()
-          print('set/26 maiores vendas'); print((sg.head(8)/1e6).round(1)); print('maiores compras'); print((sg.tail(8)/1e6).round(1))
-          print('versoes', d['Versao'].value_counts().head().to_dict())
+          pd.set_option('display.width', 250); pd.set_option('display.max_columns', 40)
+          d = pd.read_csv('vlmo_cia_aberta_con_2026.csv', sep=';', encoding='latin1', dtype=str)
+          print('MOV', d['Tipo_Movimentacao'].value_counts().to_dict())
+          print('CARGO NaN amostra'); print(d[d['Tipo_Cargo'].isna()].head(5).T.to_string())
+          m = pd.read_csv('vlmo_cia_aberta_2026.csv', sep=';', encoding='latin1', dtype=str)
+          print('DOC cols', list(m.columns)); print(m.head(2).T.to_string())
+          for c in ['Categoria','Tipo','Tipo_Apresentacao']: print(c, m[c].value_counts().to_dict())
+          v = pd.read_csv('fca_cia_aberta_valor_mobiliario_2026.csv', sep=';', encoding='latin1', dtype=str)
+          print('FCA VM cols', list(v.columns)); print(v.head(3).T.to_string())
+          c = pd.read_csv('cad_cia_aberta.csv', sep=';', encoding='latin1', dtype=str)
+          print('CAD cols', list(c.columns)); print(c['SETOR_ATIV'].value_counts().head(40).to_dict())
+          a = d[d['Tipo_Movimentacao'].isin(['Compra à vista','Venda à vista'])].copy()
+          a['Volume']=pd.to_numeric(a['Volume'],errors='coerce'); a['Q']=pd.to_numeric(a['Quantidade'],errors='coerce'); a['P']=pd.to_numeric(a['Preco_Unitario'],errors='coerce')
+          print('vol nan', a['Volume'].isna().mean(), 'preco nan', a['P'].isna().mean())
+          a['r'] = a['Volume']/(a['Q']*a['P'])
+          print('razao vol/(q*p)', a['r'].describe().to_dict())
+          print(a.sort_values('Volume').tail(8)[['Nome_Companhia','Tipo_Cargo','Tipo_Movimentacao','Q','P','Volume','Data_Movimentacao','Tipo_Empresa','Tipo_Ativo']].to_string())
           PY
           python3 a.py 2>&1 | head -300
