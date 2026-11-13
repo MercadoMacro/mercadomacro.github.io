@@ -316,7 +316,8 @@ globalThis.MMDeskWindows = (() => {
     let g = qb.querySelector('.qb-mj');
     if (!g) {
       g = document.createElement('span'); g.className = 'qb-mj';
-      g.innerHTML = '<button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="1" title="Mesa 1: a de sempre" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="2" title="Mesa 2: a nova, com o gráfico vinculado por cor" aria-label="Mesa 2, a nova">2</button><button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button>';
+      // (13/11/2026) Restaurar e Montar mesa à esquerda e a chave 1|2 sempre na ponta direita, do mesmo tamanho nas duas Mesas
+      g.innerHTML = '<button type="button" class="qb-mj-b" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="qb-mj-b" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><span class="qb-mj-seg" role="group" aria-label="Escolher a Mesa"><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="1" title="Mesa 1: a de sempre" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="qb-mj-b qb-mj-n" data-mj-modo="2" title="Mesa 2: a nova, com o gráfico vinculado por cor" aria-label="Mesa 2, a nova">2</button></span>';
       const temp = qb.querySelector('.qb-temp');
       if (temp) temp.after(g); else qb.append(g);
       rotulos();
@@ -329,7 +330,9 @@ globalThis.MMDeskWindows = (() => {
   css.textContent = '.qb-mj{flex:0 0 auto;display:inline-flex;gap:6px;margin-left:6px}.qb-mj[hidden]{display:none}.qbanner .qb-temp+.qb-mj{margin-left:6px}.qbanner>.qb-mj:not(.qb-temp+.qb-mj){margin-left:auto}'
     + '.qb-mj-b{font:inherit;font-size:11.5px;color:var(--text-2);background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap}'
     + '.qb-mj-b:hover{color:var(--text);border-color:var(--line-2)}.qb-mj-b[hidden]{display:none}.qb-mj-b.on{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}'
-    + '.qb-mj-n{width:24px;height:24px;padding:0;display:inline-grid;place-items:center;font-weight:600;font-variant-numeric:tabular-nums}';
+    + '.qb-mj-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}'
+    + '.qb-mj-seg .qb-mj-n{width:24px;height:22px;padding:0;display:inline-grid;place-items:center;border:0;border-radius:999px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}'
+    + '.qb-mj-seg .qb-mj-n.on{background:var(--accent);color:#111;border:0}.qb-mj-seg .qb-mj-n:not(.on):hover{background:var(--surface-2)}';
   document.head.append(css);
 
   function alternar() {
