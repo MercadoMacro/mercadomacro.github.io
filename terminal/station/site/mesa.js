@@ -37,6 +37,12 @@
   // [símbolo do Yahoo, nome, sigla do país/região, casas decimais]
   const CRYPTO = [['BTC-USD', 'Bitcoin'], ['ETH-USD', 'Ethereum'], ['USDT-USD', 'Tether'], ['BNB-USD', 'BNB'], ['XRP-USD', 'XRP'],
     ['SOL-USD', 'Solana'], ['DOGE-USD', 'Dogecoin'], ['USDC-USD', 'USDC'], ['ADA-USD', 'Cardano']];
+  // Mesa 2 (12/11/2026): tabela Cripto no lugar da faixa de cima. Sem stablecoins (valem sempre cerca de US$ 1), tudo em
+  // US$ (a Binance cota em USDT, que acompanha o dólar) e o Bitcoin também em reais. Ícone: círculo com o símbolo ou a
+  // inicial de cada moeda (sem logotipos), na cor que o mercado associa a ela.
+  const CRIPTO_TB = [['BTC-USD', 'Bitcoin', '₿', '#f7931a'], ['ETH-USD', 'Ethereum', 'Ξ', '#627eea'], ['SOL-USD', 'Solana', 'S', '#0f9b8e'],
+    ['XRP-USD', 'XRP', 'X', '#3b4a5e'], ['BNB-USD', 'BNB', 'B', '#c99a0e'], ['DOGE-USD', 'Dogecoin', 'D', '#b39b3a'], ['ADA-USD', 'Cardano', 'A', '#1f4ec4'],
+    ['BTC-BRL', 'Bitcoin em reais', 'R$', '#f7931a']];
   const CARDS = [
     { s: '^BVSP', n: 'Ibovespa', d: 0, pre: '' },
     { s: 'BRL=X', n: 'Dólar (USD/BRL)', d: 4, pre: 'R$ ' },
@@ -74,7 +80,7 @@
   // datas de decisão do Fed e do Copom vêm do index.html (FOMC_DECISIONS e COPOM_DECISIONS)
   const FOMC = (typeof FOMC_DECISIONS !== 'undefined' && FOMC_DECISIONS.length) ? FOMC_DECISIONS : ['2026-10-28', '2026-12-09'];
 
-  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
+  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), 'BTC-BRL', ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
 
   /* ---------------- dados ---------------- */
   const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
@@ -576,8 +582,34 @@
       return '<button type="button" class="ms-cr '+(has&&!q.live?'old':'')+'" data-sym="'+esc(s)+'" data-name="'+esc(n)+'" title="'+esc(cryptoTitle(s,n,q))+'"><span>'+esc(n)+'</span><b>'+cryptoPrice(q)+'</b><em class="'+cls(has?q.c:null)+'">'+(has?pct(q.c):'')+'</em></button>';
     }).join('');
   }
+  const modo2 = () => window.MMDeskWindows?.modo?.() === '2';
+  function criptoLinha([s, n, l, cor]) {
+    const q = s === 'BTC-BRL' ? Q[s] : cryptoView(s), has = q && q.v != null && isFinite(q.v);
+    const ic = `<span class="ms-mk" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="${cor}"/><text x="8" y="${l.length > 1 ? 10.9 : 11.6}" text-anchor="middle" font-size="${l.length > 1 ? 6.6 : 9.6}" font-weight="700" fill="#fff" font-family="Arial, sans-serif">${l}</text></svg></span>`;
+    const tit = s === 'BTC-BRL' ? 'Bitcoin cotado em reais · Yahoo Finance · atualização periódica' : cryptoTitle(s, n, q);
+    return `<tr data-sym="${esc(s)}" data-name="${esc(n)}" data-cr="${esc(s)}" class="${has && !q.live ? 'old' : ''}" title="${esc(tit)}">
+      <td class="nm">${ic}${esc(n)}</td>
+      <td class="px">${has ? (s === 'BTC-BRL' ? 'R$ ' : '') + nf(q.v, q.v < 2 ? 4 : 2) : '—'}</td>
+      <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
+      <td class="tm">${has ? hhmm(q.ts) : ''}</td>
+    </tr>`;
+  }
+  function criptoTbHTML() {
+    return `<section class="ms-box ms-tb" data-tb="cr"><div class="ms-head"><h3>Cripto</h3><span class="sp"></span><span class="ms-hsub" title="Variação das últimas 24 horas. Cotações em dólar; a Binance cota em USDT, que acompanha o dólar.">em US$ · 24h</span></div>
+      <table><tbody>${CRIPTO_TB.map(criptoLinha).join('')}</tbody></table></section>`;
+  }
   function paintCrypto(event) {
     if(!cryptoEnabled)return;
+    // tabela Cripto da Mesa 2: troca só a linha que mudou (sem redesenhar a Mesa)
+    for (const def of CRIPTO_TB) {
+      if (def[0] === 'BTC-BRL' || (event?.type === 'quote' && event.symbol !== def[0])) continue;
+      const tr = root.querySelector(`tr[data-cr="${CSS.escape(def[0])}"]`); if (!tr) continue;
+      const q = cryptoView(def[0]), has = q && q.v != null && isFinite(q.v); if (!has) continue;
+      const px = tr.querySelector('.px'), ch = tr.querySelector('.ch'), tm = tr.querySelector('.tm');
+      px.textContent = nf(q.v, q.v < 2 ? 4 : 2); ch.textContent = pct(q.c); ch.className = 'ch ' + cls(q.c); tm.innerHTML = hhmm(q.ts);
+      tr.classList.remove('old'); tr.title = cryptoTitle(def[0], def[1], q);
+      if (event?.type === 'quote' && event.quote.direction) { px.classList.remove('ms-tick-up', 'ms-tick-down'); void px.offsetWidth; px.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down'); }
+    }
     for(const [s,n]of CRYPTO){
       if(event?.type==='quote'&&event.symbol!==s)continue;
       const node=[...root.querySelectorAll('.ms-cr')].find(el=>el.dataset.sym===s);if(!node)continue;
@@ -737,13 +769,13 @@
         <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
-      <div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>
+      ${modo2() ? '' : `<div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>`}
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section></div>` : ''}
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
         <div class="ms-col">${col(2)}${futB3HTML()}</div>
-        <div class="ms-col">${col(3)}</div>
+        <div class="ms-col">${col(3)}${modo2() ? criptoTbHTML() : ''}</div>
         <div class="ms-col ms-c4">
           <section class="ms-box ms-curvebox">${curveHTML()}</section>
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>
@@ -807,6 +839,7 @@
     if (typeof window.openAssetChart === 'function') window.openAssetChart(sym, name, list, quote, 'mesa');
   }
   const listOf = (tid) => {
+    if (tid === 'cr') return CRIPTO_TB.map((r) => ({ s: r[0], n: r[1] }));
     const t = TABLES.find((x) => x.id === tid);
     return t ? t.rows.filter((r) => !r[0].startsWith('__')).map((r) => ({ s: r[0], n: r[1] })) : null;
   };
@@ -846,7 +879,8 @@
   const active = () => panel.classList.contains('active') && !document.hidden;
   function syncCrypto() {
     if(!cryptoStream)return;
-    const strip=root.querySelector('.ms-crypto');
+    // a faixa (Mesa 1) ou a tabela Cripto (Mesa 2): a conexão com a Binance só fica aberta com uma delas à vista
+    const strip=root.querySelector('.ms-crypto')||root.querySelector('.ms-tb[data-tb="cr"]');
     if(active())carSetas();
     cryptoStream.setActive(active()&&!window.__mmLoggingOut&&!!strip&&!strip.hidden&&getComputedStyle(strip).display!=='none');
   }

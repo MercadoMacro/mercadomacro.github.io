@@ -84,4 +84,4 @@ tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{bo
 .ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block]>.ms-fold-body,.mj-gs .ms-tb[data-mesa-block]>.ms-fold-body{flex:1 1 auto;min-height:0}
 .ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block] .ms-tw[data-vis],.mj-gs .ms-tb[data-mesa-block] .ms-tw[data-vis]{flex:1 1 auto;min-height:0;max-height:none!important}
 /* o aviso de rolagem não encosta na bolinha de cor do vínculo */
-.ms-tb[data-mv] .ms-mais{margin-right:16px}
+.ms-tb[data-mv] .ms-head .ms-hsub{margin-right:16px}

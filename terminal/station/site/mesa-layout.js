@@ -3,7 +3,7 @@ globalThis.MMDeskLayout = (() => {
   const blocks = [
     ['crypto','Criptomoedas'],['cards','Destaques do mercado'],['grafico','Gráfico do ativo'],['am','Índices das Américas'],
     ['eu','Índices europeus'],['as','Índices asiáticos'],['dx','Cesta do DXY'],['em','Moedas emergentes'],
-    ['b3','Futuros B3'],['co','Commodities'],['ou','Futuros, juros e risco'],['curve','Curva de juros'],['news','Notícias'],
+    ['b3','Futuros B3'],['co','Commodities'],['ou','Futuros, juros e risco'],['cr','Cripto (Mesa 2)'],['curve','Curva de juros'],['news','Notícias'],
   ];
   const ids = blocks.map(([id]) => id);
   function normalize(value) {
