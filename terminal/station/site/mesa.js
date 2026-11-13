@@ -444,16 +444,46 @@
     return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${p}" fill="none" stroke="var(${up ? '--pos' : '--neg'})" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
   };
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
-  // Mesa 1 e 2: bandeira no lugar da sigla do país (12/11/2026; primeiro na Mesa 2, depois nas duas). Desenhos do flag-icons (licença MIT, bandeiras/LICENSE-flag-icons.txt),
-  // em imagem de 32x24 para aparecer igual no Windows (lá a bandeira em emoji vira só letras). Commodities seguem com a sigla:
-  // ali ela diz onde o contrato é negociado, não "de quem" é o petróleo ou o ouro.
+  // Marca de cada linha nas duas Mesas (12/11/2026), no estilo dos terminais de mercado: bandeira redonda do país;
+  // nos pares de moedas, as duas bandeiras sobrepostas (a primeira moeda na frente); nas commodities, um ícone próprio
+  // por grupo (desenhado aqui, sem imagem). Bandeiras: flag-icons, licença MIT (bandeiras/LICENSE-flag-icons.txt),
+  // em imagem de 32x32 para aparecer igual no Windows (lá a bandeira em emoji vira só letras).
   const PAISES = { AR: 'Argentina', AU: 'Austrália', BR: 'Brasil', CA: 'Canadá', CH: 'Suíça', CL: 'Chile', CN: 'China', CO: 'Colômbia', DE: 'Alemanha', ES: 'Espanha',
     EU: 'Zona do euro', FR: 'França', HK: 'Hong Kong', IN: 'Índia', IT: 'Itália', JP: 'Japão', KR: 'Coreia do Sul', MX: 'México', NL: 'Holanda', SE: 'Suécia',
     SG: 'Singapura', TR: 'Turquia', TW: 'Taiwan', UK: 'Reino Unido', US: 'Estados Unidos', ZA: 'África do Sul' };
-  const marcaPais = (cc, tid) => {
-    if (tid === 'co' || !PAISES[cc]) return `<span class="cc">${esc(cc)}</span>`;
-    return `<img class="ms-fl" src="bandeiras/${cc === 'UK' ? 'gb' : cc.toLowerCase()}.webp" width="16" height="12" alt="${PAISES[cc]}" title="${PAISES[cc]}" decoding="async">`;
+  const MOEDAS = { USD: ['us', 'Dólar americano'], EUR: ['eu', 'Euro'], JPY: ['jp', 'Iene'], GBP: ['gb', 'Libra esterlina'], CAD: ['ca', 'Dólar canadense'],
+    SEK: ['se', 'Coroa sueca'], CHF: ['ch', 'Franco suíço'], BRL: ['br', 'Real'], MXN: ['mx', 'Peso mexicano'], CLP: ['cl', 'Peso chileno'], COP: ['co', 'Peso colombiano'],
+    ARS: ['ar', 'Peso argentino'], CNY: ['cn', 'Yuan'], INR: ['in', 'Rupia indiana'], ZAR: ['za', 'Rand sul-africano'], TRY: ['tr', 'Lira turca'], AUD: ['au', 'Dólar australiano'] };
+  // ícones das commodities: círculo colorido com o desenho em branco (viewBox 16x16)
+  const G = {
+    gota: '<path d="M8 3.3c2 2.7 3.1 4.4 3.1 5.9a3.1 3.1 0 0 1-6.2 0C4.9 7.7 6 6 8 3.3z"/>',
+    chama: '<path d="M8.6 2.9C9 5 11.3 6 11.3 9a3.3 3.3 0 0 1-6.6 0c0-1.6.8-2.6 1.5-3.3-.1 1.2.4 2 1.1 2.3C6.9 6 7.6 4.3 8.6 2.9z"/><path d="M8 12.3a1.5 1.5 0 0 1-1.5-1.5c0-.9.6-1.4 1-2 .1.6.4.9.8 1 .2-.5.3-1 .2-1.5.7.6 1 1.4 1 2.5A1.5 1.5 0 0 1 8 12.3z" fill="var(--mk-bg)"/>',
+    barras: '<path d="M3.4 11.6l.8-2.1h3l.8 2.1zM8 11.6l.8-2.1h3l.8 2.1zM5.7 8.7l.8-2.1h3l.8 2.1z"/>',
+    lingote: '<path d="M3.7 10.9l1.4-3.6h5.8l1.4 3.6z"/>',
+    pedra: '<path d="M3.9 11.1l1.2-3.8 2.8-2.4 3.1 1 1.6 2.7-.7 2.5z"/><path d="M7.9 4.9l.6 3.3 3.8.5" fill="none" stroke="var(--mk-bg)" stroke-width=".6" opacity=".55"/>',
+    grao: '<path d="M8 3.4c2.1 1.7 2.8 4.8 0 9.2-2.8-4.4-2.1-7.5 0-9.2z"/>',
+    cafe: '<ellipse cx="8" cy="8" rx="3.1" ry="4.4" transform="rotate(32 8 8)"/><path d="M6.9 4.6c1.6 1.9.6 4.9 2.2 6.9" fill="none" stroke="var(--mk-bg)" stroke-width="1"/>',
+    cubo: '<path d="M4.8 6.3L8 4.6l3.2 1.7v3.6L8 11.6 4.8 9.9z"/><path d="M4.8 6.3 8 8l3.2-1.7M8 8v3.6" fill="none" stroke="var(--mk-bg)" stroke-width=".8"/>',
   };
+  const ic = (g, cor) => `<svg viewBox="0 0 16 16" style="--mk-bg:${cor}"><circle cx="8" cy="8" r="8" fill="${cor}"/><g fill="#fff">${G[g]}</g></svg>`;
+  const ICONES = {
+    __dce: ic('pedra', '#8a3b1e'), 'TIO=F': ic('pedra', '#8a3b1e'),
+    'BZ=F': ic('gota', '#334155'), 'CL=F': ic('gota', '#334155'), 'NG=F': ic('chama', '#2563eb'),
+    'GC=F': ic('barras', '#c9930a'), __xau: ic('barras', '#c9930a'), 'SI=F': ic('barras', '#8b95a5'), __xag: ic('barras', '#8b95a5'),
+    __xpt: ic('barras', '#64748b'), __xpd: ic('barras', '#7c8aa0'), 'HG=F': ic('lingote', '#b45f2a'),
+    'ZS=F': ic('grao', '#5f8f1f'), 'ZC=F': ic('grao', '#c89b18'), 'KC=F': ic('cafe', '#6f4e37'), 'SB=F': ic('cubo', '#0e8ac4'),
+  };
+  const bandeira = (c) => `<img src="bandeiras/${c}.webp" width="16" height="16" alt="" decoding="async">`;
+  function marca(s, n, cc, tid) {
+    if (ICONES[s]) return `<span class="ms-mk" aria-hidden="true">${ICONES[s]}</span>`;
+    const par = /^([A-Z]{3})\/([A-Z]{3})$/.exec(n);
+    if (par && MOEDAS[par[1]] && MOEDAS[par[2]]) {
+      const t = MOEDAS[par[1]][1] + ' / ' + MOEDAS[par[2]][1];
+      return `<span class="ms-mk ms-par" role="img" aria-label="${t}" title="${t}">${bandeira(MOEDAS[par[2]][0])}${bandeira(MOEDAS[par[1]][0])}</span>`;
+    }
+    if (tid !== 'co' && PAISES[cc]) return `<span class="ms-mk" role="img" aria-label="${PAISES[cc]}" title="${PAISES[cc]}">${bandeira(cc === 'UK' ? 'gb' : cc.toLowerCase())}</span>`;
+    return `<span class="cc">${esc(cc)}</span>`;
+  }
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : s === '__dce' ? (X.dce ? { ...X.dce, live: true } : null) : Q[s];
     const fq = forexStream?.covers(s) ? forexStream.quote(s) : null;
@@ -473,7 +503,7 @@
     const tag = s === '__cds' ? '' : s === '__dce' ? ' title="Bolsa de Dalian (China), contrato principal, convertido para US$ por tonelada. A variação é a do contrato, em yuan."' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
     const fora = cfdFora(s, fq);
     return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}${fora ? ' ms-cfd-off' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${fora ? tag.replace(/ title="[^"]*"/, ` title="${esc(window.MMDicaCfd)}"`) : tag}>
-      <td class="nm">${marcaPais(cc, tid)}${esc(n)}</td>
+      <td class="nm">${marca(s, n, cc, tid)}${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
       <td class="tm">${has ? (stale ? '<i title="Valor salvo; a fonte não respondeu agora">salvo</i>' : hhmm(q.ts)) : ''}</td>
@@ -950,7 +980,12 @@
   .ms-fb3 td.nm small { margin-left:6px; font:10px 'JetBrains Mono', monospace; color:var(--text-3); }
   .ms-fb3 td.ch i.aj-ant { font-style:normal; font-size:10.5px; color:var(--text-3); }
   .ms-hsub { font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); }
-  .ms-fl { display:inline-block; width:16px; height:12px; margin-right:8px; vertical-align:-1px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.08); object-fit:cover; }
+  .ms-mk { display:inline-block; position:relative; width:24px; height:16px; margin-right:7px; vertical-align:-3px; flex:none; }
+  .ms-mk > img, .ms-mk > svg { display:block; width:16px; height:16px; border-radius:50%; }
+  .ms-mk > img { object-fit:cover; box-shadow:0 0 0 1px rgba(255,255,255,.12); }
+  .ms-par > img { position:absolute; width:14px; height:14px; }
+  .ms-par > img:first-child { right:0; top:-1px; }
+  .ms-par > img:last-child { left:0; bottom:-1px; box-shadow:0 0 0 1.5px var(--surface, #111827); }
   .cc { display:inline-block; min-width:22px; margin-right:7px; padding:0 3px; border-radius:4px; background:var(--surface-3); color:var(--text-3); font:600 9px 'JetBrains Mono', monospace; text-align:center; vertical-align:1px; }
 
   .ms-seg { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
