@@ -1,21 +1,13 @@
 name: Teste CVM insiders
 on: { push: { branches: [teste-cvm] } }
+permissions: { contents: write }
 jobs:
   t:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - run: |
-          pip install -q pandas
-          for a in 2024 2025 2026; do curl -sSfLO https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/VLMO/DADOS/vlmo_cia_aberta_$a.zip && unzip -oq vlmo_cia_aberta_$a.zip; done
-          python3 - <<'PY'
-          import pandas as pd
-          pd.set_option('display.width', 250); pd.set_option('display.max_columns', 40)
-          d = pd.concat([pd.read_csv(f'vlmo_cia_aberta_con_{a}.csv', sep=';', encoding='latin1', dtype=str) for a in (2024, 2025, 2026)])
-          n = d[d['Tipo_Cargo'].isna()]
-          print('NaN cargo', len(n), n['Tipo_Movimentacao'].value_counts().to_dict(), n['Tipo_Empresa'].value_counts().to_dict())
-          print('empresas com NaN', n['Nome_Companhia'].nunique())
-          for c in d['Tipo_Cargo'].dropna().unique(): print('cargo:', c)
-          x = d[d['Tipo_Movimentacao'].str.contains('Recompra|Tesour|Cancel', case=False, na=False)]
-          print('movs recompra/tesouraria', x['Tipo_Movimentacao'].value_counts().to_dict())
-          print(x.head(3).T.to_string())
-          PY
+          git fetch -q origin main && git show origin/main:terminal/fundamentos/index.json > /tmp/fund.json
+          python3 terminal/insiders/gerar_insiders.py terminal/insiders /tmp/fund.json
+          git config user.name "teste" && git config user.email "actions@users.noreply.github.com"
+          git add terminal/insiders/insiders.json && git commit -qm "teste: insiders.json" && git push -q
