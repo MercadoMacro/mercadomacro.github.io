@@ -5166,7 +5166,7 @@ function newsReadMins(n) {
     if (asked || !panel.classList.contains('active')) return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'mesa.js?v=57';
+    sc.src = 'mesa.js?v=58';
     sc.onerror = () => {
       asked = false;
       const r = document.getElementById('mesa-root');

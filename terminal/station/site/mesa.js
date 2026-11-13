@@ -444,14 +444,14 @@
     return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${p}" fill="none" stroke="var(${up ? '--pos' : '--neg'})" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
   };
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
-  // Mesa 2: bandeira no lugar da sigla do país (12/11/2026). Desenhos do flag-icons (licença MIT, bandeiras/LICENSE-flag-icons.txt),
+  // Mesa 1 e 2: bandeira no lugar da sigla do país (12/11/2026; primeiro na Mesa 2, depois nas duas). Desenhos do flag-icons (licença MIT, bandeiras/LICENSE-flag-icons.txt),
   // em imagem de 32x24 para aparecer igual no Windows (lá a bandeira em emoji vira só letras). Commodities seguem com a sigla:
   // ali ela diz onde o contrato é negociado, não "de quem" é o petróleo ou o ouro.
   const PAISES = { AR: 'Argentina', AU: 'Austrália', BR: 'Brasil', CA: 'Canadá', CH: 'Suíça', CL: 'Chile', CN: 'China', CO: 'Colômbia', DE: 'Alemanha', ES: 'Espanha',
     EU: 'Zona do euro', FR: 'França', HK: 'Hong Kong', IN: 'Índia', IT: 'Itália', JP: 'Japão', KR: 'Coreia do Sul', MX: 'México', NL: 'Holanda', SE: 'Suécia',
     SG: 'Singapura', TR: 'Turquia', TW: 'Taiwan', UK: 'Reino Unido', US: 'Estados Unidos', ZA: 'África do Sul' };
   const marcaPais = (cc, tid) => {
-    if (window.MMDeskWindows?.modo?.() !== '2' || tid === 'co' || !PAISES[cc]) return `<span class="cc">${esc(cc)}</span>`;
+    if (tid === 'co' || !PAISES[cc]) return `<span class="cc">${esc(cc)}</span>`;
     return `<img class="ms-fl" src="bandeiras/${cc === 'UK' ? 'gb' : cc.toLowerCase()}.webp" width="16" height="12" alt="${PAISES[cc]}" title="${PAISES[cc]}" decoding="async">`;
   };
   function rowHTML([s, n, cc, d], tid) {
