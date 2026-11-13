@@ -400,7 +400,7 @@
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${diTentou && !diCurvas ? 'Curva DI indisponível agora.' : 'Carregando curva…'}</div>`}</div>
       ${diListaHTML()}
-      ${vivo ? `<div class="ms-foot">DI futuro da B3, ${negociou ? rotuloNegocios(diVivo && diVivo.b3) : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}
+      ${vivo ? `<div class="ms-foot">DI futuro, ${negociou ? rotuloNegocios(diVivo && diVivo.b3) : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}
       ${!vivo && C.hoje ? `<div class="ms-foot">Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
   }
   function drawCurve() {
