@@ -34,7 +34,10 @@ globalThis.MMAssetHistory = (() => {
   class Viewer {
     constructor(fetchHistory){this.fetchHistory=fetchHistory;this.cache=new Map();this.chart=null;this.generation=0;}
     destroy(){this.generation++;this.chart?.remove();this.chart=null;}
-    async show(box,symbol,name,light){
+    async show(box,symbol,name,light,opts){
+      // opts.sutil (Mesa 2, 12/11/2026): sem grade, linha verde ou laranja conforme o período sobe ou cai
+      // opts.intraday: pontos de 5 ou 30 minutos (eixo com hora); opts.dias: quantos dias mostrar (padrão 93)
+      const sutil=!!opts?.sutil,intra=!!opts?.intraday,serie=(v,o)=>intra?[...new Map(v.map(p=>[p.t+o,{time:p.t+o,value:p.c}])).values()].sort((a,b)=>a.time-b.time):seriesData(v,o);
       this.destroy();const generation=this.generation;box.innerHTML='<div class="wlc-load" role="status">Carregando histórico do ativo…</div>';
       try{
         const L=await loadLibrary();
@@ -54,13 +57,13 @@ globalThis.MMAssetHistory = (() => {
         host.setAttribute('aria-label','Histórico diário de '+name);
         box.querySelector('.wlh-caption').textContent='Fechamentos diários · Yahoo Finance';
         box.querySelector('.wlh-note').textContent='Até '+date(all.at(-1).t,off)+' · Arraste para navegar; use o zoom para aproximar. Dados diários, sem atualização em tempo real.';
-        const text=light?'#46526a':'#a7b1c3',grid=light?'#e5e7eb':'#1c2740',background=light?'#ffffff':'#0e1524';
+        const text=light?'#46526a':'#a7b1c3',grid=sutil?'rgba(0,0,0,0)':light?'#e5e7eb':'#1c2740',background=sutil?'rgba(0,0,0,0)':light?'#ffffff':'#0e1524';
         this.chart=L.createChart(host,{
           autoSize:true,
           layout:{background:{type:'solid',color:background},textColor:text,attributionLogo:true},
           grid:{vertLines:{color:grid},horzLines:{color:grid}},
-          rightPriceScale:{borderColor:grid},timeScale:{borderColor:grid,timeVisible:false},
-          localization:{locale:'pt-BR',dateFormat:'dd/MM/yyyy'},
+          rightPriceScale:{borderColor:grid,...(sutil?{borderVisible:false,scaleMargins:{top:.12,bottom:.04}}:{})},timeScale:{borderColor:grid,timeVisible:intra,...(sutil?{borderVisible:false}:{})},
+          localization:{locale:'pt-BR',dateFormat:'dd/MM/yyyy',...(sutil?{priceFormatter:p=>p.toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(p)>=1000?0:Math.abs(p)>=10?2:4})}:{})},
           handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
           handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},
           crosshair:{mode:L.CrosshairMode.Normal}
@@ -77,19 +80,20 @@ globalThis.MMAssetHistory = (() => {
           describe(p&&typeof p.value==='number'?{time:param.time,value:p.value}:shown.at(-1));
         });
         const render=days=>{
-          const subset=seriesData(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
+          const subset=serie(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
           if(subset.length<2)throw Error('Sem dados suficientes para este período');
           shown=subset;line.setData(subset);this.chart.timeScale().fitContent();describe(shown.at(-1));
+          if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#34d399':'#fb923c';line.applyOptions({lineColor:c,topColor:sobe?'rgba(52,211,153,.16)':'rgba(251,146,60,.16)',bottomColor:'rgba(0,0,0,0)'});}
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
         };
         box.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{try{render(+b.dataset.days);}catch{box.querySelector('.wlh-note').textContent='Sem dados suficientes para este período.';}}));
         box.querySelector('[data-reset]').addEventListener('click',()=>this.chart?.timeScale().fitContent());
-        render(93);
+        render(opts?.dias||93);
       }catch{
         if(generation!==this.generation)return;
         this.chart?.remove();this.chart=null;
         box.innerHTML='<div class="wlh-error" role="status"><b>Não foi possível carregar o gráfico agora.</b><span>Tente novamente ou use o link TradingView no topo.</span><button type="button" class="wlc-b">Tentar novamente</button></div>';
-        box.querySelector('button').addEventListener('click',()=>this.show(box,symbol,name,light));
+        box.querySelector('button').addEventListener('click',()=>this.show(box,symbol,name,light,opts));
       }
     }
   }

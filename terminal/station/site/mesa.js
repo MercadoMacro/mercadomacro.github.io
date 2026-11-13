@@ -765,6 +765,41 @@
       }
     });
   }
+  const barraHTML = () => `<div class="ms-bar">
+        <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
+        <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura do mercado <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
+        <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
+      </div>`;
+  // o que a Mesa 2 (mesa2.js) usa daqui: cotações já com câmbio e cripto ao vivo, listas, curva e formatação
+  function qAgora(s) {
+    if (s === 'BTC-BRL') return btcReais();
+    if (CRIPTO_TB.some((c) => c[0] === s)) { const v = cryptoView(s); if (v) return v; }
+    if (s === '__dce') return X.dce ? { ...X.dce, live: true } : null;
+    if (s === '__cds') return X.cds;
+    if (s === 'TIO=F' && X.min && X.min.mercado !== 'DCE' && (X.min.live || !(Q[s] && Q[s].live))) return X.min;
+    let q = Q[s];
+    const fq = forexStream?.covers(s) ? forexStream.quote(s) : null;
+    if (fq) q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), ts: fq.ts, live: true, stream: true };
+    return q;
+  }
+  const MERCADO_CO = { CN: 'Bolsa de Dalian', SG: 'Bolsa de Singapura', UK: 'ICE Londres', US: 'bolsas dos EUA' };
+  function subtitulo(s, n, cc) {
+    const par = /^([A-Z]{3})\/([A-Z]{3})$/.exec(n);
+    if (par && MOEDAS[par[1]] && MOEDAS[par[2]]) return MOEDAS[par[1]][1] + ' / ' + MOEDAS[par[2]][1];
+    if (ICONES[s]) return MERCADO_CO[cc] || '';
+    return PAISES[cc] || '';
+  }
+  const iconeCripto = (s) => { const r = CRIPTO_TB.find((c) => c[0] === s); return r ? criptoLinha(r).match(/<span class="ms-mk"[\s\S]*?<\/svg><\/span>/)[0] : ''; };
+  const apiM2 = {
+    TABLES, CRIPTO_TB, PROXY, getJSON, nf, pct, dec, interp, subtitulo, q: qAgora, X: () => X,
+    marca: (s, n, cc, tid) => (tid === 'cr' ? iconeCripto(s) : marca(s, n, cc, tid)),
+    diPontos: () => diHojePoints(),
+    // redesenha os Juros só quando a curva mudou de verdade (senão ficava num laço: desenhar → pedir → desenhar)
+    carregarDI: () => {
+      const marca0 = (p) => p.length + ':' + (p[p.length - 1]?.taxa ?? ''), antes = marca0(diHojePoints());
+      Promise.all([loadDI(), loadDIvivo()]).then(() => { if (marca0(diHojePoints()) !== antes) window.MMMesa2?.atualizar?.('juros'); }).catch(() => {});
+    },
+  };
   function render() {
     // montando a mesa (mesa-janelas.js): não redesenha no meio do arraste; ao concluir, volta a atualizar
     if (window.MMDeskWindows?.editando?.() && root.querySelector('.ms-janelas')) return;
@@ -773,12 +808,15 @@
     const sc = root.querySelector('.ms-wrap')?.scrollTop || 0, cx = root.querySelector('.ms-car')?.scrollLeft || 0;
     // posição da rolagem de cada tabela com linhas escondidas (a Mesa redesenha a cada atualização)
     const rolTw = {}; root.querySelectorAll('.ms-tw[data-vis]').forEach((t) => { rolTw[t.closest('[data-tb]')?.dataset.tb] = t.scrollTop; });
+    // Mesa 2 (mesa2.js, 12/11/2026): painel próprio, sem a grade de tabelas nem as janelas da Mesa 1
+    if (window.MMDeskWindows?.modo?.() === '2' && window.MMMesa2) {
+      root.innerHTML = `<div class="ms-wrap ms-wrap-m2">${barraHTML()}${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}${window.MMMesa2.html(apiM2)}</div>`;
+      window.MMMesa2.depois(root);
+      const w2 = root.querySelector('.ms-wrap'); if (w2) w2.scrollTop = sc;
+      return;
+    }
     root.innerHTML = `<div class="ms-wrap">
-      <div class="ms-bar">
-        <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
-        <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura do mercado <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
-        <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
-      </div>
+      ${barraHTML()}
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section></div>` : ''}
@@ -890,7 +928,7 @@
   function syncCrypto() {
     if(!cryptoStream)return;
     // a faixa (Mesa 1) ou a tabela Cripto (Mesa 2): a conexão com a Binance só fica aberta com uma delas à vista
-    const strip=root.querySelector('.ms-crypto')||root.querySelector('.ms-tb[data-tb="cr"]');
+    const strip=root.querySelector('.ms-crypto')||root.querySelector('.ms-tb[data-tb="cr"]')||root.querySelector('.m2');
     if(active())carSetas();
     cryptoStream.setActive(active()&&!window.__mmLoggingOut&&!!strip&&!strip.hidden&&getComputedStyle(strip).display!=='none');
   }

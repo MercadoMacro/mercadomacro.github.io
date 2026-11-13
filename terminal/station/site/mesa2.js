@@ -1,0 +1,324 @@
+/* Mesa 2 (12/11/2026): painel no desenho que o Dante mandou. Gráfico limpo do ativo escolhido, seletor de ativos em
+   abas (Índices, Commodities, Juros, Moedas, Cripto: as mesmas listas da Mesa 1), Pulso global em vidro, Juros Brasil
+   e EUA, Notícias do ativo, Radar do Copom, Próximo evento e Estrangeiro na B3. A Mesa 1 continua a de sempre.
+   Dados: os mesmos da Mesa (mesa.js passa tudo em "api"), a agenda do Calendário (app.js), fluxo/fluxo.json (aba
+   Fluxo) e copom/copom.json (aba Análises, robôs do GitHub). Nada aqui chama a Jade nem a IA. Sem dado, mostra "—". */
+globalThis.MMMesa2 = (() => {
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ok = (v) => v != null && isFinite(v);
+  const lado = (v) => (!ok(v) ? 'na' : v > 0 ? 'up' : v < 0 ? 'dn' : 'eq');
+  const seta = (v) => (!ok(v) ? '' : v > 0 ? '▲' : v < 0 ? '▼' : '•');
+  const SEL_KEY = 'mm_m2_sel_v1', ABA_KEY = 'mm_m2_aba_v1';
+  const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? d; } catch (e) { return d; } };
+  const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem espaço */ } };
+  let api = null, root = null;
+  let sel = ler(SEL_KEY, { s: '^BVSP', n: 'Ibovespa' });
+  if (!sel || typeof sel.s !== 'string' || !/^[\w^.=\-]{1,24}$/.test(sel.s)) sel = { s: '^BVSP', n: 'Ibovespa' };
+  let aba = ler(ABA_KEY, 'ind');
+
+  /* ---------- listas ---------- */
+  // abas do seletor: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo na Mesa 1)
+  function abas() {
+    const T = (ids) => api.TABLES.filter((t) => ids.includes(t.id)).flatMap((t) => t.rows.map((r) => ({ s: r[0], n: r[1], cc: r[2], d: r[3], tid: t.id })));
+    return [
+      { id: 'ind', t: 'Índices', l: T(['am', 'eu', 'as']) },
+      { id: 'com', t: 'Commodities', l: T(['co']).filter((r) => !r.s.startsWith('__x')) },
+      { id: 'jur', t: 'Juros', l: T(['ou']) },
+      { id: 'moe', t: 'Moedas', l: T(['dx', 'em']) },
+      { id: 'cri', t: 'Cripto', l: api.CRIPTO_TB.map((r) => ({ s: r[0], n: r[1], cc: '', d: 2, tid: 'cr' })) },
+    ];
+  }
+  const PULSO = [['^BVSP', 'Ibovespa'], ['^GSPC', 'S&P 500'], ['^IXIC', 'Nasdaq'], ['^DJI', 'Dow Jones'], ['BRL=X', 'Dólar'],
+    ['BZ=F', 'Brent'], ['GC=F', 'Ouro'], ['BTC-USD', 'Bitcoin'], ['^TNX', 'Treasury 10a']];
+  // unidade mostrada ao lado do preço grande do gráfico
+  function unidade(s, n) {
+    if (s === 'BTC-BRL' || /=X$/.test(s) && /BRL/.test(s)) return 'R$';
+    if (/^\^(IRX|FVX|TNX|TYX)$/.test(s) || s === '__cds') return s === '__cds' ? 'pontos-base' : '% ao ano';
+    if (/^\^BVSP$/.test(s) || s === 'EWZ') return s === 'EWZ' ? 'US$' : 'B3 · pontos';
+    if (/^\^/.test(s) || /=F$/.test(s) && /^(ES|NQ|YM|RTY)=F$/.test(s)) return 'pontos';
+    if (/=F$/.test(s) || /-USD$/.test(s) || s === '__dce') return 'US$';
+    if (/=X$/.test(s)) return (n.split('/')[1] || '').trim();
+    return '';
+  }
+  const prefixo = (s) => (s === 'BTC-BRL' || s === 'BRL=X' || s === 'EURBRL=X' ? 'R$ ' : /-USD$/.test(s) || /^(BZ|CL|GC|SI|HG|NG)=F$/.test(s) || s === '__dce' || s === 'TIO=F' ? 'US$ ' : '');
+  function preco(s, q, d) {
+    if (!q || !ok(q.v)) return '—';
+    // índices grandes sem centavos (Ibovespa 171.324, como nas telas de cotação); o resto como na Mesa 1
+    const casas = Math.abs(q.v) >= 10000 && !/-USD$|BRL$/.test(s) ? 0 : d != null ? d : api.dec(q.v);
+    return prefixo(s) + api.nf(q.v, casas) + (/^\^(IRX|FVX|TNX|TYX)$/.test(s) ? '%' : '');
+  }
+
+  /* ---------- pedaços ---------- */
+  const cab = (t, cor, extra = '') => `<div class="m2-head"><span class="m2-dot ${cor || ''}" aria-hidden="true"></span><h3>${t}</h3><span class="sp"></span>${extra}</div>`;
+  function spark(sp, c) {
+    const v = (sp || []).filter(ok); if (v.length < 2) return '<svg class="m2-spark" viewBox="0 0 72 22" aria-hidden="true"></svg>';
+    const mn = Math.min(...v), mx = Math.max(...v), d = mx - mn || 1;
+    const pts = v.map((y, i) => `${(i / (v.length - 1) * 72).toFixed(1)},${(19 - (y - mn) / d * 16).toFixed(1)}`).join(' ');
+    return `<svg class="m2-spark ${lado(c)}" viewBox="0 0 72 22" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+  }
+
+  // gráfico: preço grande + gráfico diário limpo (asset-history.js no modo sutil)
+  // períodos do gráfico: o servidor de dados devolve 1 dia (5 min), 5 dias (30 min), 1 mês e 1 ano (diários)
+  const PERIODOS = [['1D', '1d', true, 2], ['5D', '5d', true, 8], ['1M', '1mo', false, 31], ['1A', '1y', false, 366]];
+  const PER_KEY = 'mm_m2_per_v1';
+  let per = ler(PER_KEY, '5D'); if (!PERIODOS.some((p) => p[0] === per)) per = '5D';
+  const viewers = {};
+  let grafNo = null, grafSym = null;
+  function graficoHTML() {
+    const q = api.q(sel.s);
+    return `${cab(`Gráfico · <span class="m2-gnome">${esc(sel.n)}</span>`, 'ouro', `<span class="m2-per" role="group" aria-label="Período do gráfico">${PERIODOS.map(([r]) => `<button type="button" data-m2-per="${r}" aria-pressed="${r === per}">${r}</button>`).join('')}</span><button type="button" class="m2-ic" data-m2-cheio aria-label="Abrir em tela cheia" title="Abrir em tela cheia"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`)}
+      <div class="m2-preco"><b class="num" data-m2-px="${esc(sel.s)}">${preco(sel.s, q).replace(/^(R\$|US\$) /, '')}</b><span class="m2-var ${lado(q?.c)}" data-m2-ch="${esc(sel.s)}">${seta(q?.c)} ${api.pct(q?.c)}</span><small>${esc(unidade(sel.s, sel.n))}</small></div>
+      <div class="m2-graf-slot"></div>`;
+  }
+  function montarGrafico(box) {
+    const slot = box.querySelector('.m2-graf-slot'); if (!slot) return;
+    if (!grafNo) { grafNo = document.createElement('div'); grafNo.className = 'm2-graf mv-graf'; }
+    slot.replaceWith(grafNo);
+    const chave = sel.s + '|' + per;
+    if (grafSym === chave && grafNo.querySelector('.wlh, .wlh-error')) return;
+    grafSym = chave;
+    const [, r, intraday, dias] = PERIODOS.find((p) => p[0] === per);
+    if (!viewers[r] && window.MMAssetHistory) viewers[r] = new window.MMAssetHistory.Viewer((s) => api.getJSON(`${api.PROXY}/history?symbols=${encodeURIComponent(s)}&r=${r}`, 20000));
+    if (!viewers[r]) return;
+    Object.entries(viewers).forEach(([k, v]) => { if (k !== r) v.destroy(); });
+    const claro = document.documentElement.dataset.theme === 'light' || document.body.classList.contains('light');
+    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias }).catch(() => {});
+  }
+
+
+  function seletorHTML() {
+    const A = abas(), atual = A.find((x) => x.id === aba) || A[0];
+    return `<div class="m2-tabs" role="tablist" aria-label="Grupos de ativos">${A.map((x) => `<button type="button" role="tab" data-m2-aba="${x.id}" aria-selected="${x.id === atual.id}">${x.t}</button>`).join('')}</div>
+      <div class="m2-lista"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="sk">Hoje</th><th class="n">Dia</th></tr></thead><tbody>${atual.l.map((r) => {
+        const q = api.q(r.s), sub = r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
+        return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="0">
+          <td><span class="m2-at">${api.marca(r.s, r.n, r.cc, r.tid)}<span><b>${esc(r.n)}</b><small>${esc(sub)}</small></span></span></td>
+          <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td>
+          <td class="sk">${spark(q?.sp, q?.c)}</td>
+          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${seta(q?.c)} ${api.pct(q?.c)}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  }
+
+  // Pulso global: vidro fosco sobre um fundo de luzes; o brilho de cada quadro cresce com o tamanho do movimento
+  function pulsoHTML() {
+    return `${cab('Pulso global', 'vazio', '<span class="m2-hint">variação do dia</span>')}<div class="m2-pulso"><div class="m2-luzes" aria-hidden="true"><i></i><i></i><i></i></div>${PULSO.map(([s, n]) => {
+      const q = api.q(s), tnx = s === '^TNX', c = q?.c, f = ok(c) ? Math.min(1, Math.abs(c) / (tnx ? 3 : 2)) : 0;
+      const valor = tnx ? (q && ok(q.v) ? api.nf(q.v, 2) + '%' : '—') : api.pct(c);
+      return `<button type="button" class="m2-vidro ${tnx ? 'neutro' : lado(c)}" style="--f:${f.toFixed(2)}" data-m2-sym="${esc(s)}" data-name="${esc(n)}" title="Ver ${esc(n)} no gráfico">
+        <span>${esc(n)}</span><b class="num" ${tnx ? `data-m2-pxt="${esc(s)}"` : `data-m2-pc="${esc(s)}"`}>${valor}</b>${tnx && ok(c) ? `<small class="${lado(c)}">${api.pct(c)} no dia</small>` : ''}</button>`;
+    }).join('')}</div>`;
+  }
+
+  // Juros: curva do DI (B3) e pontos dos Treasuries (EUA) no mesmo eixo de anos, mais 4 números
+  function jurosHTML() {
+    api.carregarDI();
+    const di = api.diPontos().filter((p) => p.y <= 10.5), X = api.X();
+    const us = [['^IRX', 0.25], ['^FVX', 5], ['^TNX', 10]].map(([s, y]) => ({ y, taxa: api.q(s)?.v })).filter((p) => ok(p.taxa));
+    // cada curva na sua própria escala (o DI anda perto de 14% e os Treasuries perto de 4%: na mesma escala as duas
+    // viravam retas); o valor da ponta de cada uma fica escrito no fim da linha
+    const W = 400, H = 150, P = 8, R = 58;
+    let svg = '<p class="m2-vazio">Carregando a curva do DI…</p>';
+    if (di.length > 1) {
+      const xx = (y) => P + (y / 10.5) * (W - P - R);
+      const escala = (pts, topo, base) => { const v = pts.map((p) => p.taxa), mn = Math.min(...v), mx = Math.max(...v), d = mx - mn || 0.5; return (tx) => base - (tx - mn) / d * (base - topo); };
+      const ydi = escala(di, 14, 92), yus = escala(us.length ? us : di, 96, 140);
+      const caminho = (pts, yy) => [...pts].sort((a, b) => a.y - b.y).map((p, i) => `${i ? 'L' : 'M'}${xx(p.y).toFixed(1)} ${yy(p.taxa).toFixed(1)}`).join(' ');
+      const ultDi = [...di].sort((a, b) => a.y - b.y).pop(), ultUs = [...us].sort((a, b) => a.y - b.y).pop();
+      const grade = [0, 2, 5, 10].map((a) => `<line x1="${xx(a).toFixed(1)}" x2="${xx(a).toFixed(1)}" y1="8" y2="${H - 4}"/><text x="${xx(a).toFixed(1)}" y="${H}">${a ? a + 'a' : 'hoje'}</text>`).join('');
+      svg = `<svg class="m2-curva" viewBox="0 0 ${W} ${H + 4}" role="img" aria-label="Curva de juros do DI futuro e dos Treasuries">
+        <g class="grade">${grade}</g>
+        <path class="br-area" d="${caminho(di, ydi)} L${xx(ultDi.y).toFixed(1)} 92 L${xx([...di].sort((a, b) => a.y - b.y)[0].y).toFixed(1)} 92 Z"/><path class="br" d="${caminho(di, ydi)}"/>
+        <circle class="br-p" cx="${xx(ultDi.y).toFixed(1)}" cy="${ydi(ultDi.taxa).toFixed(1)}" r="3"/><text class="br-t" x="${(xx(ultDi.y) + 6).toFixed(1)}" y="${(ydi(ultDi.taxa) + 4).toFixed(1)}">${api.nf(ultDi.taxa, 2)}%</text>
+        ${us.length > 1 ? `<path class="us" d="${caminho(us, yus)}"/>${us.map((p) => `<circle class="us-p" cx="${xx(p.y).toFixed(1)}" cy="${yus(p.taxa).toFixed(1)}" r="2.6"/>`).join('')}<text class="us-t" x="${(xx(ultUs.y) + 6).toFixed(1)}" y="${(yus(ultUs.taxa) + 4).toFixed(1)}">${api.nf(ultUs.taxa, 2)}%</text>` : ''}</svg>
+        <div class="m2-leg"><span class="br">DI futuro (B3)</span><span class="us">Treasuries (EUA)</span><span class="eixo">escalas separadas</span></div>`;
+    }
+    const di5 = api.interp(di, 5), tnx = api.q('^TNX');
+    const cel = (r, v, s = '') => `<div><small>${r}</small><b class="num">${v}</b>${s ? `<em>${s}</em>` : ''}</div>`;
+    return `${cab('Juros · Brasil e EUA', 'azul')}<div class="m2-juros">${svg}<div class="m2-num4">
+      ${cel('Selic', X.selic && ok(X.selic.v) ? api.nf(X.selic.v, 2) + '%' : '—')}
+      ${cel('DI 5 anos', ok(di5) ? api.nf(di5, 2) + '%' : '—', 'B3')}
+      ${cel('Fed (alvo)', X.fed ? api.nf(X.fed.lo, 2) + '–' + api.nf(X.fed.up, 2) + '%' : '—')}
+      ${cel('Treasury 10 anos', tnx && ok(tnx.v) ? api.nf(tnx.v, 2) + '%' : '—', tnx && ok(tnx.c) ? api.pct(tnx.c) : '')}</div></div>`;
+  }
+
+  // Notícias do ativo escolhido (manchetes do terminal que citam o ativo); sem nenhuma, as últimas do terminal
+  function noticiasHTML() {
+    const todas = typeof newsAll !== 'undefined' && Array.isArray(newsAll) ? newsAll : [];
+    const termos = (window.MMRadar?.termos(sel.s) || []).concat(sel.n.split(' (')[0]).filter((x, i, a) => x && a.indexOf(x) === i);
+    let lista = todas.filter((n) => n && n.titulo && window.MMRadar?.cita(n.titulo, termos)).sort((a, b) => b.data - a.data).slice(0, 6), geral = false;
+    if (!lista.length) { lista = [...todas].sort((a, b) => b.data - a.data).slice(0, 6); geral = true; }
+    const hora = (ms) => { const d = new Date(ms), h = new Date(); return d.toDateString() === h.toDateString() ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
+    const fonte = (n) => (n.fonte === 'Google News' ? n.veiculo || n.fonte : n.fonte || '');
+    return `${cab(`Notícias · ${esc(sel.n.split(' (')[0])}`, 'ouro', '<button type="button" class="m2-link" data-go="news-panel">Ver todas</button>')}
+      <div class="m2-news">${geral && todas.length ? `<p class="m2-aviso">Sem manchetes recentes sobre ${esc(sel.n.split(' (')[0])}. Últimas do terminal:</p>` : ''}${lista.length ? lista.map((n, i) => `<a href="${esc(n.link || '#')}" target="_blank" rel="noopener" class="${i === 0 && !geral ? 'top' : ''}">
+        <b>${esc(n.titulo)}</b><small><span class="num">${hora(n.data)}</span> · ${esc(fonte(n))}</small></a>`).join('') : '<p class="m2-vazio">Carregando notícias…</p>'}</div>`;
+  }
+
+  /* ---------- Radar do Copom (copom/copom.json): o que as opções de Copom da B3 precificam para a próxima reunião ---------- */
+  let copom = null, copomTs = 0, copomBusca = null;
+  function buscarCopom() {
+    if (copomBusca || Date.now() - copomTs < 30 * 60000) return;
+    copomBusca = (async () => {
+      for (const u of ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/copom/copom.json', 'copom/copom.json']) {
+        try { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) continue; copom = await r.json(); copomTs = Date.now(); trocar('radar', radarHTML()); return; } catch (e) { /* próxima */ }
+      }
+    })().finally(() => { copomBusca = null; });
+  }
+  function radarHTML() {
+    buscarCopom();
+    const t = 'Radar do Copom';
+    const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+    const r = copom && (copom.reunioes || []).find((x) => x.data >= hoje && x.hist && x.hist.length);
+    if (!r) return cab(t, 'ouro') + `<div class="m2-body"><p class="m2-vazio">${copom ? 'Sem reunião com preços na B3 agora.' : 'Carregando as opções de Copom da B3…'}</p></div>`;
+    const ult = r.hist[r.hist.length - 1], p = ult.p || {};
+    const cen = Object.entries(p).map(([k, v]) => ({ bps: +k, p: +v })).filter((x) => ok(x.bps) && ok(x.p));
+    const soma = cen.reduce((s, x) => s + x.p, 0) || 1;
+    const top = [...cen].sort((a, b) => b.p - a.p).slice(0, 4).sort((a, b) => a.bps - b.bps);
+    const nome = (b) => (b === 0 ? 'Manutenção' : `${b < 0 ? 'Corte' : 'Alta'} de ${api.nf(Math.abs(b) / 100, 2)} pp`);
+    const esperada = ok(copom.selic) ? copom.selic + cen.reduce((s, x) => s + x.bps / 100 * x.p / soma, 0) : null;
+    const corte = r.hist.slice(-20).map((h) => Object.entries(h.p || {}).reduce((s, [k, v]) => s + (+k < 0 ? +v : 0), 0));
+    const dias = Math.max(0, Math.round((Date.parse(r.data + 'T12:00:00Z') - Date.now()) / 864e5));
+    const mxp = Math.max(...top.map((x) => x.p), 1);
+    return cab(t, 'ouro', `<span class="m2-hint">${esc(r.data.split('-').reverse().slice(0, 2).join('/'))} · em ${dias} dia${dias === 1 ? '' : 's'}</span>`) + `<div class="m2-body m2-radar">
+      <div class="m2-radar-top"><div><small>Selic hoje</small><b class="num">${ok(copom.selic) ? api.nf(copom.selic, 2) + '%' : '—'}</b></div><div><small>Selic esperada</small><b class="num ouro">${ok(esperada) ? api.nf(esperada, 2) + '%' : '—'}</b></div>
+        <div class="m2-radar-sp"><small>Chance de corte, 20 pregões</small>${spark(corte, corte.length > 1 ? corte[corte.length - 1] - corte[0] : 0)}</div></div>
+      ${top.map((x) => `<div class="m2-cen"><span>${nome(x.bps)}</span><div class="m2-bar"><i class="${x.bps < 0 ? 'dn' : x.bps > 0 ? 'up' : 'eq'}" style="width:${Math.max(2, x.p / mxp * 100).toFixed(0)}%"></i></div><b class="num">${api.nf(x.p / soma * 100, 0)}%</b></div>`).join('')}
+      <small class="m2-fonte">Opções de Copom da B3 · ${esc(ult.d.split('-').reverse().join('/'))}</small><button type="button" class="m2-link" data-go="analysis-panel">Copom e Fed completos</button></div>`;
+  }
+
+  /* ---------- próximo evento da agenda (mesmo feed do Calendário, app.js) ---------- */
+  const PAIS = { USD: ['us', 'EUA'], EUR: ['eu', 'Zona do euro'], CNY: ['cn', 'China'], GBP: ['gb', 'Reino Unido'], BRL: ['br', 'Brasil'], JPY: ['jp', 'Japão'] };
+  let agendaPedida = false;
+  function agenda() {
+    const f = window.__calFeed || [];
+    if (!f.length && !agendaPedida && typeof loadCalendarFeed === 'function') {
+      agendaPedida = true;
+      // eslint-disable-next-line no-undef
+      loadCalendarFeed().then((d) => { if (Array.isArray(d) && d.length) window.__calFeed = d; else if (typeof calFeed !== 'undefined' && calFeed) window.__calFeed = calFeed; trocar('evento', eventoHTML()); }).catch(() => {});
+    }
+    const agora = Date.now();
+    return f.filter((e) => e && e.date && !/T00:00:00-/.test(e.date) && PAIS[e.country] && (e.impact === 'High' || e.impact === 'Medium' && e.country === 'BRL'))
+      .map((e) => ({ ...e, t: Date.parse(e.date) })).filter((e) => isFinite(e.t) && e.t > agora).sort((a, b) => a.t - b.t);
+  }
+  const relogio = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(s / 86400); return (d ? d + 'd ' : '') + [Math.floor(s / 3600) % 24, Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':'); };
+  function eventoHTML() {
+    const L = agenda(), e = L[0];
+    if (!e) return cab('Próximo evento', 'vazio') + '<div class="m2-body m2-ev"><p class="m2-vazio">Carregando a agenda…</p><button type="button" class="m2-link" data-go="calendar-panel">Abrir o Calendário</button></div>';
+    const quando = (t) => new Date(t).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const imp = e.impact === 'High' ? 3 : 2, [pf, pn] = PAIS[e.country];
+    const janela = 24 * 3600000, prog = Math.max(0.02, Math.min(1, 1 - (e.t - Date.now()) / janela));
+    return cab('Próximo evento', 'vazio', `<span class="m2-imp" title="Impacto ${imp === 3 ? 'alto' : 'médio'}">${'<i></i>'.repeat(imp)}${'<i class="off"></i>'.repeat(3 - imp)}</span>`) + `<div class="m2-body m2-ev">
+      <span class="m2-relogio num" data-m2-t="${e.t}">${relogio(e.t - Date.now())}</span>
+      <b class="m2-ev-t"><img src="bandeiras/${pf}.webp" width="14" height="14" alt="">${esc(pn)}: ${esc(e.title)}</b>
+      <small>${esc(quando(e.t))}${e.forecast ? ` · previsão <b>${esc(e.forecast)}</b>` : ''}${e.previous ? ` · anterior ${esc(e.previous)}` : ''}</small>
+      <div class="m2-prog" aria-hidden="true"><i style="width:${(prog * 100).toFixed(0)}%" data-m2-prog="${e.t}"></i></div>
+      ${L.slice(1, 3).map((x) => `<div class="m2-ev-prox"><span class="num">${esc(new Date(x.t).toLocaleString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }))}</span>${esc(PAIS[x.country][1])}: ${esc(x.title)}</div>`).join('')}
+      <button type="button" class="m2-link" data-go="calendar-panel">Abrir o Calendário</button></div>`;
+  }
+
+  /* ---------- estrangeiro na B3 (fluxo/fluxo.json, a mesma base da aba Fluxo) ---------- */
+  let fluxo = null, fluxoTs = 0, fluxoBusca = null;
+  function buscarFluxo() {
+    if (fluxoBusca || Date.now() - fluxoTs < 30 * 60000) return;
+    fluxoBusca = (async () => {
+      for (const u of ['https://raw.githubusercontent.com/MercadoMacro/mercadomacro.github.io/main/terminal/fluxo/fluxo.json', 'fluxo/fluxo.json']) {
+        try {
+          const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) continue;
+          const j = await r.json(), dias = j.dias || [], ult = dias[dias.length - 1];
+          const meses = Object.entries(j.meses || {}).sort(([a], [b]) => a.localeCompare(b)), mes = meses[meses.length - 1];
+          const ano = ult ? ult.data.slice(0, 4) : '', saldo = (t) => t?.estrangeiro?.saldo;
+          fluxo = { data: ult?.data, dia: saldo(ult?.tipos), mes: saldo(mes?.[1]?.tipos), ano: meses.filter(([m]) => m.startsWith(ano)).reduce((s, [, m]) => s + (saldo(m.tipos) || 0), 0),
+            serie: dias.slice(-20).map((d) => ({ d: d.data, v: saldo(d.tipos) })).filter((x) => ok(x.v)) };
+          fluxoTs = Date.now(); trocar('fluxo', fluxoHTML()); return;
+        } catch (e) { /* próxima */ }
+      }
+    })().finally(() => { fluxoBusca = null; });
+  }
+  const bi = (mil) => (ok(mil) ? `${mil > 0 ? '+' : mil < 0 ? '−' : ''}R$ ${api.nf(Math.abs(mil / 1e6), 2)} bi` : '—');
+  function fluxoHTML() {
+    buscarFluxo();
+    if (!fluxo) return cab('Estrangeiro na B3', 'vazio') + '<div class="m2-body"><p class="m2-vazio">Carregando o boletim da B3…</p></div>';
+    const linhas = [[`Dia ${fluxo.data ? fluxo.data.slice(8, 10) + '/' + fluxo.data.slice(5, 7) : ''}`, fluxo.dia], ['No mês', fluxo.mes], ['No ano', fluxo.ano]];
+    const mx = Math.max(1, ...linhas.map(([, v]) => Math.abs(v || 0))), S = fluxo.serie, smx = Math.max(1, ...S.map((x) => Math.abs(x.v)));
+    // colunas do saldo diário: para cima compra, para baixo venda, a partir da linha do meio
+    const bw = 200 / Math.max(S.length, 1);
+    const colunas = S.length ? `<svg class="m2-colunas" viewBox="0 0 200 56" preserveAspectRatio="none" role="img" aria-label="Saldo diário do investidor estrangeiro nos últimos ${S.length} pregões"><line x1="0" x2="200" y1="28" y2="28"/>${S.map((x, k) => { const h = Math.max(1.5, Math.abs(x.v) / smx * 26); return `<rect class="${lado(x.v)}" x="${(k * bw + bw * 0.18).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" y="${(x.v >= 0 ? 28 - h : 28).toFixed(1)}" height="${h.toFixed(1)}"><title>${esc(x.d.split('-').reverse().join('/'))}: ${esc(bi(x.v))}</title></rect>`; }).join('')}</svg>` : '';
+    return cab('Estrangeiro na B3', 'vazio', '<span class="m2-hint">ações à vista</span>') + `<div class="m2-body m2-fluxo">${linhas.map(([r, v]) => `<div class="m2-fl"><span>${esc(r)}</span><div class="m2-bar"><i class="${lado(v)}" style="width:${Math.max(2, Math.abs(v || 0) / mx * 100).toFixed(0)}%"></i></div><b class="num ${lado(v)}">${bi(v)}</b></div>`).join('')}
+      ${colunas}<small class="m2-fonte">Saldo diário dos últimos ${S.length} pregões · a B3 divulga com cerca de 2 pregões de atraso.</small></div>`;
+  }
+
+  /* ---------- a Mesa 2 inteira ---------- */
+  const caixa = (id, cls, conteudo, rotulo) => `<section class="m2-box ${cls}" data-m2="${id}" aria-label="${rotulo}">${conteudo}</section>`;
+  function html(a) {
+    api = a;
+    return `<div class="m2">
+      ${caixa('grafico', 'm2-c-graf', graficoHTML(), 'Gráfico do ativo escolhido')}
+      ${caixa('seletor', 'm2-c-sel', seletorHTML(), 'Seletor de ativos')}
+      ${caixa('pulso', 'm2-c-pulso', pulsoHTML(), 'Pulso global')}
+      ${caixa('juros', 'm2-c-juros', jurosHTML(), 'Juros no Brasil e nos EUA')}
+      ${caixa('noticias', 'm2-c-news', noticiasHTML(), 'Notícias do ativo escolhido')}
+      ${caixa('radar', 'm2-c-radar', radarHTML(), 'Radar do Copom')}
+      ${caixa('evento', 'm2-c-ev', eventoHTML(), 'Próximo evento')}
+      ${caixa('fluxo', 'm2-c-fluxo', fluxoHTML(), 'Estrangeiro na B3')}
+    </div>`;
+  }
+  function trocar(id, conteudo) {
+    const b = root && root.querySelector(`[data-m2="${id}"]`); if (!b) return;
+    if (id === 'seletor') { const l = b.querySelector('.m2-lista'), st = l ? l.scrollTop : 0; b.innerHTML = conteudo; const n = b.querySelector('.m2-lista'); if (n) n.scrollTop = st; return; }
+    b.innerHTML = conteudo;
+    if (id === 'grafico') montarGrafico(b);
+  }
+  // chamado pelo mesa.js logo depois de pôr html() na página
+  function depois(r) {
+    root = r;
+    const g = root.querySelector('[data-m2="grafico"]'); if (g) montarGrafico(g);
+    root.querySelector('.m2-lista tr.on')?.scrollIntoView({ block: 'nearest' });
+  }
+  function escolher(s, n) {
+    if (!s) return;
+    sel = { s, n: String(n || s).slice(0, 60) }; gravar(SEL_KEY, sel);
+    trocar('grafico', graficoHTML()); trocar('noticias', noticiasHTML());
+    root?.querySelectorAll('[data-m2-sym]').forEach((el) => el.classList.toggle('on', el.dataset.m2Sym === s));
+  }
+  document.addEventListener('click', (e) => {
+    if (!root || !root.contains(e.target)) return;
+    const pb = e.target.closest('[data-m2-per]');
+    if (pb) { per = pb.dataset.m2Per; gravar(PER_KEY, per); root.querySelectorAll('[data-m2-per]').forEach((b) => b.setAttribute('aria-pressed', String(b === pb))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
+    const t = e.target.closest('[data-m2-aba]');
+    if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
+    const linha = e.target.closest('[data-m2-sym]');
+    if (linha) { escolher(linha.dataset.m2Sym, linha.dataset.name); return; }
+    if (e.target.closest('[data-m2-cheio]')) window.openAssetChart?.(sel.s, sel.n, [{ s: sel.s, n: sel.n }], null, 'mesa');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!root || (e.key !== 'Enter' && e.key !== ' ')) return;
+    const linha = e.target.closest?.('tr[data-m2-sym]'); if (!linha || !root.contains(linha)) return;
+    e.preventDefault(); escolher(linha.dataset.m2Sym, linha.dataset.name);
+  });
+  // a cada 2 s: preços e variações ao vivo (câmbio, cripto) sem redesenhar; relógio e barra do próximo evento
+  setInterval(() => {
+    if (!root || !root.isConnected || document.hidden || !api) return;
+    root.querySelectorAll('[data-m2-px]').forEach((el) => {
+      const s = el.dataset.m2Px, q = api.q(s); if (!q || !ok(q.v)) return;
+      const grande = el.closest('.m2-preco'), txt = grande ? preco(s, q).replace(/^(R\$|US\$) /, '') : null;
+      const novo = txt ?? preco(s, q, abas().flatMap((x) => x.l).find((r) => r.s === s)?.d);
+      if (el.textContent !== novo) { el.textContent = novo; el.classList.remove('m2-pisca'); void el.offsetWidth; el.classList.add('m2-pisca'); }
+    });
+    root.querySelectorAll('[data-m2-ch]').forEach((el) => {
+      const q = api.q(el.dataset.m2Ch); if (!q || !ok(q.c)) return;
+      el.textContent = `${seta(q.c)} ${api.pct(q.c)}`; el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
+    });
+    root.querySelectorAll('[data-m2-pc]').forEach((el) => {
+      const q = api.q(el.dataset.m2Pc); if (!q || !ok(q.c)) return;
+      el.textContent = api.pct(q.c); const b = el.closest('.m2-vidro'); b.classList.remove('up', 'dn', 'eq', 'na'); b.classList.add(lado(q.c)); b.style.setProperty('--f', Math.min(1, Math.abs(q.c) / 2).toFixed(2));
+    });
+    root.querySelectorAll('[data-m2-t]').forEach((el) => { el.textContent = relogio(+el.dataset.m2T - Date.now()); });
+    root.querySelectorAll('[data-m2-prog]').forEach((el) => { el.style.width = (Math.max(0.02, Math.min(1, 1 - (+el.dataset.m2Prog - Date.now()) / 864e5)) * 100).toFixed(1) + '%'; });
+  }, 2000);
+  // notícias novas chegam sem redesenhar a Mesa
+  window.addEventListener('mm-news-ok', () => { if (root?.isConnected) trocar('noticias', noticiasHTML()); });
+
+  const PAINEIS = { grafico: graficoHTML, seletor: seletorHTML, pulso: pulsoHTML, juros: jurosHTML, noticias: noticiasHTML, radar: radarHTML, evento: eventoHTML, fluxo: fluxoHTML };
+  function atualizar(id) { if (root?.isConnected && api && PAINEIS[id]) trocar(id, PAINEIS[id]()); }
+  return { html, depois, escolher, atualizar, PULSO, abas: () => (api ? abas() : []) };
+})();
