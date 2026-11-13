@@ -73,6 +73,7 @@
     // gráficos desenhados com a largura real: avisa que a área mudou
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     if (k === 'mercado') window.__anaAbrir?.();   // a Análise avançada só busca dados quando aparece
+    document.dispatchEvent(new CustomEvent('mm-ana-secao', { detail: k }));   // menu lateral acompanha (menu-sub.js)
   }
   nav.addEventListener('click', (e) => { const b = e.target.closest('[data-secao]'); if (b) mostra(b.dataset.secao); });
   window.addEventListener('resize', pilula);
@@ -120,6 +121,8 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) fechaCheia(); });
 
   // os cartões de destaque levam à seção certa
+  // menu lateral e menu do celular mostram as seções como sub-itens de "Análises" (menu-sub.js, 13/11/2026)
+  window.MMAnaSecoes = { lista: SECOES.map(([k, t, ic]) => ({ k, t, icone: icone(ic) })), atual: () => secao, ir: (k) => { if (SECOES.some(([s]) => s === k)) mostra(k); } };
   window.__anaSecao = (id) => { const k = ALVO[id] || (SECOES.some(([s]) => s === id) ? id : null); if (k) mostra(k); return !!k; };
   nav.classList.add('sem-anim');
   mostra(secao, false);
