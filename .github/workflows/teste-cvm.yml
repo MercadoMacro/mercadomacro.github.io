@@ -8,13 +8,25 @@ jobs:
           B=https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/VLMO
           curl -sSfLO $B/META/meta_vlmo_cia_aberta.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2026.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2025.zip
           for z in *.zip; do echo "== $z"; unzip -l $z; unzip -oq $z; done
-          for f in meta_*.txt; do echo "=== $f"; iconv -f latin1 -t utf8 "$f" | head -150; done
+          pip install -q pandas
           cat > a.py <<'PY'
-          import pandas as pd, glob
-          for f in sorted(glob.glob('vlmo_cia_aberta*_202*.csv')):
-              d = pd.read_csv(f, sep=';', encoding='latin1', dtype=str)
-              print('\n#####', f, d.shape); print(d.head(3).T.to_string())
-              for c in d.columns:
-                  if d[c].nunique() < 40: print('--', c, d[c].value_counts().head(25).to_dict())
+          import pandas as pd
+          pd.set_option('display.width', 250); pd.set_option('display.max_columns', 30)
+          d = pd.concat([pd.read_csv(f'vlmo_cia_aberta_con_{a}.csv', sep=';', encoding='latin1', dtype=str) for a in (2025, 2026)])
+          print('linhas', d.shape); print(d.head(4).T.to_string())
+          for c in ['Tipo_Cargo','Tipo_Movimentacao','Tipo_Operacao','Tipo_Empresa','Tipo_Ativo','Caracteristica_Valor_Mobiliario','Descricao_Movimentacao']:
+              print('--', c, d[c].value_counts(dropna=False).head(20).to_dict())
+          d['Volume'] = pd.to_numeric(d['Volume'], errors='coerce'); d['Quantidade'] = pd.to_numeric(d['Quantidade'], errors='coerce')
+          print('ref max', d['Data_Referencia'].max(), 'mov max', d['Data_Movimentacao'].max())
+          print('por mes ref (n docs empresas):', d.groupby(d['Data_Referencia'].str[:7])['CNPJ_Companhia'].nunique().tail(14).to_dict())
+          a = d[d['Tipo_Ativo'].fillna('').str.contains('A..es', regex=True)]
+          a = a.sort_values('Versao').drop_duplicates(['CNPJ_Companhia','Data_Referencia','Tipo_Cargo','Data_Movimentacao','Tipo_Movimentacao','Quantidade','Volume','Empresa'], keep='last')
+          t = a.groupby([a['Data_Referencia'].str[:7], 'Tipo_Operacao'])['Volume'].sum().unstack().fillna(0) / 1e9
+          print('volume ações R$ bi por mês e operação'); print(t.tail(14).round(2))
+          print(a.groupby(['Tipo_Cargo','Tipo_Operacao'])['Volume'].sum().div(1e9).round(2).unstack())
+          o = a[a['Data_Referencia'].str[:7] == '2026-09']
+          sg = o.assign(s=o['Volume'] * o['Tipo_Operacao'].map({'Compra':1,'Venda':-1}).fillna(0)).groupby('Nome_Companhia')['s'].sum().sort_values()
+          print('set/26 maiores vendas'); print((sg.head(8)/1e6).round(1)); print('maiores compras'); print((sg.tail(8)/1e6).round(1))
+          print('versoes', d['Versao'].value_counts().head().to_dict())
           PY
-          python3 a.py 2>&1 | head -400
+          python3 a.py 2>&1 | head -300
