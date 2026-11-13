@@ -162,3 +162,12 @@ body.light .m2-vidro::before{display:none}
 .m2-opc button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .m2-opc button em{font-style:normal;color:var(--m2-ouro);font-weight:700;padding:0 6px}
 @media (max-width:760px){.m2-busca{font-size:16px}}
+
+/* seletor em uma linha só, como as listas do TradingView (13/11/2026): marca, nome, último, variação e variação % */
+.m2-tb td{padding:6px 12px;height:22px}
+.m2-tb tbody tr td:first-child{max-width:0;width:100%}
+.m2-at{gap:0}
+.m2-at .ms-mk{margin-right:8px}
+.m2-at b{font-weight:600;font-size:13px}
+.m2-tb td.n{font-size:12.5px;padding-left:10px}
+.m2-tb thead th.n{padding-left:10px}

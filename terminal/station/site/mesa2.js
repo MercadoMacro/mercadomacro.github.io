@@ -98,6 +98,13 @@ globalThis.MMMesa2 = (() => {
     return prefixo(s) + api.nf(q.v, casas) + (/^\^(IRX|FVX|TNX|TYX)$/.test(s) ? '%' : '');
   }
 
+  // variação absoluta do dia (último menos o fechamento anterior), como nas listas do TradingView
+  function absVar(s, q, d) {
+    if (!q || !ok(q.v) || !ok(q.c) || q.c <= -100) return '—';
+    const a = q.v - q.v / (1 + q.c / 100), casas = Math.abs(q.v) >= 10000 && !/-USD$|BRL$/.test(s) ? 2 : d != null ? d : api.dec(q.v);
+    return `${a > 0 ? '+' : a < 0 ? '−' : ''}${api.nf(Math.abs(a), casas)}`;
+  }
+
   /* ---------- pedaços ---------- */
   const cab = (t, cor, extra = '') => `<div class="m2-head"><span class="m2-dot ${cor || ''}" aria-hidden="true"></span><h3>${t}</h3><span class="sp"></span>${extra}</div>`;
   function spark(sp, c) {
@@ -146,10 +153,10 @@ globalThis.MMMesa2 = (() => {
     const linhas = atual.l.map((r) => {
       const q = api.q(r.s), sub = r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
       return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s && !editando ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="${editando ? -1 : 0}">
-          <td><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${api.marca(r.s, r.n, r.cc, r.tid)}<span><b>${esc(r.n)}</b><small>${esc(sub)}</small></span></span></td>
+          <td title="${esc(sub ? r.n + ' · ' + sub : r.n)}"><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${api.marca(r.s, r.n, r.cc, r.tid)}<b>${esc(r.n)}</b></span></td>
           <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td>
-          <td class="sk">${spark(q?.sp, q?.c)}</td>
-          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${editando ? `<button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button>` : `${seta(q?.c)} ${api.pct(q?.c)}`}</td></tr>`;
+          <td class="n num ${lado(q?.c)}" data-m2-abs="${esc(r.s)}">${editando ? '' : absVar(r.s, q, r.d)}</td>
+          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${editando ? `<button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button>` : api.pct(q?.c)}</td></tr>`;
     }).join('');
     const vazia = !atual.l.length ? `<tr class="m2-vaziar"><td colspan="4">Lista vazia. ${editando ? 'Use "Adicionar ativo" abaixo.' : 'Clique em Editar para pôr ativos.'}</td></tr>` : '';
     let rodape = '';
@@ -162,7 +169,7 @@ globalThis.MMMesa2 = (() => {
           <div class="m2-opc">${grupos.length ? grupos.map((g) => `<div class="m2-grp">${esc(g)}</div>${opc.filter((x) => x.grupo === g).map((x) => `<button type="button" data-m2-por="${esc(x.s)}">${api.marca(x.s, x.n, x.cc, x.tid)}<span>${esc(x.n)}</span><em>+</em></button>`).join('')}`).join('') : '<p class="m2-vazio">Nada encontrado.</p>'}</div></div>` : ''}
         <div class="m2-ed-acoes"><button type="button" class="m2-btn" data-m2-adicionar aria-expanded="${adicionando}">${adicionando ? 'Fechar a lista' : '+ Adicionar ativo'}</button>${atual.propria ? '<button type="button" class="m2-link" data-m2-restaurar>Restaurar a lista padrão</button>' : ''}</div></div>`;
     }
-    return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="sk">Hoje</th><th class="n">${editando ? '' : 'Dia'}</th></tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
+    return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="n">Var.</th><th class="n">${editando ? '' : 'Var. %'}</th></tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
   }
   // ordem atual das linhas na tela (depois de arrastar)
   const ordemTela = () => [...(root?.querySelectorAll('[data-m2="seletor"] tbody tr[data-m2-sym]') || [])].map((tr) => tr.dataset.m2Sym);
@@ -395,9 +402,14 @@ globalThis.MMMesa2 = (() => {
       const novo = txt ?? preco(s, q, abas().flatMap((x) => x.l).find((r) => r.s === s)?.d);
       if (el.textContent !== novo) { el.textContent = novo; el.classList.remove('m2-pisca'); void el.offsetWidth; el.classList.add('m2-pisca'); }
     });
+    root.querySelectorAll('[data-m2-abs]').forEach((el) => {
+      const s = el.dataset.m2Abs, q = api.q(s); if (!q || !ok(q.c) || editando) return;
+      const r = abas().flatMap((x) => x.l).find((x) => x.s === s);
+      el.textContent = absVar(s, q, r?.d); el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
+    });
     root.querySelectorAll('[data-m2-ch]').forEach((el) => {
       const q = api.q(el.dataset.m2Ch); if (!q || !ok(q.c) || el.querySelector('button')) return; // editando: ali fica o ✕
-      el.textContent = `${seta(q.c)} ${api.pct(q.c)}`; el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
+      el.textContent = el.closest('.m2-tb') ? api.pct(q.c) : `${seta(q.c)} ${api.pct(q.c)}`; el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
     });
     root.querySelectorAll('[data-m2-pc]').forEach((el) => {
       const q = api.q(el.dataset.m2Pc); if (!q || !ok(q.c)) return;
