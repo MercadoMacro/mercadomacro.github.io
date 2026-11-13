@@ -80,7 +80,7 @@
   // datas de decisão do Fed e do Copom vêm do index.html (FOMC_DECISIONS e COPOM_DECISIONS)
   const FOMC = (typeof FOMC_DECISIONS !== 'undefined' && FOMC_DECISIONS.length) ? FOMC_DECISIONS : ['2026-10-28', '2026-12-09'];
 
-  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), 'BTC-BRL', ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
+  const SYMS = [...new Set([...CRYPTO.map((c) => c[0]), ...CARDS.map((c) => c.s), ...TABLES.flatMap((t) => t.rows.map((r) => r[0]))])].filter((s) => !s.startsWith('__'));
 
   /* ---------------- dados ---------------- */
   const CACHE_KEY = 'mesa_cache_v1', CURVE_KEY = 'mesa_curva_v1';
@@ -583,10 +583,20 @@
     }).join('');
   }
   const modo2 = () => window.MMDeskWindows?.modo?.() === '2';
+  // Bitcoin em reais = Bitcoin em dólar (ao vivo) × dólar em reais (ao vivo quando há, senão o último do Yahoo).
+  // O Yahoo não devolve BTC-BRL (12/11/2026: a linha ficava em "—"). A variação junta as duas: a do Bitcoin (24h)
+  // e a do dólar no dia.
+  function btcReais() {
+    const b = cryptoView('BTC-USD'), fq = forexStream?.covers('BRL=X') ? forexStream.quote('BRL=X') : null;
+    const d = fq && isFinite(fq.value) ? { v: fq.value, c: fq.change != null && isFinite(fq.change) ? fq.change : Q['BRL=X']?.c, ts: fq.ts, live: true } : Q['BRL=X'];
+    if (!b || !d || !isFinite(b.v) || !isFinite(d.v)) return null;
+    const c = isFinite(b.c) && isFinite(d.c) ? ((1 + b.c / 100) * (1 + d.c / 100) - 1) * 100 : null;
+    return { v: b.v * d.v, c, ts: Math.max(b.ts || 0, d.ts || 0) || null, live: !!(b.live && d.live) };
+  }
   function criptoLinha([s, n, l, cor]) {
-    const q = s === 'BTC-BRL' ? Q[s] : cryptoView(s), has = q && q.v != null && isFinite(q.v);
+    const q = s === 'BTC-BRL' ? btcReais() : cryptoView(s), has = q && q.v != null && isFinite(q.v);
     const ic = `<span class="ms-mk" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="${cor}"/><text x="8" y="${l.length > 1 ? 10.9 : 11.6}" text-anchor="middle" font-size="${l.length > 1 ? 6.6 : 9.6}" font-weight="700" fill="#fff" font-family="Arial, sans-serif">${l}</text></svg></span>`;
-    const tit = s === 'BTC-BRL' ? 'Bitcoin cotado em reais · Yahoo Finance · atualização periódica' : cryptoTitle(s, n, q);
+    const tit = s === 'BTC-BRL' ? 'Bitcoin em reais, calculado: Bitcoin em dólar × dólar em reais. A variação junta a do Bitcoin (24h) e a do dólar no dia.' : cryptoTitle(s, n, q);
     return `<tr data-sym="${esc(s)}" data-name="${esc(n)}" data-cr="${esc(s)}" class="${has && !q.live ? 'old' : ''}" title="${esc(tit)}">
       <td class="nm">${ic}${esc(n)}</td>
       <td class="px">${has ? (s === 'BTC-BRL' ? 'R$ ' : '') + nf(q.v, q.v < 2 ? 4 : 2) : '—'}</td>
@@ -602,12 +612,13 @@
     if(!cryptoEnabled)return;
     // tabela Cripto da Mesa 2: troca só a linha que mudou (sem redesenhar a Mesa)
     for (const def of CRIPTO_TB) {
-      if (def[0] === 'BTC-BRL' || (event?.type === 'quote' && event.symbol !== def[0])) continue;
+      const brl = def[0] === 'BTC-BRL';
+      if (event?.type === 'quote' && event.symbol !== (brl ? 'BTC-USD' : def[0])) continue;
       const tr = root.querySelector(`tr[data-cr="${CSS.escape(def[0])}"]`); if (!tr) continue;
-      const q = cryptoView(def[0]), has = q && q.v != null && isFinite(q.v); if (!has) continue;
+      const q = brl ? btcReais() : cryptoView(def[0]), has = q && q.v != null && isFinite(q.v); if (!has) continue;
       const px = tr.querySelector('.px'), ch = tr.querySelector('.ch'), tm = tr.querySelector('.tm');
-      px.textContent = nf(q.v, q.v < 2 ? 4 : 2); ch.textContent = pct(q.c); ch.className = 'ch ' + cls(q.c); tm.innerHTML = hhmm(q.ts);
-      tr.classList.remove('old'); tr.title = cryptoTitle(def[0], def[1], q);
+      px.textContent = (brl ? 'R$ ' : '') + nf(q.v, q.v < 2 ? 4 : 2); ch.textContent = pct(q.c); ch.className = 'ch ' + cls(q.c); tm.innerHTML = hhmm(q.ts);
+      tr.classList.remove('old'); if (!brl) tr.title = cryptoTitle(def[0], def[1], q);
       if (event?.type === 'quote' && event.quote.direction) { px.classList.remove('ms-tick-up', 'ms-tick-down'); void px.offsetWidth; px.classList.add(event.quote.direction > 0 ? 'ms-tick-up' : 'ms-tick-down'); }
     }
     for(const [s,n]of CRYPTO){

@@ -60,8 +60,8 @@ test('known restricted symbols cannot reopen the broken embed through navigation
 const mesaSource=readFileSync(new URL('../site/mesa.js',import.meta.url),'utf8');
 const catalogCode=mesaSource.slice(mesaSource.indexOf('  const CRYPTO ='),mesaSource.indexOf('  /* ---------------- dados'));
 function mesaSymbols(){const ctx=vm.createContext({});vm.runInContext(catalogCode+';globalThis.symbols=SYMS;',ctx);return Array.from(ctx.symbols);}
-test('all 73 current Mesa symbols route to own history and never create an embed',()=>{
- const symbols=mesaSymbols(),u=integration();assert.equal(symbols.length,73);
+test('all 72 current Mesa symbols route to own history and never create an embed',()=>{
+ const symbols=mesaSymbols(),u=integration();assert.equal(symbols.length,72);
  for(const sym of symbols)u.ctx.window.openAssetChart(sym,sym,null,null,'mesa');
  assert.equal(u.scripts.length,0);assert.deepEqual(u.calls,symbols);
 });
