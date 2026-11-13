@@ -205,6 +205,8 @@ $('#theme-toggle').addEventListener('click', () => {
    TABS
    ========================================================= */
 function switchTab(tabId) {
+  // Insiders virou seção de "Macro e Fluxo" (13/11/2026): endereço e aba guardada antigos levam para lá
+  if (tabId === 'insiders-panel') { tabId = 'analysis-panel'; setTimeout(() => window.__anaSecao?.('ins'), 0); }
   // se o foco estava dentro da aba que vai sumir, ele passa para o botão da aba nova (aba escondida com foco gera aviso no navegador)
   const ativa = document.activeElement?.closest?.('.tab-panel');
   if (ativa && ativa.id !== tabId) document.getElementById('tab-' + tabId)?.focus({ preventScroll: true });
@@ -228,7 +230,7 @@ function contarAba(tabId) {
 }
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 const savedTab = localStorage.getItem(STORAGE.activeTab);
-if (savedTab && $(`#${savedTab}`)) switchTab(savedTab);
+if (savedTab && ($(`#${savedTab}`) || savedTab === 'insiders-panel')) switchTab(savedTab);
 else contarAba(document.querySelector('.tab-btn.active')?.dataset.tab || '');
 
 /* =========================================================
@@ -4379,7 +4381,7 @@ window.__onTabSwitch = (tabId) => {
   const GROUPS = [
     ['Visão geral', ['market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
     ['Informação', ['news-panel', 'weekly-panel', 'calendar-panel']],
-    ['Análise', ['analysis-panel', 'fund-panel', 'insiders-panel']],
+    ['Análise', ['analysis-panel', 'fund-panel']],
     ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel', 'edu-panel']]
   ];
   const tabInfo = (id) => {
@@ -4400,8 +4402,6 @@ window.__onTabSwitch = (tabId) => {
     'weekly-panel': '<mask id="si-w"><g fill="#fff"><rect x="4.5" y="4" width="15" height="18" rx="2"/><rect x="8.3" y="2" width="7.4" height="4.2" rx="1.2"/></g><g fill="#000"><rect x="9.8" y="3.2" width="4.4" height="1.6" rx=".8"/><rect x="7.6" y="14" width="2.1" height="4.8" rx=".4"/><rect x="11" y="11" width="2.1" height="7.8" rx=".4"/><rect x="14.4" y="8.5" width="2.1" height="10.3" rx=".4"/></g></mask><rect width="24" height="24" mask="url(#si-w)"/>',
     'calendar-panel': '<mask id="si-k"><g fill="#fff"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><rect x="6.8" y="2" width="2.4" height="5" rx="1.2"/><rect x="14.8" y="2" width="2.4" height="5" rx="1.2"/></g><rect x="5" y="10" width="14" height="9.5" rx="1" fill="#000"/><g fill="#fff"><rect x="6.6" y="11.6" width="2.6" height="2.4" rx=".5"/><rect x="10.7" y="11.6" width="2.6" height="2.4" rx=".5"/><rect x="14.8" y="11.6" width="2.6" height="2.4" rx=".5"/><rect x="6.6" y="15.4" width="2.6" height="2.4" rx=".5"/><rect x="10.7" y="15.4" width="2.6" height="2.4" rx=".5"/></g></mask><rect width="24" height="24" mask="url(#si-k)"/>',
     'analysis-panel': '<path d="M2.5 3h2.1v15.9h16.9V21H3.5a1 1 0 0 1-1-1Z"/><rect x="7.85" y="8" width=".5" height="9"/><rect x="7" y="10" width="2.2" height="5" rx=".4"/><rect x="11.85" y="5" width=".5" height="10"/><rect x="11" y="7" width="2.2" height="6" rx=".4"/><rect x="15.85" y="9.5" width=".5" height="7.5"/><rect x="15" y="11" width="2.2" height="4" rx=".4"/><rect x="19.35" y="3.5" width=".5" height="10"/><rect x="18.5" y="5.5" width="2.2" height="6" rx=".4"/>',
-    // insiders (13/11/2026): pessoa de gravata com uma seta de compra; desenho próprio
-    'insiders-panel': '<circle cx="9.5" cy="6.5" r="3.8"/><path d="M2.5 21c0-4.4 3.1-7.6 7-7.6s7 3.2 7 7.6Z"/><path d="m9.5 13.6 1.3 1.6-.9 4.6h-.8l-.9-4.6Z" fill="#000" fill-opacity=".45"/><path d="M16.4 9.6 19.3 6.7l-1.6-.1V5.2h4v4h-1.4l-.1-1.6-2.9 2.9Z"/>',
     'fund-panel': '<mask id="si-c2"><rect width="24" height="24" fill="#fff"/><circle cx="18" cy="18" r="5.9" fill="#000"/></mask><g mask="url(#si-c2)"><path d="M10.8 3.2A8.9 8.9 0 1 0 20.7 13.2h-9.9Z"/><path d="M12.9 1.6v9.5h9.5a9.5 9.5 0 0 0-9.5-9.5Z"/></g><mask id="si-d2"><circle cx="18" cy="18" r="4.6" fill="#fff"/><text x="18" y="20.6" font-size="7.4" font-weight="700" font-family="Arial,Helvetica,sans-serif" text-anchor="middle" fill="#000">$</text></mask><rect width="24" height="24" mask="url(#si-d2)"/>',
     'indicators-panel': '<mask id="si-c3"><rect width="24" height="24" fill="#fff"/><circle cx="17.6" cy="17.6" r="5.9" fill="#000"/></mask><g mask="url(#si-c3)" fill="none" stroke-width="1.8"><circle cx="10.2" cy="10.2" r="7.6"/><ellipse cx="10.2" cy="10.2" rx="3.3" ry="7.6"/><path d="M2.8 10.2h14.8M4.2 6h12M4.2 14.4h12"/></g><mask id="si-b3"><circle cx="17.6" cy="17.6" r="4.7" fill="#fff"/><g fill="#000"><rect x="15.3" y="18" width="1.2" height="2.2"/><rect x="17" y="16.6" width="1.2" height="3.6"/><rect x="18.7" y="15" width="1.2" height="5.2"/></g></mask><rect width="24" height="24" mask="url(#si-b3)"/>',
     'calculator-panel': '<mask id="si-q"><rect x="4.5" y="2" width="15" height="20" rx="2.5" fill="#fff"/><g fill="#000"><rect x="7" y="4.5" width="10" height="4" rx="1"/><rect x="7" y="11" width="2.4" height="2.4" rx=".5"/><rect x="10.8" y="11" width="2.4" height="2.4" rx=".5"/><rect x="14.6" y="11" width="2.4" height="2.4" rx=".5"/><rect x="7" y="14.8" width="2.4" height="2.4" rx=".5"/><rect x="10.8" y="14.8" width="2.4" height="2.4" rx=".5"/><rect x="14.6" y="14.8" width="2.4" height="6" rx=".5"/><rect x="7" y="18.4" width="2.4" height="2.4" rx=".5"/><rect x="10.8" y="18.4" width="2.4" height="2.4" rx=".5"/></g></mask><rect width="24" height="24" mask="url(#si-q)"/>',
@@ -4752,7 +4752,8 @@ window.__onTabSwitch = (tabId) => {
     ['fa-newspaper', 'Gerar briefing de notícias', 'briefing noticias', () => { switchTab('news-panel'); setTimeout(() => $('#briefing-btn')?.click(), 250); }],
     ['fa-calendar-week', 'Agenda da semana', 'calendario eventos', () => $('#ecal-week-btn')?.click()],
     ['fa-file-export', 'Exportar agenda (.ics)', 'google outlook calendario', () => { switchTab('calendar-panel'); setTimeout(() => $('#ecal-ics-btn')?.click(), 250); }],
-    ['fa-chart-line', 'Análise avançada', 'humor comparador desempenho', () => { switchTab('analysis-panel'); setTimeout(() => window.__anaSecao?.('mercado'), 250); }]
+    ['fa-chart-line', 'Análise avançada', 'humor comparador desempenho', () => { switchTab('analysis-panel'); setTimeout(() => window.__anaSecao?.('mercado'), 250); }],
+    ['fa-user-tie', 'Radar de insiders', 'insiders cvm 44 controladores diretores compras vendas', () => { switchTab('analysis-panel'); setTimeout(() => window.__anaSecao?.('ins'), 250); }]
   ].map(([ic, label, kw, run]) => ({ sec: 'Ações', icon: `<i class="fas ${ic}"></i>`, label, kw, run }));
 
   const assetsList = () => MARKET_SECTIONS.flatMap(sec => sec.items.map(it => {
@@ -5204,22 +5205,24 @@ function newsReadMins(n) {
   load();
 })();
 /* =========================================================
-   INSIDERS (13/11/2026): insiders.js só é baixado na primeira vez que a aba é aberta
+   INSIDERS (13/11/2026): seção de "Macro e Fluxo"; insiders.js só é baixado
+   na primeira vez que a seção é aberta
    ========================================================= */
 (() => {
-  const panel = document.getElementById('insiders-panel');
-  if (!panel) return;
   let asked = false;
   const load = () => {
-    if (asked || !panel.classList.contains('active')) return;
+    const panel = document.getElementById('analysis-panel'), wrap = panel?.querySelector('.ana-wrap');
+    if (asked || !panel?.classList.contains('active') || wrap?.dataset.secao !== 'ins') return;
     asked = true;
     const sc = document.createElement('script');
-    sc.src = 'insiders.js?v=1';
+    sc.src = 'insiders.js?v=2';
     sc.onerror = () => { asked = false; const r = document.getElementById('insiders-root'); if (r) r.innerHTML = '<div class="ind-boot">Não foi possível carregar o radar de insiders. Recarregue a página.</div>'; };
     document.body.appendChild(sc);
   };
-  new MutationObserver(load).observe(panel, { attributes: true, attributeFilter: ['class'] });
-  load();
+  document.addEventListener('mm-ana-secao', load);
+  const panel = document.getElementById('analysis-panel');
+  if (panel) new MutationObserver(load).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  setTimeout(load, 0);
 })();
 /* =========================================================
    FLUXO NA B3 (aba Análises): fluxo.js só é baixado

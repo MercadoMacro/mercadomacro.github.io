@@ -672,7 +672,7 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const ABAS = [
     [/calendario|agenda/, 'calendar-panel'], [/noticia/, 'news-panel'], [/mapa( de)? calor/, 'heatmap-panel'], [/watch ?list|lista/, 'watch-panel'],
-    [/\bmesa\b/, 'mesa-panel'], [/resumo semanal|resumo da semana/, 'weekly-panel'], [/analise/, 'analysis-panel'], [/fundamento|balanco/, 'fund-panel'], [/insider/, 'insiders-panel'],
+    [/\bmesa\b/, 'mesa-panel'], [/resumo semanal|resumo da semana/, 'weekly-panel'], [/analise/, 'analysis-panel'], [/fundamento|balanco/, 'fund-panel'], [/insider/, 'analysis-panel'],
     [/indicador/, 'indicators-panel'], [/calculadora/, 'calculator-panel'], [/opco|opcao/, 'options-panel'], [/educacao|lic(ao|oes)|aula/, 'edu-panel'], [/mercado/, 'market-panel'],
   ];
   function abreAba(id) { const t = document.querySelector('.tab-btn[data-tab="' + id + '"]'); if (!t) return false; window.MMAssistente?.fechar(); t.click(); return true; }

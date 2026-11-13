@@ -25,7 +25,7 @@
     sub.className = 'side-sub';
     sub.id = 'side-sub-analises';
     sub.setAttribute('role', 'group');
-    sub.setAttribute('aria-label', 'Seções das Análises');
+    sub.setAttribute('aria-label', 'Seções de Macro e Fluxo');
     sub.innerHTML = botoes('side-subitem');
     item.after(sub);
     sub.addEventListener('click', (e) => { const b = e.target.closest('[data-sub-secao]'); if (b) ir(b.dataset.subSecao); });
@@ -39,7 +39,7 @@
     const d = document.createElement('div');
     d.className = 'mn-sub';
     d.setAttribute('role', 'group');
-    d.setAttribute('aria-label', 'Seções das Análises');
+    d.setAttribute('aria-label', 'Seções de Macro e Fluxo');
     d.innerHTML = botoes('mn-subitem');
     linha.after(d);
     d.addEventListener('click', (e) => {
