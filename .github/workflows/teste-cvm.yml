@@ -1,0 +1,20 @@
+name: Teste CVM insiders
+on: { push: { branches: [teste-cvm] } }
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/VLMO
+          curl -sSfLO $B/META/meta_vlmo_cia_aberta.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2026.zip && curl -sSfLO $B/DADOS/vlmo_cia_aberta_2025.zip
+          for z in *.zip; do echo "== $z"; unzip -l $z; unzip -oq $z; done
+          for f in meta_*.txt; do echo "=== $f"; iconv -f latin1 -t utf8 "$f" | head -150; done
+          cat > a.py <<'PY'
+          import pandas as pd, glob
+          for f in sorted(glob.glob('vlmo_cia_aberta*_202*.csv')):
+              d = pd.read_csv(f, sep=';', encoding='latin1', dtype=str)
+              print('\n#####', f, d.shape); print(d.head(3).T.to_string())
+              for c in d.columns:
+                  if d[c].nunique() < 40: print('--', c, d[c].value_counts().head(25).to_dict())
+          PY
+          python3 a.py 2>&1 | head -400
