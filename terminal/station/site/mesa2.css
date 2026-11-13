@@ -185,3 +185,9 @@ body.light .m2-vidro::before{display:none}
 @media (max-width:760px){.m2>.m2-box{height:auto!important}.m2-c-graf{min-height:340px}.m2>.m2-c-sel{max-height:460px}.m2>.m2-c-juros{max-height:none;overflow:visible}}
 .m2-opc button span{text-align:left}
 .m2-opc button small{color:var(--text-3);font:600 10.5px 'JetBrains Mono',monospace;margin-left:4px}
+/* títulos que ordenam a lista (13/11/2026) */
+.m2-tb thead th .m2-ord{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:inherit;font:inherit;border-radius:4px}
+.m2-tb thead th .m2-ord:hover,.m2-tb thead th .m2-ord.on{color:var(--text)}
+.m2-tb thead th .m2-ord:focus-visible{outline:2px solid var(--m2-ouro);outline-offset:2px}
+.m2-tb thead th .m2-seta{font-size:9px;opacity:.45}
+.m2-tb thead th .m2-ord.on .m2-seta{opacity:1;color:var(--m2-ouro)}

@@ -15,6 +15,11 @@ globalThis.MMMesa2 = (() => {
   let sel = ler(SEL_KEY, { s: '^BVSP', n: 'Ibovespa' });
   if (!sel || typeof sel.s !== 'string' || !/^[\w^.=\-]{1,24}$/.test(sel.s)) sel = { s: '^BVSP', n: 'Ibovespa' };
   let aba = ler(ABA_KEY, 'ind');
+  // ordem da lista (13/11/2026, pedido do Dante): clicar no título da coluna ordena do maior para o menor, de novo do
+  // menor para o maior e, na terceira vez, volta à ordem da lista. Vale para todas as abas e fica guardada no navegador.
+  const ORD_KEY = 'mm_m2_ordem_v1', COLS = ['pct', 'abs', 'px', 'nome'];
+  let ordem = ler(ORD_KEY, null);
+  if (!ordem || !COLS.includes(ordem.k) || (ordem.d !== 1 && ordem.d !== -1)) ordem = null;
 
   /* ---------- listas ---------- */
   // abas do seletor: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo na Mesa 1)
@@ -214,13 +219,15 @@ globalThis.MMMesa2 = (() => {
     const A = abas(), atual = A.find((x) => x.id === aba) || A[0];
     const tabs = `<div class="m2-tabs" role="tablist" aria-label="Grupos de ativos">${A.map((x) => `<button type="button" role="tab" data-m2-aba="${x.id}" aria-selected="${x.id === atual.id}">${x.t}</button>`).join('')}<span class="sp"></span>
       <button type="button" class="m2-editar${editando ? ' on' : ''}" data-m2-editar aria-pressed="${editando}" title="${editando ? 'Concluir a edição da lista' : 'Organizar esta lista: arrastar, tirar e pôr ativos'}">${editando ? 'Concluir' : lapis + '<span>Editar</span>'}</button></div>`;
-    const linhas = atual.l.map((r) => {
+    const linhas = ordenar(atual.l).map((r) => {
       const q = cot(r.s), sub = r.eua ? `${r.sub} · ${r.nomeLongo || r.n} (${r.s})` : r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
       return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s && !editando ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="${editando ? -1 : 0}">
           <td title="${esc(sub ? r.n + ' · ' + sub : r.n)}"><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${marcaItem(r)}<b>${esc(r.n)}</b></span></td>
+          ${editando ? `<td class="n"></td>
           <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td>
-          <td class="n num ${lado(q?.c)}" data-m2-abs="${esc(r.s)}">${editando ? '' : absVar(r.s, q, r.d)}</td>
-          <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${editando ? `<button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button>` : api.pct(q?.c)}</td></tr>`;
+          <td class="n"><button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button></td></tr>` : `<td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${api.pct(q?.c)}</td>
+          <td class="n num ${lado(q?.c)}" data-m2-abs="${esc(r.s)}">${absVar(r.s, q, r.d)}</td>
+          <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td></tr>`}`;
     }).join('');
     const vazia = !atual.l.length ? `<tr class="m2-vaziar"><td colspan="4">Lista vazia. ${editando ? 'Use "Adicionar ativo" abaixo.' : 'Clique em Editar para pôr ativos.'}</td></tr>` : '';
     let rodape = '';
@@ -233,7 +240,29 @@ globalThis.MMMesa2 = (() => {
           <div class="m2-opc">${grupos.length ? grupos.map((g) => `<div class="m2-grp">${esc(g)}</div>${opc.filter((x) => x.grupo === g).map((x) => `<button type="button" data-m2-por="${esc(x.s)}">${marcaItem(x)}<span>${esc(x.n)}${x.eua ? ` <small>${esc(x.s)}</small>` : ''}</span><em>+</em></button>`).join('')}`).join('') : '<p class="m2-vazio">Nada encontrado.</p>'}</div></div>` : ''}
         <div class="m2-ed-acoes"><button type="button" class="m2-btn" data-m2-adicionar aria-expanded="${adicionando}">${adicionando ? 'Fechar a lista' : '+ Adicionar ativo'}</button>${atual.propria ? '<button type="button" class="m2-link" data-m2-restaurar>Restaurar a lista padrão</button>' : ''}</div></div>`;
     }
-    return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="n">Var.</th><th class="n">${editando ? '' : 'Var. %'}</th></tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
+    return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr>${editando ? '<th>Ativo</th><th class="n"></th><th class="n">Último</th><th class="n"></th>' : cabCol('nome', 'Ativo', '') + cabCol('pct', 'Var. %', 'n') + cabCol('abs', 'Var.', 'n') + cabCol('px', 'Último', 'n')}</tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
+  }
+  // título de coluna que ordena (botão dentro do th; aria-sort diz a ordem atual)
+  function cabCol(k, rot, cls) {
+    const on = !editando && ordem && ordem.k === k, dir = on ? (ordem.d < 0 ? 'descending' : 'ascending') : 'none';
+    const prox = !on ? (k === 'nome' ? 'de A a Z' : 'do maior para o menor') : ordem.d === (k === 'nome' ? 1 : -1) ? (k === 'nome' ? 'de Z a A' : 'do menor para o maior') : 'na ordem da lista';
+    return `<th class="${cls}" aria-sort="${dir}"><button type="button" class="m2-ord${on ? ' on' : ''}" data-m2-ord="${k}" title="Ordenar ${prox}">${rot}<span class="m2-seta" aria-hidden="true">${on ? (ordem.d < 0 ? '▼' : '▲') : '↕'}</span></button></th>`;
+  }
+  // ordena uma cópia (a lista guardada não muda); sem cotação vai para o fim; editando, sempre a ordem da lista
+  function ordenar(l) {
+    if (!ordem || editando) return l;
+    const val = (r) => {
+      if (ordem.k === 'nome') return r.n;
+      const q = cot(r.s); if (!q || !ok(q.v)) return null;
+      if (ordem.k === 'px') return q.v;
+      if (!ok(q.c) || q.c <= -100) return null;
+      return ordem.k === 'pct' ? q.c : q.v - q.v / (1 + q.c / 100);
+    };
+    return l.map((r, i) => ({ r, i, v: val(r) })).sort((a, b) => {
+      if (a.v == null || b.v == null) return a.v == null && b.v == null ? a.i - b.i : a.v == null ? 1 : -1;
+      const c = ordem.k === 'nome' ? String(a.v).localeCompare(String(b.v), 'pt-BR') : a.v - b.v;
+      return c ? c * ordem.d : a.i - b.i;
+    }).map((x) => x.r);
   }
   // ordem atual das linhas na tela (depois de arrastar)
   const ordemTela = () => [...(root?.querySelectorAll('[data-m2="seletor"] tbody tr[data-m2-sym]') || [])].map((tr) => tr.dataset.m2Sym);
@@ -423,6 +452,14 @@ globalThis.MMMesa2 = (() => {
     if (pb) { per = pb.dataset.m2Per; gravar(PER_KEY, per); root.querySelectorAll('[data-m2-per]').forEach((b) => b.setAttribute('aria-pressed', String(b === pb))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
     const t = e.target.closest('[data-m2-aba]');
     if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); setTimeout(() => { buscarEua(); setTimeout(() => atualizar('seletor'), 1200); }, 0); adicionando = false; busca = ''; trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
+    const ob = e.target.closest('[data-m2-ord]');
+    if (ob) {
+      // 1º clique: maior → menor (nome: A → Z); 2º: o contrário; 3º: ordem da lista
+      const k = ob.dataset.m2Ord, ini = k === 'nome' ? 1 : -1;
+      ordem = !ordem || ordem.k !== k ? { k, d: ini } : ordem.d === ini ? { k, d: -ini } : null;
+      gravar(ORD_KEY, ordem); trocar('seletor', seletorHTML());
+      root.querySelector(`[data-m2-ord="${k}"]`)?.focus(); return;
+    }
     if (e.target.closest('[data-m2-editar]')) { editando = !editando; adicionando = false; busca = ''; trocar('seletor', seletorHTML()); return; }
     const tirar = e.target.closest('[data-m2-tirar]');
     if (tirar) { mudouLista(ordemTela().filter((s) => s !== tirar.dataset.m2Tirar)); return; }
