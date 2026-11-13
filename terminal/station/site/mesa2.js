@@ -28,8 +28,10 @@ globalThis.MMMesa2 = (() => {
       { id: 'cri', t: 'Cripto', l: api.CRIPTO_TB.map((r) => ({ s: r[0], n: r[1], cc: '', d: 2, tid: 'cr' })) },
     ];
   }
-  const PULSO = [['^BVSP', 'Ibovespa'], ['^GSPC', 'S&P 500'], ['^IXIC', 'Nasdaq'], ['^DJI', 'Dow Jones'], ['BRL=X', 'Dólar'],
-    ['BZ=F', 'Brent'], ['GC=F', 'Ouro'], ['BTC-USD', 'Bitcoin'], ['^TNX', 'Treasury 10a']];
+  // [símbolo, nome, marca: país, par de moedas ou tabela (ícone)]
+  const PULSO = [['^BVSP', 'Ibovespa', 'BR'], ['^GSPC', 'S&P 500', 'US'], ['^IXIC', 'Nasdaq', 'US'], ['^DJI', 'Dow Jones', 'US'], ['BRL=X', 'Dólar', 'USD/BRL'],
+    ['BZ=F', 'Brent', 'co'], ['GC=F', 'Ouro', 'co'], ['BTC-USD', 'Bitcoin', 'cr'], ['^TNX', 'Treasury 10a', 'US']];
+  const marcaPulso = (s, n, m) => (m === 'cr' ? api.marca(s, n, '', 'cr') : m === 'co' ? api.marca(s, n, '', 'co') : m.includes('/') ? api.marca(s, m, '', 'em') : api.marca(s, n, m, 'am'));
   // unidade mostrada ao lado do preço grande do gráfico
   function unidade(s, n) {
     if (s === 'BTC-BRL' || /=X$/.test(s) && /BRL/.test(s)) return 'R$';
@@ -100,46 +102,21 @@ globalThis.MMMesa2 = (() => {
   }
 
   // Pulso global: vidro fosco sobre um fundo de luzes; o brilho de cada quadro cresce com o tamanho do movimento
+  // Pulso global (13/11/2026): verde e vermelho do site, fundo levemente tingido conforme o tamanho do movimento,
+  // bandeira ou ícone ao lado do nome
   function pulsoHTML() {
-    return `${cab('Pulso global', 'vazio', '<span class="m2-hint">variação do dia</span>')}<div class="m2-pulso"><div class="m2-luzes" aria-hidden="true"><i></i><i></i><i></i></div>${PULSO.map(([s, n]) => {
+    return `${cab('Pulso global', 'vazio', '<span class="m2-hint">variação do dia</span>')}<div class="m2-pulso">${PULSO.map(([s, n, m]) => {
       const q = api.q(s), tnx = s === '^TNX', c = q?.c, f = ok(c) ? Math.min(1, Math.abs(c) / (tnx ? 3 : 2)) : 0;
       const valor = tnx ? (q && ok(q.v) ? api.nf(q.v, 2) + '%' : '—') : api.pct(c);
-      return `<button type="button" class="m2-vidro ${tnx ? 'neutro' : lado(c)}" style="--f:${f.toFixed(2)}" data-m2-sym="${esc(s)}" data-name="${esc(n)}" title="Ver ${esc(n)} no gráfico">
-        <span>${esc(n)}</span><b class="num" ${tnx ? `data-m2-pxt="${esc(s)}"` : `data-m2-pc="${esc(s)}"`}>${valor}</b>${tnx && ok(c) ? `<small class="${lado(c)}">${api.pct(c)} no dia</small>` : ''}</button>`;
+      return `<button type="button" class="m2-vidro ${lado(c)}" style="--f:${f.toFixed(2)}" data-m2-sym="${esc(s)}" data-name="${esc(n)}" title="Ver ${esc(n)} no gráfico">
+        <span class="m2-vn">${marcaPulso(s, n, m)}${esc(n)}</span><b class="num" ${tnx ? `data-m2-pxt="${esc(s)}"` : `data-m2-pc="${esc(s)}"`}>${valor}</b>${tnx ? `<small class="${lado(c)}">${ok(c) ? api.pct(c) + ' no dia' : '&nbsp;'}</small>` : ''}</button>`;
     }).join('')}</div>`;
   }
 
-  // Juros: curva do DI (B3) e pontos dos Treasuries (EUA) no mesmo eixo de anos, mais 4 números
-  function jurosHTML() {
-    api.carregarDI();
-    const di = api.diPontos().filter((p) => p.y <= 10.5), X = api.X();
-    const us = [['^IRX', 0.25], ['^FVX', 5], ['^TNX', 10]].map(([s, y]) => ({ y, taxa: api.q(s)?.v })).filter((p) => ok(p.taxa));
-    // cada curva na sua própria escala (o DI anda perto de 14% e os Treasuries perto de 4%: na mesma escala as duas
-    // viravam retas); o valor da ponta de cada uma fica escrito no fim da linha
-    const W = 400, H = 150, P = 8, R = 58;
-    let svg = '<p class="m2-vazio">Carregando a curva do DI…</p>';
-    if (di.length > 1) {
-      const xx = (y) => P + (y / 10.5) * (W - P - R);
-      const escala = (pts, topo, base) => { const v = pts.map((p) => p.taxa), mn = Math.min(...v), mx = Math.max(...v), d = mx - mn || 0.5; return (tx) => base - (tx - mn) / d * (base - topo); };
-      const ydi = escala(di, 14, 92), yus = escala(us.length ? us : di, 96, 140);
-      const caminho = (pts, yy) => [...pts].sort((a, b) => a.y - b.y).map((p, i) => `${i ? 'L' : 'M'}${xx(p.y).toFixed(1)} ${yy(p.taxa).toFixed(1)}`).join(' ');
-      const ultDi = [...di].sort((a, b) => a.y - b.y).pop(), ultUs = [...us].sort((a, b) => a.y - b.y).pop();
-      const grade = [0, 2, 5, 10].map((a) => `<line x1="${xx(a).toFixed(1)}" x2="${xx(a).toFixed(1)}" y1="8" y2="${H - 4}"/><text x="${xx(a).toFixed(1)}" y="${H}">${a ? a + 'a' : 'hoje'}</text>`).join('');
-      svg = `<svg class="m2-curva" viewBox="0 0 ${W} ${H + 4}" role="img" aria-label="Curva de juros do DI futuro e dos Treasuries">
-        <g class="grade">${grade}</g>
-        <path class="br-area" d="${caminho(di, ydi)} L${xx(ultDi.y).toFixed(1)} 92 L${xx([...di].sort((a, b) => a.y - b.y)[0].y).toFixed(1)} 92 Z"/><path class="br" d="${caminho(di, ydi)}"/>
-        <circle class="br-p" cx="${xx(ultDi.y).toFixed(1)}" cy="${ydi(ultDi.taxa).toFixed(1)}" r="3"/><text class="br-t" x="${(xx(ultDi.y) + 6).toFixed(1)}" y="${(ydi(ultDi.taxa) + 4).toFixed(1)}">${api.nf(ultDi.taxa, 2)}%</text>
-        ${us.length > 1 ? `<path class="us" d="${caminho(us, yus)}"/>${us.map((p) => `<circle class="us-p" cx="${xx(p.y).toFixed(1)}" cy="${yus(p.taxa).toFixed(1)}" r="2.6"/>`).join('')}<text class="us-t" x="${(xx(ultUs.y) + 6).toFixed(1)}" y="${(yus(ultUs.taxa) + 4).toFixed(1)}">${api.nf(ultUs.taxa, 2)}%</text>` : ''}</svg>
-        <div class="m2-leg"><span class="br">DI futuro (B3)</span><span class="us">Treasuries (EUA)</span><span class="eixo">escalas separadas</span></div>`;
-    }
-    const di5 = api.interp(di, 5), tnx = api.q('^TNX');
-    const cel = (r, v, s = '') => `<div><small>${r}</small><b class="num">${v}</b>${s ? `<em>${s}</em>` : ''}</div>`;
-    return `${cab('Juros · Brasil e EUA', 'azul')}<div class="m2-juros">${svg}<div class="m2-num4">
-      ${cel('Selic', X.selic && ok(X.selic.v) ? api.nf(X.selic.v, 2) + '%' : '—')}
-      ${cel('DI 5 anos', ok(di5) ? api.nf(di5, 2) + '%' : '—', 'B3')}
-      ${cel('Fed (alvo)', X.fed ? api.nf(X.fed.lo, 2) + '–' + api.nf(X.fed.up, 2) + '%' : '—')}
-      ${cel('Treasury 10 anos', tnx && ok(tnx.v) ? api.nf(tnx.v, 2) + '%' : '—', tnx && ok(tnx.c) ? api.pct(tnx.c) : '')}</div></div>`;
-  }
+
+  // Juros (13/11/2026): a mesma curva da Mesa 1 (DI, Real, Pré e IPCA+, comparação, inclinação e tabela dos
+  // contratos); os cliques e os dados seguem pelo mesa.js, que acha a caixa pela classe ms-curvebox
+  function jurosHTML() { return api.curveHTML(); }
 
   // Notícias do ativo escolhido (manchetes do terminal que citam o ativo); sem nenhuma, as últimas do terminal
   function noticiasHTML() {
@@ -255,7 +232,7 @@ globalThis.MMMesa2 = (() => {
       ${caixa('grafico', 'm2-c-graf', graficoHTML(), 'Gráfico do ativo escolhido')}
       ${caixa('seletor', 'm2-c-sel', seletorHTML(), 'Seletor de ativos')}
       ${caixa('pulso', 'm2-c-pulso', pulsoHTML(), 'Pulso global')}
-      ${caixa('juros', 'm2-c-juros', jurosHTML(), 'Juros no Brasil e nos EUA')}
+      ${caixa('juros', 'm2-c-juros ms-curvebox', jurosHTML(), 'Curva de juros')}
       ${caixa('noticias', 'm2-c-news', noticiasHTML(), 'Notícias do ativo escolhido')}
       ${caixa('radar', 'm2-c-radar', radarHTML(), 'Radar do Copom')}
       ${caixa('evento', 'm2-c-ev', eventoHTML(), 'Próximo evento')}
@@ -267,11 +244,13 @@ globalThis.MMMesa2 = (() => {
     if (id === 'seletor') { const l = b.querySelector('.m2-lista'), st = l ? l.scrollTop : 0; b.innerHTML = conteudo; const n = b.querySelector('.m2-lista'); if (n) n.scrollTop = st; return; }
     b.innerHTML = conteudo;
     if (id === 'grafico') montarGrafico(b);
+    if (id === 'juros') requestAnimationFrame(() => api.drawCurve());
   }
   // chamado pelo mesa.js logo depois de pôr html() na página
   function depois(r) {
     root = r;
     const g = root.querySelector('[data-m2="grafico"]'); if (g) montarGrafico(g);
+    requestAnimationFrame(() => api.drawCurve());
     root.querySelector('.m2-lista tr.on')?.scrollIntoView({ block: 'nearest' });
   }
   function escolher(s, n) {
@@ -312,6 +291,7 @@ globalThis.MMMesa2 = (() => {
       const q = api.q(el.dataset.m2Pc); if (!q || !ok(q.c)) return;
       el.textContent = api.pct(q.c); const b = el.closest('.m2-vidro'); b.classList.remove('up', 'dn', 'eq', 'na'); b.classList.add(lado(q.c)); b.style.setProperty('--f', Math.min(1, Math.abs(q.c) / 2).toFixed(2));
     });
+    root.querySelectorAll('[data-m2-pxt]').forEach((el) => { const q = api.q(el.dataset.m2Pxt); if (q && ok(q.v)) el.textContent = api.nf(q.v, 2) + '%'; });
     root.querySelectorAll('[data-m2-t]').forEach((el) => { el.textContent = relogio(+el.dataset.m2T - Date.now()); });
     root.querySelectorAll('[data-m2-prog]').forEach((el) => { el.style.width = (Math.max(0.02, Math.min(1, 1 - (+el.dataset.m2Prog - Date.now()) / 864e5)) * 100).toFixed(1) + '%'; });
   }, 2000);

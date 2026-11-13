@@ -793,7 +793,7 @@
   const apiM2 = {
     TABLES, CRIPTO_TB, PROXY, getJSON, nf, pct, dec, interp, subtitulo, q: qAgora, X: () => X,
     marca: (s, n, cc, tid) => (tid === 'cr' ? iconeCripto(s) : marca(s, n, cc, tid)),
-    diPontos: () => diHojePoints(),
+    diPontos: () => diHojePoints(), curveHTML: () => curveHTML(), drawCurve: () => drawCurve(),
     // redesenha os Juros só quando a curva mudou de verdade (senão ficava num laço: desenhar → pedir → desenhar)
     carregarDI: () => {
       const marca0 = (p) => p.length + ':' + (p[p.length - 1]?.taxa ?? ''), antes = marca0(diHojePoints());
