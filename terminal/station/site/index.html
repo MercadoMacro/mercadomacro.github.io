@@ -266,6 +266,9 @@
   <button class="tab-btn" id="tab-fund-panel" data-tab="fund-panel" role="tab" aria-selected="false" aria-controls="fund-panel">
     <i class="fas fa-building" aria-hidden="true"></i> Fundamentos
   </button>
+  <button class="tab-btn" id="tab-insiders-panel" data-tab="insiders-panel" role="tab" aria-selected="false" aria-controls="insiders-panel">
+    <i class="fas fa-user-tie" aria-hidden="true"></i> Insiders
+  </button>
   <button class="tab-btn" id="tab-indicators-panel" data-tab="indicators-panel" role="tab" aria-selected="false" aria-controls="indicators-panel">
     <i class="fas fa-percentage" aria-hidden="true"></i> Indicadores
   </button>
@@ -671,6 +674,11 @@
   <div class="generic-wrap" id="fund-root"><div class="ind-boot">Carregando fundamentos…</div></div>
 </div>
 
+<div class="tab-panel" id="insiders-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-insiders-panel" aria-hidden="true">
+  <!-- conteúdo vem do insiders.js (dados da CVM, Resolução CVM 44), baixado só quando a aba é aberta -->
+  <div class="generic-wrap" id="insiders-root"><div class="ind-boot">Carregando o radar de insiders…</div></div>
+</div>
+
 <div class="tab-panel" id="indicators-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-indicators-panel" aria-hidden="true">
   <!-- conteúdo vem do indicadores.js, baixado só quando a aba é aberta -->
   <div class="generic-wrap" id="ind-root"><div class="ind-boot">Carregando indicadores…</div></div>
@@ -806,7 +814,7 @@
 <script src="forex-live.js?v=15"></script>
 <script src="feriados.js?v=2"></script>
 <script src="news-stream.js?v=1"></script>
-<script src="app.js?v=189"></script>
+<script src="app.js?v=190"></script>
 <script src="ana-secoes.js?v=10"></script>
 <script src="analise-avancada.js?v=1"></script>
 <script src="mesa-layout.js?v=7"></script>
@@ -828,7 +836,7 @@
 <script src="noticias2.js?v=7"></script>
 <script src="noticias3.js?v=1"></script>
 <script src="noticias-antigas.js?v=1"></script>
-<script src="navegacao-mobile.js?v=3"></script>
+<script src="navegacao-mobile.js?v=4"></script>
 <script src="mobile-topo.js?v=1"></script>
 <script src="educacao-conteudo.js?v=6"></script>
 <script src="educacao.js?v=6"></script>
@@ -836,8 +844,8 @@
 <script src="abas-borda.js?v=6"></script>
 <script src="/vitrine/ajuda-conteudo.js?v=2"></script>
 <script src="assistente.js?v=16"></script>
-<script src="assistente-mascote.js?v=23"></script>
-<script src="robo-extras.js?v=6"></script>
+<script src="assistente-mascote.js?v=24"></script>
+<script src="robo-extras.js?v=7"></script>
 <script src="ao-vivo-solto.js?v=3"></script>
 <script src="resumo-ia.js?v=1"></script>
 <script src="temperatura.js?v=4"></script>

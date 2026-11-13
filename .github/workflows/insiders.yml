@@ -1,0 +1,37 @@
+# Radar de insiders: baixa da CVM (Dados Abertos, Resolução CVM 44) as compras e vendas de ações das empresas da B3
+# pelos controladores e administradores e grava terminal/insiders/insiders.json para a aba Insiders do site.
+# A CVM atualiza a base uma vez por semana (domingo); as empresas entregam até o dia 10 de cada mês.
+name: Radar de insiders
+
+on:
+  schedule:
+    - cron: '37 10 * * 1'   # segunda, 07h37 em Brasília (depois da atualização de domingo da CVM)
+    - cron: '37 10 11-14 * *' # logo depois do prazo de entrega do dia 10
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: insiders
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Baixar e organizar (CVM)
+        run: python3 terminal/insiders/gerar_insiders.py terminal/insiders terminal/fundamentos/index.json
+      - name: Salvar no repositório
+        run: |
+          git config user.name "insiders-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add terminal/insiders/insiders.json
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -m "Insiders: dados da CVM de $(TZ=America/Sao_Paulo date +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do git pull --rebase -q origin main && git push -q origin main && exit 0; sleep $((i*5)); done; exit 1
