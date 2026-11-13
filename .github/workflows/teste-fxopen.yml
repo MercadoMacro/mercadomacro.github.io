@@ -25,3 +25,7 @@ jobs:
           pega "/quotehistory/XAUUSD/D1/bars/bid?timestamp=$T&count=-3" 1500
           pega "/tradesession" 800
           pega "/currency" 300
+          echo "--- lista completa (sem _L) com descrição"
+          curl -s -m 30 "$B/symbol" | python3 -c "import json,sys;d=json.load(sys.stdin);print('\n'.join(f\"{x['Symbol']}|{x.get('Description','')}|{x.get('MarginMode','')}\" for x in d if not x['Symbol'].endswith('_L')))" | grep -iE "bra|bov|ibov|copper|xcu|coffee|soy|corn|sugar|wheat|cocoa|xpt|xpd|platin|pallad|iron|ewz|brl|vale|petr|itub|bbd|#|xbr|xti|xng|dxy" | head -150
+          echo "--- ticks de índices e commodities"
+          curl -s -m 20 "$B/tick/%23SPXm%20%23NDXm%20%23WS30m%20%23GDAXIm%20%23J225%20%23UK100%20%23ESX50%20%23HSI%20%23VIX%20%23DXY%20XBRUSD%20XTIUSD%20XNGUSD%20ETHUSD" | python3 -c "import json,sys;[print(x['Symbol'],x.get('BestBid',{}).get('Price'),x.get('BestAsk',{}).get('Price'),x.get('TickType'),x.get('Timestamp')) for x in json.load(sys.stdin)]"
