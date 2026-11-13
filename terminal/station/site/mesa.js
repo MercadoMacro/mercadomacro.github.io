@@ -444,6 +444,16 @@
     return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${p}" fill="none" stroke="var(${up ? '--pos' : '--neg'})" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
   };
   const dec = (v, d) => (d != null ? d : Math.abs(v) >= 10000 ? 2 : Math.abs(v) < 10 ? 4 : 2);
+  // Mesa 2: bandeira no lugar da sigla do país (12/11/2026). Desenhos do flag-icons (licença MIT, bandeiras/LICENSE-flag-icons.txt),
+  // em imagem de 32x24 para aparecer igual no Windows (lá a bandeira em emoji vira só letras). Commodities seguem com a sigla:
+  // ali ela diz onde o contrato é negociado, não "de quem" é o petróleo ou o ouro.
+  const PAISES = { AR: 'Argentina', AU: 'Austrália', BR: 'Brasil', CA: 'Canadá', CH: 'Suíça', CL: 'Chile', CN: 'China', CO: 'Colômbia', DE: 'Alemanha', ES: 'Espanha',
+    EU: 'Zona do euro', FR: 'França', HK: 'Hong Kong', IN: 'Índia', IT: 'Itália', JP: 'Japão', KR: 'Coreia do Sul', MX: 'México', NL: 'Holanda', SE: 'Suécia',
+    SG: 'Singapura', TR: 'Turquia', TW: 'Taiwan', UK: 'Reino Unido', US: 'Estados Unidos', ZA: 'África do Sul' };
+  const marcaPais = (cc, tid) => {
+    if (window.MMDeskWindows?.modo?.() !== '2' || tid === 'co' || !PAISES[cc]) return `<span class="cc">${esc(cc)}</span>`;
+    return `<img class="ms-fl" src="bandeiras/${cc === 'UK' ? 'gb' : cc.toLowerCase()}.webp" width="16" height="12" alt="${PAISES[cc]}" title="${PAISES[cc]}" decoding="async">`;
+  };
   function rowHTML([s, n, cc, d], tid) {
     let q = s === '__cds' ? X.cds : s === '__dce' ? (X.dce ? { ...X.dce, live: true } : null) : Q[s];
     const fq = forexStream?.covers(s) ? forexStream.quote(s) : null;
@@ -463,7 +473,7 @@
     const tag = s === '__cds' ? '' : s === '__dce' ? ' title="Bolsa de Dalian (China), contrato principal, convertido para US$ por tonelada. A variação é a do contrato, em yuan."' : s.startsWith('__x') ? ` title="${esc(n)} · ao vivo · variação desde 00h GMT"` : ` data-sym="${esc(s)}" data-tb="${tid}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(n)}${fonte}"`;
     const fora = cfdFora(s, fq);
     return `<tr class="${stale ? 'old' : ''}${fq && fq.source !== 'Yahoo' ? ' ms-fx-live' : ''}${fora ? ' ms-cfd-off' : ''}"${s.startsWith('__x') ? ` data-x="${s}"` : ''}${fora ? tag.replace(/ title="[^"]*"/, ` title="${esc(window.MMDicaCfd)}"`) : tag}>
-      <td class="nm"><span class="cc">${esc(cc)}</span>${esc(n)}</td>
+      <td class="nm">${marcaPais(cc, tid)}${esc(n)}</td>
       <td class="px">${has ? nf(q.v, dec(q.v, d)) : '—'}</td>
       <td class="ch ${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</td>
       <td class="tm">${has ? (stale ? '<i title="Valor salvo; a fonte não respondeu agora">salvo</i>' : hhmm(q.ts)) : ''}</td>
@@ -940,6 +950,7 @@
   .ms-fb3 td.nm small { margin-left:6px; font:10px 'JetBrains Mono', monospace; color:var(--text-3); }
   .ms-fb3 td.ch i.aj-ant { font-style:normal; font-size:10.5px; color:var(--text-3); }
   .ms-hsub { font:10.5px 'JetBrains Mono', monospace; color:var(--text-3); }
+  .ms-fl { display:inline-block; width:16px; height:12px; margin-right:8px; vertical-align:-1px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.08); object-fit:cover; }
   .cc { display:inline-block; min-width:22px; margin-right:7px; padding:0 3px; border-radius:4px; background:var(--surface-3); color:var(--text-3); font:600 9px 'JetBrains Mono', monospace; text-align:center; vertical-align:1px; }
 
   .ms-seg { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
