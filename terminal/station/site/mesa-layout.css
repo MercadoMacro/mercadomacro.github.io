@@ -76,3 +76,12 @@ tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{bo
   html body #mesa-root .ms-bar .ms-bar-acoes { display:inline-flex; gap:8px; flex-wrap:wrap; }
   html body #mesa-root .ms-bar :is(.ms-refresh, .ms-temp-btn) { min-height:40px; }
 }
+
+/* tabela com linhas escondidas (Commodities) numa janela com altura própria (Mesa 2 ou mesa montada): ocupa a janela
+   inteira e rola dentro dela, em vez de ficar presa em 7 linhas com um vão vazio embaixo (12/11/2026) */
+/* (o conteúdo fica dentro de .ms-fold-body, criado para dobrar o quadro no celular) */
+.ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block],.ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block]>.ms-fold-body,.mj-gs .ms-tb[data-mesa-block],.mj-gs .ms-tb[data-mesa-block]>.ms-fold-body{display:flex;flex-direction:column}
+.ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block]>.ms-fold-body,.mj-gs .ms-tb[data-mesa-block]>.ms-fold-body{flex:1 1 auto;min-height:0}
+.ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block] .ms-tw[data-vis],.mj-gs .ms-tb[data-mesa-block] .ms-tw[data-vis]{flex:1 1 auto;min-height:0;max-height:none!important}
+/* o aviso de rolagem não encosta na bolinha de cor do vínculo */
+.ms-tb[data-mv] .ms-mais{margin-right:16px}

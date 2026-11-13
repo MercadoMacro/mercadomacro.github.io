@@ -673,6 +673,13 @@
       if (linhas.length > n && linhas[n - 1].offsetHeight) t.style.maxHeight = Math.round(linhas[n - 1].getBoundingClientRect().bottom - linhas[0].getBoundingClientRect().top) + 'px';
       const antes = rol && rol[t.closest('[data-tb]')?.dataset.tb];
       if (antes) t.scrollTop = antes;
+      // "role para ver mais N" conta o que está mesmo escondido: numa janela da Mesa montada a tabela ocupa a
+      // altura da janela (mesa-layout.css), então N muda com o tamanho dela; sem nada escondido, o aviso some
+      const mais = t.closest('.ms-tb')?.querySelector('.ms-mais');
+      if (mais && t.clientHeight) {
+        const fundo = t.getBoundingClientRect().bottom, esc = [...linhas].filter((l) => l.getBoundingClientRect().bottom > fundo + 1).length;
+        mais.textContent = esc ? 'role para ver mais ' + esc : ''; mais.hidden = !esc;
+      }
     });
   }
   function render() {
