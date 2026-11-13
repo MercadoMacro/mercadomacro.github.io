@@ -239,6 +239,17 @@
       return { nome: `${c.s} · DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}`, taxa, venc, y, s: c.s, hoje: dapTx(c) != null };
     }).filter((p) => p.y >= 1 && p.y <= 30 && p.taxa != null && isFinite(p.taxa));
   }
+  // (13/11/2026) o horário que a B3 manda (dtTm) é o da consulta, não o do último negócio: fora do pregão (antes das 9h,
+  // depois das 18h30 e no fim de semana) dizia "últimos negócios (B3 às 23:57)". Fora do pregão, mostra de qual pregão são.
+  function rotuloNegocios(b3) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(b3 || '');
+    if (!m) return 'taxas dos últimos negócios';
+    const min = +m[4] * 60 + +m[5], d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])), dia = d.getUTCDay();
+    if (dia >= 1 && dia <= 5 && min >= 9 * 60 && min <= 18 * 60 + 30) return `taxas dos últimos negócios (B3 às ${m[4]}:${m[5]})`;
+    // fora do pregão: o último pregão é hoje (se já abriu) ou o dia útil anterior
+    if (!(dia >= 1 && dia <= 5 && min > 18 * 60 + 30)) do { d.setUTCDate(d.getUTCDate() - 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+    return `taxas de fechamento do pregão de ${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
   function curveHTMLdap() {
     loadDAP();
     const pts = dapPoints('t'), cmp = dapCmp ? dapPoints('aj') : [];
@@ -261,7 +272,7 @@
         return `<tr><td class="nm"><b>${esc(c.s)}</b><small>DAP ${MES3[venc.getMonth()]}/${venc.getFullYear()}</small></td><td class="px">${t != null ? nf(t, 3) : '<span title="Sem negócios suficientes hoje">—</span>'}</td>`
           + `<td class="ch ${cls(v != null ? Math.round(v * 1000) : null)}" title="${v != null ? `${v > 0 ? '+' : ''}${nf(v * 100, 1)} bps` : 'Sem negócio hoje'}">${v != null ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${nf(Math.abs(v), 3)}` : '—'}</td><td class="ajv">${nf(a, 3)}</td></tr>`;
       }).join('')}</tbody></table></div>` : ''}
-      ${dapVivo ? `<div class="ms-foot">Juro real: DAP (cupom de IPCA) da B3, taxa ao ano acima da inflação. ${negociou ? `Taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}` : 'Sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
+      ${dapVivo ? `<div class="ms-foot">Juro real: DAP (cupom de IPCA) da B3, taxa ao ano acima da inflação. ${negociou ? (s => s[0].toUpperCase() + s.slice(1))(rotuloNegocios(dapVivo && dapVivo.b3)) : 'Sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
   }
   const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   // pontos da curva ao vivo: contratos com pelo menos 10 mil em aberto, até 10 anos; campo = 't' (hoje) ou 'aj' (ajuste anterior)
@@ -389,7 +400,7 @@
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${diTentou && !diCurvas ? 'Curva DI indisponível agora.' : 'Carregando curva…'}</div>`}</div>
       ${diListaHTML()}
-      ${vivo ? `<div class="ms-foot">DI futuro da B3, ${negociou ? `taxas dos últimos negócios${hora ? ` (B3 às ${hora})` : ''}` : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}
+      ${vivo ? `<div class="ms-foot">DI futuro da B3, ${negociou ? rotuloNegocios(diVivo && diVivo.b3) : 'sem negócios ainda hoje: taxas do ajuste do pregão anterior'}.</div>` : ''}
       ${!vivo && C.hoje ? `<div class="ms-foot">Curva DI x pré da B3 (DI futuro), fechamento de ${C.hoje.d.split('-').reverse().join('/')}; atualiza à noite. Fonte: B3, Taxas de Swap.</div>` : ''}`;  // 04/11/2026 (Severino): nota curta
   }
   function drawCurve() {
@@ -519,7 +530,7 @@
     const L = futB3 ? futB3.f : [];
     const hora = futB3 && futB3.b3 ? futB3.b3.slice(11, 16) : '';
     return `<section class="ms-box ms-tb ms-fb3" data-tb="b3">
-      <div class="ms-head"><h3>Futuros B3</h3><span class="sp"></span><span class="ms-hsub" title="Site de cotações da B3, atraso de cerca de 15 minutos">${hora ? `B3 às ${hora}` : ''}</span></div>
+      <div class="ms-head"><h3>Futuros B3</h3><span class="sp"></span><span class="ms-hsub" title="Site de cotações da B3, atraso de cerca de 15 minutos">${hora ? (/últimos negócios/.test(rotuloNegocios(futB3.b3)) ? `B3 às ${hora}` : rotuloNegocios(futB3.b3).replace('taxas de fechamento do pregão', 'fechamento')) : ''}</span></div>
       ${L.length ? `<table><tbody>${L.map((x) => {
         // variação contra a referência do pregão (meio dos limites da B3); sem ela, contra o ajuste anterior
         const base = x.ref || x.aj, v = x.t != null ? x.t : x.aj, c = x.t != null && base ? (x.t / base - 1) * 100 : null;
