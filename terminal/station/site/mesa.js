@@ -37,7 +37,7 @@
   // [símbolo do Yahoo, nome, sigla do país/região, casas decimais]
   const CRYPTO = [['BTC-USD', 'Bitcoin'], ['ETH-USD', 'Ethereum'], ['USDT-USD', 'Tether'], ['BNB-USD', 'BNB'], ['XRP-USD', 'XRP'],
     ['SOL-USD', 'Solana'], ['DOGE-USD', 'Dogecoin'], ['USDC-USD', 'USDC'], ['ADA-USD', 'Cardano']];
-  // Mesa 2 (12/11/2026): tabela Cripto no lugar da faixa de cima. Sem stablecoins (valem sempre cerca de US$ 1), tudo em
+  // Mesa 1 e 2 (12/11/2026): tabela Cripto no lugar da faixa de cima (primeiro na Mesa 2, depois nas duas). Sem stablecoins (valem sempre cerca de US$ 1), tudo em
   // US$ (a Binance cota em USDT, que acompanha o dólar) e o Bitcoin também em reais. Ícone: círculo com o símbolo ou a
   // inicial de cada moeda (sem logotipos), na cor que o mercado associa a ela.
   const CRIPTO_TB = [['BTC-USD', 'Bitcoin', '₿', '#f7931a'], ['ETH-USD', 'Ethereum', 'Ξ', '#627eea'], ['SOL-USD', 'Solana', 'S', '#0f9b8e'],
@@ -582,7 +582,6 @@
       return '<button type="button" class="ms-cr '+(has&&!q.live?'old':'')+'" data-sym="'+esc(s)+'" data-name="'+esc(n)+'" title="'+esc(cryptoTitle(s,n,q))+'"><span>'+esc(n)+'</span><b>'+cryptoPrice(q)+'</b><em class="'+cls(has?q.c:null)+'">'+(has?pct(q.c):'')+'</em></button>';
     }).join('');
   }
-  const modo2 = () => window.MMDeskWindows?.modo?.() === '2';
   // Bitcoin em reais = Bitcoin em dólar (ao vivo) × dólar em reais (ao vivo quando há, senão o último do Yahoo).
   // O Yahoo não devolve BTC-BRL (12/11/2026: a linha ficava em "—"). A variação junta as duas: a do Bitcoin (24h)
   // e a do dólar no dia.
@@ -780,13 +779,12 @@
         <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
-      ${modo2() ? '' : `<div class="ms-crypto">${cryptoEnabled ? '<span class="ms-live-status" role="status"></span>' : ''}<button type="button" class="ms-car-btn" data-car="-1" aria-label="Voltar"><i class="fas fa-chevron-left"></i></button><div class="ms-car">${cryptoHTML()}</div><button type="button" class="ms-car-btn" data-car="1" aria-label="Avançar"><i class="fas fa-chevron-right"></i></button></div>`}
       <div class="ms-cards">${CARDS.map(cardHTML).join('')}</div>
       ${window.MMDeskWindows?.modo?.() === '2' ? `<div class="ms-vinc"><section class="ms-box ms-vbox" data-v="grafico" aria-label="Gráfico do ativo vinculado"></section></div>` : ''}
       <div class="ms-grid">
         <div class="ms-col">${col(1)}</div>
         <div class="ms-col">${col(2)}${futB3HTML()}</div>
-        <div class="ms-col">${col(3)}${modo2() ? criptoTbHTML() : ''}</div>
+        <div class="ms-col">${col(3)}${criptoTbHTML()}</div>
         <div class="ms-col ms-c4">
           <section class="ms-box ms-curvebox">${curveHTML()}</section>
           <section class="ms-box ms-newsbox"><div class="ms-head"><h3>Notícias</h3><span class="sp"></span><button type="button" class="ms-link" data-go="news-panel">Ver todas</button></div>${newsHTML()}</section>

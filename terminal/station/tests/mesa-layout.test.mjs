@@ -7,22 +7,22 @@ vm.runInContext(readFileSync(new URL('../site/mesa-layout.js',import.meta.url),'
 const layout=ctx.MMDeskLayout;
 test('remove IDs desconhecidos e duplicados e inclui novos blocos no fim',()=>{
   const p=layout.normalize({order:['news','news','inexistente'],hidden:['co','co','fake']});
-  assert.equal(p.order[0],'news');assert.equal(p.order.length,14);assert.equal(new Set(p.order).size,14);assert.deepEqual(Array.from(p.hidden),['co']);
+  assert.equal(p.order[0],'news');assert.equal(p.order.length,13);assert.equal(new Set(p.order).size,13);assert.deepEqual(Array.from(p.hidden),['co']);
 });
 test('ocultar e mostrar preserva a ordem e não altera a preferência original',()=>{
-  const p=layout.normalize(null),hidden=layout.toggle(p,'crypto');
-  assert.equal(hidden.hidden.includes('crypto'),true);assert.equal(p.hidden.length,0);
-  assert.equal(layout.toggle(hidden,'crypto').hidden.length,0);assert.deepEqual(Array.from(hidden.order),Array.from(p.order));
+  const p=layout.normalize(null),hidden=layout.toggle(p,'cards');
+  assert.equal(hidden.hidden.includes('cards'),true);assert.equal(p.hidden.length,0);
+  assert.equal(layout.toggle(hidden,'cards').hidden.length,0);assert.deepEqual(Array.from(hidden.order),Array.from(p.order));
 });
 test('as setas respeitam limites e arrastar insere antes do destino',()=>{
-  const p=layout.normalize(null);assert.equal(layout.move(p,'crypto',-1).order[0],'crypto');
+  const p=layout.normalize(null);assert.equal(layout.move(p,'cards',-1).order[0],'cards');
   assert.equal(layout.move(p,'cards',-1).order[0],'cards');
-  assert.equal(layout.before(p,'news','crypto').order[0],'news');
+  assert.equal(layout.before(p,'news','cards').order[0],'news');
   assert.equal(layout.before(p,'news','fake').order.at(-1),'news');
 });
 test('preferências sobrevivem ao salvamento e opções inválidas voltam ao padrão',()=>{
-  const p=layout.toggle(layout.before(null,'curve','crypto'),'news');
+  const p=layout.toggle(layout.before(null,'curve','cards'),'news');
   const restored=layout.normalize(JSON.parse(JSON.stringify(p)));
   assert.equal(restored.order[0],'curve');assert.equal(restored.hidden.includes('news'),true);
-  assert.equal(layout.normalize({order:'x',hidden:null}).order.length,14);
+  assert.equal(layout.normalize({order:'x',hidden:null}).order.length,13);
 });
