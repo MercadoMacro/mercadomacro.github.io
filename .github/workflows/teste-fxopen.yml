@@ -10,22 +10,24 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Consultar endpoints públicos
+      - name: Catálogo de símbolos por tipo
         run: |
           B=https://ttlivewebapi.fxopen.net/api/v2/public
-          pega() { echo "=== $1"; curl -s -m 20 -D /tmp/h -o /tmp/b -w "HTTP %{http_code} · %{time_total}s · %{size_download} bytes\n" -H 'Accept: application/json' -H 'Origin: https://mercadomacro.com.br' "$B$1"; grep -i "access-control-allow-origin\|content-type\|cache-control" /tmp/h || true; head -c ${2:-1500} /tmp/b; echo; }
-          pega ""
-          pega "/symbol" 400
-          echo "--- quantos símbolos e exemplos"; python3 -c "import json;d=json.load(open('/tmp/b'));print(len(d));import collections;print(collections.Counter(x.get('MarginMode') or x.get('Type') or '?' for x in d).most_common(8));print([x.get('Symbol') for x in d][:400])" 2>&1 | head -c 6000; echo
-          pega "/tick/EURUSD%20XAUUSD%20USDBRL%20BTCUSD%20US500%20BRENT%20NGAS%20XAGUSD" 3000
-          pega "/ticker/EURUSD" 1500
-          pega "/level2/EURUSD?depth=1" 1500
+          curl -s -m 30 "$B/symbol" -o /tmp/s.json
+          python3 - <<'PY'
+          import json, collections
+          d = [x for x in json.load(open('/tmp/s.json')) if not x['Symbol'].endswith('_L')]
+          print('símbolos sem _L:', len(d))
+          print('campos de um símbolo:', json.dumps(d[300], ensure_ascii=False)[:1500])
+          for campo in ('SecurityName', 'SecurityDescription', 'StatusGroupId', 'MarginMode', 'ProfitCurrency', 'MarginCurrency'):
+              print(campo, collections.Counter(str(x.get(campo)) for x in d).most_common(25))
+          PY
+      - name: Lote de ações e ETFs
+        run: |
+          B=https://ttlivewebapi.fxopen.net/api/v2/public
+          L="AAPL MSFT NVDA AMZN GOOGL META TSLA NFLX AMD JPM SPY QQQ IWM EWZ GLD TLT XLE XLF ARKK VALE"
+          Q=$(echo $L | sed 's/ /%20/g')
+          curl -s -m 20 -w "\nHTTP %{http_code} · %{time_total}s\n" "$B/tick/$Q" -o /tmp/t.json
+          python3 -c "import json;[print(x['Symbol'],x.get('BestBid',{}).get('Price'),x.get('BestAsk',{}).get('Price'),x.get('TickType')) for x in json.load(open('/tmp/t.json'))]"
           T=$(($(date +%s)*1000))
-          pega "/quotehistory/EURUSD/M1/bars/bid?timestamp=$T&count=-5" 1500
-          pega "/quotehistory/XAUUSD/D1/bars/bid?timestamp=$T&count=-3" 1500
-          pega "/tradesession" 800
-          pega "/currency" 300
-          echo "--- lista completa (sem _L) com descrição"
-          curl -s -m 30 "$B/symbol" | python3 -c "import json,sys;d=json.load(sys.stdin);print('\n'.join(f\"{x['Symbol']}|{x.get('Description','')}|{x.get('MarginMode','')}\" for x in d if not x['Symbol'].endswith('_L')))" | grep -iE "bra|bov|ibov|copper|xcu|coffee|soy|corn|sugar|wheat|cocoa|xpt|xpd|platin|pallad|iron|ewz|brl|vale|petr|itub|bbd|#|xbr|xti|xng|dxy" | head -150
-          echo "--- ticks de índices e commodities"
-          curl -s -m 20 "$B/tick/%23SPXm%20%23NDXm%20%23WS30m%20%23GDAXIm%20%23J225%20%23UK100%20%23ESX50%20%23HSI%20%23VIX%20%23DXY%20XBRUSD%20XTIUSD%20XNGUSD%20ETHUSD" | python3 -c "import json,sys;[print(x['Symbol'],x.get('BestBid',{}).get('Price'),x.get('BestAsk',{}).get('Price'),x.get('TickType'),x.get('Timestamp')) for x in json.load(sys.stdin)]"
+          curl -s -m 20 "$B/quotehistory/AAPL/D1/bars/bid?timestamp=$T&count=-2"; echo
