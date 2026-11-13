@@ -25,25 +25,28 @@ try{
  });
  await page.addScriptTag({path:join(site,'crypto-live.js')});
  await page.addScriptTag({path:join(site,'mesa.js')});
- await page.waitForFunction(()=>document.querySelector('.ms-cr b')?.textContent.includes('US$'));
+ // tabela Cripto (12/11/2026, no lugar da faixa): cada linha diz de onde veio o preço em data-fonte
+ await page.waitForFunction(()=>{const t=document.querySelector('tr[data-cr="BTC-USD"]');return t&&t.dataset.fonte==='yahoo'&&t.querySelector('.px').textContent.trim()==='90,00';});
  for(let i=0;i<100&&!sockets.length;i++)await page.waitForTimeout(20);
  assert.equal(sockets.length,1);
  const send=(pair,value)=>sockets.at(-1).send(JSON.stringify({stream:pair.toLowerCase()+'@ticker',data:{e:'24hrTicker',E:Date.now(),s:pair,c:String(value),P:'2.5'}}));
- const pairs=await page.evaluate(()=>Object.entries(MMCryptoLive.PAIRS));
- for(const [symbol,pair]of pairs){send(pair,100);await page.waitForFunction(s=>[...document.querySelectorAll('.ms-cr')].find(n=>n.dataset.sym===s)?.querySelector('b').textContent.includes('USDT'),symbol);}
- assert.match(await page.locator('.ms-live-status').innerText(),/8 pares em USDT/);
- assert.match(await page.locator('.ms-cr[data-sym="USDT-USD"] b').innerText(),/US\$/);
- send('BTCUSDT',101);await page.waitForFunction(()=>document.querySelector('.ms-cr[data-sym="BTC-USD"] b').classList.contains('ms-tick-up'));
- send('BTCUSDT',99);await page.waitForFunction(()=>document.querySelector('.ms-cr[data-sym="BTC-USD"] b').classList.contains('ms-tick-down'));
+ const pairs=await page.evaluate(()=>Object.entries(MMCryptoLive.PAIRS).filter(([s])=>document.querySelector(`tr[data-cr="${s}"]`)));
+ assert.equal(pairs.length,7,'7 moedas na tabela (sem stablecoins)');
+ for(const [symbol,pair]of pairs){send(pair,100);await page.waitForFunction(s=>document.querySelector(`tr[data-cr="${s}"]`)?.dataset.fonte==='binance',symbol);}
+ assert.match(await page.locator('.ms-live-status').innerText(),/ao vivo/);
+ assert.equal(await page.locator('tr[data-cr="USDT-USD"], tr[data-cr="USDC-USD"]').count(),0);
+ assert.match(await page.locator('tr[data-cr="BTC-BRL"] .px').innerText(),/^R\$ /);
+ send('BTCUSDT',101);await page.waitForFunction(()=>document.querySelector('tr[data-cr="BTC-USD"] .px').classList.contains('ms-tick-up'));
+ send('BTCUSDT',99);await page.waitForFunction(()=>document.querySelector('tr[data-cr="BTC-USD"] .px').classList.contains('ms-tick-down'));
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('mesa_cache_v1')).q['BTC-USD'].v),90,'Stream não pode contaminar o cache Yahoo em USD');
  await page.evaluate(()=>{document.getElementById('mesa-panel').classList.remove('active');});
- await page.waitForFunction(()=>!document.querySelector('.ms-cr[data-sym="BTC-USD"] b').textContent.includes('USDT'));
- assert.match(await page.locator('.ms-cr[data-sym="BTC-USD"] b').innerText(),/US\$/);
+ await page.waitForFunction(()=>document.querySelector('tr[data-cr="BTC-USD"]').dataset.fonte==='yahoo');
+ assert.equal((await page.locator('tr[data-cr="BTC-USD"] .px').innerText()).trim(),'90,00');
  await page.evaluate(()=>{document.getElementById('mesa-panel').classList.add('active');});
  for(let i=0;i<100&&sockets.length<2;i++)await page.waitForTimeout(20);
  assert.equal(sockets.length,2);
  await page.setViewportSize({width:390,height:780});send('BTCUSDT',102);
- await page.waitForFunction(()=>document.querySelector('.ms-cr[data-sym="BTC-USD"] b').textContent.includes('USDT'));
+ await page.waitForFunction(()=>document.querySelector('tr[data-cr="BTC-USD"]').dataset.fonte==='binance');
  if(process.env.MM_BROWSER_OUTPUT){mkdirSync(process.env.MM_BROWSER_OUTPUT,{recursive:true});await page.screenshot({path:join(process.env.MM_BROWSER_OUTPUT,'crypto-local-fixture.png')});}
  for(const host of ['mercadomacro.com.br','www.mercadomacro.com.br','example.com']){
   const prod=await browser.newPage(),productionSockets=[],prodErrors=[];
@@ -53,7 +56,7 @@ try{
   await prod.goto('https://'+host+'/');await prod.addScriptTag({path:join(site,'crypto-live.js')});
   await prod.evaluate(()=>{window.fetchT=async()=>new Response('{}');window.parseYahooChart=x=>x;});
   await prod.addScriptTag({path:join(site,'mesa.js')});
-  await prod.waitForSelector('.ms-cr');
+  await prod.waitForSelector('tr[data-cr]');
   const expected=host!=='example.com';
   assert.equal(await prod.evaluate(()=>MMCryptoLive.hostAllowed(location.hostname)),expected);
   if(expected){
@@ -62,13 +65,12 @@ try{
    assert.equal(productionSockets.length,1);
    for(const [symbol,pair]of pairs){
     productionSockets[0].send(JSON.stringify({stream:pair.toLowerCase()+'@ticker',data:{e:'24hrTicker',E:Date.now(),s:pair,c:'100',P:'2.5'}}));
-    await prod.waitForFunction(s=>[...document.querySelectorAll('.ms-cr')].find(n=>n.dataset.sym===s)?.querySelector('b').textContent.includes('USDT'),symbol);
+    await prod.waitForFunction(s=>document.querySelector(`tr[data-cr="${s}"]`)?.dataset.fonte==='binance',symbol);
    }
-   assert.match(await prod.locator('.ms-live-status').innerText(),/Binance · 8 pares em USDT · 24h · ao vivo/);
+   assert.match(await prod.locator('.ms-live-status').innerText(),/^em US\$ · 24h · ao vivo$/);
    assert.doesNotMatch(await prod.locator('.ms-live-status').innerText(),/Prévia/);
    await prod.evaluate(()=>{window.__mmLoggingOut=true;});
-   await prod.waitForFunction(()=>document.querySelector('.ms-live-status')?.textContent==='Cripto · Yahoo periódico');
-   assert.equal(await prod.locator('.ms-cr b').filter({hasText:'USDT'}).count(),0);
+   await prod.waitForFunction(()=>document.querySelector('.ms-live-status')?.textContent==='em US$ · a cada 2 min');
   }else{
    await prod.waitForTimeout(1200);
    assert.equal(productionSockets.length,0);assert.equal(await prod.locator('.ms-live-status').count(),0);
@@ -76,7 +78,7 @@ try{
   assert.deepEqual(prodErrors,[]);await prod.close();
  }
  assert.deepEqual(errors,[]);
- console.log('Cripto: 8 pares simulados em Chromium; USD/USDT separados, flash, pausa/retomada, domínios oficiais, logout e bloqueio de domínio desconhecido aprovados.');
+ console.log('Cripto: tabela com 7 moedas ao vivo simuladas em Chromium; Binance/Yahoo separados, Bitcoin em reais, flash, pausa/retomada, domínios oficiais, logout e bloqueio de domínio desconhecido aprovados.');
  // Sonda externa de leitura: indisponibilidade regional não altera o resultado dos testes determinísticos.
  const network=await browser.newPage();
  await network.route('http://127.0.0.1:8787/**',route=>route.fulfill({contentType:'text/html',body:'<html><head></head><body>Verificação da conexão</body></html>'}));
