@@ -20,17 +20,61 @@ globalThis.MMMesa2 = (() => {
   // abas do seletor: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo na Mesa 1)
   // listas padrão de cada aba: as tabelas da Mesa 1 juntas por assunto (sem os metais "à vista", que só existem ao vivo
   // na Mesa 1); a pessoa pode reordenar, tirar e pôr ativos (lista própria, guardada na conta: chave mesa2sel)
-  const ABAS = [['ind', 'Índices', ['am', 'eu', 'as']], ['com', 'Commodities', ['co']], ['jur', 'Juros', ['ou']], ['moe', 'Moedas', ['dx', 'em']], ['cri', 'Cripto', ['cr']]];
+  const ABAS = [['ind', 'Índices', ['am', 'eu', 'as']], ['com', 'Commodities', ['co']], ['jur', 'Juros', ['ou']], ['moe', 'Moedas', ['dx', 'em']], ['cri', 'Cripto', ['cr']],
+    ['acoes', 'Ações EUA', ['eua-acao']], ['etfs', 'ETFs EUA', ['eua-etf']]];
+  /* ---------- ações e ETFs americanos (13/11/2026): catálogo e cotações pelo servidor de dados (/eua/*, FXOpen com o
+     Yahoo de reserva); o catálogo fica 1 dia neste navegador. Preços da corretora (CFD), não os oficiais da bolsa. ---------- */
+  const PADRAO_EUA = {
+    acoes: ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'JPM', 'V', 'MA', 'NFLX', 'AMD', 'COST', 'WMT', 'XOM', 'UNH', 'LLY', 'ORCL', 'BAC'],
+    etfs: ['SPY', 'QQQ', 'DIA', 'IWM', 'EWZ', 'EEM', 'EFA', 'GLD', 'SLV', 'TLT', 'IEF', 'HYG', 'LQD', 'XLE', 'XLF', 'XLK', 'ARKK', 'VNQ', 'USO', 'TQQQ'],
+  };
+  const NOME_EUA = { AAPL: 'Apple', MSFT: 'Microsoft', NVDA: 'Nvidia', AMZN: 'Amazon', GOOGL: 'Alphabet (Google)', META: 'Meta', TSLA: 'Tesla', SPY: 'S&P 500 (SPY)', QQQ: 'Nasdaq 100 (QQQ)', EWZ: 'Brasil (EWZ)', GLD: 'Ouro (GLD)', TLT: 'Treasuries 20+ (TLT)' };
+  const EUA_CAT = 'mm_eua_cat_v1';
+  let euaCat = (() => { const c = ler(EUA_CAT, null); return c && Array.isArray(c.l) && Date.now() - (c.ts || 0) < 864e5 ? c.l : null; })();
+  let euaPedido = false;
+  function carregarEuaCat() {
+    if (euaCat || euaPedido || !api) return; euaPedido = true;
+    api.getJSON(`${api.PROXY}/eua/catalogo`, 20000).then((l) => {
+      if (Array.isArray(l) && l.length) { euaCat = l.filter((x) => x && typeof x.s === 'string' && /^[A-Z0-9.\-]{1,12}$/.test(x.s)); gravar(EUA_CAT, { ts: Date.now(), l: euaCat }); atualizar('seletor'); }
+    }).catch(() => {}).finally(() => { setTimeout(() => { euaPedido = false; }, 60000); });
+  }
+  const curto = (n) => String(n || '').replace(/,?\s+(Inc\.?|Corp\.?|Corporation|Co\.?|Ltd\.?|plc|Holdings?|Class [A-C]|N\.V\.|S\.A\.|Company)\b\.?/gi, '').replace(/[\s,&]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+  function itensEua() {
+    const L = euaCat || [...PADRAO_EUA.acoes.map((s) => ({ s, n: NOME_EUA[s] || s, t: 'acao' })), ...PADRAO_EUA.etfs.map((s) => ({ s, n: NOME_EUA[s] || s, t: s === 'TQQQ' ? 'etfa' : 'etf' }))];
+    return L.map((x) => ({ s: x.s, n: NOME_EUA[x.s] || curto(x.n) || x.s, cc: 'US', d: 2, tid: x.t === 'acao' ? 'eua-acao' : 'eua-etf', grupo: x.t === 'acao' ? 'Ações EUA' : x.t === 'etfa' ? 'ETFs alavancados EUA' : 'ETFs EUA', eua: true, sub: x.t === 'acao' ? 'Ação · EUA' : x.t === 'etfa' ? 'ETF alavancado · EUA' : 'ETF · EUA', nomeLongo: x.n }));
+  }
+  let euaSetMemo = null, euaSetRef;
+  const EUA_SET = () => { if (!euaSetMemo || euaSetRef !== euaCat) { euaSetRef = euaCat; euaSetMemo = new Set(itensEua().map((x) => x.s)); } return euaSetMemo; };
+  let QE = {}, euaTs = 0, euaBusca = null;
+  // cotação: a da Mesa (Yahoo, câmbio e cripto ao vivo) ou, para ações e ETFs americanos, a do /eua/cotacoes
+  const cot = (s) => { const a = api.q(s); return a && ok(a.v) ? a : QE[s] || a; };
+  function buscarEua() {
+    if (!api || !root?.isConnected || document.hidden || euaBusca) return;
+    const E = EUA_SET(), syms = [...new Set(abas().flatMap((x) => x.l).map((r) => r.s).concat(sel.s).filter((s) => E.has(s)))].slice(0, 120);
+    if (!syms.length) return;
+    euaBusca = api.getJSON(`${api.PROXY}/eua/cotacoes?s=${encodeURIComponent(syms.join(','))}`, 15000).then((j) => {
+      if (!j || j.error) return;
+      for (const [s, q] of Object.entries(j)) if (q && ok(q.v)) QE[s] = { v: q.v, c: q.c, ts: q.ts, live: true, eua: q.f };
+      euaTs = Date.now();
+    }).catch(() => {}).finally(() => { euaBusca = null; });
+  }
+  setInterval(buscarEua, 15000);
+  // o catálogo inteiro (cerca de 900 ativos) só é montado de novo quando chega o catálogo dos EUA
+  let catMemo = null, catRef;
   function catalogo() {
+    if (catMemo && catRef === euaCat) return catMemo;
+    catRef = euaCat;
     const L = [];
     for (const t of api.TABLES) for (const r of t.rows) if (!r[0].startsWith('__x')) L.push({ s: r[0], n: r[1], cc: r[2], d: r[3], tid: t.id, grupo: t.t });
     for (const r of api.CRIPTO_TB) L.push({ s: r[0], n: r[1], cc: '', d: 2, tid: 'cr', grupo: 'Cripto' });
-    const vistos = new Set(); return L.filter((x) => !vistos.has(x.s) && vistos.add(x.s));
+    L.push(...itensEua());
+    const vistos = new Set(); return (catMemo = L.filter((x) => !vistos.has(x.s) && vistos.add(x.s)));
   }
   function abas() {
+    carregarEuaCat();
     const C = catalogo(), por = new Map(C.map((x) => [x.s, x])), P = minhas.dados?.abas || {};
     return ABAS.map(([id, t, tids]) => {
-      const padrao = C.filter((x) => tids.includes(x.tid));
+      const padrao = PADRAO_EUA[id] ? PADRAO_EUA[id].map((s) => por.get(s)).filter(Boolean) : C.filter((x) => tids.includes(x.tid));
       const propria = Array.isArray(P[id]) ? P[id].map((s) => por.get(s)).filter(Boolean) : null;
       return { id, t, l: propria || padrao, padrao, propria: !!propria };
     });
@@ -82,6 +126,7 @@ globalThis.MMMesa2 = (() => {
   const marcaPulso = (s, n, m) => (m === 'cr' ? api.marca(s, n, '', 'cr') : m === 'co' ? api.marca(s, n, '', 'co') : m.includes('/') ? api.marca(s, m, '', 'em') : api.marca(s, n, m, 'am'));
   // unidade mostrada ao lado do preço grande do gráfico
   function unidade(s, n) {
+    if (euaSim(s)) return 'US$ · preço da corretora';
     if (s === 'BTC-BRL' || /=X$/.test(s) && /BRL/.test(s)) return 'R$';
     if (/^\^(IRX|FVX|TNX|TYX)$/.test(s) || s === '__cds') return s === '__cds' ? 'pontos-base' : '% ao ano';
     if (/^\^BVSP$/.test(s) || s === 'EWZ') return s === 'EWZ' ? 'US$' : 'B3 · pontos';
@@ -90,7 +135,8 @@ globalThis.MMMesa2 = (() => {
     if (/=X$/.test(s)) return (n.split('/')[1] || '').trim();
     return '';
   }
-  const prefixo = (s) => (s === 'BTC-BRL' || s === 'BRL=X' || s === 'EURBRL=X' ? 'R$ ' : /-USD$/.test(s) || /^(BZ|CL|GC|SI|HG|NG)=F$/.test(s) || s === '__dce' || s === 'TIO=F' ? 'US$ ' : '');
+  const euaSim = (s) => !!api && EUA_SET().has(s) && !api.q(s)?.v;
+  const prefixo = (s) => (euaSim(s) ? 'US$ ' : s === 'BTC-BRL' || s === 'BRL=X' || s === 'EURBRL=X' ? 'R$ ' : /-USD$/.test(s) || /^(BZ|CL|GC|SI|HG|NG)=F$/.test(s) || s === '__dce' || s === 'TIO=F' ? 'US$ ' : '');
   function preco(s, q, d) {
     if (!q || !ok(q.v)) return '—';
     // índices grandes sem centavos (Ibovespa 171.324, como nas telas de cotação); o resto como na Mesa 1
@@ -103,6 +149,14 @@ globalThis.MMMesa2 = (() => {
     if (!q || !ok(q.v) || !ok(q.c) || q.c <= -100) return '—';
     const a = q.v - q.v / (1 + q.c / 100), casas = Math.abs(q.v) >= 10000 && !/-USD$|BRL$/.test(s) ? 2 : d != null ? d : api.dec(q.v);
     return `${a > 0 ? '+' : a < 0 ? '−' : ''}${api.nf(Math.abs(a), casas)}`;
+  }
+
+  const COR_EUA = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#db2777', '#4f46e5', '#0d9488'];
+  function marcaItem(r) {
+    if (!r.eua) return api.marca(r.s, r.n, r.cc, r.tid);
+    let h = 0; for (const ch of r.s) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const cor = r.tid === 'eua-etf' ? '#475569' : COR_EUA[h % COR_EUA.length], l = r.s.replace(/[^A-Z]/g, '').slice(0, 1) || r.s[0];
+    return `<span class="ms-mk" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="${cor}"/><text x="8" y="${l.length > 1 ? 10.6 : 11.6}" text-anchor="middle" font-size="${l.length > 2 ? 5.2 : l.length > 1 ? 6.6 : 9.6}" font-weight="700" fill="#fff" font-family="Arial, sans-serif">${esc(l)}</text></svg></span>`;
   }
 
   /* ---------- pedaços ---------- */
@@ -126,7 +180,7 @@ globalThis.MMMesa2 = (() => {
   const viewers = {};
   let grafNo = null, grafSym = null;
   function graficoHTML() {
-    const q = api.q(sel.s);
+    const q = cot(sel.s);
     return `${cab(`Gráfico · <span class="m2-gnome">${esc(sel.n)}</span>`, 'ouro', '<button type="button" class="m2-ic" data-m2-cheio aria-label="Abrir em tela cheia" title="Abrir em tela cheia"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>')}
       <div class="m2-preco"><b class="num" data-m2-px="${esc(sel.s)}">${preco(sel.s, q).replace(/^(R\$|US\$) /, '')}</b><span class="m2-var ${lado(q?.c)}" data-m2-ch="${esc(sel.s)}">${seta(q?.c)} ${api.pct(q?.c)}</span><small>${esc(unidade(sel.s, sel.n))}</small>
         <span class="m2-pervar" data-m2-pervar></span></div>
@@ -161,9 +215,9 @@ globalThis.MMMesa2 = (() => {
     const tabs = `<div class="m2-tabs" role="tablist" aria-label="Grupos de ativos">${A.map((x) => `<button type="button" role="tab" data-m2-aba="${x.id}" aria-selected="${x.id === atual.id}">${x.t}</button>`).join('')}<span class="sp"></span>
       <button type="button" class="m2-editar${editando ? ' on' : ''}" data-m2-editar aria-pressed="${editando}" title="${editando ? 'Concluir a edição da lista' : 'Organizar esta lista: arrastar, tirar e pôr ativos'}">${editando ? 'Concluir' : lapis + '<span>Editar</span>'}</button></div>`;
     const linhas = atual.l.map((r) => {
-      const q = api.q(r.s), sub = r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
+      const q = cot(r.s), sub = r.eua ? `${r.sub} · ${r.nomeLongo || r.n} (${r.s})` : r.tid === 'cr' ? (r.s === 'BTC-BRL' ? 'em reais' : 'em US$') : api.subtitulo(r.s, r.n, r.cc);
       return `<tr data-m2-sym="${esc(r.s)}" data-name="${esc(r.n)}" class="${r.s === sel.s && !editando ? 'on' : ''}${q && ok(q.v) && !q.live ? ' old' : ''}" tabindex="${editando ? -1 : 0}">
-          <td title="${esc(sub ? r.n + ' · ' + sub : r.n)}"><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${api.marca(r.s, r.n, r.cc, r.tid)}<b>${esc(r.n)}</b></span></td>
+          <td title="${esc(sub ? r.n + ' · ' + sub : r.n)}"><span class="m2-at">${editando ? `<button type="button" class="m2-alca" data-m2-alca aria-label="Mover ${esc(r.n)} (setas para cima e para baixo)" title="Arraste para mudar a ordem">⠿</button>` : ''}${marcaItem(r)}<b>${esc(r.n)}</b></span></td>
           <td class="n num" data-m2-px="${esc(r.s)}">${preco(r.s, q, r.d)}</td>
           <td class="n num ${lado(q?.c)}" data-m2-abs="${esc(r.s)}">${editando ? '' : absVar(r.s, q, r.d)}</td>
           <td class="n num ${lado(q?.c)}" data-m2-ch="${esc(r.s)}">${editando ? `<button type="button" class="m2-tirar" data-m2-tirar="${esc(r.s)}" aria-label="Tirar ${esc(r.n)} da lista" title="Tirar da lista">✕</button>` : api.pct(q?.c)}</td></tr>`;
@@ -173,10 +227,10 @@ globalThis.MMMesa2 = (() => {
     if (editando) {
       const ja = new Set(atual.l.map((r) => r.s)), q = busca.trim().toLowerCase();
       const sem = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      const opc = catalogo().filter((x) => !ja.has(x.s) && (!q || sem(x.n + ' ' + x.s + ' ' + x.grupo).includes(sem(q))));
+      const opc = catalogo().filter((x) => !ja.has(x.s) && (q ? sem(x.n + ' ' + x.s + ' ' + x.grupo + ' ' + (x.nomeLongo || '')).includes(sem(q)) : !x.eua || PADRAO_EUA.acoes.includes(x.s) || PADRAO_EUA.etfs.includes(x.s))).slice(0, 200);
       const grupos = [...new Set(opc.map((x) => x.grupo))];
-      rodape = `<div class="m2-ed">${adicionando ? `<div class="m2-add"><input type="search" class="m2-busca" data-m2-busca placeholder="Buscar ativo da Mesa (ex.: DAX, ouro, peso)" value="${esc(busca)}" aria-label="Buscar ativo para adicionar" autocomplete="off">
-          <div class="m2-opc">${grupos.length ? grupos.map((g) => `<div class="m2-grp">${esc(g)}</div>${opc.filter((x) => x.grupo === g).map((x) => `<button type="button" data-m2-por="${esc(x.s)}">${api.marca(x.s, x.n, x.cc, x.tid)}<span>${esc(x.n)}</span><em>+</em></button>`).join('')}`).join('') : '<p class="m2-vazio">Nada encontrado.</p>'}</div></div>` : ''}
+      rodape = `<div class="m2-ed">${adicionando ? `<div class="m2-add"><input type="search" class="m2-busca" data-m2-busca placeholder="Buscar (ex.: DAX, ouro, Apple, NVDA, SPY)" value="${esc(busca)}" aria-label="Buscar ativo para adicionar" autocomplete="off">
+          <div class="m2-opc">${grupos.length ? grupos.map((g) => `<div class="m2-grp">${esc(g)}</div>${opc.filter((x) => x.grupo === g).map((x) => `<button type="button" data-m2-por="${esc(x.s)}">${marcaItem(x)}<span>${esc(x.n)}${x.eua ? ` <small>${esc(x.s)}</small>` : ''}</span><em>+</em></button>`).join('')}`).join('') : '<p class="m2-vazio">Nada encontrado.</p>'}</div></div>` : ''}
         <div class="m2-ed-acoes"><button type="button" class="m2-btn" data-m2-adicionar aria-expanded="${adicionando}">${adicionando ? 'Fechar a lista' : '+ Adicionar ativo'}</button>${atual.propria ? '<button type="button" class="m2-link" data-m2-restaurar>Restaurar a lista padrão</button>' : ''}</div></div>`;
     }
     return `${tabs}<div class="m2-lista${editando ? ' editando' : ''}"><table class="m2-tb"><thead><tr><th>Ativo</th><th class="n">Último</th><th class="n">Var.</th><th class="n">${editando ? '' : 'Var. %'}</th></tr></thead><tbody>${linhas}${vazia}</tbody></table>${rodape}</div>`;
@@ -209,7 +263,7 @@ globalThis.MMMesa2 = (() => {
   // bandeira ou ícone ao lado do nome
   function pulsoHTML() {
     return `${cab('Pulso global', 'vazio', '<span class="m2-hint">variação do dia</span>')}<div class="m2-pulso">${PULSO.map(([s, n, m]) => {
-      const q = api.q(s), tnx = s === '^TNX', c = q?.c, f = ok(c) ? Math.min(1, Math.abs(c) / (tnx ? 3 : 2)) : 0;
+      const q = cot(s), tnx = s === '^TNX', c = q?.c, f = ok(c) ? Math.min(1, Math.abs(c) / (tnx ? 3 : 2)) : 0;
       const valor = tnx ? (q && ok(q.v) ? api.nf(q.v, 2) + '%' : '—') : api.pct(c);
       return `<button type="button" class="m2-vidro ${lado(c)}" style="--f:${f.toFixed(2)}" data-m2-sym="${esc(s)}" data-name="${esc(n)}" title="Ver ${esc(n)} no gráfico">
         <span class="m2-vn">${marcaPulso(s, n, m)}${esc(n)}</span><b class="num" ${tnx ? `data-m2-pxt="${esc(s)}"` : `data-m2-pc="${esc(s)}"`}>${valor}</b>${tnx ? `<small class="${lado(c)}">${ok(c) ? api.pct(c) + ' no dia' : '&nbsp;'}</small>` : ''}</button>`;
@@ -353,6 +407,7 @@ globalThis.MMMesa2 = (() => {
   function depois(r) {
     root = r;
     const g = root.querySelector('[data-m2="grafico"]'); if (g) montarGrafico(g);
+    if (Date.now() - euaTs > 15000) setTimeout(() => { buscarEua(); setTimeout(() => atualizar('seletor'), 1500); }, 0);
     requestAnimationFrame(() => api.drawCurve());
     root.querySelector('.m2-lista tr.on')?.scrollIntoView({ block: 'nearest' });
   }
@@ -367,7 +422,7 @@ globalThis.MMMesa2 = (() => {
     const pb = e.target.closest('[data-m2-per]');
     if (pb) { per = pb.dataset.m2Per; gravar(PER_KEY, per); root.querySelectorAll('[data-m2-per]').forEach((b) => b.setAttribute('aria-pressed', String(b === pb))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
     const t = e.target.closest('[data-m2-aba]');
-    if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); adicionando = false; busca = ''; trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
+    if (t) { aba = t.dataset.m2Aba; gravar(ABA_KEY, aba); setTimeout(() => { buscarEua(); setTimeout(() => atualizar('seletor'), 1200); }, 0); adicionando = false; busca = ''; trocar('seletor', seletorHTML()); root.querySelector('[data-m2="seletor"] .m2-lista')?.scrollTo(0, 0); return; }
     if (e.target.closest('[data-m2-editar]')) { editando = !editando; adicionando = false; busca = ''; trocar('seletor', seletorHTML()); return; }
     const tirar = e.target.closest('[data-m2-tirar]');
     if (tirar) { mudouLista(ordemTela().filter((s) => s !== tirar.dataset.m2Tirar)); return; }
@@ -407,25 +462,25 @@ globalThis.MMMesa2 = (() => {
   setInterval(() => {
     if (!root || !root.isConnected || document.hidden || !api) return;
     root.querySelectorAll('[data-m2-px]').forEach((el) => {
-      const s = el.dataset.m2Px, q = api.q(s); if (!q || !ok(q.v)) return;
+      const s = el.dataset.m2Px, q = cot(s); if (!q || !ok(q.v)) return;
       const grande = el.closest('.m2-preco'), txt = grande ? preco(s, q).replace(/^(R\$|US\$) /, '') : null;
       const novo = txt ?? preco(s, q, abas().flatMap((x) => x.l).find((r) => r.s === s)?.d);
       if (el.textContent !== novo) { el.textContent = novo; el.classList.remove('m2-pisca'); void el.offsetWidth; el.classList.add('m2-pisca'); }
     });
     root.querySelectorAll('[data-m2-abs]').forEach((el) => {
-      const s = el.dataset.m2Abs, q = api.q(s); if (!q || !ok(q.c) || editando) return;
+      const s = el.dataset.m2Abs, q = cot(s); if (!q || !ok(q.c) || editando) return;
       const r = abas().flatMap((x) => x.l).find((x) => x.s === s);
       el.textContent = absVar(s, q, r?.d); el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
     });
     root.querySelectorAll('[data-m2-ch]').forEach((el) => {
-      const q = api.q(el.dataset.m2Ch); if (!q || !ok(q.c) || el.querySelector('button')) return; // editando: ali fica o ✕
+      const q = cot(el.dataset.m2Ch); if (!q || !ok(q.c) || el.querySelector('button')) return; // editando: ali fica o ✕
       el.textContent = el.closest('.m2-tb') ? api.pct(q.c) : `${seta(q.c)} ${api.pct(q.c)}`; el.classList.remove('up', 'dn', 'eq', 'na'); el.classList.add(lado(q.c));
     });
     root.querySelectorAll('[data-m2-pc]').forEach((el) => {
-      const q = api.q(el.dataset.m2Pc); if (!q || !ok(q.c)) return;
+      const q = cot(el.dataset.m2Pc); if (!q || !ok(q.c)) return;
       el.textContent = api.pct(q.c); const b = el.closest('.m2-vidro'); b.classList.remove('up', 'dn', 'eq', 'na'); b.classList.add(lado(q.c)); b.style.setProperty('--f', Math.min(1, Math.abs(q.c) / 2).toFixed(2));
     });
-    root.querySelectorAll('[data-m2-pxt]').forEach((el) => { const q = api.q(el.dataset.m2Pxt); if (q && ok(q.v)) el.textContent = api.nf(q.v, 2) + '%'; });
+    root.querySelectorAll('[data-m2-pxt]').forEach((el) => { const q = cot(el.dataset.m2Pxt); if (q && ok(q.v)) el.textContent = api.nf(q.v, 2) + '%'; });
     root.querySelectorAll('[data-m2-t]').forEach((el) => { el.textContent = relogio(+el.dataset.m2T - Date.now()); });
     root.querySelectorAll('[data-m2-prog]').forEach((el) => { el.style.width = (Math.max(0.02, Math.min(1, 1 - (+el.dataset.m2Prog - Date.now()) / 864e5)) * 100).toFixed(1) + '%'; });
   }, 2000);

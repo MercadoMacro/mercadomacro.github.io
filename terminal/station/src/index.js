@@ -980,7 +980,7 @@ const CHAVES_DADOS = {
   mesa2sel: v => {
     if (!v || v.v !== 1 || !v.abas || typeof v.abas !== 'object' || Array.isArray(v.abas)) return false;
     const e = Object.entries(v.abas);
-    return e.length <= 5 && e.every(([id, l]) => ['ind', 'com', 'jur', 'moe', 'cri'].includes(id) && Array.isArray(l) && l.length <= 60
+    return e.length <= 7 && e.every(([id, l]) => ['ind', 'com', 'jur', 'moe', 'cri', 'acoes', 'etfs'].includes(id) && Array.isArray(l) && l.length <= 60
       && new Set(l).size === l.length && l.every(s => typeof s === 'string' && /^[\w^.=\-]{1,24}$/.test(s)));
   },
   // progresso da aba Educação: lições feitas, respostas do quiz e a última aberta
