@@ -1,5 +1,5 @@
 /* =========================================================
-   RADAR DE INSIDERS (aba Insiders, 13/11/2026, pedido do Dante)
+   RADAR DE INSIDERS (seção Insiders de "Macro e Fluxo", 13/11/2026, pedido do Dante)
    Compras e vendas de ações da própria empresa por controladores e administradores (conselhos e diretoria),
    mês a mês, desde jan/2021. Fonte: insiders/insiders.json, gravado toda semana pelo robô do GitHub a partir
    da base "Valores Mobiliários Negociados e Detidos" da CVM (Resolução CVM 44, licença ODbL). Valores em R$ mil.
@@ -210,7 +210,7 @@
     const setores = [...new Set(dados.emp.map((e) => dados.setores[e.s]))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const empSel = prefs.emp >= 0 ? dados.emp[prefs.emp] : null;
     root.innerHTML = `<div class="in-wrap">
-      <header class="in-head"><div><h2>Radar de Insiders <span class="in-tag">CVM 44</span></h2>
+      <header class="in-head"><div>
         <p class="in-mut">Compras e vendas de ações da própria empresa por ${quemTxt()}, mês a mês. Dados entregues à CVM até o dia 10 do mês seguinte.</p></div></header>
       <div class="in-filtros in-card">
         <label class="in-busca"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" data-in-busca placeholder="Buscar empresa (ex.: PETR4, Vale, Itaú)" aria-label="Buscar empresa" autocomplete="off" value="${empSel ? esc(empSel.t[0] + ' · ' + empSel.n) : ''}"><div class="in-sug" hidden></div></label>

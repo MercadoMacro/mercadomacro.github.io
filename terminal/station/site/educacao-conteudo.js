@@ -1157,7 +1157,7 @@ Probabilidade não é previsão garantida, e ela muda a cada dado novo de infla�
             { p: 'O boletim Focus reúne:', o: ['Projeções de economistas', 'Decisões do Copom', 'Preços de ações'], c: 0, e: 'É uma pesquisa semanal do Banco Central.' },
             { p: 'Uma decisão esperada pode mexer muito no mercado quando:', o: ['O comunicado muda a expectativa para as próximas reuniões', 'Nunca', 'Só se for em feriado'], c: 0, e: 'O mercado reage à surpresa, inclusive no tom do comunicado.' },
           ],
-          painel: { texto: 'Ver as probabilidades em Análises', aba: 'analysis-panel' },
+          painel: { texto: 'Ver as probabilidades em Macro e Fluxo', aba: 'analysis-panel' },
           livro: LIVRO_MVM,
         },
         {
@@ -1400,7 +1400,7 @@ Em julho de 2012, no auge da crise da dívida na zona do euro, o então presiden
             { p: 'Um comunicado "hawkish" sugere:', o: ['Viés de juros mais altos', 'Cortes rápidos', 'Nenhuma mudança'], c: 0, e: 'Hawkish é o tom duro, preocupado com a inflação.' },
             { p: 'Por que a frase de Draghi em 2012 mexeu tanto com o mercado?', o: ['Porque anunciou um corte de juros', 'Porque a credibilidade do BCE mudou as expectativas', 'Porque foi feriado'], c: 1, e: 'Sem medida concreta no dia, a promessa bastou para derrubar os juros dos países em crise.' },
           ],
-          painel: { texto: 'Ver as probabilidades em Análises', aba: 'analysis-panel' },
+          painel: { texto: 'Ver as probabilidades em Macro e Fluxo', aba: 'analysis-panel' },
           livro: FONTE_BCB,
         },
         {

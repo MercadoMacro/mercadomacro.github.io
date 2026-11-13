@@ -23,7 +23,7 @@
   const groups = [
     ['Visão geral', ['market-panel', 'mesa-panel', 'watch-panel', 'heatmap-panel']],
     ['Informação', ['news-panel', 'weekly-panel', 'calendar-panel']],
-    ['Análise', ['analysis-panel', 'fund-panel', 'insiders-panel']],
+    ['Análise', ['analysis-panel', 'fund-panel']],
     ['Ferramentas', ['indicators-panel', 'calculator-panel', 'options-panel', 'edu-panel']],
   ];
   const label = b => [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() || b.textContent.trim();

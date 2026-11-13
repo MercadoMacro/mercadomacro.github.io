@@ -10,9 +10,10 @@
     ['copom', 'Copom', 'flag-br'],
     ['cot', 'Especuladores', 'fa-scale-balanced'],
     ['f13', 'Grandes fundos', 'fa-briefcase'],
+    ['ins', 'Insiders', 'fa-user-tie'],
     ['mercado', 'Análise avançada', 'fa-chart-line']
   ];
-  const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'fed', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13' };
+  const ALVO = { 'ana-sec-fluxo': 'fluxo', 'ana-sec-fed': 'fed', 'ana-sec-cot': 'cot', 'ana-sec-13f': 'f13', 'ana-sec-ins': 'ins' };
   // Fed e Copom usam as bandeirinhas no lugar do ícone
   const BANDEIRA = { 'flag-us': '<svg class="pj-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/></svg>', 'flag-br': '<svg class="pj-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2.2 27.2 10 15 17.8 2.8 10z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/><path d="M10.6 9.1c3-.8 6.2-.5 8.9.9" stroke="#fff" stroke-width=".8" fill="none"/></svg>' };
   const icone = (ic) => BANDEIRA[ic] || `<i class="fa-solid ${ic}" aria-hidden="true"></i>`;
@@ -46,7 +47,7 @@
 
   const nav = document.createElement('nav');
   nav.className = 'ana-jump';
-  nav.setAttribute('aria-label', 'Seções das Análises');
+  nav.setAttribute('aria-label', 'Seções de Macro e Fluxo');
   nav.innerHTML = `<span class="aj-pill" aria-hidden="true"></span>${SECOES.map(([k, t, ic]) => `<button type="button" data-secao="${k}">${icone(ic)}<span>${t}</span></button>`).join('')}`;
   dq.after(nav);
 
@@ -151,7 +152,8 @@
   .ana-wrap[data-secao="fed"] #pj-col-br,
   .ana-wrap[data-secao="copom"] #pj-col-eua,
   .ana-wrap[data-secao="cot"] .ana-extra > .market-section:not(#ana-sec-cot),
-  .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f) { display:none !important; }
+  .ana-wrap[data-secao="f13"] .ana-extra > .market-section:not(#ana-sec-13f),
+  .ana-wrap[data-secao="ins"] .ana-extra > .market-section:not(#ana-sec-ins) { display:none !important; }
   /* seções no formato do Resumo semanal: cartão centralizado, título grande e margens fixas (28/10/2026) */
   /* todas as seções com a mesma largura (Severino, 30/10/2026: trocar de seção deixava a página torta).
      A .ana-wrap é quem rola: fica com a largura toda, para a barra de rolagem ficar no canto da tela,
