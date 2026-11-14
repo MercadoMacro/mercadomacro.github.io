@@ -77,9 +77,24 @@ export function resumoAtraso(linhas) {
     return { fonte, n: v.length, mediana: pct(v, 0.5), p90: pct(v, 0.9), ate2min: v.filter((x) => x <= 120000).length / v.length };
   }).sort((x, y) => x.mediana - y.mediana);
 }
+// leituras das fontes rápidas pelo relé (ok, limite 429, erro), somadas por dia (14/11/2026)
+export async function gravarContagem(env, c, agora = Date.now()) {
+  const l = Object.entries(c || {}).filter(([, v]) => v.ok || v.limite || v.erro);
+  if (!l.length || !env.DB) return;
+  const dia = new Date(agora - 3 * 3600000).toISOString().slice(0, 10);
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS feeds_status (dia TEXT NOT NULL, fonte TEXT NOT NULL, ok INTEGER NOT NULL DEFAULT 0, limite INTEGER NOT NULL DEFAULT 0, erro INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (dia, fonte))').run();
+  await env.DB.batch(l.map(([fonte, v]) => env.DB.prepare('INSERT INTO feeds_status (dia, fonte, ok, limite, erro) VALUES (?, ?, ?, ?, ?) ON CONFLICT(dia, fonte) DO UPDATE SET ok = ok + excluded.ok, limite = limite + excluded.limite, erro = erro + excluded.erro')
+    .bind(dia, fonte.slice(0, 60), v.ok, v.limite, v.erro)));
+}
+
 export async function atrasoNoticias(env, agora = Date.now()) {
   await preparar(env);
   const r = await env.DB.prepare("SELECT fonte, data, visto FROM noticias_hist WHERE via = 'ao_vivo' AND visto >= ? LIMIT 20000").bind(agora - SEMANA).all();
   const t = await env.DB.prepare('SELECT COUNT(*) n, MIN(data) de FROM noticias_hist WHERE data >= ?').bind(agora - SEMANA).first();
-  return { fontes: resumoAtraso(r.results || []), semana: t?.n || 0, desde: t?.de || null };
+  let leituras = [];
+  try {
+    const desde = new Date(agora - 3 * 3600000 - 6 * 86400000).toISOString().slice(0, 10);
+    leituras = (await env.DB.prepare('SELECT fonte, SUM(ok) ok, SUM(limite) limite, SUM(erro) erro FROM feeds_status WHERE dia >= ? GROUP BY fonte ORDER BY fonte').bind(desde).all()).results || [];
+  } catch (e) { /* tabela ainda não existe */ }
+  return { fontes: resumoAtraso(r.results || []), semana: t?.n || 0, desde: t?.de || null, leituras };
 }

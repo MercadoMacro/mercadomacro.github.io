@@ -1,6 +1,6 @@
 // Uma coleta para todos os leitores; SQLite guarda o snapshot entre hibernações.
-import { noticiasRapidas } from './noticias.js';
-import { arquivarNoticias } from './noticias-arquivo.js';
+import { noticiasRapidas, tirarContagem } from './noticias.js';
+import { arquivarNoticias, gravarContagem } from './noticias-arquivo.js';
 const SOURCE = 'https://news.cota-cotacao10.workers.dev/';
 const PERIOD = 15000, MAX_AGE = 48 * 3600000;
 export function cleanNews(value, now = Date.now()) {
@@ -77,6 +77,8 @@ export class NewsRelay {
       // na primeira rodada depois de acordar (última conferência há mais de 1 min) tudo parece novo, então entra como 'lista' (não conta para o atraso)
       const novas=items.filter(n=>!before.has(n.link));
       if(novas.length&&this.env?.DB)this.ctx.waitUntil(arquivarNoticias(this.env,novas,this.items.length&&now-this.checked<60000?'ao_vivo':'lista',now).catch(e=>console.error('arquivo de notícias:',e.message)));
+      // a cada 5 minutos, grava quantas leituras das fontes rápidas deram certo, bateram no limite (429) ou falharam
+      if(this.env?.DB&&now-(this.contagemEm||0)>=300000){this.contagemEm=now;this.ctx.waitUntil(gravarContagem(this.env,tirarContagem(),now).catch(e=>console.error('contagem de feeds:',e.message)));}
       this.items=items;this.checked=now;
       for(const ws of this.sockets()) {
         const a=ws.deserializeAttachment();

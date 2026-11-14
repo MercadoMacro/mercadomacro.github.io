@@ -212,7 +212,7 @@ async function lerFeed(response) {
   return decodificaFeed(new Uint8Array(await response.arrayBuffer()), response.headers.get('Content-Type') || '');
 }
 
-async function fetchOneFeed(feed, fresco, ttl = 90) {
+async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -225,6 +225,7 @@ async function fetchOneFeed(feed, fresco, ttl = 90) {
       ...(fresco ? { cache: 'no-store' } : { cf: { cacheTtl: ttl, cacheEverything: true } })
     });
 
+    if (info) { info.status = response.status; info.retry = response.headers.get('Retry-After'); }
     if (!response.ok) { clearTimeout(timeout); return []; }
     // o tempo limite também vale para o corpo: um feed travado não segura a resposta inteira
     const bruto = await lerFeed(response).finally(() => clearTimeout(timeout));
@@ -330,11 +331,43 @@ const CHAVE_ULTIMOS = 'https://cache.local/feeds-ultimos-v1';
 // Desde 13/11/2026 também as fontes marcadas com rapida (Reuters, Bloomberg, WSJ, ForexLive, CNBC, InfoMoney, Valor),
 // com cópia de 30 s na borda (o relé roda a cada 15 s; lê cada site no máximo 2 vezes por minuto)
 export const FEEDS_RAPIDOS = FEEDS.filter((f) => f.rapida).map((f) => f.name);
-export async function noticiasRapidas() {
+// Financial Juice com limite (14/11/2026): lido a cada 15 s, ele respondia "muitos pedidos" (HTTP 429) em boa parte
+// das vezes, e as manchetes chegavam atrasadas. Agora: no máximo uma leitura a cada 45 s; se responder 429, espera o
+// tempo que ele pedir (Retry-After, ou 2 minutos) e, enquanto isso, a lista usa a última leitura boa (nada some).
+export const FJ_INTERVALO = 45000;
+const fj = { itens: [], em: 0, ate: 0 };
+// contagem das leituras por fonte (ok, limite 429, outro erro), gravada pelo relé de tempos em tempos (feeds_status)
+let contagem = {};
+export function tirarContagem() { const c = contagem; contagem = {}; return c; }
+const contar = (fonte, status) => {
+  const c = contagem[fonte] ||= { ok: 0, limite: 0, erro: 0 };
+  if (status === 200) c.ok++; else if (status === 429) c.limite++; else c.erro++;
+};
+async function lerFj(feed, agora) {
+  if (agora < fj.ate || agora - fj.em < FJ_INTERVALO) return fj.itens;
+  fj.em = agora;
+  const info = {};
+  const l = await fetchOneFeed(feed, true, 30, info);
+  contar(feed.source, info.status || 0);
+  if (info.status === 429) {
+    const seg = Number(info.retry);
+    fj.ate = agora + (Number.isFinite(seg) && seg > 0 ? Math.min(seg, 600) * 1000 : 120000);
+    return fj.itens;
+  }
+  if (l.length) fj.itens = l;
+  return fj.itens;
+}
+export async function noticiasRapidas(agora = Date.now()) {
   const l = await Promise.all(FEEDS.filter((f) => f.source === 'Financial Juice' || f.rapida)
-    .map((f) => fetchOneFeed(f, f.source === 'Financial Juice', 30)));
+    .map(async (f) => {
+      if (f.source === 'Financial Juice') return lerFj(f, agora);
+      const info = {};
+      const r = await fetchOneFeed(f, false, 30, info);
+      contar(f.source, info.status || 0);
+      return r;
+    }));
   // 20 mais novas de cada (a lista do relé tem teto de 250)
-  return l.flatMap((x) => x.sort((a, b) => b.data - a.data).slice(0, 20));
+  return l.flatMap((x) => [...x].sort((a, b) => b.data - a.data).slice(0, 20));
 }
 
 export async function coletarNoticias(ctx) {

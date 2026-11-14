@@ -53,3 +53,34 @@ test('atraso: mediana e 90% por fonte, ignora negativos e absurdos', () => {
   assert.equal(re.p90, 10 * 60000);
   assert.equal(re.ate2min, 0.2);
 });
+
+test('Financial Juice: no máximo uma leitura a cada 45 s e espera quando responde 429', async () => {
+  const { noticiasRapidas, tirarContagem, FJ_INTERVALO } = await import('../src/noticias.js');
+  const rss = (t) => `<rss><channel><item><title>${t}</title><link>https://fj.test/${encodeURIComponent(t)}</link><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`;
+  let pedidosFj = 0, resposta = () => new Response(rss('FJ primeira'), { status: 200 });
+  const antigo = globalThis.fetch;
+  globalThis.fetch = async (u) => {
+    if (String(u).includes('financialjuice')) { pedidosFj++; return resposta(); }
+    return new Response('<rss></rss>', { status: 200 });
+  };
+  try {
+    tirarContagem();
+    const t0 = 1_000_000_000_000;
+    const a = await noticiasRapidas(t0);
+    assert.ok(a.some((n) => /FJ primeira/.test(n.titulo)));
+    await noticiasRapidas(t0 + 15000);
+    assert.equal(pedidosFj, 1); // dentro dos 45 s: reaproveita
+    resposta = () => new Response('', { status: 429, headers: { 'Retry-After': '90' } });
+    const b = await noticiasRapidas(t0 + FJ_INTERVALO);
+    assert.equal(pedidosFj, 2);
+    assert.ok(b.some((n) => /FJ primeira/.test(n.titulo))); // a última leitura boa continua
+    await noticiasRapidas(t0 + FJ_INTERVALO + 60000);
+    assert.equal(pedidosFj, 2); // ainda esperando os 90 s pedidos
+    resposta = () => new Response(rss('FJ segunda'), { status: 200 });
+    const c = await noticiasRapidas(t0 + FJ_INTERVALO + 91000);
+    assert.equal(pedidosFj, 3);
+    assert.ok(c.some((n) => /FJ segunda/.test(n.titulo)));
+    const cont = tirarContagem()['Financial Juice'];
+    assert.deepEqual(cont, { ok: 2, limite: 1, erro: 0 });
+  } finally { globalThis.fetch = antigo; }
+});
