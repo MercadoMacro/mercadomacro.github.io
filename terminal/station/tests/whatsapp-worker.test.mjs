@@ -188,3 +188,16 @@ test('Radar: rascunho vai uma vez por dia para o administrador, em duas mensagen
   assert.equal(await rascunhoRadar({}, { tipo: 'abertura', html: 'x', config: { ...config, radar_ult_abertura: k }, telegram }), false);
   assert.equal(await rascunhoRadar({}, { tipo: 'abertura', html: 'x', config: { ...config, radar_wa: 'nao' }, telegram }), false);
 });
+
+test('Vim do Radar tira a pausa do atendimento', async () => {
+  const { env, enviadas } = ambiente();
+  const de = '5511999990008';
+  await mensagem(env, 'SIM QUERO', de);
+  await mensagem(env, 'oi', de);
+  assert.equal(enviadas.length, 1);
+  await mensagem(env, 'Vim do Radar', de);
+  assert.equal(enviadas.length, 2);
+  assert.match(enviadas[1], /veio do \*Radar\*/);
+  await mensagem(env, 'oi', de);
+  assert.equal(enviadas.length, 3); // a Jade voltou a responder
+});
