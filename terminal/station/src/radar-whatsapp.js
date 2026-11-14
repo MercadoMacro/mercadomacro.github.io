@@ -33,14 +33,14 @@ export function postRadar(html) {
 }
 
 // manda para a conversa do administrador: um aviso curto e, separado, só o post (para copiar sem sobra)
-export async function rascunhoRadar(env, { tipo, html, config, telegram }) {
+export async function rascunhoRadar(env, { tipo, html, config, telegram, teste = false }) {
   const c = config;
-  if (c.radar_wa === 'nao' || !(c.tg_token && c.tg_chat) || !html) return false;
+  if ((!teste && c.radar_wa === 'nao') || !(c.tg_token && c.tg_chat) || !html) return false;
   const chave = `${tipo}-${new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10)}`;
-  if (c['radar_ult_' + tipo] === chave) return false;
+  if (!teste && c['radar_ult_' + tipo] === chave) return false;
   const post = postRadar(html).slice(0, 4000);
   const nome = tipo === 'abertura' ? 'Abertura' : 'Fechamento';
-  const a = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: `📋 ${nome} pronto para o Radar no WhatsApp. Toque e segure a próxima mensagem, copie e cole no canal.`, disable_notification: false });
+  const a = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: (teste ? '🧪 TESTE (não precisa postar). ' : '') + `📋 ${nome} pronto para o Radar no WhatsApp. Toque e segure a próxima mensagem, copie e cole no canal.`, disable_notification: false });
   if (!a.ok) return false;
   const b = await telegram(c.tg_token, 'sendMessage', { chat_id: c.tg_chat, text: post, disable_web_page_preview: true });
   return b.ok ? chave : false;
