@@ -1,3 +1,5 @@
+import { jadeAccount, jadeSchema } from './jade-whatsapp.js';
+export { JadeWatchlist } from './jade-whatsapp.js';
 import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 export { NewsRelay } from './news-relay.js';
@@ -184,6 +186,7 @@ export default {
         if (!(await dentroDoLimite(env, 'busca:' + u.id, 120, 600))) return json({ erro: 'Muitas buscas seguidas. Espere alguns minutos.' }, 429);
         return await buscarAtivos(req);
       }
+      if (p === '/api/conta/jade-whatsapp') return await jadeAccount(req, env, u, json);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       // alarmes de preço da Jade no servidor e avisos com o site fechado (11/11/2026, src/alarmes.js)
       if (p === '/api/alarmes' || p.startsWith('/api/push/')) { const r = await apiAlarmes(req, env, u, p, mesmaOrigem, json); if (r) return r; }
@@ -1177,9 +1180,11 @@ async function apiAuth(req, env, acao, ctx) {
     if (!(await dentroDoLimite(env, 'sen:' + eu.id, 10, 900))) return json({ erro: 'Muitas tentativas. Espere 15 minutos.' }, 429);
     const r = await env.DB.prepare('SELECT senha FROM usuarios WHERE id = ?').bind(eu.id).first();
     if (!r || !(await conferirSenha(senha, r.senha))) return json({ erro: 'A senha não confere.' }, 400);
+    await jadeSchema(env);
     await env.DB.batch([
       env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind('sen:' + eu.id),
+      env.DB.prepare('DELETE FROM jade_whatsapp WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = ?').bind(eu.id),
       env.DB.prepare('DELETE FROM historico WHERE usuario_id = ?').bind(eu.id),
@@ -1383,8 +1388,10 @@ async function apiAdmin(req, env, acao, eu) {
     const novo = { liberar: 'ativo', recusar: 'recusado', bloquear: 'bloqueado' }[b.acao];
     const agora = new Date().toISOString();
     if (b.acao === 'excluir') {
+      await jadeSchema(env);
       await env.DB.batch([
         env.DB.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM jade_whatsapp WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM dados_usuario WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM pagamentos WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
         env.DB.prepare('DELETE FROM historico WHERE usuario_id = (SELECT id FROM usuarios WHERE id = ? AND admin = 0)').bind(id),
@@ -3525,6 +3532,15 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
   <p class="msg" id="msgc" role="status" aria-live="polite"></p>
   <p class="nota">Usado só para avisar sobre o vencimento e a renovação do acesso. Deixe em branco e salve para apagar.</p>
 </form>
+<h2>Jade no WhatsApp</h2>
+<form id="jade-whatsapp">
+  <p class="nota">Autorize a Jade a consultar sua watchlist pelo WhatsApp. O código de uso único vale por cinco minutos.</p>
+  <button type="submit">Gerar código de vínculo</button>
+  <button type="button" id="jade-desvincular">Desvincular WhatsApp</button>
+  <p class="msg" id="jade-status" role="status"></p>
+  <a id="jade-abrir" hidden target="_blank" rel="noopener noreferrer">Abrir WhatsApp e enviar o código</a>
+</form>
+<script src="/jade-whatsapp-account.js" defer></script>
 <h2>Trocar senha</h2>
 <form id="f" novalidate>
   <label for="atual">Senha atual</label><input id="atual" type="password" autocomplete="current-password" required>
