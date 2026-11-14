@@ -1349,6 +1349,17 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'noticias-atraso' && req.method === 'GET') return json(await atrasoNoticias(env));
   // quem veio do canal Radar no WhatsApp, por semana (src/radar-whatsapp.js)
   if (acao === 'funil-whatsapp' && req.method === 'GET') return json(await funilRadar(env));
+  // exemplo do post do Radar na conversa do administrador, sem postar em canal nenhum e sem marcar o dia
+  if (acao === 'radar-teste' && req.method === 'POST') {
+    const b = await req.json().catch(() => ({}));
+    const c = await config(env);
+    const tipo = b.tipo === 'fechamento' ? 'fechamento' : 'abertura';
+    let html;
+    if (tipo === 'abertura') { const d = await dadosAbertura(env); html = textoCanalAbertura(d) || textoAbertura(d); }
+    else { const d = await dadosFechamento(env); if (d.semDados) return json({ erro: 'Sem cotação do Ibovespa agora para montar o fechamento.' }, 503); html = textoCanalFechamento(d) || textoFechamento(d); }
+    const ok = await rascunhoRadar(env, { tipo, html, config: c, telegram, teste: true });
+    return ok ? json({ ok: true }) : json({ erro: 'Não foi possível mandar. Confira se o Telegram do administrador está conectado.' }, 502);
+  }
   if (acao === 'jade-perguntas' && req.method === 'GET') {
     try {
       const r = await env.DB.prepare('SELECT quando, dia, tela, texto FROM jade_perguntas WHERE quando >= ? ORDER BY quando DESC LIMIT 1000').bind(Date.now() - 30 * 864e5).all();
@@ -2650,6 +2661,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <h2>Radar no WhatsApp</h2>
   <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p>
   <div id="radar-wa"><p class="vazio">Carregando…</p></div>
+  <div class="ferr" style="margin-top:8px"><button type="button" class="b" data-radar-teste="abertura">Mandar exemplo da abertura para o meu Telegram</button><button type="button" class="b" data-radar-teste="fechamento">Mandar exemplo do fechamento</button><span class="vazio" id="radar-teste-msg" style="font-size:12.5px"></span></div>
   <h2>Abas mais usadas pelos assinantes</h2>
   <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p>
   <h3 style="margin:18px 0 8px;font-size:15px">Por assinante hoje</h3>
@@ -2850,6 +2862,15 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
         }).join('') + '</tbody></table></div>';
     }).catch(function(){ document.getElementById('funil').innerHTML = '<p class="vazio">Não foi possível carregar os números.</p>'; });
   }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-radar-teste]'); if (!b) return;
+    var m = document.getElementById('radar-teste-msg'); b.disabled = true; m.textContent = 'Montando…';
+    fetch('/api/admin/radar-teste', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: b.dataset.radarTeste }) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.erro || 'falhou'); }); })
+      .then(function(){ m.textContent = 'Mandado. Veja no Telegram (Avisos Mercado Macro).'; })
+      .catch(function(err){ m.textContent = err.message; })
+      .finally(function(){ b.disabled = false; });
+  });
   function radarWa(){
     var raiz = document.getElementById('radar-wa');
     fetch('/api/admin/funil-whatsapp', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(l){
