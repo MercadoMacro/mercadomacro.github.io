@@ -154,6 +154,11 @@ export default {
       const u = await usuarioDaSessao(req, env);
       // conta que entrou mas não tem acesso (aguardando liberação ou validade vencida): só a página de assinatura
       const conta = u ? { ...u, status: 'ativo' } : await contaDaSessao(req, env);
+      if (p === '/api/conta/jade-whatsapp') {
+        const account = req.method === 'POST' ? u : conta;
+        return await jadeAccount(req, env, account, json);
+      }
+      if (p === '/jade-whatsapp-account.js' && conta) return await env.ASSETS.fetch(req);
       if (conta) {
         if (p === '/assinar') return paginaAssinar();
         if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
@@ -186,7 +191,6 @@ export default {
         if (!(await dentroDoLimite(env, 'busca:' + u.id, 120, 600))) return json({ erro: 'Muitas buscas seguidas. Espere alguns minutos.' }, 429);
         return await buscarAtivos(req);
       }
-      if (p === '/api/conta/jade-whatsapp') return await jadeAccount(req, env, u, json);
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
       // alarmes de preço da Jade no servidor e avisos com o site fechado (11/11/2026, src/alarmes.js)
       if (p === '/api/alarmes' || p.startsWith('/api/push/')) { const r = await apiAlarmes(req, env, u, p, mesmaOrigem, json); if (r) return r; }

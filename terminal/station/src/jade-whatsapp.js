@@ -1,5 +1,9 @@
 
-import { WorkerEntrypoint } from 'cloudflare:workers';
+// The Node suite imports the site router outside the Cloudflare runtime.
+const { WorkerEntrypoint } = await import('cloudflare:workers').catch(error => {
+  if (error.code !== 'ERR_UNSUPPORTED_ESM_URL_SCHEME') throw error;
+  return { WorkerEntrypoint: class { constructor(ctx, env) { this.env = env; } } };
+});
 
 const table = `CREATE TABLE IF NOT EXISTS jade_whatsapp (
   usuario_id TEXT PRIMARY KEY, telefone_hash TEXT UNIQUE, codigo_hash TEXT UNIQUE, expira INTEGER
@@ -24,8 +28,8 @@ export async function jadeAccount(req, env, user, json) {
   if (!user) return json({ erro: 'Entre na sua conta para continuar.' }, 401);
   await env.DB.prepare(table).run();
   if (req.method === 'GET') {
-    const row = await env.DB.prepare('SELECT telefone_hash FROM jade_whatsapp WHERE usuario_id = ?').bind(user.id).first();
-    return json({ vinculado: Boolean(row?.telefone_hash) });
+    const row = await env.DB.prepare('SELECT telefone_hash, expira FROM jade_whatsapp WHERE usuario_id = ?').bind(user.id).first();
+    return json({ vinculado: Boolean(row?.telefone_hash), pendente: Number(row?.expira) > Date.now() });
   }
   if (req.headers.get('Origin') !== new URL(req.url).origin) return json({ erro: 'Origem inválida.' }, 403);
   if (req.method === 'DELETE') {
