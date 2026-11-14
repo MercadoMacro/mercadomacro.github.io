@@ -2958,10 +2958,12 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
       var F = j.fontes || [];
       res.innerHTML = [['Notícias guardadas (7 dias)', (j.semana || 0).toLocaleString('pt-BR')], ['Fontes medidas', F.length]]
         .map(function(k){ return '<div class="kpi" style="cursor:default"><small>' + k[0] + '</small><strong>' + k[1] + '</strong></div>'; }).join('');
-      if (!F.length) { tab.innerHTML = '<p class="vazio">Ainda sem medição: ela começa a contar quando alguém fica com o site aberto.</p>'; return; }
+      var L = j.leituras || [];
+      var lt = L.length ? '<h3 style="margin:18px 0 6px;font-size:14px">Leituras das fontes rápidas (7 dias)</h3><p class="vazio" style="text-align:left;margin:0 0 8px;font-size:12.5px">Quantas vezes o site conseguiu ler cada fonte. <b>Limite</b> é quando a fonte respondeu que recebeu pedidos demais (HTTP 429): nessas horas as manchetes dela chegam atrasadas.</p><table class="t"><thead><tr><th>Fonte</th><th style="text-align:right">Deram certo</th><th style="text-align:right">Limite</th><th style="text-align:right">Erro</th></tr></thead><tbody>' + L.map(function(l){ var tot = (l.ok || 0) + (l.limite || 0) + (l.erro || 0); return '<tr><td data-r="Fonte">' + esc(l.fonte) + '</td><td class="c" data-r="Deram certo" style="text-align:right">' + (tot ? Math.round(l.ok / tot * 100) : 0) + '% de ' + tot.toLocaleString('pt-BR') + '</td><td class="c" data-r="Limite" style="text-align:right">' + (l.limite || 0).toLocaleString('pt-BR') + '</td><td class="c" data-r="Erro" style="text-align:right">' + (l.erro || 0).toLocaleString('pt-BR') + '</td></tr>'; }).join('') + '</tbody></table>' : '';
+      if (!F.length) { tab.innerHTML = '<p class="vazio">Ainda sem medição: ela começa a contar quando alguém fica com o site aberto.</p>' + lt; return; }
       tab.innerHTML = '<table class="t"><thead><tr><th>Fonte</th><th style="text-align:right">Típico</th><th style="text-align:right">Nas piores</th><th style="text-align:right">Em até 2 min</th><th style="text-align:right">Notícias</th></tr></thead><tbody>' + F.map(function(l){
         return '<tr><td data-r="Fonte">' + esc(l.fonte) + '</td><td class="c" data-r="Típico" style="text-align:right">' + tempo(l.mediana) + '</td><td class="c" data-r="Nas piores" style="text-align:right">' + tempo(l.p90) + '</td><td class="c" data-r="Em até 2 min" style="text-align:right">' + Math.round(l.ate2min * 100) + '%</td><td class="c" data-r="Notícias" style="text-align:right">' + l.n.toLocaleString('pt-BR') + '</td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table>' + lt;
     }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar a medição.</p>'; });
   }
   function passe(){
