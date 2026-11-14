@@ -201,3 +201,10 @@ test('Vim do Radar tira a pausa do atendimento', async () => {
   await mensagem(env, 'oi', de);
   assert.equal(enviadas.length, 3); // a Jade voltou a responder
 });
+
+test('"Voltar" sozinho também tira a pausa', async () => {
+  const { env, enviadas } = ambiente();
+  await mensagem(env, 'SIM QUERO', '5511999990009');
+  await mensagem(env, 'Voltar', '5511999990009');
+  assert.match(enviadas[1], /Voltei/);
+});
