@@ -112,7 +112,6 @@
       <div class="aj-conta-topo">${planoCard(C)}</div>
       <div class="aj-busca aj-busca-cel">${buscaInput('aj-q-cel')}</div>
       <div class="aj-rapido" aria-label="Atalhos rápidos">
-        <div><span>Tema</span>${seg('mode', MODES.slice(0, 2), curMode())}</div>
         <div><span>Tamanho da letra</span>${seg('scale', [[0.9, 'A−'], [1, 'A'], [1.1, 'A+'], [1.2, 'A++']], P.scale)}</div>
         ${liveOn != null ? `<div><span>Cotações</span>${sw('live', liveOn, 'Auto-atualizar')}</div>` : ''}
       </div>
@@ -142,14 +141,15 @@
         <div class="aj-aparelhos">${aparelhosHtml()}</div>
         <p class="aj-note">A conta fica aberta em até 2 aparelhos. Ao entrar num terceiro, o mais antigo sai sozinho.</p>
       </section>
-      <section class="aj-sec">
+      <section class="aj-sec aj-perigo">
         <h3>Excluir minha conta</h3>
+        <details class="aj-perigo-d"><summary>Quero excluir minha conta</summary>
         <form class="aj-form" data-form="excluir" novalidate>
           <p class="aj-note">Apaga de vez seu nome, e-mail e senha do Mercado Macro e desconecta todos os aparelhos. Não dá para desfazer. Veja a <a href="/privacidade">política de privacidade</a>.</p>
           <label for="aj-sx">Digite sua senha para confirmar</label><input id="aj-sx" name="senha" type="password" autocomplete="current-password">
           <button type="submit" class="btn-sm aj-form-bt aj-del">Excluir minha conta</button>
           <p class="aj-msg" role="status" aria-live="polite"></p>
-        </form>
+        </form></details>
       </section>` : ''}
       <section class="aj-sec">
         <h3>Tema</h3>
@@ -178,7 +178,7 @@
       </section>
       <section class="aj-sec">
         <h3>Leitura</h3>
-        <div class="aj-row"><span>Tamanho</span>${seg('scale', [[0.9, '90%'], [1, '100%'], [1.1, '110%'], [1.2, '120%']], P.scale)}</div>
+        <div class="aj-row aj-so-pc"><span>Tamanho</span>${seg('scale', [[0.9, '90%'], [1, '100%'], [1.1, '110%'], [1.2, '120%']], P.scale)}</div>
         <div class="aj-row"><span>Densidade</span>${seg('density', [['normal', 'Confortável'], ['compact', 'Compacta']], P.density)}</div>
         <div class="aj-row"><span>Alta e baixa</span>${seg('updown', [['padrao', 'Verde e vermelho'], ['cb', 'Azul e laranja'], ['asia', 'Invertido']], P.updown)}</div>
         <div class="aj-updown"><span class="up">+1,25%</span><span class="dn">−0,80%</span><em>${P.updown === 'cb' ? 'Mais fácil de distinguir para quem tem daltonismo.' : P.updown === 'asia' ? 'Padrão da China e do Japão: vermelho sobe, verde cai.' : 'Padrão brasileiro e americano.'}</em></div>
@@ -194,32 +194,42 @@
         <div class="aj-row"><span>Abrir sempre em</span><select data-str="startTab" aria-label="Abrir sempre em"><option value="">Última aba usada</option>${tabsList().map(([id, l]) => `<option value="${id}" ${P.startTab === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         ${sw('ticker', P.ticker !== 'off', 'Faixa de cotações no topo')}
         ${liveOn != null ? sw('live', liveOn, 'Atualização automática das cotações (5 min no pregão, 15 min fora)') : ''}
-        <button type="button" class="btn-sm aj-wide" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
+        <button type="button" class="btn-sm aj-wide aj-so-pc" data-act="full"><i class="fas fa-${document.fullscreenElement ? 'compress' : 'expand'}"></i> ${document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia (bom para monitor extra)'}</button>
       </section>
       <section class="aj-sec">
-        <h3>Jade (assistente robô)</h3>
-        ${sw('roboVoz', P.roboVoz === true, 'Ler em voz alta as notícias urgentes')}
-        ${(() => { const V = window.MMRoboVoz; const vs = V ? V.vozes() : []; const cur = P.roboVozNome || (V ? V.atual() : '');
-          return vs.length ? `<div class="aj-row"><span>Voz</span><select data-str="roboVozNome" aria-label="Voz do robô">${vs.map((n) => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n.replace(/^Microsoft |^Google /, '').replace(/ - .*$/, ''))}</option>`).join('')}</select></div>
-          <button type="button" class="btn-sm" data-act="roboTestar"><i class="fas fa-volume-up"></i> Testar a voz</button>` : ''; })()}
-        <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
-        <div class="aj-row"><span>Jeito da Jade</span><select data-str="roboModo" aria-label="Jeito da Jade">${[['', 'Normal: se mexe, mostra cotações e dá dicas'], ['discreta', 'Discreta: fica quieta e só dá os avisos']].map(([v, l]) => `<option value="${v}" ${(P.roboModo || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div class="aj-row"><span>Tamanho da Jade</span><select data-str="roboTam" aria-label="Tamanho da Jade">${[['p', 'Pequeno'], ['m', 'Normal'], ['g', 'Grande'], ['gg', 'Muito grande']].map(([v, l]) => `<option value="${v}" ${(P.roboTam || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        <button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
-        <p class="aj-note">No computador, você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p>
-        <div class="aj-row" style="margin-top:12px"><span>Respostas do Assistente</span><select data-str="iaNivel" aria-label="Nível das respostas do Assistente">${[['iniciante', 'Para iniciante'], ['intermediario', 'Intermediário'], ['avancado', 'Avançado']].map(([v, l]) => `<option value="${v}" ${(P.iaNivel || 'intermediario') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <h3>Jeito da Jade</h3>
+        <div class="aj-row"><span>Jeito</span><select data-str="roboModo" aria-label="Jeito da Jade">${[['', 'Normal'], ['discreta', 'Discreta']].map(([v, l]) => `<option value="${v}" ${(P.roboModo || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <p class="aj-note">${(P.roboModo || '') === 'discreta' ? 'Discreta: fica quieta e só dá os avisos.' : 'Normal: se mexe, mostra cotações e dá dicas.'}</p>
+        <div class="aj-row"><span>Tamanho</span><select data-str="roboTam" aria-label="Tamanho da Jade">${[['p', 'Pequeno'], ['m', 'Normal'], ['g', 'Grande'], ['gg', 'Muito grande']].map(([v, l]) => `<option value="${v}" ${(P.roboTam || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="aj-so-pc"><button type="button" class="btn-sm aj-wide" data-act="roboCanto"><i class="fas fa-undo"></i> Voltar o robô para o canto</button>
+        <p class="aj-note">Você pode arrastar o robô para qualquer lugar da tela. Ele lembra onde ficou.</p></div>
+        ${window.MMRoboExtras ? '<div class="aj-so-pc"><button type="button" class="btn-sm aj-wide" data-act="roboJanela"><i class="far fa-window-restore"></i> Abrir o robô numa janela flutuante</button><p class="aj-note">A janela fica por cima de outros programas, com cotações, a sua watchlist e os avisos.</p></div>' : ''}
+      </section>
+      <section class="aj-sec">
+        <h3>Respostas do Assistente</h3>
+        <div class="aj-row"><span>Nível</span><select data-str="iaNivel" aria-label="Nível das respostas do Assistente">${[['iniciante', 'Para iniciante'], ['intermediario', 'Intermediário'], ['avancado', 'Avançado']].map(([v, l]) => `<option value="${v}" ${(P.iaNivel || 'intermediario') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <p class="aj-note">O Assistente ajusta a linguagem a este nível, relaciona as respostas com a sua watchlist e lembra os assuntos que você mais pergunta (guardados só neste navegador).</p>
         <button type="button" class="btn-sm aj-wide" data-act="iaEsquecer"><i class="fas fa-eraser"></i> Esquecer os assuntos que pergunto</button>
+      </section>
+      <section class="aj-sec">
+        <h3>Avisos da Jade</h3>
         ${sw('roboRadar', P.roboRadar !== false, 'Radar da watchlist (o robô avisa notícia importante sobre os seus ativos)')}
         ${sw('roboBomDia', P.roboBomDia !== false, 'Bom dia da Jade (resumo da manhã, nos dias de pregão)')}
         ${sw('roboOi', P.roboOi !== false, 'Jade diz oi quando você entra no site')}
         ${sw('roboDicas', P.roboDicas !== false, 'Dica da Jade ao abrir cada aba (uma vez por dia em cada aba)')}
         ${sw('roboQuiz', P.roboQuiz !== false, 'Pergunta do dia (das lições da aba Educação)')}
-        ${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
-        <p class="aj-note">Notícias urgentes, alarmes de preço e decisões do Copom e do Fed aparecem como aviso do Windows (ou do Mac) enquanto você usa outro programa. O terminal precisa ficar aberto numa aba.</p>
-        ${window.MMRoboExtras ? '<button type="button" class="btn-sm aj-wide" data-act="roboJanela"><i class="far fa-window-restore"></i> Abrir o robô numa janela flutuante</button><p class="aj-note">A janela fica por cima de outros programas, com cotações, a sua watchlist e os avisos.</p>' : ''}
+        <div class="aj-so-pc">${sw('roboNotif', P.roboNotif === true, 'Avisar no sistema quando o terminal estiver em segundo plano')}
+        <p class="aj-note">Notícias urgentes, alarmes de preço e decisões do Copom e do Fed aparecem como aviso do Windows (ou do Mac) enquanto você usa outro programa. O terminal precisa ficar aberto numa aba.</p></div>
+      </section>
+      <section class="aj-sec">
+        <h3>Voz e alarmes</h3>
+        ${sw('roboVoz', P.roboVoz === true, 'Ler em voz alta as notícias urgentes')}
+        ${(() => { const V = window.MMRoboVoz; const vs = V ? V.vozes() : []; const cur = P.roboVozNome || (V ? V.atual() : '');
+          return vs.length ? `<div class="aj-row"><span>Voz</span><select data-str="roboVozNome" aria-label="Voz do robô">${vs.map((n) => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n.replace(/^Microsoft |^Google /, '').replace(/ - .*$/, ''))}</option>`).join('')}</select></div>
+          <button type="button" class="btn-sm" data-act="roboTestar"><i class="fas fa-volume-up"></i> Testar a voz</button>` : ''; })()}
+        <p class="aj-note">Usa as vozes do seu navegador, que variam de um computador para outro. As marcadas como Natural ou Online costumam soar melhor. Só funciona com o terminal aberto. Vem desligado.</p>
         ${(() => { const A = window.MMRoboAlarmes; if (!A) return ''; const l = A.lista();
-          return `<p class="aj-note" style="margin-top:12px"><b>Alarmes de preço</b></p>${l.length ? l.map((a) => `<div class="aj-row"><span>${esc(a.nome)} ${a.dir === 'acima' ? 'acima de' : 'abaixo de'} ${esc(A.nomeNum(a))}</span><button type="button" class="btn-sm" data-act="roboAlarmeApaga" data-id="${esc(a.id)}">Apagar</button></div>`).join('') : ''}
+          return `<p class="aj-note aj-sub"><b>Alarmes de preço</b></p>${l.length ? l.map((a) => `<div class="aj-row"><span>${esc(a.nome)} ${a.dir === 'acima' ? 'acima de' : 'abaixo de'} ${esc(A.nomeNum(a))}</span><button type="button" class="btn-sm" data-act="roboAlarmeApaga" data-id="${esc(a.id)}">Apagar</button></div>`).join('') : ''}
           <p class="aj-note">${l.length ? '' : 'Nenhum alarme. '}Para criar, escreva no Assistente, por exemplo: "me avisa se o dólar passar de 5,50".</p>${A.pushUI ? '<div data-push-ui></div>' : ''}`; })()}
         ${window.MMRoboComando && window.MMRoboComando.tem() ? '<p class="aj-note">Comandos de voz: toque no microfone do Assistente ou use Alt+V e fale, por exemplo, "abre o calendário", "cotação do dólar" ou "explica a tela". A voz é reconhecida pelo serviço do navegador.</p>' : ''}
       </section>
@@ -230,11 +240,9 @@
       <section class="aj-sec">
         <h3>Dados</h3>
         <p class="aj-note">Este navegador guarda ${storageKB()} KB do painel: cotações, histórico, indicadores, notícias, suas notas e estratégias.</p>
-        <div class="aj-btns">
+        <div class="aj-btns aj-btns-grade">
           <button type="button" class="btn-sm" data-act="cache"><i class="fas fa-broom"></i> Limpar cache de dados</button>
           <button type="button" class="btn-sm" data-act="backup"><i class="fas fa-database"></i> Backup e restauração</button>
-          <button type="button" class="btn-sm" data-act="summary"><i class="fas fa-clipboard-list"></i> Resumo para cliente</button>
-          <button type="button" class="btn-sm" data-act="refresh"><i class="fas fa-sync-alt"></i> Atualizar cotações</button>
           <button type="button" class="btn-sm" data-act="reset"><i class="fas fa-undo"></i> Restaurar ajustes</button>
         </div>
         <p class="aj-note">Limpar o cache baixa tudo de novo, sem apagar notas, compromissos, estratégias salvas nem estes ajustes.</p>
@@ -247,7 +255,7 @@
           <a class="aj-ajuda-it" href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs" target="_blank" rel="noopener"><i class="fab fa-spotify" aria-hidden="true"></i><span><b>Podcast Radar Macro</b><em>Ouça no Spotify</em></span></a>
         </div>
       </section>
-      <section class="aj-sec">
+      <section class="aj-sec aj-so-pc">
         <h3>Atalhos de teclado</h3>
         <dl class="aj-keys">
           <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Buscar ativo, aba ou ação</dd>
@@ -268,7 +276,8 @@
     const groups = [
       ...(C && C.logado ? [['account', 'Minha conta', ['Celular', 'Trocar senha', 'Aparelhos conectados', 'Excluir minha conta']]] : []),
       ['appearance', 'Aparência', ['Tema', 'Cor de destaque', 'Papel de parede', 'Leitura']],
-      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Jade (assistente robô)', 'Minha Mesa']],
+      ['panel', 'Meu painel', ['Exibição dos cards', 'Painel', 'Minha Mesa']],
+      ['jade', 'Jade', ['Jeito da Jade', 'Respostas do Assistente', 'Avisos da Jade', 'Voz e alarmes']],
       ['data', 'Dados', ['Dados']],
       ['help', 'Ajuda', ['Contato', 'Atalhos de teclado']],
       ['about', 'Sobre', ['Sobre']]
@@ -339,10 +348,10 @@
     nav.innerHTML = planoCard(C)
       + `<div class="aj-busca">${buscaInput('aj-q-pc')}</div>`
       + (logado ? cat('account', 'user-cog', 'Minha conta') : `<a class="aj-nav-link" href="/conta"><i class="fas fa-user-cog" aria-hidden="true"></i> Minha conta</a>`)
-      + (logado && C.admin ? `<a class="aj-nav-link" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i> Cadastros${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a>`
+      + (logado && C.admin ? `<a class="aj-nav-link" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i> Painel do administrador${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a>`
         : `<a class="aj-nav-link" href="/assinar"><i class="fas fa-receipt" aria-hidden="true"></i> Assinatura</a>`)
       + '<hr class="aj-nav-sep">'
-      + cat('appearance', 'palette', 'Aparência') + cat('panel', 'columns', 'Meu painel') + cat('data', 'database', 'Dados') + cat('help', 'life-ring', 'Ajuda') + cat('about', 'info-circle', 'Sobre')
+      + cat('appearance', 'palette', 'Aparência') + cat('panel', 'columns', 'Meu painel') + cat('jade', 'robot', 'Jade') + cat('data', 'database', 'Dados') + cat('help', 'life-ring', 'Ajuda') + cat('about', 'info-circle', 'Sobre')
       + (logado ? '<button type="button" class="aj-nav-sair" data-act="sair"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair</button>' : '');
     if (foco) { const n = nav.querySelector('#aj-q-pc'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
   }
@@ -351,7 +360,7 @@
   function planoCard(C) {
     if (!C || !C.logado) return `<div class="aj-plano"><b class="aj-plano-nome">Você não está conectado</b><a class="aj-plano-bt" href="/entrar">Entrar</a></div>`;
     const topo = `<div class="aj-plano-quem"><span class="aj-plano-av" aria-hidden="true">${esc((C.nome || '?').trim().charAt(0).toUpperCase())}</span><span><b class="aj-plano-nome">${esc(C.nome)}</b><span class="aj-plano-mail">${esc(C.email)}</span></span></div>`;
-    if (C.admin) return `<div class="aj-plano">${topo}<span class="aj-selo">Administrador</span></div>`;
+    if (C.admin) return `<div class="aj-plano">${topo}<span class="aj-selo">Administrador</span><a class="aj-plano-bt aj-plano-adm" href="/admin"><i class="fas fa-user-check" aria-hidden="true"></i>&nbsp;Painel do administrador${C.pendentes ? ` <span class="aj-pend">${C.pendentes}</span>` : ''}</a></div>`;
     const fim = C.expira ? Date.parse(C.expira) : NaN, falta = (fim - Date.now()) / 864e5;
     const ok = Number.isFinite(falta), dias = ok ? Math.max(0, Math.ceil(falta)) : 0;
     const pct = ok && C.planoDias ? Math.max(3, Math.min(100, falta / C.planoDias * 100)) : null;
@@ -378,7 +387,7 @@
     box.querySelectorAll('.aj-body > .aj-group').forEach((g) => {
       const nomeBate = q && norm(g.querySelector('summary')?.textContent).includes(q);
       let tem = false;
-      g.querySelectorAll(':scope > .aj-sec').forEach((sec) => { const hit = !q || nomeBate || norm(sec.textContent).includes(q); sec.hidden = !hit; tem = tem || hit; });
+      g.querySelectorAll(':scope > .aj-sec').forEach((sec) => { const soPc = sec.classList.contains('aj-so-pc') && !desktopSettings.matches; const hit = !soPc && (!q || nomeBate || norm(sec.textContent).includes(q)); sec.hidden = !hit; tem = tem || hit; });
       g.hidden = !!q && !tem;
       if (q && tem && !desktopSettings.matches) g.open = true;
       algum = algum || tem;
@@ -411,7 +420,7 @@
     box.hidden = true;
     box.innerHTML = `<div class="aj-scrim" data-act="close"></div>
       <aside class="aj-panel" role="dialog" aria-modal="true" aria-labelledby="aj-title">
-        <header class="aj-head"><span class="aj-ic"><i class="fas fa-cog"></i></span><div><h2 id="aj-title">Ajustes</h2><p>Mudanças aplicadas na hora e salvas neste navegador</p></div>
+        <header class="aj-head"><span class="aj-ic"><i class="fas fa-cog"></i></span><div><h2 id="aj-title">Ajustes</h2><p>As mudanças valem na hora</p></div>
           <button type="button" class="aj-x" data-act="close" aria-label="Fechar"><i class="fas fa-times"></i></button></header>
         <div class="aj-content"><nav class="aj-categories" aria-label="Categorias de configurações"></nav><div class="aj-body"></div></div>
       </aside>`;
@@ -599,7 +608,7 @@
     const t = e.target;
     if (t.id === 'aj-file' && t.files && t.files[0]) return loadImage(t.files[0]);
     if (t.dataset.num && t.tagName === 'SELECT') { P[t.dataset.num] = +t.value; save(); syncTheme(); return; }
-    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboTam') window.MMPet?.tamanho?.(); else if (t.dataset.str === 'roboModo') { window.MMPet?.modo?.(); toast(t.value ? 'Jade discreta: ela fica quieta e só aparece para os avisos. Passe o mouse para ver Ibovespa e dólar.' : 'Jade no modo normal.'); } else if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (t.dataset.str === 'iaNivel') toast('O Assistente vai responder no nível ' + t.selectedOptions[0].textContent.toLowerCase().replace('para ', '') + '.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
+    if (t.dataset.str) { P[t.dataset.str] = t.value; save(); if (t.dataset.str === 'roboTam') window.MMPet?.tamanho?.(); else if (t.dataset.str === 'roboModo') { window.MMPet?.modo?.(); toast(t.value ? 'Jade discreta: ela fica quieta e só aparece para os avisos. Passe o mouse para ver Ibovespa e dólar.' : 'Jade no modo normal.');  render(); } else if (t.dataset.str === 'roboVozNome') window.MMRoboVoz?.falar('Olá! Vou usar esta voz.'); else if (t.dataset.str === 'iaNivel') toast('O Assistente vai responder no nível ' + t.selectedOptions[0].textContent.toLowerCase().replace('para ', '') + '.'); else if (!t.value) toast('O painel vai abrir na última aba usada.'); }
   }
   // reduz a foto (no máximo 1920 px, JPEG) para caber no armazenamento do navegador
   function loadImage(file) {
@@ -775,7 +784,16 @@
   .aj-row:first-of-type { margin-top:0; }
   .aj-row > span { flex:0 0 100%; font-size:12px; color:var(--text-3); }
   .aj-row .aj-seg { flex:1; }
-  .aj-row select { flex:1; height:34px; padding:0 10px; font-size:12.5px; }
+  .aj-row select { flex:1; min-width:0; max-width:100%; height:34px; padding:0 10px; font-size:12.5px; text-overflow:ellipsis; }
+  /* 14/11/2026: o que só funciona no computador some no celular; exclusão recolhida; Dados em grade */
+  @media (max-width:900px) { .aj .aj-so-pc { display:none !important; } }
+  .aj-sub { margin-top:14px; }
+  .aj-perigo-d > summary { cursor:pointer; color:var(--neg, #ff6b73); font-size:13px; font-weight:600; padding:6px 0; list-style-position:inside; }
+  .aj-perigo-d[open] > summary { margin-bottom:8px; }
+  .aj-btns-grade { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); max-width:560px; }
+  .aj-btns-grade .btn-sm { justify-content:center; width:100%; }
+  .aj-categories .aj-plano-adm { display:none; }
+  .aj-plano-adm .aj-pend { margin-left:6px; }
   .aj-updown { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:12px; font-family:'JetBrains Mono', monospace; }
   .aj-updown .up { color:var(--pos-ink); font-weight:600; } .aj-updown .dn { color:var(--neg); font-weight:600; }
   .aj-updown em { font-style:normal; font-family:'Inter', sans-serif; color:var(--text-3); font-size:11.5px; }
