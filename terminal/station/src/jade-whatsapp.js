@@ -1,5 +1,9 @@
 
-import { WorkerEntrypoint } from 'cloudflare:workers';
+// The Node suite imports the site router outside the Cloudflare runtime.
+const { WorkerEntrypoint } = await import('cloudflare:workers').catch(error => {
+  if (error.code !== 'ERR_UNSUPPORTED_ESM_URL_SCHEME') throw error;
+  return { WorkerEntrypoint: class { constructor(ctx, env) { this.env = env; } } };
+});
 
 const table = `CREATE TABLE IF NOT EXISTS jade_whatsapp (
   usuario_id TEXT PRIMARY KEY, telefone_hash TEXT UNIQUE, codigo_hash TEXT UNIQUE, expira INTEGER
