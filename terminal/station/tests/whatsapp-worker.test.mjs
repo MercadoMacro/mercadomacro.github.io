@@ -81,7 +81,7 @@ test('SIM QUERO avisa a equipe; mensagens na pausa vão para a equipe e a Jade f
   await mensagem(env, 'Quero saber do plano anual para minha equipe');
   assert.equal(enviadas.length, 1);
   assert.deepEqual(avisos[1], ['mensagem', '0001', 'Quero saber do plano anual para minha equipe']);
-  await mensagem(env, 'voltar para a jade');
+  await mensagem(env, 'Volte pra Jade');
   assert.equal(enviadas.length, 2);
   assert.match(enviadas[1], /Voltei/);
 });
