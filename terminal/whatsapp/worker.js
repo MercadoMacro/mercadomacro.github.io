@@ -153,6 +153,10 @@ export default {
           if (reply === null && phoneId === PRODUCAO) {
             reply = await jadeWatchlistCommand(text, message.from, env);
           }
+          // insiders (CVM 44): "os diretores da Vale compraram ações esse ano?", "insiders PETR4"
+          if (reply === null && ehInsiders(text)) {
+            reply = await jadeInsiders(env, original);
+          }
           if (reply === null) {
             if (/\b(humano|atendente|suporte|cobranca|problema|erro|nao consigo)\b/.test(text)) {
               reply = help;
@@ -281,6 +285,21 @@ async function avisarEquipe(env, tipo, phoneId, from, texto) {
     await env.JADE.avisarEquipe(tipo, String(from).slice(-4), String(texto || '').slice(0, 500));
   } catch (error) {
     console.warn('Jade: aviso à equipe falhou', error.name);
+  }
+}
+
+export function ehInsiders(text) {
+  return /\binsiders?\b/.test(text) ||
+    (/\b(diretor\w*|controlador\w*|conselheir\w*|administrador\w*|executivos?)\b/.test(text) && /\b(compr\w*|vend\w*|negoci\w*)\b/.test(text));
+}
+async function jadeInsiders(env, original) {
+  try {
+    const r = await env.JADE.insiders(original);
+    if (typeof r === 'string' && r) return r;
+    throw new Error('vazio');
+  } catch (error) {
+    console.warn('Jade: insiders indisponível', error.name);
+    return 'Não consegui consultar o radar de insiders agora. Veja no terminal: https://mercadomacro.com.br/ (Macro e Fluxo › Insiders)';
   }
 }
 

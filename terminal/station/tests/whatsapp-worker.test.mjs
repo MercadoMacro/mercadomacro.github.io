@@ -3,7 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { LIMITE_HORA, reais } from '../../whatsapp/worker.js';
+import worker, { LIMITE_HORA, reais, ehInsiders } from '../../whatsapp/worker.js';
 
 function d1() {
   const sql = new DatabaseSync(':memory:');
@@ -47,6 +47,7 @@ function ambiente() {
       precos: async () => ({ cartao: { mensal: 2190, semestral: 9990, anual: 17990 }, pix: { mensal: 2490, semestral: 13900 }, gratisHoras: 48 }),
       avisarEquipe: async (tipo, final, texto) => { avisos.push([tipo, final, texto]); return true; },
       watchlist: async () => null, link: async () => false,
+      insiders: async (t) => 'INSIDERS:' + t,
     },
   };
   return { env, enviadas, avisos };
@@ -103,4 +104,43 @@ test('ticker da conversa fica guardado para "e as notícias?"', async () => {
   assert.match(enviadas[0], /\+10,00%/);
   await mensagem(env, 'e as notícias?', '5511999990004');
   assert.match(enviadas[1], /Petrobras anuncia dividendos/);
+});
+
+test('perguntas sobre insiders vão para o radar da CVM (antes da consulta de cotação)', async () => {
+  assert.equal(ehInsiders('os diretores da vale compraram acoes esse ano?'), true);
+  assert.equal(ehInsiders('insiders petr4'), true);
+  assert.equal(ehInsiders('quanto custa?'), false);
+  assert.equal(ehInsiders('petr4'), false);
+  const { env, enviadas } = ambiente();
+  await mensagem(env, 'Os diretores da VALE3 compraram ações esse ano?', '5511999990005');
+  assert.equal(enviadas[0], 'INSIDERS:Os diretores da VALE3 compraram ações esse ano?');
+  env.JADE.insiders = async () => { throw new Error('fora'); };
+  await mensagem(env, 'insiders petr4', '5511999990005');
+  assert.match(enviadas[1], /Não consegui consultar o radar de insiders/);
+});
+
+test('resumo de insiders: empresa, período e texto do WhatsApp', async () => {
+  const { acharEmpresa, periodoDoTexto, resumoInsiders, textoInsiders } = await import('../src/insiders-resumo.js');
+  const d = {
+    meses: ['2025-11', '2025-12', '2026-01', '2026-02'], parciais: ['2026-02'], setores: ['Mineração'],
+    emp: [{ n: 'VALE', t: ['VALE3'], s: 0, m: { 1: [0, 5000, 100, 0], 2: [0, 0, 300, 50] } }, { n: 'WEG SA', t: ['WEGE3'], s: 0, m: { 3: [0, 0, 0, 900] } }],
+    ops: [[0, 'Diretoria', 'C', '2026-01-15', 1000, 60.5, 1200, 'ON']],
+  };
+  assert.deepEqual(acharEmpresa(d, 'os diretores da Vale compraram?').map((e) => e.n), ['VALE']);
+  assert.deepEqual(acharEmpresa(d, 'insiders weg').map((e) => e.n), ['WEG SA']);
+  assert.deepEqual(acharEmpresa(d, 'quem os insiders estão comprando?'), []);
+  const p = periodoDoTexto('esse ano', new Date('2026-11-14T12:00:00Z'));
+  assert.deepEqual(p, { desde: '2026-01' });
+  const r = resumoInsiders(d, { empresa: d.emp[0], periodo: p });
+  assert.equal(r.periodo, 'jan/2026 a fev/2026');
+  assert.deepEqual(r.administracao, { compras: 300000, vendas: 50000, saldo: 250000 });
+  assert.deepEqual(r.controladores, { compras: 0, vendas: 0, saldo: 0 });
+  const t = textoInsiders(r);
+  assert.match(t, /Controladores: sem compras nem vendas/);
+  assert.match(t, /saldo \*\+R\$ 250 mil\*/);
+  assert.match(t, /15\/01 · Diretoria · compra de 1\.000 ON a R\$ 60,50/);
+  assert.match(t, /fev\/2026 ainda chegando/);
+  const m = resumoInsiders(d, { periodo: { meses: 12 } });
+  assert.equal(m.maiores_vendas[0].ticker, 'VALE3');
+  assert.match(textoInsiders(m), /Mais venderam/);
 });

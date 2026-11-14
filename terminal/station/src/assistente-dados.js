@@ -4,6 +4,7 @@
       fundamentos de empresas da B3, fluxo do estrangeiro, notícias e agenda).
    Tudo vem das mesmas fontes do site (servidor de dados shrill-meadow, arquivos dos robôs no GitHub, cache de notícias).
    Valor que falhar volta como "sem dado"; nada é inventado. */
+import { carregarInsiders, acharEmpresa, periodoDoTexto, resumoInsiders } from './insiders-resumo.js';
 let api = null, noticias = null, fluxo = null, resumo = null, perfilAtual = null, busca = null, temAula = false, arquivo = null;
 export function ligarDados(u) { ({ api, noticias, fluxo } = u); resumo = u.resumo || null; perfilAtual = u.perfil || null; busca = u.busca || null; temAula = !!u.temAula; arquivo = u.arquivo || null; }
 
@@ -293,6 +294,8 @@ export const FERRAMENTAS = [{
     { name: 'probabilidades_fed', description: 'Chances de cada faixa de juros do Fed nas próximas reuniões do FOMC, pelos futuros de Fed Funds, e a faixa atual.', parameters: { type: 'object', properties: {} } },
     { name: 'fundamentos', description: 'Dados contábeis de uma empresa da B3 (receita, lucro, EBITDA, patrimônio, dívida líquida, proventos por ano e últimos 12 meses), quantidade de ações e cotação.',
       parameters: { type: 'object', properties: { ticker: { type: 'string', description: 'Código da B3, como PETR4' } }, required: ['ticker'] } },
+    { name: 'insiders', description: 'Compras e vendas de ações da própria empresa por controladores e administradores (conselhos e diretoria) das empresas da B3, informadas à CVM (Resolução CVM 44), mês a mês desde 2021. Com empresa: compras, vendas e saldo de cada grupo e as operações recentes acima de R$ 1 milhão. Sem empresa: quem mais comprou e vendeu no período. Use para perguntas sobre insiders, diretores ou controladores comprando ou vendendo ações.',
+      parameters: { type: 'object', properties: { empresa: { type: 'string', description: 'Código (VALE3, PETR4) ou nome da empresa; vazio para o mercado todo' }, periodo: { type: 'string', description: 'Período em palavras: "esse ano", "6 meses", "desde 2024", "ano passado" (padrão: 12 meses)' } } } },
     { name: 'fluxo_estrangeiro', description: 'Saldo do investidor estrangeiro na B3 (R$ mil): último dia disponível, mês e ano.', parameters: { type: 'object', properties: {} } },
     { name: 'noticias', description: 'Manchetes recentes do terminal, opcionalmente filtradas por palavras.',
       parameters: { type: 'object', properties: { termo: { type: 'string', description: 'Palavras para filtrar; vazio = as mais importantes' }, horas: { type: 'number', description: '1 a 168 (7 dias), padrão 12; acima de 48 usa as manchetes guardadas' } } } },
@@ -316,6 +319,15 @@ export async function executar(nome, a = {}) {
       case 'fundamentos': return await fundamentos(a.ticker);
       case 'fluxo_estrangeiro': { const f = await fluxo(); return f ? { unidade: 'R$ mil', ultimo_dia: f.data, saldo_dia: f.dia, saldo_mes: f.mes, saldo_ano: f.ano, fonte: 'B3, boletim diário (participação dos investidores, todos os mercados de ações)' } : { erro: 'sem dado' }; }
       case 'noticias': return await buscaNoticias(a.termo, a.horas);
+      case 'insiders': {
+        const d = await carregarInsiders();
+        const periodo = periodoDoTexto(String(a.periodo || ''));
+        if (!a.empresa) return resumoInsiders(d, { periodo });
+        const l = acharEmpresa(d, String(a.empresa).slice(0, 80));
+        if (!l.length) return { resultado: 'nenhuma compra ou venda à vista de insiders informada à CVM para ' + String(a.empresa).slice(0, 40) + ' desde 2021 (ou a empresa não foi encontrada pelo nome; tente o código, como VALE3)' };
+        if (l.length > 1) return { resultado: 'mais de uma empresa combina; pergunte qual', opcoes: l.slice(0, 6).map((e) => e.n + ' (' + e.t.join(', ') + ')') };
+        return resumoInsiders(d, { empresa: l[0], periodo });
+      }
       case 'agenda': return await agenda(a.dias, a.todos);
       case 'resumo_semanal': {
         let r = null; try { r = JSON.parse((resumo && (await resumo())) || 'null'); } catch (e) { r = null; }
