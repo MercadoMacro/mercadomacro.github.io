@@ -1,0 +1,57 @@
+name: Conectar Jade à watchlist
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  conectar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Conectar o serviço interno e conferir os segredos existentes
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account } = process.env;
+          if (!token || !/^[a-f0-9]{32}$/i.test(account || '')) throw Error('Credenciais de implantação indisponíveis.');
+          async function api(worker, path, options = {}) {
+            const response = await fetch('https://api.cloudflare.com/client/v4/accounts/' + account + '/workers/scripts/' + worker + path, {
+              ...options,
+              headers: { Authorization: 'Bearer ' + token, ...options.headers },
+              signal: AbortSignal.timeout(20000)
+            });
+            const body = await response.json();
+            if (!response.ok || !body.success) {
+              throw Error(worker + path + ': HTTP ' + response.status + ', códigos ' + (body.errors || []).map(e => e.code).join(','));
+            }
+            return body.result;
+          }
+          const target = { name: 'JADE', type: 'service', service: 'station', entrypoint: 'JadeWatchlist' };
+          const station = await api('station', '/settings');
+          const exported = station.exports?.JadeWatchlist;
+          if (exported?.type !== 'worker') throw Error('A versão publicada de station ainda não expõe JadeWatchlist.');
+          const worker = 'mercadomacro-whatsapp';
+          const current = (await api(worker, '/settings')).bindings || [];
+          for (const name of ['META_APP_SECRET', 'WEBHOOK_VERIFY_TOKEN', 'WHATSAPP_PRODUCTION_ACCESS_TOKEN']) {
+            if (!current.some(binding => binding.name === name && binding.type === 'secret_text')) throw Error('Segredo esperado ausente: ' + name);
+          }
+          const existing = current.find(binding => binding.name === target.name);
+          if (existing && (existing.type !== target.type || existing.service !== target.service || existing.entrypoint !== target.entrypoint)) {
+            throw Error('Já existe uma configuração JADE diferente.');
+          }
+          if (!existing) {
+            const form = new FormData();
+            form.set('settings', JSON.stringify({
+              bindings: [...current.map(({name}) => ({name, type: 'inherit'})), target]
+            }));
+            await api(worker, '/settings', { method: 'PATCH', body: form });
+          }
+          const active = (await api(worker, '/settings')).bindings || [];
+          if (!active.some(binding => binding.name === target.name && binding.type === target.type && binding.service === target.service && binding.entrypoint === target.entrypoint) ||
+            !current.every(before => active.some(after => after.name === before.name && after.type === before.type))) {
+            throw Error('A pós-verificação das associações não passou.');
+          }
+          console.log('Associação JADE confirmada, com as associações anteriores preservadas.');
+          JS
