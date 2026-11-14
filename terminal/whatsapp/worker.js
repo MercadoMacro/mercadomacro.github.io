@@ -119,6 +119,19 @@ export default {
             continue;
           }
 
+          // quem veio do canal Radar (link do post abre o WhatsApp com "Vim do Radar")
+          const vimDoRadar = /\b(vim|venho|cheguei|vindo)\b.{0,12}\bradar\b/.test(text);
+          let origem = null;
+          try {
+            await prepararTabelas(db);
+            if (vimDoRadar) {
+              await db.prepare('INSERT INTO jade_origem (conversation_key, origem, expires_at) VALUES (?, ?, ?) ON CONFLICT(conversation_key) DO UPDATE SET origem = excluded.origem, expires_at = excluded.expires_at').bind(key, 'radar', Date.now() + 30 * 86400000).run();
+              origem = 'radar';
+            } else {
+              origem = (await db.prepare('SELECT origem FROM jade_origem WHERE conversation_key = ? AND expires_at > ?').bind(key, Date.now()).first())?.origem || null;
+            }
+          } catch (error) { console.warn('Jade: origem indisponível', error.name); }
+
           const help = 'Para atendimento comercial nesta conversa, digite *SIM QUERO*. Para suporte técnico ou cobrança, escreva para contato@mercadomacro.com.br.';
           const wantsHuman = /^(?:sim[ ,]+quero)[.!?\s]*$/.test(text) || /\b(?:atendimento comercial|falar com (?:um consultor|uma pessoa|alguem|o atendente))\b/.test(text);
           // aceita "voltar", "volte" ou "volta", "para" ou "pra", com ou sem "a" (14/11/2026)
@@ -136,7 +149,8 @@ export default {
                 await avisarEquipe(env, 'mensagem', phoneId, message.from, original);
                 continue;
               }
-              await avisarEquipe(env, 'pedido', phoneId, message.from, original);
+              await avisarEquipe(env, 'pedido', phoneId, message.from, original + (origem === 'radar' ? ' (veio do Radar)' : ''));
+              if (origem) await funil(env, phoneId, origem, 'atendimento');
               reply = 'Claro! Nossa equipe comercial pode continuar por aqui. Me diga em uma frase o que você quer saber sobre o terminal ou os planos. Se quiser voltar ao atendimento automático, digite *VOLTAR PARA A JADE*.';
             } else {
               const paused = await db.prepare('SELECT 1 AS paused FROM jade_handoff WHERE conversation_key = ? AND expires_at > ?').bind(key, now).first();
@@ -150,6 +164,10 @@ export default {
             console.warn('Jade: estado do atendimento indisponível', error.name);
             if (wantsHuman || wantsJade) reply = 'Não consegui mudar o modo de atendimento agora. Para falar com a equipe, escreva para contato@mercadomacro.com.br.';
           }
+          if (reply === null && vimDoRadar && !wantsHuman) {
+            await funil(env, phoneId, 'radar', 'inicio');
+            reply = 'Que bom que você veio do *Radar*! 👋 Sou a Jade, assistente do Mercado Macro.\n\nPor onde quer começar?\n• *Demo*: veja na prática (notícias, agenda ou um ativo, como BBAS3)\n• *Planos*: valores e o teste de 48 horas grátis\n• *SIM QUERO*: falar com a nossa equipe por aqui';
+          }
           if (reply === null && phoneId === PRODUCAO) {
             reply = await jadeWatchlistCommand(text, message.from, env);
           }
@@ -162,8 +180,13 @@ export default {
               reply = help;
           } else if (/\b(senha|login|acesso|cadastro|entrar|conta)\b/.test(text)) {
             reply = 'Para acessar o terminal, abra https://mercadomacro.com.br/ e entre com seu e-mail cadastrado. Se esqueceu a senha, use a opção Esqueci minha senha na tela de login. Se precisar de ajuda com sua conta, ' + help.charAt(0).toLowerCase() + help.slice(1);
-          } else if ((reply = await jadeSalesReply(text, env)) !== null) {
+          } else if ((reply = await jadeSalesReply(text, env, origem)) !== null) {
             // Commercial questions are handled before general market queries.
+            // primeira vez que quem veio do Radar recebe o link dos planos ou da assinatura
+            if (origem && /mercadomacro\.com\.br\/(planos|assinar)/.test(reply)) {
+              const r = await db.prepare('UPDATE jade_origem SET planos = 1 WHERE conversation_key = ? AND planos = 0').bind(key).run().catch(() => null);
+              if (r?.meta?.changes) await funil(env, phoneId, origem, 'planos');
+            }
           } else if ((reply = await jadeAssetCommand(text, key, db)) !== null) {
             // A specific asset takes precedence over general market queries.
           } else if (jadeAsset(text)) {
@@ -258,6 +281,8 @@ async function prepararTabelas(db) {
   await db.batch([
     db.prepare('CREATE TABLE IF NOT EXISTS jade_limite (conversation_key TEXT NOT NULL, hora INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (conversation_key, hora))'),
     db.prepare('CREATE TABLE IF NOT EXISTS jade_contexto (conversation_key TEXT PRIMARY KEY, tickers TEXT NOT NULL, expires_at INTEGER NOT NULL)'),
+    // de onde veio a conversa (Radar), por 30 dias, para contar o caminho até o atendimento e os planos
+    db.prepare('CREATE TABLE IF NOT EXISTS jade_origem (conversation_key TEXT PRIMARY KEY, origem TEXT NOT NULL, expires_at INTEGER NOT NULL, planos INTEGER NOT NULL DEFAULT 0)'),
   ]);
   tabelasProntas.add(db);
 }
@@ -272,12 +297,18 @@ export async function contarMensagem(db, key, agora = Date.now()) {
       db.prepare('DELETE FROM jade_limite WHERE hora < ?').bind(hora - 24),
       db.prepare('DELETE FROM jade_contexto WHERE expires_at < ?').bind(agora),
       db.prepare('DELETE FROM jade_handoff WHERE expires_at < ?').bind(agora),
+      db.prepare('DELETE FROM jade_origem WHERE expires_at < ?').bind(agora),
     ]).catch(() => {});
   }
   return Number(r?.n) || 1;
 }
 
 // aviso no Telegram da equipe (pelo site, que guarda o token): só os 4 últimos dígitos do número
+async function funil(env, phoneId, origem, evento) {
+  if (phoneId !== PRODUCAO || !env.JADE) return;
+  try { await env.JADE.funil(origem, evento); } catch (error) { console.warn('Jade: funil indisponível', error.name); }
+}
+
 async function avisarEquipe(env, tipo, phoneId, from, texto) {
   if (phoneId !== PRODUCAO) return;
   try {
@@ -383,9 +414,10 @@ async function precosDoSite(env) {
 }
 export const reais = (centavos) => 'R$ ' + (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export async function jadeSalesReply(text, env) {
-  const checkout = 'https://mercadomacro.com.br/assinar?utm_source=whatsapp&utm_medium=chat&utm_campaign=jade';
-  const plans = 'https://mercadomacro.com.br/planos';
+export async function jadeSalesReply(text, env, origem = null) {
+  // quem veio do Radar recebe links com a origem marcada (aparecem em "De onde vêm os visitantes" no /admin)
+  const checkout = origem === 'radar' ? 'https://mercadomacro.com.br/assinar?origem=radar-wa' : 'https://mercadomacro.com.br/assinar?utm_source=whatsapp&utm_medium=chat&utm_campaign=jade';
+  const plans = origem === 'radar' ? 'https://mercadomacro.com.br/planos?origem=radar-wa' : 'https://mercadomacro.com.br/planos';
   const semPreco = 'Os valores atualizados estão em ' + plans;
   // só busca os preços quando a mensagem é sobre planos
   const P = /\b(orcamento|pix|renovacao|pagamento unico|cartao|anual|12 meses|custo mensal|valor por mes|por mes|quanto|precos?|valores?|planos?|teste gratis|testar gratis|experimentar|48 horas|quero testar|como testar)\b/.test(text) ? await precosDoSite(env) : null;
@@ -403,7 +435,7 @@ export async function jadeSalesReply(text, env) {
   if (/^(?:meu )?orcamento[?.!]*$|\bacima do meu orcamento\b/.test(text)) {
     return trial + '\n\n' + (P ? 'Se quiser acesso completo por um mês, são ' + reais(P.cartao.mensal) + ' no cartão com renovação automática ou ' + reais(P.pix.mensal) + ' no Pix em pagamento único. ' : semPreco + '. ') + checkout;
   }
-  if (/^(?:eu )?quero ver na pratica[?.!]*$/.test(text)) {
+  if (/^(?:eu )?quero ver na pratica[?.!]*$|^demo[?.!]*$/.test(text)) {
     return 'Escolha uma amostra: *Demo notícias*, *Demo agenda* ou *Demo BBAS3*. Você também pode enviar o ticker de outro ativo que acompanha.';
   }
   if (/\b(?:pix|sem renovacao|pagamento unico)\b/.test(text)) {

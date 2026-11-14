@@ -4,6 +4,7 @@ import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
 export { NewsRelay } from './news-relay.js';
 import { noticiasCache, noticiasSoCache } from './noticias.js';
+import { rascunhoRadar, funilRadar } from './radar-whatsapp.js';
 import { arquivarNoticias, limparArquivo, noticiasAntigas, arquivoParaJade, atrasoNoticias } from './noticias-arquivo.js';
 import { apiAlarmes, checarAlarmes } from './alarmes.js';
 import { respostaSelic } from './selic-publica.js';
@@ -1346,6 +1347,8 @@ async function apiAdmin(req, env, acao, eu) {
   // perguntas feitas à Jade nos últimos 30 dias, sem nome nem conta (src/assistente.js, guardarPergunta)
   // quanto tempo cada fonte leva entre publicar e aparecer no site (últimos 7 dias, src/noticias-arquivo.js)
   if (acao === 'noticias-atraso' && req.method === 'GET') return json(await atrasoNoticias(env));
+  // quem veio do canal Radar no WhatsApp, por semana (src/radar-whatsapp.js)
+  if (acao === 'funil-whatsapp' && req.method === 'GET') return json(await funilRadar(env));
   if (acao === 'jade-perguntas' && req.method === 'GET') {
     try {
       const r = await env.DB.prepare('SELECT quando, dia, tela, texto FROM jade_perguntas WHERE quando >= ? ORDER BY quando DESC LIMIT 1000').bind(Date.now() - 30 * 864e5).all();
@@ -1964,6 +1967,9 @@ async function enviarAberturaNoSite(env, c) {
   if (!r.ok) throw new Error('Telegram recusou a abertura: ' + (r.description || 'sem detalhe'));
   await salvarConfig(env, { canal_ult_abertura: chave });
   console.log('abertura postada pelo site:', chave);
+  // o mesmo texto, no formato do WhatsApp, para o administrador colar no canal Radar (src/radar-whatsapp.js)
+  try { const k = await rascunhoRadar(env, { tipo: 'abertura', html: tc || textoAbertura(d), config: c, telegram }); if (k) await salvarConfig(env, { radar_ult_abertura: k }); }
+  catch (e) { console.error('rascunho do Radar (abertura):', e.message); }
 }
 async function dadosDoCartao(env, c) {
   const d = await dadosFechamento(env);
@@ -2007,6 +2013,9 @@ async function enviarFechamentoNoSite(env, c) {
       else console.error('fechamento no canal recusado:', rc.description || 'sem detalhe');
     } catch (e) { console.error('fechamento no canal falhou:', e.message); }
   }
+  // o mesmo texto, no formato do WhatsApp, para o administrador colar no canal Radar (src/radar-whatsapp.js)
+  try { const k = await rascunhoRadar(env, { tipo: 'fechamento', html: dados.textoCanal || dados.texto, config: c, telegram }); if (k) await salvarConfig(env, { radar_ult_fechamento: k }); }
+  catch (e) { console.error('rascunho do Radar (fechamento):', e.message); }
 }
 // só para teste (robô teste-foto-cloudflare.yml): devolve a foto do cartão tirada pelo navegador da Cloudflare, sem mandar nada
 async function roboFechamentoFoto(req, env) {
@@ -2638,6 +2647,9 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   <h2>De onde vêm os visitantes</h2>
   <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p>
   <div id="origens"><p class="vazio">Carregando…</p></div>
+  <h2>Radar no WhatsApp</h2>
+  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p>
+  <div id="radar-wa"><p class="vazio">Carregando…</p></div>
   <h2>Abas mais usadas pelos assinantes</h2>
   <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p>
   <h3 style="margin:18px 0 8px;font-size:15px">Por assinante hoje</h3>
@@ -2838,6 +2850,16 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
         }).join('') + '</tbody></table></div>';
     }).catch(function(){ document.getElementById('funil').innerHTML = '<p class="vazio">Não foi possível carregar os números.</p>'; });
   }
+  function radarWa(){
+    var raiz = document.getElementById('radar-wa');
+    fetch('/api/admin/funil-whatsapp', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(l){
+      if (!l.length) { raiz.innerHTML = '<p class="vazio">Ainda ninguém veio do Radar. Os números aparecem aqui assim que alguém mandar "Vim do Radar" ou abrir o site pelo link do post.</p>'; return; }
+      var c = function(v){ return '<td class="c" style="text-align:right">' + (v || 0).toLocaleString('pt-BR') + '</td>'; };
+      raiz.innerHTML = '<table class="t"><thead><tr><th>Semana de</th><th style="text-align:right">Conversas</th><th style="text-align:right">Pediram atendimento</th><th style="text-align:right">Links de planos</th><th style="text-align:right">Visitas</th><th style="text-align:right">Pedidos de acesso</th></tr></thead><tbody>' + l.map(function(x){
+        return '<tr><td>' + x.semana.slice(8, 10) + '/' + x.semana.slice(5, 7) + '</td>' + c(x.inicio) + c(x.atendimento) + c(x.planos) + c(x.visita) + c(x.cadastro) + '</tr>';
+      }).join('') + '</tbody></table>';
+    }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
   function origens(){
     var raiz = document.getElementById('origens');
     fetch('/api/admin/origens', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
@@ -2904,7 +2926,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
         }).join('') + '</tbody></table></div>';
   }
   function carregar(){
-    funil(); origens(); uso();
+    funil(); origens(); radarWa(); uso();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       eu = j.eu; US = j.usuarios; ALERTA = j.alertaTrocas || 4;
       // validade já passou mas o robô diário ainda não marcou: mostra como vencido (o acesso já está cortado)
