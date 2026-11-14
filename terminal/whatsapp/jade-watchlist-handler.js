@@ -1,17 +1,34 @@
 
 const JADESITE = 'https://mercadomacro.com.br/conta';
 
-async function jadeWatchlistCommand(text, phone, env) {
+// Call only from the signature-verified production WhatsApp webhook.
+export async function jadeWatchlistCommand(text, phone, env) {
+  if (!/^vincular\b/.test(text) && !/\b(watchlists?|minha lista|meus ativos)\b/.test(text)) return null;
+  if (!env.JADE) return 'A consulta à watchlist está temporariamente indisponível.';
+  try {
+    return await handleWatchlist(text, phone, env);
+  } catch {
+    return 'Não consegui consultar sua watchlist agora. Tente de novo em alguns minutos.';
+  }
+}
+
+async function handleWatchlist(text, phone, env) {
   const link = /^vincular ([a-f0-9]{32})$/.exec(text);
   if (link) {
     const linked = await env.JADE.link(phone, link[1]);
     return linked ? 'WhatsApp vinculado. Pergunte: o que mexeu com minha watchlist?' :
       'O código está inválido ou expirou. Gere outro em ' + JADESITE + '. Se este número já estiver vinculado a outra conta, desvincule por lá primeiro.';
   }
+  if (/^vincular\b/.test(text)) return 'Gere um código de vínculo em ' + JADESITE;
   const list = await env.JADE.watchlist(phone);
   if (list === null) return 'Para consultar sua watchlist, entre no Mercado Macro e vincule seu WhatsApp em ' + JADESITE;
   if (!list.length) return 'Sua conta está vinculada. Adicione ativos à watchlist do terminal para começar.';
-  const data = await jadeJson('https://news.cota-cotacao10.workers.dev/', 10000);
+  const response = await fetch('https://news.cota-cotacao10.workers.dev/', {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok) throw new Error('Feed indisponível');
+  const data = await response.json();
   const now = Date.now();
   const headlines = [];
   const seen = new Set();
@@ -37,5 +54,3 @@ async function jadeWatchlistCommand(text, phone, env) {
   return headlines.length ? '*Sua watchlist | Jade*\n\n' + headlines.join('\n\n') :
     'Não encontrei manchetes recentes que mencionem diretamente ativos da sua watchlist. Veja a lista no terminal: https://mercadomacro.com.br/';
 }
-
-export { jadeWatchlistCommand };
