@@ -1,0 +1,58 @@
+# Jade no WhatsApp: testa nos PRs e publica o worker "mercadomacro-whatsapp" depois do merge.
+# Os segredos da Meta ficam só na Cloudflare; o deploy não os altera.
+name: Publicar WhatsApp (Cloudflare)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terminal/whatsapp/**'
+      - 'terminal/station/tests/whatsapp-worker.test.mjs'
+      - '.github/workflows/publicar-whatsapp.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terminal/whatsapp/**'
+      - 'terminal/station/tests/whatsapp-worker.test.mjs'
+      - '.github/workflows/publicar-whatsapp.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar-whatsapp-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    name: Validar WhatsApp
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Testes do robô
+        run: node --test terminal/station/tests/whatsapp-worker.test.mjs
+      - name: Montar sem publicar
+        working-directory: terminal/whatsapp
+        run: npx --yes wrangler@4.149.0 deploy --dry-run --outdir "$RUNNER_TEMP/whatsapp-validado"
+
+  publicar:
+    name: Publicar WhatsApp
+    needs: validar
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Publicar na Cloudflare
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: terminal/whatsapp
+          command: deploy
+          wranglerVersion: '4.149.0'

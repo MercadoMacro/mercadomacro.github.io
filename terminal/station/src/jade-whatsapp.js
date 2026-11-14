@@ -5,6 +5,12 @@ const { WorkerEntrypoint } = await import('cloudflare:workers').catch(error => {
   return { WorkerEntrypoint: class { constructor(ctx, env) { this.env = env; } } };
 });
 
+import { PLANOS } from './assinatura.js';
+
+// aviso no Telegram da equipe: index.js liga a função avisar (que lê o token guardado no cofre)
+let avisarFn = null;
+export function ligarJade(u) { avisarFn = u.avisar; }
+
 const table = `CREATE TABLE IF NOT EXISTS jade_whatsapp (
   usuario_id TEXT PRIMARY KEY, telefone_hash TEXT UNIQUE, codigo_hash TEXT UNIQUE, expira INTEGER
 )`;
@@ -47,6 +53,27 @@ export async function jadeAccount(req, env, user, json) {
 }
 
 export class JadeWatchlist extends WorkerEntrypoint {
+  // preços em centavos, direto da tabela do site (o robô do WhatsApp não guarda valores à mão)
+  async precos() {
+    return {
+      cartao: { mensal: PLANOS.mensal.valorCartao, semestral: PLANOS.semestral.valorCartao, anual: PLANOS.anual.valorCartao },
+      pix: { mensal: PLANOS.mensal.valor, semestral: PLANOS.semestral.valor },
+      gratisHoras: PLANOS.gratis.horas,
+    };
+  }
+
+  // pedido de atendimento humano ou mensagem durante a pausa da Jade: avisa a equipe no Telegram
+  async avisarEquipe(tipo, final, texto) {
+    if (!avisarFn) return false;
+    const fim = /^\d{2,4}$/.test(String(final)) ? String(final) : '????';
+    const msg = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+    const hora = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+    const titulo = tipo === 'pedido' ? '💬 WhatsApp: pediram atendimento' : '💬 WhatsApp: nova mensagem no atendimento';
+    const corpo = `Número terminado em ${fim}, às ${hora}.\n` + (msg ? `“${msg}”\n` : '') +
+      (tipo === 'pedido' ? 'A Jade ficou em silêncio por 24 horas nessa conversa. Responda pela caixa de entrada do número comercial.' : 'A Jade está em silêncio nessa conversa.');
+    return avisarFn(this.env, titulo, corpo).catch(() => false);
+  }
+
   async link(phone, code) {
     if (typeof phone !== 'string' || !/^\d{8,15}$/.test(phone) || typeof code !== 'string' || !/^[a-f0-9]{32}$/.test(code)) return false;
     const db = this.env.DB;
