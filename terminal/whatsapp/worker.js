@@ -139,7 +139,10 @@ export default {
           let reply = null;
           try {
             const now = Date.now();
-            if (wantsJade) {
+            if (vimDoRadar && !wantsHuman) {
+              // "Vim do Radar" é um começo de conversa: tira a pausa do atendimento e a Jade dá as boas-vindas
+              await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
+            } else if (wantsJade) {
               await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
               reply = 'Voltei! Sou a Jade. Posso ajudar com ativos, notícias, agenda econômica ou planos.';
             } else if (wantsHuman) {
