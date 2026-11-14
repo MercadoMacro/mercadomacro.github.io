@@ -1363,6 +1363,42 @@ async function apiAdmin(req, env, acao, eu) {
   // perguntas feitas à Jade nos últimos 30 dias, sem nome nem conta (src/assistente.js, guardarPergunta)
   // quanto tempo cada fonte leva entre publicar e aparecer no site (últimos 7 dias, src/noticias-arquivo.js)
   if (acao === 'noticias-atraso' && req.method === 'GET') return json(await atrasoNoticias(env));
+  // Ajustes (14/11/2026): situação de cada integração e das automações, sem devolver nenhuma chave
+  if (acao === 'estado' && req.method === 'GET') {
+    const c = await config(env);
+    const dias = (iso) => (iso ? Math.floor((Date.now() - Date.parse(iso)) / 864e5) : null);
+    const ult = (k) => (c[k] ? String(c[k]).replace(/^[a-z]+-/, '') : null);
+    let vinculos = 0, radar7 = { inicio: 0, atendimento: 0 };
+    try { vinculos = (await env.DB.prepare('SELECT COUNT(*) n FROM jade_whatsapp WHERE telefone_hash IS NOT NULL').first())?.n || 0; } catch (e) { /* tabela ainda não existe */ }
+    try {
+      const desde = new Date(Date.now() - 3 * 3600000 - 6 * 864e5).toISOString().slice(0, 10);
+      for (const r of (await env.DB.prepare("SELECT evento, SUM(n) n FROM funil_whatsapp WHERE origem = 'radar' AND dia >= ? GROUP BY evento").bind(desde).all()).results || []) radar7[r.evento] = r.n;
+    } catch (e) { /* tabela ainda não existe */ }
+    return json({
+      integracoes: {
+        pix: { ligado: !!c.pix_chave },
+        stripe: { ligado: !!c.stripe_key, webhook: !!c.stripe_whsec, desde: c.stripe_desde || null, dias: dias(c.stripe_desde), teste: /^sk_test_/.test(c.stripe_key || '') },
+        email: { ligado: !!c.mail_key },
+        telegram: { ligado: !!(c.tg_token && c.tg_chat), canal: c.tg_canal_nome || null },
+        gemini: { ligado: !!c.gemini_key, desde: c.gemini_desde || null, modelo: c.gemini_modelo || null },
+        capital: { ligado: !!(c.cap_key && c.cap_id && c.cap_pw), amb: c.cap_amb || 'demo' },
+      },
+      automacoes: {
+        cf_abertura: c.cf_abertura === '1', cf_fechamento: c.cf_fechamento === '1', radar_wa: c.radar_wa !== 'nao',
+        tg_canal_noticias: c.tg_canal_noticias !== 'nao', busca_ligada: c.busca_ligada === '1',
+        canal: !!c.tg_canal, ult_abertura: ult('canal_ult_abertura'), ult_fechamento: ult('canal_ult_fechamento'),
+      },
+      whatsapp: { numero: '+55 11 97178-7986', link: 'https://wa.me/5511971787986?text=' + encodeURIComponent('Vim do Radar'), vinculos, radar7 },
+    }, 200, { 'Cache-Control': 'no-store' });
+  }
+  // liga e desliga as automações (só estas chaves; nada de chave secreta por aqui)
+  if (acao === 'automacao' && req.method === 'POST') {
+    const b = await req.json().catch(() => ({}));
+    const MAPA = { cf_abertura: (v) => (v ? '1' : null), cf_fechamento: (v) => (v ? '1' : null), radar_wa: (v) => (v ? null : 'nao'), tg_canal_noticias: (v) => (v ? null : 'nao'), busca_ligada: (v) => (v ? '1' : null) };
+    if (!MAPA[b.chave] || typeof b.ligar !== 'boolean') return json({ erro: 'Ajuste desconhecido.' }, 400);
+    await salvarConfig(env, { [b.chave]: MAPA[b.chave](b.ligar) });
+    return json({ ok: true });
+  }
   // quem veio do canal Radar no WhatsApp, por semana (src/radar-whatsapp.js)
   if (acao === 'funil-whatsapp' && req.method === 'GET') return json(await funilRadar(env));
   // exemplo do post do Radar na conversa do administrador, sem postar em canal nenhum e sem marcar o dia
@@ -2649,6 +2685,35 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   .cab h1{font-size:26px}
   #msg{top:12px}
 }
+/* Ajustes 2026-11-14: automações, cartão do WhatsApp, selos de situação e grade sem buracos */
+.cfg-top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.cfg-top .painel{margin:0}
+.cfg-tit{margin:26px 0 0}
+.cfg2{columns:2 380px;column-gap:16px;margin-top:4px}
+.cfg2 .painel{break-inside:avoid;display:block;margin:12px 0 4px}
+.painel .caixa{background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 10px}
+.painel .caixa:last-child{margin-bottom:0}
+.selo{margin-left:auto;font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 10px 3px 8px;white-space:nowrap;background:color-mix(in srgb,currentColor 13%,transparent)}
+.selo:empty{display:none}
+.selo::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.selo.ok{color:var(--pos)}.selo.at{color:var(--accent-text)}.selo.off{color:var(--text-3)}
+.tgl-l{display:flex;flex-direction:column}
+.tgl{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
+.tgl:first-child{border-top:0;padding-top:2px}
+.tgl .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tgl .tx b{font-size:13.5px;font-weight:600}
+.tgl .tx small{color:var(--text-3);font-size:12.5px;line-height:1.45}
+.tgl input{position:absolute;opacity:0;width:1px;height:1px}
+.tgl .sw{flex:none;width:38px;height:22px;border-radius:12px;background:var(--line-2);position:relative;transition:background .15s}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.tgl input:checked+.sw{background:var(--pos)}
+.tgl input:checked+.sw::after{transform:translateX(16px)}
+.tgl input:focus-visible+.sw{outline:2px solid var(--accent);outline-offset:2px}
+.tgl.bloq{opacity:.55;cursor:not-allowed}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.kv small{display:block;color:var(--text-3);font-size:11.5px}.kv b{font-size:15px;font-variant-numeric:tabular-nums}
+@media (max-width:900px){.cfg-top{grid-template-columns:1fr}}
 /* visual 2026-11-14 (pedido do Dante: "deixe profissional"): grupos no menu, cabeçalho com hora e Atualizar,
    seções da Visão geral em cartões com título, subtítulo e "Como ler" recolhido no lugar dos textos longos */
 h2{font-size:15px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:600;margin:28px 0 12px}
@@ -2752,14 +2817,19 @@ h2 b{font-size:12px;font-weight:700}
   <div id="passe-tab"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="ajustes" hidden>
-  <div class="cfg">
-    <div><h2>Pix para assinaturas</h2><div id="pix"><p class="vazio">Carregando…</p></div>
-      <h2>Cartão (Stripe)</h2><div id="stripe"><p class="vazio">Carregando…</p></div>
-      <h2>E-mail (Resend)</h2><div id="email"><p class="vazio">Carregando…</p></div></div>
-    <div><h2>Avisos no Telegram</h2><div id="avisos"><p class="vazio">Carregando…</p></div>
-      <h2>Assistente (Google Gemini)</h2><div id="assistente"><p class="vazio">Carregando…</p></div>
-      <h2>Capital.com (cotações ao vivo)</h2><div id="capital"><p class="vazio">Carregando…</p></div>
-      <h2>Sua conta de administrador</h2><div id="aparelhos"><p class="vazio">Carregando…</p></div></div>
+  <div class="cfg-top">
+    <section class="painel"><header><h2>Automações</h2><span class="ph">O que o site faz sozinho</span></header><div id="automacoes"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>WhatsApp (Jade)</h2><span class="selo" data-selo="whatsapp"></span></header><div id="whatsapp-cfg"><p class="vazio">Carregando…</p></div></section>
+  </div>
+  <h2 class="cfg-tit">Integrações</h2>
+  <div class="cfg2">
+    <section class="painel"><header><h2>Pix para assinaturas</h2><span class="selo" data-selo="pix"></span></header><div id="pix"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Cartão (Stripe)</h2><span class="selo" data-selo="stripe"></span></header><div id="stripe"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Avisos no Telegram</h2><span class="selo" data-selo="avisos"></span></header><div id="avisos"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
   </div>
 </section>
 <dialog id="dlg-hist" aria-labelledby="hs-t"><div class="dl" id="hs"></div></dialog>
@@ -3007,6 +3077,57 @@ h2 b{font-size:12px;font-weight:700}
         }).join('') + '</tbody></table></div>';
   }
   // hora no cabeçalho e botão Atualizar
+  // Ajustes: selos de cada integração, automações (liga/desliga) e cartão do WhatsApp
+  function selo(id, cor, txt){ var el = document.querySelector('[data-selo="' + id + '"]'); if (el) { el.className = 'selo ' + cor; el.textContent = txt; } }
+  var AUTO = [
+    ['cf_abertura', 'Abertura postada pelo site', 'Em dia útil, o site posta a abertura no canal do Telegram. Desligado, quem posta é o robô do GitHub, que costuma atrasar.', 'ult_abertura'],
+    ['cf_fechamento', 'Fechamento enviado pelo site', 'Em dia útil, às 18h, o site fotografa o cartão do fechamento e manda. Desligado, vai pelo robô do GitHub.', 'ult_fechamento'],
+    ['radar_wa', 'Rascunho do Radar no WhatsApp', 'A abertura e o fechamento chegam no seu Telegram já no formato do WhatsApp, para colar no canal Radar.'],
+    ['tg_canal_noticias', 'Notícias de alto impacto no canal do Telegram', 'Até 2 por hora e 20 por dia, sem repetir assunto.', null, 'canal'],
+    ['busca_ligada', 'Busca inteligente da Jade', 'A Jade procura nas aulas e no histórico de notícias. Até 1.000 buscas por mês são grátis; acima disso, a Cloudflare cobra à parte.'],
+  ];
+  function estado(){
+    var au = document.getElementById('automacoes'), wa = document.getElementById('whatsapp-cfg');
+    fetch('/api/admin/estado', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var I = j.integracoes, A = j.automacoes, W = j.whatsapp;
+      var dm = function(iso){ return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; };
+      selo('pix', I.pix.ligado ? 'ok' : 'off', I.pix.ligado ? 'Ligado' : 'Não configurado');
+      if (!I.stripe.ligado) selo('stripe', 'off', 'Não configurado');
+      else if (I.stripe.teste) selo('stripe', 'at', 'Modo de teste');
+      else if (!I.stripe.webhook) selo('stripe', 'at', 'Sem aviso de pagamento');
+      else if (I.stripe.dias != null && I.stripe.dias >= 90) selo('stripe', 'at', 'Chave de ' + dm(I.stripe.desde) + ': hora de trocar');
+      else selo('stripe', 'ok', 'Conectado' + (I.stripe.desde ? ' · chave de ' + dm(I.stripe.desde) + ' (há ' + I.stripe.dias + ' d)' : ''));
+      selo('email', I.email.ligado ? 'ok' : 'off', I.email.ligado ? 'Ligado' : 'Não configurado');
+      selo('avisos', I.telegram.ligado ? 'ok' : 'off', I.telegram.ligado ? 'Ligado' + (I.telegram.canal ? ' · canal ' + I.telegram.canal : '') : 'Não configurado');
+      selo('assistente', I.gemini.ligado ? 'ok' : 'off', I.gemini.ligado ? 'Ligado' + (I.gemini.modelo ? ' · ' + I.gemini.modelo : '') : 'Não configurado');
+      selo('capital', I.capital.ligado ? 'ok' : 'off', I.capital.ligado ? 'Ligado · conta ' + (I.capital.amb === 'real' ? 'real' : 'demo') : 'Não configurado');
+      selo('aparelhos', 'ok', 'Administrador');
+      selo('whatsapp', 'ok', 'API oficial');
+      au.innerHTML = '<div class="tgl-l">' + AUTO.map(function(a){
+        var on = !!A[a[0]], bloq = a[4] && !A[a[4]];
+        var extra = a[3] && A[a[3]] ? ' Último envio: ' + dm(A[a[3]]) + '.' : '';
+        return '<label class="tgl' + (bloq ? ' bloq' : '') + '"><span class="tx"><b>' + a[1] + '</b><small>' + a[2] + extra + (bloq ? ' Ligue o canal no cartão Avisos no Telegram primeiro.' : '') + '</small></span>'
+          + '<input type="checkbox" role="switch" data-auto="' + a[0] + '"' + (on && !bloq ? ' checked' : '') + (bloq ? ' disabled' : '') + '><span class="sw" aria-hidden="true"></span></label>';
+      }).join('') + '</div><p class="vazio" id="auto-msg" role="status" style="margin-top:8px;font-size:12.5px"></p>';
+      wa.innerHTML = '<div class="kv"><div><small>Número da Jade</small><b>' + esc(W.numero) + '</b></div><div><small>Watchlists ligadas</small><b>' + W.vinculos + '</b></div><div><small>Vieram do Radar (7 dias)</small><b>' + (W.radar7.inicio || 0) + '</b></div><div><small>Pediram atendimento (7 dias)</small><b>' + (W.radar7.atendimento || 0) + '</b></div></div>'
+        + '<p class="vazio" style="margin:12px 0 6px;font-size:12.5px">Link "Vim do Radar" (vai no fim de cada post do canal):</p>'
+        + '<div class="linha" style="margin:0"><span class="cod" style="font-size:12.5px">' + esc(W.link) + '</span><button type="button" class="b" id="wa-copiar">Copiar</button></div>'
+        + '<p class="vazio" style="margin:12px 0 0;font-size:12.5px">Quem digita SIM QUERO faz a Jade ficar em silêncio por 24 horas e chega um aviso no seu Telegram. A resposta é pela caixa de entrada do número comercial. Para religar a Jade, a pessoa manda "Voltar".</p>';
+    }).catch(function(){ au.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  document.addEventListener('change', function(e){
+    var t = e.target; if (!t.matches || !t.matches('[data-auto]')) return;
+    var m = document.getElementById('auto-msg'); t.disabled = true;
+    fetch('/api/admin/automacao', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chave: t.dataset.auto, ligar: t.checked }) })
+      .then(function(r){ if (!r.ok) throw r; if (m) m.textContent = 'Salvo.'; })
+      .catch(function(){ t.checked = !t.checked; if (m) m.textContent = 'Não foi possível salvar. Tente de novo.'; })
+      .finally(function(){ t.disabled = false; });
+  });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest || !e.target.closest('#wa-copiar')) return;
+    var b = e.target.closest('#wa-copiar'), cod = b.previousElementSibling;
+    (navigator.clipboard ? navigator.clipboard.writeText(cod.textContent) : Promise.reject()).then(function(){ b.textContent = 'Copiado'; setTimeout(function(){ b.textContent = 'Copiar'; }, 1500); }).catch(function(){});
+  });
   function relogio(){ var el = document.getElementById('agora'); if (el) el.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); }
   document.getElementById('recarregar').addEventListener('click', function(){ var b = this; b.disabled = true; carregar(); setTimeout(function(){ b.disabled = false; }, 1200); });
   function carregar(){
@@ -3020,7 +3141,7 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Pix, cartão, e-mail, Telegram, assistente e sua conta.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -3033,6 +3154,7 @@ h2 b{font-size:12px;font-weight:700}
     if (n === 'passe') passe();
     if (n === 'jade') jade();
     if (n === 'atraso') atraso();
+    if (n === 'ajustes') estado();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
   }
   var JADE = [];
