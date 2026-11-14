@@ -1,0 +1,24 @@
+name: Teste config WhatsApp
+on: { push: { branches: [teste-wa-config] } }
+permissions: {}
+jobs:
+  t:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - run: |
+          node --input-type=module <<'JS'
+          const { CLOUDFLARE_API_TOKEN: t, CLOUDFLARE_ACCOUNT_ID: a } = process.env;
+          const get = async (p) => { const r = await fetch('https://api.cloudflare.com/client/v4/accounts/' + a + p, { headers: { Authorization: 'Bearer ' + t } }); const j = await r.json(); return j.success ? j.result : { erro: r.status, codes: (j.errors||[]).map(e=>e.code+':'+e.message) }; };
+          const s = await get('/workers/scripts/mercadomacro-whatsapp/settings');
+          console.log('settings', JSON.stringify({ compatibility_date: s.compatibility_date, compatibility_flags: s.compatibility_flags, usage_model: s.usage_model, observability: s.observability, logpush: s.logpush, placement: s.placement, bindings: (s.bindings||[]).map(b => ({ name: b.name, type: b.type, service: b.service, entrypoint: b.entrypoint, id: b.id, database_id: b.database_id })) }, null, 1));
+          console.log('subdomain', JSON.stringify(await get('/workers/scripts/mercadomacro-whatsapp/subdomain')));
+          const d = await get('/workers/domains');
+          console.log('domains', JSON.stringify(Array.isArray(d) ? d.filter(x => x.service === 'mercadomacro-whatsapp').map(x => ({ hostname: x.hostname, zone: x.zone_name })) : d));
+          const sc = await get('/workers/scripts');
+          const w = Array.isArray(sc) ? sc.find(x => x.id === 'mercadomacro-whatsapp') : null;
+          console.log('script', JSON.stringify(w && { modified_on: w.modified_on, created_on: w.created_on, handlers: w.handlers, routes: w.routes, has_modules: w.has_modules }));
+          const sub = await get('/workers/subdomain'); console.log('conta subdominio', JSON.stringify(sub));
+          JS
