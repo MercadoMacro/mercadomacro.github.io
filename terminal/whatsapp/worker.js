@@ -121,7 +121,8 @@ export default {
 
           const help = 'Para atendimento comercial nesta conversa, digite *SIM QUERO*. Para suporte técnico ou cobrança, escreva para contato@mercadomacro.com.br.';
           const wantsHuman = /^(?:sim[ ,]+quero)[.!?\s]*$/.test(text) || /\b(?:atendimento comercial|falar com (?:um consultor|uma pessoa|alguem|o atendente))\b/.test(text);
-          const wantsJade = /^voltar para a jade[.!?\s]*$/.test(text);
+          // aceita "voltar", "volte" ou "volta", "para" ou "pra", com ou sem "a" (14/11/2026)
+          const wantsJade = /^(?:voltar|volte|volta)\s+(?:para|pra)\s+(?:a\s+)?jade[.!?\s]*$/.test(text);
           let reply = null;
           try {
             const now = Date.now();
