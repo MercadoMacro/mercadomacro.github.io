@@ -29,9 +29,6 @@ jobs:
             return body.result;
           }
           const target = { name: 'JADE', type: 'service', service: 'station', entrypoint: 'JadeWatchlist' };
-          const station = await api('station', '/settings');
-          const exported = station.exports?.JadeWatchlist;
-          if (exported?.type !== 'worker') throw Error('A versão publicada de station ainda não expõe JadeWatchlist.');
           const worker = 'mercadomacro-whatsapp';
           const current = (await api(worker, '/settings')).bindings || [];
           for (const name of ['META_APP_SECRET', 'WEBHOOK_VERIFY_TOKEN', 'WHATSAPP_PRODUCTION_ACCESS_TOKEN']) {
