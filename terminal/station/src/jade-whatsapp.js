@@ -6,6 +6,7 @@ const { WorkerEntrypoint } = await import('cloudflare:workers').catch(error => {
 });
 
 import { PLANOS } from './assinatura.js';
+import { registrarFunil } from './radar-whatsapp.js';
 import { carregarInsiders, acharEmpresa, periodoDoTexto, resumoInsiders, textoInsiders } from './insiders-resumo.js';
 
 // aviso no Telegram da equipe: index.js liga a função avisar (que lê o token guardado no cofre)
@@ -63,6 +64,9 @@ export class JadeWatchlist extends WorkerEntrypoint {
     if (l.length > 1) return 'Encontrei mais de uma empresa: ' + l.slice(0, 5).map((e) => e.t[0]).join(', ') + '. Mande de novo com o código, por exemplo: insiders ' + l[0].t[0] + ' esse ano';
     return textoInsiders(resumoInsiders(d, { empresa: l[0] || null, periodo }));
   }
+
+  // caminho de quem vem do canal Radar (origem 'radar'; eventos inicio, atendimento, planos)
+  async funil(origem, evento) { return registrarFunil(this.env, origem, evento).catch(() => false); }
 
   // preços em centavos, direto da tabela do site (o robô do WhatsApp não guarda valores à mão)
   async precos() {

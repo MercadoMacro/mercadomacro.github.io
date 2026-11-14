@@ -33,7 +33,7 @@ async function mensagem(env, texto, de = '5511999990001') {
 }
 
 function ambiente() {
-  const enviadas = [], avisos = [];
+  const enviadas = [], avisos = [], funis = [];
   globalThis.fetch = async (url, op = {}) => {
     const u = String(url);
     if (u.startsWith('https://graph.facebook.com/')) { enviadas.push(JSON.parse(op.body).text.body); return new Response('{}'); }
@@ -48,9 +48,10 @@ function ambiente() {
       avisarEquipe: async (tipo, final, texto) => { avisos.push([tipo, final, texto]); return true; },
       watchlist: async () => null, link: async () => false,
       insiders: async (t) => 'INSIDERS:' + t,
+      funil: async (o, e) => { funis.push([o, e]); return true; },
     },
   };
-  return { env, enviadas, avisos };
+  return { env, enviadas, avisos, funis };
 }
 
 test('assinatura errada é recusada', async () => {
@@ -143,4 +144,47 @@ test('resumo de insiders: empresa, período e texto do WhatsApp', async () => {
   const m = resumoInsiders(d, { periodo: { meses: 12 } });
   assert.equal(m.maiores_vendas[0].ticker, 'VALE3');
   assert.match(textoInsiders(m), /Mais venderam/);
+});
+
+test('Vim do Radar: boas-vindas, origem marcada nos links e caminho contado', async () => {
+  const { env, enviadas, avisos, funis } = ambiente();
+  const de = '5511999990006';
+  await mensagem(env, 'Vim do Radar', de);
+  assert.match(enviadas[0], /veio do \*Radar\*/);
+  await mensagem(env, 'Planos', de);
+  assert.match(enviadas[1], /planos\?origem=radar-wa/);
+  await mensagem(env, 'quanto custa?', de);
+  await mensagem(env, 'SIM QUERO', de);
+  assert.match(avisos[0][2], /veio do Radar/);
+  assert.deepEqual(funis, [['radar', 'inicio'], ['radar', 'planos'], ['radar', 'atendimento']]); // planos conta uma vez
+  // quem não veio do Radar continua com os links de sempre e não entra na conta
+  await mensagem(env, 'planos', '5511999990007');
+  assert.doesNotMatch(enviadas.at(-1), /radar-wa/);
+  assert.equal(funis.length, 3);
+});
+
+test('Radar: texto do Telegram vira post do WhatsApp com convite para a Jade', async () => {
+  const { paraWhatsApp, postRadar, linkJade } = await import('../src/radar-whatsapp.js');
+  assert.equal(paraWhatsApp('☀️ <b>Abertura</b> &amp; <i>mais</i>\n\n\n• Dólar: R$ 5,40'), '☀️ *Abertura* & _mais_\n\n• Dólar: R$ 5,40');
+  assert.equal(paraWhatsApp('<a href="https://mercadomacro.com.br">mercadomacro.com.br</a>'), 'https://mercadomacro.com.br');
+  const p = postRadar('<b>Fechamento</b>\n• Ibov: 171.000\n\nPainel completo: <a href="https://mercadomacro.com.br">mercadomacro.com.br</a>');
+  assert.doesNotMatch(p, /Painel completo/);
+  assert.match(p, /\*Conheça o terminal com a Jade:\* https:\/\/wa\.me\/5511971787986\?text=Vim%20do%20Radar/);
+  assert.match(p, /\?origem=radar-wa/);
+  assert.equal(linkJade(), 'https://wa.me/5511971787986?text=Vim%20do%20Radar');
+});
+
+test('Radar: rascunho vai uma vez por dia para o administrador, em duas mensagens', async () => {
+  const { rascunhoRadar } = await import('../src/radar-whatsapp.js');
+  const msgs = [];
+  const telegram = async (tok, m, corpo) => { msgs.push(corpo); return { ok: true }; };
+  const config = { tg_token: 't', tg_chat: '1' };
+  const k = await rascunhoRadar({}, { tipo: 'abertura', html: '<b>Abertura</b>', config, telegram });
+  assert.match(k, /^abertura-\d{4}-\d{2}-\d{2}$/);
+  assert.equal(msgs.length, 2);
+  assert.match(msgs[0].text, /pronto para o Radar/);
+  assert.match(msgs[1].text, /^\*Abertura\*/);
+  assert.equal(msgs[1].parse_mode, undefined);
+  assert.equal(await rascunhoRadar({}, { tipo: 'abertura', html: 'x', config: { ...config, radar_ult_abertura: k }, telegram }), false);
+  assert.equal(await rascunhoRadar({}, { tipo: 'abertura', html: 'x', config: { ...config, radar_wa: 'nao' }, telegram }), false);
 });
