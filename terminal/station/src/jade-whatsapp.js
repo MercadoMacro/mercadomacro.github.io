@@ -24,8 +24,8 @@ export async function jadeAccount(req, env, user, json) {
   if (!user) return json({ erro: 'Entre na sua conta para continuar.' }, 401);
   await env.DB.prepare(table).run();
   if (req.method === 'GET') {
-    const row = await env.DB.prepare('SELECT telefone_hash FROM jade_whatsapp WHERE usuario_id = ?').bind(user.id).first();
-    return json({ vinculado: Boolean(row?.telefone_hash) });
+    const row = await env.DB.prepare('SELECT telefone_hash, expira FROM jade_whatsapp WHERE usuario_id = ?').bind(user.id).first();
+    return json({ vinculado: Boolean(row?.telefone_hash), pendente: Number(row?.expira) > Date.now() });
   }
   if (req.headers.get('Origin') !== new URL(req.url).origin) return json({ erro: 'Origem inválida.' }, 403);
   if (req.method === 'DELETE') {
