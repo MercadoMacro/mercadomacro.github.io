@@ -1,4 +1,4 @@
-import { jadeAccount, jadeSchema } from './jade-whatsapp.js';
+import { jadeAccount, jadeSchema, ligarJade } from './jade-whatsapp.js';
 export { JadeWatchlist } from './jade-whatsapp.js';
 import { buscarAtivos } from './busca-ativos.js';
 export { CapitalRelay } from './capital.js';
@@ -3607,6 +3607,7 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
 ligarStripe({ json, mesmaOrigem, config, salvarConfig, avisar, limparCacheSessao, dentroDoLimite });
+ligarJade({ avisar });
 ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
 ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });
