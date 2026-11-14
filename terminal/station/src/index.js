@@ -2649,42 +2649,83 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   .cab h1{font-size:26px}
   #msg{top:12px}
 }
+/* visual 2026-11-14 (pedido do Dante: "deixe profissional"): grupos no menu, cabeçalho com hora e Atualizar,
+   seções da Visão geral em cartões com título, subtítulo e "Como ler" recolhido no lugar dos textos longos */
+h2{font-size:15px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:600;margin:28px 0 12px}
+h2 b{font-size:12px;font-weight:700}
+.grp{display:none}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cab-ac{display:flex;align-items:center;gap:10px}
+.cab-ac .b{display:inline-flex;align-items:center;gap:6px}
+.cab-ac .ic{width:15px;height:15px}
+.agora{color:var(--text-3);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.painel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px 18px;margin:16px 0 0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.painel>header{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin:0 0 12px}
+.painel>header h2{margin:0}
+.painel .ph{color:var(--text-3);font-size:12.5px}
+.painel>header .info{margin-left:auto}
+.info summary{list-style:none;cursor:pointer;color:var(--text-3);font-size:12px;font-weight:600;border:1px solid var(--line-2);border-radius:20px;padding:2px 10px}
+.info summary::-webkit-details-marker{display:none}
+.info summary::before{content:"i";display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;border:1px solid currentColor;font:700 9px/1 Georgia,serif;margin-right:6px;vertical-align:-2px}
+.info summary:hover,.info[open] summary{color:var(--text);border-color:var(--text-3)}
+.info p{flex-basis:100%;margin:10px 0 0;color:var(--text-2);font-size:13px;line-height:1.55;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.painel>header .info[open]{flex-basis:100%;margin-left:0}
+.painel table.t,.painel .mm{box-shadow:none;background:transparent}
+.painel .mm{border-color:var(--line)}
+.painel .vazio{text-align:left}
+.painel h2:not(:first-child){margin:20px 0 10px;font-size:14px;color:var(--text-2)}
+.grid2.cards{gap:16px;margin-top:2px}
+.grid2.cards .painel{margin:16px 0 0}
+.nota-topo{text-align:left;margin:0 0 14px;font-size:13px;line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;color:var(--text-2)}
+.kpi small{text-transform:none;letter-spacing:0;font-weight:500}
+@media (min-width:1000px){
+  .grp{display:block;margin:16px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+  .abas .grp:first-child{margin-top:4px}
+  .cab{margin:0 0 22px}
+}
+.kpi{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
+.kpi small{line-height:18px;min-height:36px;display:flex;align-items:flex-end}
+@media (max-width:820px){
+  .kpi small{min-height:0}
+  .painel .ferr .b{white-space:normal;text-align:left;flex:1 1 100%}
+  .painel{padding:14px;border-radius:12px}
+  .painel table.t .t tr{background:var(--surface-2)}
+  .cab-ac{width:100%;justify-content:space-between}
+}
 </style></head><body><div class="app"><aside class="lado">
 <header class="top"><div class="marca"><img src="/icone-mercado-macro.png" alt="" width="30" height="30"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar ao site</a></header>
 <nav class="abas" role="tablist" aria-label="Seções">
+  <div class="grp" aria-hidden="true">Negócio</div>
   <button type="button" role="tab" data-aba="geral" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="rot">Visão geral</span></button>
   <button type="button" role="tab" data-aba="pessoas" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span class="rot">Pessoas</span> <span class="cnt" id="cnt-pessoas"></span></button>
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
+  <div class="grp" aria-hidden="true">Comunicação</div>
   <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">E-mails</span></button>
+  <div class="grp" aria-hidden="true">Monitoramento</div>
   <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
   <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
   <button type="button" role="tab" data-aba="atraso" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg><span class="rot">Atraso das notícias</span></button>
+  <div class="grp" aria-hidden="true">Sistema</div>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
 </nav>
 </aside><main>
-<div class="cab"><h1 id="tit">Visão geral</h1><p id="sub"></p></div>
+<div class="cab"><div><h1 id="tit">Visão geral</h1><p id="sub"></p></div><div class="cab-ac"><span id="agora" class="agora"></span><button type="button" class="b" id="recarregar" title="Buscar os números de novo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Atualizar</button></div></div>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
 <div id="prov"></div>
 <section data-p="geral">
   <div class="kpis" id="kpis"></div>
-  <div class="grid2">
-    <div><h2>Precisa de você</h2><div id="acao"><p class="vazio">Carregando…</p></div></div>
-    <div><h2>Vencem nos próximos 7 dias</h2><div id="venc"><p class="vazio">Carregando…</p></div></div>
+  <div class="grid2 cards">
+    <section class="painel"><header><h2>Precisa de você</h2></header><div id="acao"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Vencem nos próximos 7 dias</h2></header><div id="venc"><p class="vazio">Carregando…</p></div></section>
   </div>
-  <h2>Mês a mês</h2><div id="funil"><p class="vazio">Carregando…</p></div>
-  <h2>De onde vêm os visitantes</h2>
-  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p>
-  <div id="origens"><p class="vazio">Carregando…</p></div>
-  <h2>Radar no WhatsApp</h2>
-  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p>
-  <div id="radar-wa"><p class="vazio">Carregando…</p></div>
-  <div class="ferr" style="margin-top:8px"><button type="button" class="b" data-radar-teste="abertura">Mandar exemplo da abertura para o meu Telegram</button><button type="button" class="b" data-radar-teste="fechamento">Mandar exemplo do fechamento</button><span class="vazio" id="radar-teste-msg" style="font-size:12.5px"></span></div>
-  <h2>Abas mais usadas pelos assinantes</h2>
-  <p class="vazio" style="text-align:left;margin:0 0 10px;font-size:13px">Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p>
-  <h3 style="margin:18px 0 8px;font-size:15px">Por assinante hoje</h3>
-  <div id="uso-pessoas"><p class="vazio">Carregando…</p></div>
-  <h3 style="margin:18px 0 8px;font-size:15px">Todas as abas</h3>
-  <div id="uso"><p class="vazio">Carregando…</p></div>
+  <section class="painel"><header><h2>Mês a mês</h2><span class="ph">Cadastros, primeiros pagamentos e receita</span></header><div id="funil"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>De onde vêm os visitantes</h2><span class="ph">Visitas e pedidos de acesso por origem</span><details class="info"><summary>Como ler</summary><p>Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p></details></header><div id="origens"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>Radar no WhatsApp</h2><span class="ph">Quem veio do canal, por semana</span><details class="info"><summary>Como ler</summary><p>Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p></details></header>
+    <div id="radar-wa"><p class="vazio">Carregando…</p></div>
+    <div class="ferr" style="margin:12px 0 0"><button type="button" class="b" data-radar-teste="abertura">Mandar exemplo da abertura para o meu Telegram</button><button type="button" class="b" data-radar-teste="fechamento">Mandar exemplo do fechamento</button><span class="vazio" id="radar-teste-msg" style="font-size:12.5px"></span></div>
+  </section>
+  <section class="painel"><header><h2>Assinantes hoje</h2><span class="ph">Quem está no site, em qual aba e em que aparelho</span><details class="info"><summary>Como ler</summary><p>Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p></details></header><div id="uso-pessoas"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>Abas mais usadas</h2><span class="ph">Aberturas por aba: hoje, 7 e 30 dias</span></header><div id="uso"><p class="vazio">Carregando…</p></div></section>
 </section>
 <section data-p="pessoas" hidden>
   <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore readonly aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
@@ -2694,19 +2735,19 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
 <section data-p="comunicado" hidden><h2>E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
 <section data-p="jade" hidden>
-  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
+  <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
   <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
   <div class="ferr"><input id="jade-busca" type="search" placeholder="Filtrar perguntas" autocomplete="off" aria-label="Filtrar perguntas"></div>
   <div id="jade-tab"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="atraso" hidden>
-  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Quanto tempo cada fonte leva entre publicar (horário do feed) e aparecer no site, nos últimos 7 dias. Só conta o que o site viu ao vivo (com alguém conectado), porque fora disso a leitura é a cada 15 minutos. <b>Típico</b> é a mediana (metade chega mais rápido que isso); <b>Nas piores</b> é o tempo que 90% não passam.</p>
+  <p class="vazio nota-topo">Quanto tempo cada fonte leva entre publicar (horário do feed) e aparecer no site, nos últimos 7 dias. Só conta o que o site viu ao vivo (com alguém conectado), porque fora disso a leitura é a cada 15 minutos. <b>Típico</b> é a mediana (metade chega mais rápido que isso); <b>Nas piores</b> é o tempo que 90% não passam.</p>
   <div class="kpis" id="atraso-res" style="margin-bottom:14px"></div>
   <div id="atraso-tab"><p class="vazio">Carregando…</p></div>
 </section>
 <section data-p="passe" hidden>
   <h2>Pedidos ao servidor de dados sem o passe de login</h2>
-  <p class="vazio" style="text-align:left;margin:0 0 12px;font-size:13px">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
+  <p class="vazio nota-topo">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
   <div class="kpis" id="passe-res" style="margin-bottom:14px"></div>
   <div id="passe-tab"><p class="vazio">Carregando…</p></div>
 </section>
@@ -2965,7 +3006,11 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
             + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
   }
+  // hora no cabeçalho e botão Atualizar
+  function relogio(){ var el = document.getElementById('agora'); if (el) el.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); }
+  document.getElementById('recarregar').addEventListener('click', function(){ var b = this; b.disabled = true; carregar(); setTimeout(function(){ b.disabled = false; }, 1200); });
   function carregar(){
+    relogio();
     funil(); origens(); radarWa(); uso();
     fetch('/api/admin/usuarios', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       eu = j.eu; US = j.usuarios; ALERTA = j.alertaTrocas || 4;
