@@ -7,6 +7,8 @@
   "main": "worker.js",
   "compatibility_date": "2026-11-14",
   "workers_dev": true,
+  // sem endereços de prévia por versão (como estava antes de o código vir para o GitHub)
+  "preview_urls": false,
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "d1_databases": [
     { "binding": "HANDOFF_DB", "database_name": "mercadomacro-atendimento", "database_id": "c1cde2a2-b328-4a1a-a7a0-a13578eddcab" }
