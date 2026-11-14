@@ -203,7 +203,9 @@ export default {
       }
       if (p === '/api/passe') {
         // o site aberto renova o passe a cada ~8 min: serve de sinal de "online" no /admin
-        await env.DB.prepare('UPDATE usuarios SET visto = ? WHERE id = ?').bind(new Date().toISOString(), u.id).run().catch(() => 0);
+        // e de que aparelho (14/11/2026): só o tipo (celular, tablet ou computador), tirado do navegador
+        await garantirAparelho(env);
+        await env.DB.prepare('UPDATE usuarios SET visto = ?, aparelho = ? WHERE id = ?').bind(new Date().toISOString(), tipoAparelho(req.headers.get('User-Agent')), u.id).run().catch(() => 0);
         return await emitirPasse(env, u);
       }
       if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u), {
@@ -331,6 +333,19 @@ function origemDe(ref, utm) {
 const ABAS_USO = { 'market-panel': 'Mercado', 'mesa-panel': 'Mesa', 'watch-panel': 'Watchlist', 'heatmap-panel': 'Mapa de Calor', 'news-panel': 'Notícias',
   'weekly-panel': 'Resumo semanal', 'calendar-panel': 'Calendário', 'analysis-panel': 'Macro e Fluxo', 'fund-panel': 'Fundamentos', 'indicators-panel': 'Indicadores',
   'calculator-panel': 'Calculadora', 'options-panel': 'Opções', 'edu-panel': 'Educação' };
+// tipo de aparelho pelo navegador: celular, tablet ou computador (nada além disso é guardado)
+export function tipoAparelho(ua) {
+  const s = String(ua || '');
+  if (/iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(s)) return 'tablet';
+  if (/Mobi|iPhone|iPod|Android|Windows Phone|Opera Mini/i.test(s)) return 'celular';
+  return 'computador';
+}
+let colunaAparelho = false;
+async function garantirAparelho(env) {
+  if (colunaAparelho) return;
+  await env.DB.prepare('ALTER TABLE usuarios ADD COLUMN aparelho TEXT').run().catch(() => {}); // já existe
+  colunaAparelho = true;
+}
 let tabelaUso = false;
 async function garantirUso(env) {
   if (tabelaUso) return;
@@ -1338,7 +1353,8 @@ async function apiAdmin(req, env, acao, eu) {
       const r = await env.DB.prepare('SELECT dia, aba, n, pessoas FROM uso_abas WHERE dia >= ?').bind(desde).all();
       // por assinante: hoje e ontem (a aba atual pode ter sido aberta antes da meia-noite)
       const ontem = new Date(Date.parse(diaBrasilia() + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
-      const pp = await env.DB.prepare('SELECT p.usuario_id id, u.nome, u.visto, p.dia, p.aba, p.n, p.ultimo FROM uso_pessoa p JOIN usuarios u ON u.id = p.usuario_id WHERE p.dia >= ?').bind(ontem).all();
+      await garantirAparelho(env);
+      const pp = await env.DB.prepare('SELECT p.usuario_id id, u.nome, u.visto, u.aparelho, p.dia, p.aba, p.n, p.ultimo FROM uso_pessoa p JOIN usuarios u ON u.id = p.usuario_id WHERE p.dia >= ?').bind(ontem).all();
       return json({ hoje: diaBrasilia(), nomes: ABAS_USO, linhas: r.results, pessoas: pp.results });
     } catch (e) {
       return json({ hoje: diaBrasilia(), nomes: ABAS_USO, linhas: [], pessoas: [] });
@@ -1380,8 +1396,9 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
     await garantirDerrubadas(env);
+    await garantirAparelho(env);
     const r = await env.DB.prepare(
-      `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.visto, u.expira,
+      `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.visto, u.aparelho, u.expira,
         COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano,
         (SELECT COUNT(*) FROM sessoes_derrubadas d WHERE d.usuario_id = u.id AND d.quando > ?) trocas
         FROM usuarios u ORDER BY u.criado DESC`).bind(Date.now() - 7 * 864e5).all();
@@ -2746,6 +2763,8 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   var em7 = function(u){ return u.status === 'ativo' && !u.admin && u.expira && u.expira > agora() && u.expira <= new Date(Date.now() + 7 * 864e5).toISOString(); };
   // online: o site aberto renova o passe a cada ~8 min; sem sinal há 10 min, a pessoa saiu
   function online(u){ return !!u.visto && Date.parse(u.visto) > Date.now() - 10 * 60000; }
+  // celular, tablet ou computador (do último sinal do site aberto)
+  function aparelho(a){ var m = { celular: ['📱', 'Celular'], tablet: ['📱', 'Tablet'], computador: ['💻', 'Computador'] }[a]; return m ? '<span title="' + m[1] + '">' + m[0] + ' ' + m[1] + '</span>' : '<span style="color:var(--text-3)">—</span>'; }
   function ultimo(u){ var a = u.ultimo_acesso || '', b = u.visto || ''; return (a > b ? a : b) || null; }
   var FILTROS = [
     ['todos', 'Todos', function(){ return true; }],
@@ -2811,7 +2830,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
       + lista.map(function(u){
         return '<tr><td class="p"><div class="pp"><span class="av' + (online(u) ? ' on' : '') + '" aria-hidden="true">' + esc(iniciais(u.nome)) + '</span><div><button type="button" class="nm" data-h="' + u.id + '">' + esc(u.nome) + '</button><span>' + esc(u.email) + '</span>' + (u.celular ? '<span class="cel">' + celFmt(u.celular) + '</span>' : '') + '</div></div></td>'
           + '<td><span class="pill ' + (u.admin ? 'admin' : u.status) + '">' + (u.admin ? 'Administrador' : SIT[u.status] || u.status) + '</span></td>'
-          + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + (online(u) ? '<span class="onl">online agora</span>' : data(ultimo(u))) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
+          + '<td class="c" data-r="Plano">' + plano(u) + '</td><td class="c" data-r="Validade">' + validade(u) + '</td><td class="c" data-r="Último acesso">' + (online(u) ? '<span class="onl">online agora' + (u.aparelho ? ' · ' + (u.aparelho === 'computador' ? '💻' : '📱') + ' ' + u.aparelho : '') + '</span>' : data(ultimo(u))) + '</td><td class="c" data-r="Cadastro">' + dia(u.criado) + '</td>'
           + '<td class="ac">' + botoes(u) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<p class="vazio">Ninguém ' + (q ? 'com essa busca' : 'nesta lista') + '.</p>';
     document.getElementById('nota-pessoas').textContent = US.some(function(u){ return u.status === 'confirmar'; }) ? 'Quem está "Sem confirmar e-mail" pediu acesso mas não clicou no link de confirmação; some sozinho depois de 7 dias.' : '';
@@ -2929,7 +2948,7 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
   function pessoasUso(j){
     var raiz = document.getElementById('uso-pessoas'), P = {}, nomes = j.nomes || {};
     (j.pessoas || []).forEach(function(l){
-      var p = P[l.id] || (P[l.id] = { nome: l.nome, visto: l.visto, aba: null, ult: '', abas: {}, tot: 0 });
+      var p = P[l.id] || (P[l.id] = { nome: l.nome, visto: l.visto, aparelho: l.aparelho, aba: null, ult: '', abas: {}, tot: 0 });
       if (l.ultimo > p.ult) { p.ult = l.ultimo; p.aba = l.aba; }
       if (l.dia === j.hoje) { p.abas[l.aba] = (p.abas[l.aba] || 0) + l.n; p.tot += l.n; }
     });
@@ -2939,10 +2958,10 @@ dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
     var no = L.filter(online).length;
     raiz.innerHTML = !L.length ? '<p class="vazio">Ninguém abriu o terminal hoje ainda.</p>'
       : '<p class="vazio" style="text-align:left;margin:0 0 8px;font-size:13px"><b>' + no + '</b> ' + (no === 1 ? 'pessoa no site agora' : 'pessoas no site agora') + ' · ' + L.length + ' usaram hoje</p>'
-      + '<div class="mmw"><table class="mm"><thead><tr><th>Assinante</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
+      + '<div class="mmw"><table class="mm"><thead><tr><th>Assinante</th><th>Aparelho</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
       + L.map(function(p){
           var on = online(p), ab = Object.keys(p.abas).sort(function(a, b){ return p.abas[b] - p.abas[a]; });
-          return '<tr><td>' + esc(p.nome) + '</td><td>' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td>' + (p.tot || 0) + '</td><td>'
+          return '<tr><td>' + esc(p.nome) + '</td><td>' + aparelho(p.aparelho) + '</td><td>' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td>' + (p.tot || 0) + '</td><td>'
             + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
   }
