@@ -1,12 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-const source = await readFile(new URL('../src/jade-whatsapp.js', import.meta.url), 'utf8');
-const stub = 'class WorkerEntrypoint { constructor(ctx, env) { this.env = env; } }';
-const moduleURL = 'data:text/javascript;base64,' + Buffer.from(source.replace("import { WorkerEntrypoint } from 'cloudflare:workers';", stub)).toString('base64');
-const { jadeAccount, JadeWatchlist } = await import(moduleURL);
+import { jadeAccount, JadeWatchlist } from '../src/jade-whatsapp.js';
 
 test('Jade vincula uma vez, isola contas e revoga o acesso', async () => {
   const sql = new DatabaseSync(':memory:');
