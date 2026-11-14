@@ -3410,7 +3410,7 @@ html body .topbar.topbar .topbar-right #theme-toggle { display:inline-flex; alig
   html body .aj-categories .aj-plano { margin:0 0 6px; }
   html body .aj-categories .aj-busca { margin:0 0 6px; }
   html body .aj-busca-cel { display:none; }
-  html body .aj-rapido { grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:20px; }
+  html body .aj-rapido { grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:20px; }
   html body .aj-buscando .aj-body > .aj-group:not([hidden]) { display:block; margin-bottom:12px; }
   html body .aj-body .aj-group[hidden], html body .aj-body .aj-sec[hidden] { display:none; }
 }
