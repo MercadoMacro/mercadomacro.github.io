@@ -494,7 +494,7 @@
     root.innerHTML = `<div class="mn">
       <div class="mn-bar">
         <div><h2>Mercado</h2><span class="mn-sub">${errMsg ? `<span class="mn-err">${esc(errMsg)}</span>` : `Atualizado às ${hora}`}</span></div>
-        <div class="mn-acts"><button type="button" class="mn-btn mn-refresh">Atualizar</button></div>
+        <div class="mn-acts"><button type="button" class="mn-btn mn-refresh" aria-label="Atualizar cotações" title="Atualizar cotações"><i class="fas fa-sync-alt" aria-hidden="true"></i><span>Atualizar</span></button></div>
       </div>
       ${errMsg ? `<p class="quotes-warning" role="status">Não foi possível atualizar as cotações. Os valores podem estar desatualizados ou indisponíveis.</p>` : ''}
       <div class="mn-grid">${ordem().map(cartao).join('')}${cartaoCmc()}${cartaoPerp()}</div>
@@ -578,6 +578,21 @@
   .mn-root .mn-btn { font:inherit; font-size:12.5px; color:var(--text-2); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; }
   .mn-root .mn-btn:hover { color:var(--text); }
   .mn-root .mn-refresh.busy { opacity:.6; pointer-events:none; }
+  .mn-root .mn-refresh i { display:none; }
+  .mn-root .mn-refresh.busy i { animation:mn-gira 1s linear infinite; }
+  @keyframes mn-gira { to { transform:rotate(360deg); } }
+  /* celular (14/11/2026): sem o título repetido (a aba já diz Mercado), só a hora e o atualizar redondo; sem a barrinha de rolagem */
+  @media (max-width: 640px) {
+    .mn-root { scrollbar-width:none; }
+    .mn-root::-webkit-scrollbar { display:none; }
+    .mn-root .mn { gap:12px; }
+    .mn-root .mn-bar { align-items:center; flex-wrap:nowrap; padding:0 2px; }
+    .mn-root .mn-bar h2 { display:none; }
+    .mn-root .mn-sub { font-size:13px; }
+    .mn-root .mn-refresh { width:36px; height:36px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
+    .mn-root .mn-refresh i { display:inline-block; font-size:14px; }
+    .mn-root .mn-refresh span { display:none; }
+  }
   .mn-root .mn-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:14px; align-items:start; }
   .mn-root .mn-card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 14px 8px; display:flex; flex-direction:column; gap:8px; min-width:0; }
   .mn-root .mn-head { display:flex; align-items:center; gap:10px; min-width:0; }
