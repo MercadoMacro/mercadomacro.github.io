@@ -507,7 +507,7 @@ async function resumoSemanal(env) {
     '',
     '🩺 Saúde do site',
     feeds.length ? `- Fontes de notícias com bloqueio: ${feeds.map((f) => `${f.fonte} (${f.lim + f.err} de ${f.ok + f.lim + f.err} leituras)`).join(', ')}` : '- Fontes de notícias: nenhuma com bloqueio relevante',
-    csp ? `- Avisos de segurança (CSP): ${mil(csp)}${cspTop ? ` (o mais comum: ${cspTop.bloqueado === 'inline' ? 'código embutido na página' : String(cspTop.bloqueado).slice(0, 60)})` : ''}. Só avisos: nada é bloqueado ainda`` : '- Avisos de segurança (CSP): nenhum',
+    csp ? `- Avisos de segurança (CSP): ${mil(csp)}${cspTop ? ` (o mais comum: ${cspTop.bloqueado === 'inline' ? 'código embutido na página' : String(cspTop.bloqueado).slice(0, 60)})` : ''}. Só avisos: nada é bloqueado ainda` : '- Avisos de segurança (CSP): nenhum',
     '',
     'Mais detalhes (países, aparelhos): painel da Cloudflare > Web Analytics.',
   ].join('\n') + await especuladores();
