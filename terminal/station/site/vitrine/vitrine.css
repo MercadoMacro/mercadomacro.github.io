@@ -334,3 +334,23 @@ main { width: 100%; }
 .vt-plx li strong small { display: block; font-weight: 500; }
 .vt-plx-s { font-size: 13px !important; margin: 12px 0 0 !important; }
 .vt-plx .vt-enviar { margin-top: 14px; }
+
+/* conversão (15/11/2026): chamada no topo, planos na página inicial e perguntas frequentes */
+.vt-hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 8px; }
+.vt-hero-cta .vt-bt { text-decoration: none; }
+.vt-hero-nota { color: var(--text-3); font-size: 13.5px; margin: 0 0 22px; }
+.vt-hero-nota b { color: var(--text-2); }
+.vt-planos-pe { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 22px; }
+.vt-planos-pe a { color: var(--text-2); font-size: 14px; }
+.vt-faq { max-width: 860px; display: grid; gap: 10px; }
+.vt-faq details { background: rgba(13,20,34,.85); border: 1px solid var(--line); border-radius: 12px; padding: 0 18px; }
+.vt-faq summary { cursor: pointer; padding: 16px 0; font-weight: 600; font-size: 15.5px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.vt-faq summary::-webkit-details-marker { display: none; }
+.vt-faq summary::after { content: '+'; color: var(--accent); font-weight: 700; font-size: 18px; line-height: 1; }
+.vt-faq details[open] summary::after { content: '−'; }
+.vt-faq details p { margin: 0 0 16px; color: var(--text-2); line-height: 1.6; font-size: 14.5px; }
+@media (max-width: 900px) { .vt-planos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .vt-hero-cta .vt-bt { width: 100%; justify-content: center; }
+  .vt-planos { grid-template-columns: 1fr; }
+}
