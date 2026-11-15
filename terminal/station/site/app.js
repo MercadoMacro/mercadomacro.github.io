@@ -1219,7 +1219,7 @@ function toggleNewsPolitica() {
   if (newsLiveShown()) renderLiveView();
 }
 const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias de meses atrás
-const NEWS_TR_KEY = 'news_tr_v1';
+const NEWS_TR_KEY = 'news_tr_v2'; // v2 (15/11/2026): descarta os trechos antigos, que no Zero Hedge eram a manchete repetida
 let newsTr = {};
 try { newsTr = JSON.parse(localStorage.getItem(NEWS_TR_KEY) || '{}') || {}; } catch (e) { newsTr = {}; }
 function newsAplicaTraducao(n) {
@@ -4897,7 +4897,14 @@ function newsReadMins(n) {
 
 (() => {
   const FS_KEY = 'news_reader_fs';
-  const trCache = {};
+  const trCache = {}, trOriginal = new Set(), trTentou = new Set();
+  // tira do texto a manchete repetida e o "Authored by... via..." do começo (Zero Hedge e outros)
+  const limpaCorpo = (n, texto) => {
+    const tits = [n.tituloOriginal, n.titulo].filter(Boolean).map(newsSoLetras);
+    const ps = String(texto || '').split('\n\n');
+    while (ps.length > 1 && (tits.includes(newsSoLetras(ps[0])) || /^(authored by|submitted by|via )/i.test(ps[0].trim()) || !ps[0].trim())) ps.shift();
+    return ps.join('\n\n');
+  };
   let fs = 16;
   try { fs = +localStorage.getItem(FS_KEY) || 16; } catch (e) { /* silencioso */ }
   let list = [], idx = -1, cur = null;
@@ -4985,8 +4992,12 @@ function newsReadMins(n) {
     const d = new Date(n.data);
     const mins = newsReadMins(n);
     const intl = isIntl(n);
-    const tr = trCache[n.link];
-    const text = tr || n.resumo || '';
+    const verOrig = trOriginal.has(n.link);
+    const tr = verOrig ? '' : trCache[n.link];
+    const traduzindo = intl && !tr && !verOrig && n.resumo && !trTentou.has(n.link);
+    const text = tr || limpaCorpo(n, n.resumo || '');
+    // resumo em português que só repete a manchete não aparece
+    const ledeBoa = n.trechoPt && newsSoLetras(n.trechoPt) !== newsSoLetras(n.titulo);
     const short = (n.palavras || 0) < 120;
     const impact = n.impactScore >= 10 ? '<span class="nc-impact critico">Alto Impacto</span>' : n.impactScore >= 7 ? '<span class="nc-impact alto">Relevante</span>' : n.impactScore >= 4 ? '<span class="nc-impact medio">Mercado</span>' : '';
     const related = (n.related || []);
@@ -5008,10 +5019,11 @@ function newsReadMins(n) {
         <button class="btn-sm${bionicOn ? ' on' : ''}" id="nr-bionic" title="Ativar/desativar Leitura Dinâmica (Bionic Reading)"><i class="fas fa-bolt"></i> Leitura Rápida</button>
         <button class="btn-sm${picked ? ' on' : ''}" id="nr-pick"><i class="fas fa-star"></i> ${picked ? 'No resumo do cliente' : 'Mandar ao cliente'}</button>
         <button class="btn-sm" id="nr-copy"><i class="fab fa-whatsapp"></i> Copiar para WhatsApp</button>
-        ${intl && n.resumo && !tr ? '<button class="btn-sm" id="nr-tr"><i class="fas fa-language"></i> Traduzir texto completo</button>' : ''}
+        ${intl && n.resumo && !tr && !traduzindo ? `<button class="btn-sm" id="nr-tr"><i class="fas fa-language"></i> ${verOrig ? 'Ver em português' : 'Traduzir texto completo'}</button>` : ''}
+        ${intl && tr ? '<button class="btn-sm" id="nr-orig"><i class="fas fa-language"></i> Ver original em inglês</button>' : ''}
       </div>
-      ${intl && n.trechoPt && !tr ? `<div class="nr-lede"><small>Resumo em português</small>${escapeHTML(n.trechoPt)}</div>` : ''}
-      <div class="nr-body" id="nr-body">${text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
+      ${intl && ledeBoa && !tr && !traduzindo ? `<div class="nr-lede"><small>Resumo em português</small>${escapeHTML(n.trechoPt)}</div>` : ''}
+      <div class="nr-body" id="nr-body">${traduzindo ? '<p class="nr-traduzindo" style="color:var(--text-3);font-size:13px"><i class="fas fa-language"></i> Traduzindo o texto…</p><div class="nr-skel"></div><div class="nr-skel" style="width:92%"></div><div class="nr-skel" style="width:80%"></div>' : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
       ${!text ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>${escapeHTML(srcOf(n))} envia só a manchete pelo feed, sem o texto. ${related.length ? 'Veja abaixo como outras fontes noticiaram o mesmo fato.' : ''}</span></div>`
         : short ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>Este é o trecho que ${escapeHTML(srcOf(n))} libera pelo feed. A matéria completa fica no site.</span></div>` : ''}
       ${related.length ? `<section class="nr-sec"><h3>Também noticiado por</h3>${related.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}
@@ -5027,7 +5039,10 @@ function newsReadMins(n) {
     });
     $('#nr-pick').addEventListener('click', () => { toggleNewsPick(n.id); render(); });
     $('#nr-copy').addEventListener('click', copyWa);
-    $('#nr-tr')?.addEventListener('click', translateFull);
+    $('#nr-tr')?.addEventListener('click', () => { if (trCache[n.link]) { trOriginal.delete(n.link); render(); } else translateFull(); });
+    $('#nr-orig')?.addEventListener('click', () => { trOriginal.add(n.link); render(); });
+    // 15/11/2026: notícia em inglês já abre traduzida (uma vez por notícia; se falhar, fica o botão)
+    if (traduzindo) translateFull();
   }
 
   // Plano B: o próprio navegador pede a tradução ao Google (IP do usuário, que raramente é bloqueado)
@@ -5052,20 +5067,21 @@ function newsReadMins(n) {
 
   async function translateFull() {
     const n = cur, btn = $('#nr-tr');
+    trTentou.add(n.link); trOriginal.delete(n.link);
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-language"></i> Traduzindo…'; }
-    $('#nr-body').innerHTML = '<div class="nr-skel"></div><div class="nr-skel" style="width:92%"></div><div class="nr-skel" style="width:80%"></div>';
-    let texto = '', erroWorker = '';
-    try {
-      const res = await fetchT(`${NEWS_WORKER_URL}traduzir?u=${encodeURIComponent(n.link)}`, { cache: 'no-store' }, 25000);
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.texto) throw new Error(j.error || `HTTP ${res.status}`);
-      texto = j.texto;
-    } catch (e) {
-      erroWorker = e.message;
+    if (!$('#nr-body .nr-traduzindo')) $('#nr-body').innerHTML = '<div class="nr-skel"></div><div class="nr-skel" style="width:92%"></div><div class="nr-skel" style="width:80%"></div>';
+    let texto = '', erroNav = '';
+    // o navegador pede ao Google direto (1 a 2 s); o servidor fica de plano B, porque o Google costuma recusá-lo
+    if (n.resumo) {
+      try { texto = await translateInBrowser(limpaCorpo(n, n.resumo)); }
+      catch (e) { erroNav = e.message; }
     }
-    if (!texto && n.resumo) {
-      try { texto = await translateInBrowser(n.resumo); }
-      catch (e) { console.warn('Tradução falhou. Worker:', erroWorker, '| Navegador:', e.message); }
+    if (!texto) {
+      try {
+        const res = await fetchT(`${NEWS_WORKER_URL}traduzir?u=${encodeURIComponent(n.link)}`, { cache: 'no-store' }, 20000);
+        const j = await res.json().catch(() => ({}));
+        if (res.ok && j.texto) texto = limpaCorpo(n, j.texto);
+      } catch (e) { console.warn('Tradução falhou. Navegador:', erroNav, '| Servidor:', e.message); }
     }
     if (texto) trCache[n.link] = texto;
     else toast('Não foi possível traduzir agora. Tente de novo em alguns minutos.', 'warning');
@@ -5074,7 +5090,7 @@ function newsReadMins(n) {
 
   function copyWa() {
     const n = cur;
-    const text = trCache[n.link] || n.resumo || '';
+    const text = trCache[n.link] || limpaCorpo(n, n.resumo || '');
     let corpo = '';
     for (const p of text.split('\n\n')) { if ((corpo + p).length > 700) break; corpo += (corpo ? '\n\n' : '') + p; }
     if (!corpo && n.trechoPt) corpo = n.trechoPt;
