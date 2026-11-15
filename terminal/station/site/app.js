@@ -4898,6 +4898,9 @@ function newsReadMins(n) {
 (() => {
   const FS_KEY = 'news_reader_fs';
   const trCache = {}, trOriginal = new Set(), trTentou = new Set();
+  // aviso de tradução (15/11/2026): cartão com barra de progresso e pontinhos animados, e o texto "desenhando" embaixo
+  const nrTradBox = () => '<div class="nr-traduzindo" role="status" aria-live="polite"><div class="nr-trad-top"><span class="nr-trad-ic"><i class="fas fa-language" aria-hidden="true"></i></span><span class="nr-trad-tx"><b>Traduzindo para o português<span class="nr-dots" aria-hidden="true"><i></i><i></i><i></i></span></b><small>Leva só alguns segundos</small></span></div><div class="nr-trad-bar" aria-hidden="true"><span></span></div></div>'
+    + '<div class="nr-skel"></div><div class="nr-skel" style="width:94%"></div><div class="nr-skel" style="width:86%"></div><div class="nr-skel" style="width:90%;margin-top:22px"></div><div class="nr-skel" style="width:72%"></div>';
   // tira do texto a manchete repetida e o "Authored by... via..." do começo (Zero Hedge e outros)
   const limpaCorpo = (n, texto) => {
     const tits = [n.tituloOriginal, n.titulo].filter(Boolean).map(newsSoLetras);
@@ -5023,7 +5026,7 @@ function newsReadMins(n) {
         ${intl && tr ? '<button class="btn-sm" id="nr-orig"><i class="fas fa-language"></i> Ver original em inglês</button>' : ''}
       </div>
       ${intl && ledeBoa && !tr && !traduzindo ? `<div class="nr-lede"><small>Resumo em português</small>${escapeHTML(n.trechoPt)}</div>` : ''}
-      <div class="nr-body" id="nr-body">${traduzindo ? '<p class="nr-traduzindo" style="color:var(--text-3);font-size:13px"><i class="fas fa-language"></i> Traduzindo o texto…</p><div class="nr-skel"></div><div class="nr-skel" style="width:92%"></div><div class="nr-skel" style="width:80%"></div>' : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
+      <div class="nr-body" id="nr-body">${traduzindo ? nrTradBox() : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
       ${!text ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>${escapeHTML(srcOf(n))} envia só a manchete pelo feed, sem o texto. ${related.length ? 'Veja abaixo como outras fontes noticiaram o mesmo fato.' : ''}</span></div>`
         : short ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>Este é o trecho que ${escapeHTML(srcOf(n))} libera pelo feed. A matéria completa fica no site.</span></div>` : ''}
       ${related.length ? `<section class="nr-sec"><h3>Também noticiado por</h3>${related.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}
@@ -5069,7 +5072,7 @@ function newsReadMins(n) {
     const n = cur, btn = $('#nr-tr');
     trTentou.add(n.link); trOriginal.delete(n.link);
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-language"></i> Traduzindo…'; }
-    if (!$('#nr-body .nr-traduzindo')) $('#nr-body').innerHTML = '<div class="nr-skel"></div><div class="nr-skel" style="width:92%"></div><div class="nr-skel" style="width:80%"></div>';
+    if (!$('#nr-body .nr-traduzindo')) $('#nr-body').innerHTML = nrTradBox();
     let texto = '', erroNav = '';
     // o navegador pede ao Google direto (1 a 2 s); o servidor fica de plano B, porque o Google costuma recusá-lo
     if (n.resumo) {
