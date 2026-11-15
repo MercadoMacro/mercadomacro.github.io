@@ -3466,3 +3466,21 @@ html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !impor
 @keyframes nrTradPonto { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
 @keyframes nrTradPulso { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 7px transparent; } }
 @media (prefers-reduced-motion: reduce) { .nr-trad-ic, .nr-dots i, .nr-trad-bar span::after, #nr-body .nr-skel { animation: none; } .nr-trad-bar span { animation-duration: .01s; } }
+
+/* LOGO OFICIAL (15/11/2026, opção B escolhida pelo Dante): o M com a seta e "MERCADO / MACRO" empilhado, igual ao ícone
+   do app e à vitrine. No celular, no topo; no computador, na barra lateral (recolhida: só o símbolo).
+   Para voltar ao logo anterior: apagar este bloco e restaurar o .side-brand do app.js e as imagens do h1. */
+@media (max-width: 900px) {
+  html body .topbar.topbar .mm-logo .mm-img { display:block !important; height:34px; width:auto; }
+  html body.light .topbar.topbar .mm-logo .mm-dark, html body:not(.light) .topbar.topbar .mm-logo .mm-light { display:none !important; }
+  html body .topbar.topbar .mm-mini { display:none !important; }
+}
+@media (max-width: 359px) { html body .topbar.topbar .mm-logo .mm-img { height:28px; } }
+body.has-side .side-brand { min-height:40px; }
+body.has-side .side-brand .sb-logo { height:36px; width:auto; display:block; }
+body.has-side .side-brand .sb-marca { height:30px; width:auto; display:none; }
+body.has-side .side-brand .sb-claro, body.light.has-side .side-brand .sb-escuro { display:none !important; }
+body.light.has-side .side-brand .sb-logo.sb-claro { display:block !important; }
+body.has-side.side-collapsed .side-brand .sb-logo { display:none !important; }
+body.has-side.side-collapsed .side-brand .sb-marca.sb-escuro { display:block; }
+body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:block !important; }
