@@ -35,7 +35,7 @@ const BOAS_VINDAS = 'Olá! Sou a Jade, assistente virtual do Mercado Macro. 😊
 const textoDe = (r) => (r && typeof r === 'object' ? r.texto : r) || '';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname !== "/webhook") {
@@ -121,6 +121,7 @@ export default {
           ? env.WHATSAPP_PRODUCTION_ACCESS_TOKEN
           : phoneId === TESTE ? env.WHATSAPP_ACCESS_TOKEN : undefined;
         if (!accessToken) continue;
+        if (phoneId === PRODUCAO && ctx?.waitUntil) ctx.waitUntil(atualizarPerfil(env, phoneId, accessToken).catch((e) => console.warn('Jade: perfil', e.name, e.message)));
 
         for (const message of value.messages ?? []) {
           if (!/^\d{8,15}$/.test(message.from ?? '')) continue;
@@ -711,4 +712,35 @@ async function duvida(db, key, somar) {
   const agora = Date.now();
   const r = await db.prepare('INSERT INTO jade_duvida (conversation_key, n, expires_at) VALUES (?, 1, ?) ON CONFLICT(conversation_key) DO UPDATE SET n = CASE WHEN jade_duvida.expires_at > ? THEN jade_duvida.n + 1 ELSE 1 END, expires_at = excluded.expires_at RETURNING n').bind(key, agora + 1800000, agora).first();
   return Number(r?.n) || 1;
+}
+
+/* Perfil comercial do número da Jade (15/11/2026, pedido do Dante). No Gerenciador do WhatsApp o formulário do perfil
+   aparece travado, então o perfil é gravado pela API, uma vez por versão: na primeira mensagem que chegar depois do
+   deploy. Para mudar: editar PERFIL e subir PERFIL_VERSAO. A foto não muda aqui. */
+export const PERFIL_VERSAO = '2026-11-15a';
+export const PERFIL = {
+  about: 'Notícias, cotações e análises do mercado. Fale com a Jade 24h.',
+  description: 'Mercado Macro: notícias em tempo real, cotações, indicadores e análises do mercado brasileiro e internacional, num só terminal.\n\nAqui no WhatsApp, a Jade, nossa assistente, responde na hora. Mande, por exemplo:\n• PETR4 (ou outro ativo)\n• notícias\n• agenda\n• planos\n\nPara falar com a equipe, escreva SIM QUERO.\nTerminal: mercadomacro.com.br',
+  vertical: 'FINANCE',
+  address: 'São Paulo, SP, Brasil',
+  email: 'contato@mercadomacro.com.br',
+  websites: ['https://mercadomacro.com.br/', 'https://mercadomacro.com.br/radar'],
+};
+async function atualizarPerfil(env, phoneId, accessToken) {
+  const db = env.HANDOFF_DB;
+  await db.prepare('CREATE TABLE IF NOT EXISTS jade_config (chave TEXT PRIMARY KEY, valor TEXT)').run();
+  const r = await db.prepare("SELECT valor FROM jade_config WHERE chave = 'perfil_versao'").first();
+  if (r && r.valor === PERFIL_VERSAO) return false;
+  // marca antes de enviar, para duas mensagens ao mesmo tempo não repetirem a chamada; se falhar, desfaz
+  await db.prepare("INSERT INTO jade_config (chave, valor) VALUES ('perfil_versao', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor").bind(PERFIL_VERSAO).run();
+  const res = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/whatsapp_business_profile', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', ...PERFIL }),
+  });
+  const corpo = await res.text().catch(() => '');
+  await db.prepare("INSERT INTO jade_config (chave, valor) VALUES ('perfil_resultado', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor")
+    .bind(new Date().toISOString() + ' ' + res.status + ' ' + corpo.slice(0, 300)).run();
+  if (!res.ok) { await db.prepare("DELETE FROM jade_config WHERE chave = 'perfil_versao'").run(); return false; }
+  return true;
 }
