@@ -224,6 +224,18 @@
   .side-etq::before { content:""; position:absolute; left:-5px; top:50%; transform:translateY(-50%); border:5px solid transparent; border-left:0; border-right-color:var(--text); }
   /* Auto-atualizar e Aparência saem da barra (ficam em Ajustes; o tema também no atalho Alt+L) para sobrar altura */
   body.has-side .side #side-live, body.has-side .side #side-theme { display:none !important; }
+  /* telas baixas (notebook): itens mais juntos para a barra caber inteira com um submenu aberto; abaixo de 820 px de
+     altura, os títulos dos grupos viram uma linha fina (medido no PC do Dante, 15/11/2026) */
+  @media (min-width:901px) and (max-height:900px) {
+    body.has-side .side .side-nav .side-item { padding-top:5px; padding-bottom:5px; }
+    body.has-side .side .side-subitem { padding-top:4px; padding-bottom:4px; margin:0; }
+    body.has-side .side .side-group { padding:10px 12px 3px; }
+  }
+  @media (min-width:901px) and (max-height:820px) {
+    body.has-side .side .side-nav .side-item { padding-top:3px; padding-bottom:3px; }
+    body.has-side .side .side-foot .side-item { padding-top:4px; padding-bottom:4px; }
+    body.has-side .side .side-group { font-size:0; line-height:0; padding:0; height:1px; margin:7px 12px; background:var(--line); }
+  }
   `;
   document.head.appendChild(css);
 })();
