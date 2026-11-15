@@ -143,6 +143,7 @@ export default {
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/planos' || p === '/termos') return await paginaPlanos(req, env);
       if (p === '/telegram') return await irParaCanal(req, env, ctx, url);
+      if (p === '/radar') return irParaRadar(req, env, ctx, url);
       if (p === '/api/publico/canal') return await previaCanal(env);
       if (p === '/confirmar') return await paginaConfirmar(req, env, ctx);
       if (p === '/esqueci') return paginaEsqueci();
@@ -1837,6 +1838,13 @@ async function conviteDoCanal(env, lugar) {
   await salvarConfig(env, { [k]: c.tg_canal + '|' + r.result.invite_link });
   return r.result.invite_link;
 }
+// canal "Radar Mercado Macro" no WhatsApp (14/11/2026): /radar conta o clique (por lugar) e leva ao canal
+const RADAR_CANAL = 'https://whatsapp.com/channel/0029Vb9buP2CRs1jw66ZrH41';
+function irParaRadar(req, env, ctx, url) {
+  const lugar = LUGARES_CANAL[url.searchParams.get('de')] ? url.searchParams.get('de') : 'rodape';
+  if (!ROBO.test(req.headers.get('User-Agent') || '')) contarOrigem(env, ctx, 'WhatsApp · ' + LUGARES_CANAL[lugar], 'canal');
+  return new Response(null, { status: 302, headers: { Location: RADAR_CANAL, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+}
 async function irParaCanal(req, env, ctx, url) {
   const lugar = LUGARES_CANAL[url.searchParams.get('de')] ? url.searchParams.get('de') : 'rodape';
   const link = await conviteDoCanal(env, lugar).catch(() => null);
@@ -3067,8 +3075,8 @@ h2 b{font-size:12px;font-weight:700}
         + '</tbody></table></div>') + canal();
       function canal(){
         var k = Object.keys(TG);
-        return '<h2 style="margin-top:22px">Cliques no convite do canal do Telegram</h2>' + (k.length ? '<div class="mmw"><table class="mm"><thead><tr><th>Onde clicou</th><th>7 dias</th><th>30 dias</th></tr></thead><tbody>'
-          + k.sort(function(a, b){ return TG[b].m - TG[a].m; }).map(function(n){ return '<tr><td>' + esc(n) + '</td><td>' + f(TG[n].s) + '</td><td>' + f(TG[n].m) + '</td></tr>'; }).join('') + '</tbody></table></div>'
+        return '<h2 style="margin-top:22px">Cliques nos convites dos canais (Telegram e WhatsApp)</h2>' + (k.length ? '<div class="mmw"><table class="mm"><thead><tr><th>Onde clicou</th><th>7 dias</th><th>30 dias</th></tr></thead><tbody>'
+          + k.sort(function(a, b){ return TG[b].m - TG[a].m; }).map(function(n){ return '<tr><td>' + esc(/^WhatsApp · /.test(n) ? n : 'Telegram · ' + n) + '</td><td>' + f(TG[n].s) + '</td><td>' + f(TG[n].m) + '</td></tr>'; }).join('') + '</tbody></table></div>'
           : '<p class="vazio" style="text-align:left">Nenhum clique ainda.</p>')
           + '<p class="vazio" style="text-align:left;margin-top:8px;font-size:13px">Quantos entraram de fato aparece no próprio Telegram: no canal, Links de convite, um link para cada lugar (nome começa com "Site:").</p>';
       }
