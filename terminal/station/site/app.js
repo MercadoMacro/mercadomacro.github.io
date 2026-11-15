@@ -1224,9 +1224,9 @@ let newsTr = {};
 try { newsTr = JSON.parse(localStorage.getItem(NEWS_TR_KEY) || '{}') || {}; } catch (e) { newsTr = {}; }
 function newsAplicaTraducao(n) {
   const t = newsTr[n.link];
-  if (!t || n.traduzido) return;
-  if (t[0]) { n.tituloOriginal = n.titulo; n.titulo = t[0]; n.traduzido = true; }
-  if (t[1]) n.trechoPt = t[1];
+  if (!t) return;
+  if (t[0] && !n.traduzido) { n.tituloOriginal = n.titulo; n.titulo = t[0]; n.traduzido = true; }
+  if (t[1]) n.trechoPt = t[1]; // 15/11/2026: o trecho chega depois do título; antes ficava de fora até recarregar
 }
 // tira notícias velhas, o "FinancialJuice:" do começo e aplica as traduções já guardadas
 // Notícias Agrícolas lidas no navegador do leitor (09/11/2026): o site deles passou a barrar leitura automática
@@ -1323,6 +1323,15 @@ function newsLotes(itens, campo) {
   if (atual.length) lotes.push(atual);
   return lotes;
 }
+// o trecho que o cartão mostra; pula a manchete repetida e o "Authored by... via..." do começo (Zero Hedge)
+const newsSoLetras = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9à-ú]+/g, '');
+const newsTextoCurto = (n) => {
+  const tit = newsSoLetras(n.tituloOriginal || n.titulo);
+  const bom = (x) => x && newsSoLetras(x.replace(/…$/, '')) !== tit && !tit.startsWith(newsSoLetras(x.replace(/…$/, ''))) && !/^(authored by|submitted by|via )/i.test(x);
+  const ps = [n.trecho].concat(String(n.resumo || '').split('\n\n')).map(x => String(x || '').trim()).filter(x => x.length > 40);
+  return (ps.find(bom) || '').replace(/\n+/g, ' ').slice(0, 400);
+};
+const newsTrPulados = new Set(); // trechos que o Google devolveu vazios: não tenta de novo nesta visita
 let newsTraduzindo = false, newsTrDeNovo = false, newsTrEspera = 0, newsTrTimer = null;
 // traduz no navegador de quem lê (só o que ainda não foi traduzido; fica guardado neste aparelho).
 // 15/11/2026: as mais novas primeiro (as que chegam ao vivo ficam em português em 1 a 2 s); se chegar notícia
@@ -1330,7 +1339,8 @@ let newsTraduzindo = false, newsTrDeNovo = false, newsTrEspera = 0, newsTrTimer 
 async function newsTraduzir() {
   if (newsTraduzindo) { newsTrDeNovo = true; return; }
   const falta = newsAll.filter(n => NEWS_EN.has(n.fonte) && !n.traduzido && !(newsTr[n.link] && newsTr[n.link][0]));
-  const faltaTrecho = newsAll.filter(n => NEWS_EN.has(n.fonte) && n.trecho && !(newsTr[n.link] && newsTr[n.link][1])).length;
+  const semTrecho = (n) => NEWS_EN.has(n.fonte) && !newsTrPulados.has(n.link) && newsTextoCurto(n) && !(newsTr[n.link] && newsTr[n.link][1]);
+  const faltaTrecho = newsAll.filter(semTrecho).length;
   if (!falta.length && !faltaTrecho) return;
   newsTraduzindo = true; newsTrDeNovo = false;
   let falhou = false;
@@ -1356,13 +1366,15 @@ async function newsTraduzir() {
       } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
     }
     if (!falhou) {
-      const comTrecho = newsAll.filter(n => NEWS_EN.has(n.fonte) && n.trecho && !(newsTr[n.link] && newsTr[n.link][1]))
-        .sort((a, b) => newsRank(b) - newsRank(a)).slice(0, 80)
-        .map(n => ({ n, trecho: n.trecho.replace(/\n+/g, ' ').slice(0, 400) }));
-      for (const lote of newsLotes(comTrecho, 'trecho').slice(0, 10)) {
+      // trechos: as mais novas primeiro; o que não couber nesta rodada vai na próxima (2 s depois)
+      const comTrecho = newsAll.filter(semTrecho).sort((a, b) => b.data - a.data).slice(0, 120)
+        .map(n => ({ n, trecho: newsTextoCurto(n) }));
+      const lotesT = newsLotes(comTrecho, 'trecho');
+      if (lotesT.length > 12) newsTrDeNovo = true;
+      for (const lote of lotesT.slice(0, 12)) {
         try {
           const tr = await newsTraduzSeguro(lote.map(x => x.trecho));
-          lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; });
+          lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; else newsTrPulados.add(x.n.link); });
         } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
       }
     }
@@ -1374,7 +1386,7 @@ async function newsTraduzir() {
     newsTraduzindo = false;
     clearTimeout(newsTrTimer);
     if (falhou) { newsTrEspera = Math.min((newsTrEspera || 10000) * 2, 300000); newsTrTimer = setTimeout(newsTraduzir, newsTrEspera); }
-    else { newsTrEspera = 0; if (newsTrDeNovo) newsTrTimer = setTimeout(newsTraduzir, 300); }
+    else { newsTrEspera = 0; if (newsTrDeNovo) newsTrTimer = setTimeout(newsTraduzir, 2000); }
   }
 }
 // Financial Juice e ForexLive mandam cada frase de um discurso como uma notícia ("Fed's Goolsbee: ...").
@@ -4874,6 +4886,7 @@ window.__onTabSwitch = (tabId) => {
    LEITOR DE NOTÍCIAS: o texto que o feed entrega, sem sair do painel
    ========================================================= */
 function newsExcerpt(n, max = 230) {
+  if (NEWS_EN.has(n.fonte) && !n.trechoPt) return ''; // 15/11/2026: o trecho em inglês só aparece já traduzido
   const t = n.trechoPt || n.trecho || (n.resumo ? n.resumo.split('\n\n')[0] : '');
   if (!t) return '';
   return t.length <= max ? t : t.slice(0, max).replace(/\s+\S*$/, '') + '…';
