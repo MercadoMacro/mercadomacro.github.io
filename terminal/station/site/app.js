@@ -135,8 +135,8 @@ const NEWS_SOURCES = {
   'RTTNews':          { letter: 'RT',  color: '#0ea5e9', scope: 'int', name: 'RTTNews (Nasdaq)' },
   'Barchart':         { letter: 'BA',  color: '#2563eb', scope: 'int', name: 'Barchart' },
   'Seeking Alpha':    { letter: 'SA',  color: '#f97316', scope: 'int', name: 'Seeking Alpha' },
-  'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'int', name: 'Google News' },
-  'Invezz':           { letter: 'IZ',  color: '#2dd4bf', scope: 'int', name: 'Invezz' }
+  'Google News':      { letter: 'G',   color: '#94a3b8', scope: 'br', name: 'Google Notícias' },
+  'Invezz':           { letter: 'IZ',  color: '#2dd4bf', scope: 'br', name: 'Invezz' }
 };
 
 /* =========================================================
