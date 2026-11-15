@@ -9,6 +9,7 @@ import { arquivarNoticias, limparArquivo, noticiasAntigas, arquivoParaJade, atra
 import { apiAlarmes, checarAlarmes } from './alarmes.js';
 import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
+import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA } from './assistente.js';
 import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
@@ -201,6 +202,11 @@ export default {
         const r = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'resumo_semanal'").first().catch(() => null);
         let v = null; try { v = r ? JSON.parse(r.valor) : null; } catch (e) { v = null; }
         return json(v && v.txt ? { txt: v.txt, ts: v.ts } : { txt: null }, 200, { 'Cache-Control': 'no-store' });
+      }
+      // pop-up de novidades (15/11/2026, src/popup-novidades.js): cada pessoa vê uma vez
+      if (p === '/api/novidades') {
+        if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
+        return await apiPopupUsuario(req, env, u, json);
       }
       if (p === '/api/passe') {
         // o site aberto renova o passe a cada ~8 min: serve de sinal de "online" no /admin
@@ -1403,6 +1409,7 @@ async function apiAdmin(req, env, acao, eu) {
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
+  if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
   if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
   if (ass) return ass;
@@ -2834,6 +2841,24 @@ h2 b{font-size:12px;font-weight:700}
   .painel table.t .t tr{background:var(--surface-2)}
   .cab-ac{width:100%;justify-content:space-between}
 }
+/* pop-up de novidades: formulário no admin e prévia (15/11/2026) */
+.pop-adm .pc{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-3);margin:0 0 10px;flex:1;min-width:0}
+.pop-adm .pc[hidden]{display:none}
+.pop-adm .pc input,.pop-adm .pc textarea,.pop-adm .pc select{font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;min-height:40px;width:100%;box-sizing:border-box;color-scheme:dark light}
+.pop-adm .pc textarea{resize:vertical;line-height:1.5}
+.pop-adm .pc2{display:flex;gap:12px;flex-wrap:wrap}.pop-adm .pc2 .pc{min-width:200px}
+.pop-adm .b.pri{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.pop-status{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--line)}
+.pop-status .selo{margin-left:0}.pop-status .d{color:var(--text-3)}
+.pop-fundo{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.6);display:grid;place-items:center;padding:16px;backdrop-filter:blur(3px)}
+.pop-card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px 22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.45);color:var(--text)}
+.pop-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:20px;padding:4px 10px}
+.pop-card h3{font-size:19px;margin:12px 0 8px;line-height:1.3}
+.pop-tx{font-size:14.5px;line-height:1.55;color:var(--text-2)}.pop-tx p{margin:0 0 8px}.pop-tx ul{margin:0 0 8px;padding-left:20px}.pop-tx li{margin:3px 0}
+.pop-bts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.pop-bts button{font:inherit;font-weight:600;font-size:14px;border-radius:10px;padding:10px 16px;min-height:42px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text)}
+.pop-bts .pop-b1{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.pop-nota{font-size:11.5px;color:var(--text-3);margin:10px 0 0;text-align:center}
 /* celular 14/11/2026: barra fixa com o menu de abas e o Atualizar, números compactos, tabelas em lista */
 .barra-cel,.menu-fundo{display:none}
 @media (max-width:999px){
@@ -2884,7 +2909,7 @@ h2 b{font-size:12px;font-weight:700}
   <button type="button" role="tab" data-aba="pessoas" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span class="rot">Pessoas</span> <span class="cnt" id="cnt-pessoas"></span></button>
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
   <div class="grp" aria-hidden="true">Comunicação</div>
-  <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">E-mails</span></button>
+  <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">Novidades e e-mails</span></button>
   <div class="grp" aria-hidden="true">Monitoramento</div>
   <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
   <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
@@ -2919,7 +2944,7 @@ h2 b{font-size:12px;font-weight:700}
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
-<section data-p="comunicado" hidden><h2>E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="comunicado" hidden><h2>Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
 <section data-p="jade" hidden>
   <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
   <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
@@ -3262,7 +3287,7 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Boas-vindas para quem assina e comunicados de novidades.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -3781,6 +3806,70 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ px.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   var cm = document.getElementById('com');
+  // pop-up de novidades (15/11/2026): escrever, ver a prévia, publicar, ligar e desligar, e os números
+  var ABAS_POP = [['', 'Sem botão'], ['tab:market-panel', 'Aba Mercado'], ['tab:mesa-panel', 'Aba Mesa'], ['tab:news-panel', 'Aba Notícias'], ['tab:watch-panel', 'Aba Watchlist'],
+    ['tab:calendar-panel', 'Aba Calendário'], ['tab:analysis-panel', 'Aba Macro e Fluxo'], ['tab:fund-panel', 'Aba Fundamentos'], ['tab:indicators-panel', 'Aba Indicadores'],
+    ['tab:weekly-panel', 'Aba Resumo semanal'], ['tab:heatmap-panel', 'Aba Mapa de Calor'], ['tab:edu-panel', 'Aba Educação'], ['link', 'Outro endereço…']];
+  function popTexto(t){ // **negrito**, linhas com "- " viram lista, linha em branco separa parágrafos
+    var linhas = esc(t).replace(/\\*\\*(.+?)\\*\\*/g, '<b>$1</b>').split('\\n'), out = '', lista = false;
+    linhas.forEach(function(l){
+      if (/^\\s*[-•]\\s+/.test(l)) { if (!lista) { out += '<ul>'; lista = true; } out += '<li>' + l.replace(/^\\s*[-•]\\s+/, '') + '</li>'; return; }
+      if (lista) { out += '</ul>'; lista = false; }
+      out += l.trim() ? '<p>' + l + '</p>' : '';
+    });
+    return out + (lista ? '</ul>' : '');
+  }
+  function popPrevia(d){
+    var f = document.createElement('div'); f.className = 'pop-fundo';
+    f.innerHTML = '<div class="pop-card" role="dialog" aria-modal="true"><span class="pop-tag">✨ Novidade no site</span><h3>' + esc(d.titulo || 'Título') + '</h3><div class="pop-tx">' + popTexto(d.texto || 'Texto do aviso.') + '</div><div class="pop-bts">'
+      + (d.botao ? '<button type="button" class="pop-b1">' + esc(d.botao) + '</button>' : '') + '<button type="button" class="pop-b2">Entendi</button></div><p class="pop-nota">Prévia: é assim que o assinante vê.</p></div>';
+    f.addEventListener('click', function(e){ if (e.target === f || e.target.closest('button')) f.remove(); });
+    document.body.appendChild(f);
+  }
+  function popupAdm(){
+    var el = document.getElementById('pop'); if (!el) return;
+    fetch('/api/admin/popup', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var p = j.popup || {}, st = j.stats || {};
+      var alvoSel = !p.alvo ? '' : /^tab:/.test(p.alvo) ? p.alvo : 'link';
+      el.innerHTML = '<div class="caixa pop-adm">'
+        + (p.id ? '<div class="pop-status"><span class="selo ' + (p.ligado ? 'ok' : 'off') + '">' + (p.ligado ? 'No ar' : 'Desligado') + '</span>'
+          + '<span>Viram: <b>' + (st.mostrou || 0) + '</b> · Fecharam: <b>' + (st.fechou || 0) + '</b> · Clicaram no botão: <b>' + (st.clicou || 0) + '</b></span>'
+          + '<span class="d">Publicado em ' + new Date(p.criado).toLocaleDateString('pt-BR') + (p.ate ? ' · mostra até ' + p.ate.split('-').reverse().join('/') : '') + '</span></div>' : '')
+        + '<label class="pc">Título<input id="pp-tit" maxlength="90" value="' + esc(p.titulo || '') + '" placeholder="Ex.: Notícias agora traduzidas na hora"></label>'
+        + '<label class="pc">Texto<textarea id="pp-tx" maxlength="1500" rows="6" placeholder="O que mudou, em poucas linhas.&#10;- Use um traço no começo da linha para fazer uma lista&#10;- **Duas estrelas** deixam em negrito">' + esc(p.texto || '') + '</textarea></label>'
+        + '<div class="pc2"><label class="pc">Botão (opcional)<input id="pp-bt" maxlength="32" value="' + esc(p.botao || '') + '" placeholder="Ex.: Ver as notícias"></label>'
+        + '<label class="pc">O botão leva para<select id="pp-al">' + ABAS_POP.map(function(a){ return '<option value="' + a[0] + '"' + (a[0] === alvoSel ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></label></div>'
+        + '<label class="pc" id="pp-lk-l"' + (alvoSel === 'link' ? '' : ' hidden') + '>Endereço<input id="pp-lk" value="' + esc(alvoSel === 'link' ? p.alvo : '') + '" placeholder="/planos ou https://…"></label>'
+        + '<div class="pc2"><label class="pc">Quem vê<select id="pp-pub"><option value="todos">Todos que entram no terminal</option><option value="assinantes"' + (p.publico === 'assinantes' ? ' selected' : '') + '>Só assinantes (sem quem está no teste)</option><option value="teste"' + (p.publico === 'teste' ? ' selected' : '') + '>Só quem está no teste grátis</option></select></label>'
+        + '<label class="pc">Mostrar até (opcional)<input type="date" id="pp-ate" value="' + esc(p.ate || '') + '"></label></div>'
+        + '<div class="linha" style="margin-top:12px"><button type="button" class="b" id="pp-prev">Ver prévia</button>'
+        + '<button type="button" class="b pri" id="pp-pub-nova">' + (p.id ? 'Publicar como novidade nova' : 'Publicar') + '</button>'
+        + (p.id ? '<button type="button" class="b" id="pp-corr">Salvar correção</button><button type="button" class="b" id="pp-lig">' + (p.ligado ? 'Tirar do ar' : 'Pôr no ar de novo') + '</button><button type="button" class="b" id="pp-rever">Ver no site</button>' : '') + '</div>'
+        + '<p class="d" style="margin:8px 0 0">"Publicar como novidade nova" mostra para todo mundo de novo. "Salvar correção" só arruma o texto, sem mostrar de novo a quem já viu. "Ver no site" mostra o aviso para você na próxima vez que abrir o terminal.</p>'
+        + '<p class="msg" id="pp-msg"></p></div>';
+      var m = document.getElementById('pp-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function dados(){
+        var al = document.getElementById('pp-al').value;
+        return { titulo: document.getElementById('pp-tit').value, texto: document.getElementById('pp-tx').value, botao: document.getElementById('pp-bt').value,
+          alvo: al === 'link' ? document.getElementById('pp-lk').value : al, publico: document.getElementById('pp-pub').value, ate: document.getElementById('pp-ate').value };
+      }
+      document.getElementById('pp-al').onchange = function(){ document.getElementById('pp-lk-l').hidden = this.value !== 'link'; };
+      document.getElementById('pp-prev').onclick = function(){ popPrevia(dados()); };
+      function salvar(nova){
+        var d = dados(); d.acao = 'salvar'; d.nova = nova; d.ligado = nova ? true : !!p.ligado;
+        if (nova && p.id && !confirm('Publicar como novidade nova? Todo mundo vai ver o aviso de novo, uma vez.')) return;
+        post('/api/admin/popup', d).then(function(){
+          popupAdm();
+          setTimeout(function(){ var mm = document.getElementById('pp-msg'); if (mm) { mm.className = 'msg ok'; mm.textContent = nova ? 'Publicado. Quem entrar no terminal vai ver o aviso.' : 'Correção salva.'; } }, 400);
+        }, function(e){ diz(false, (e && e.erro) || 'Não foi possível salvar.'); });
+      }
+      document.getElementById('pp-pub-nova').onclick = function(){ salvar(true); };
+      var c = document.getElementById('pp-corr'); if (c) c.onclick = function(){ salvar(false); };
+      var lg = document.getElementById('pp-lig'); if (lg) lg.onclick = function(){ post('/api/admin/popup', { acao: 'ligar', ligado: !p.ligado }).then(popupAdm, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }); };
+      var rv = document.getElementById('pp-rever'); if (rv) rv.onclick = function(){ post('/api/admin/popup', { acao: 'rever' }).then(function(){ diz(true, 'Pronto. Abra o terminal (ou recarregue) para ver o aviso.'); }, function(){ diz(false, 'Não foi possível.'); }); };
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
   function comunicado(){
     fetch('/api/admin/comunicado', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
@@ -3806,6 +3895,7 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ cm.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   comunicado();
+  popupAdm();
   // e-mail de boas-vindas (src/boasvindas.js): texto editável, envio sozinho no primeiro pagamento e para quem já pagou
   function boasVindas(){
     var raiz = document.getElementById('bv');
