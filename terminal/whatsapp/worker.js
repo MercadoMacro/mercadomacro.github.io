@@ -6,12 +6,33 @@
 // - pedido de atendimento humano (SIM QUERO) avisa a equipe no Telegram, e as mensagens durante a pausa também;
 // - preços lidos do site (env.JADE.precos()), sem valores escritos à mão que ficam velhos;
 // - o ticker da conversa ("e as notícias?") fica guardado no D1 (o Cache API não funciona em workers.dev).
+// Mudanças de 15/11/2026 (pedido do Dante):
+// - manchetes em português, do arquivo de notícias do site (env.JADE.noticias()), no lugar do serviço antigo em inglês;
+// - botões tocáveis (Ver demo, Planos, Falar com a equipe...): toque no botão chega como o texto equivalente;
+// - áudio, foto, vídeo, figurinha e documento recebem uma resposta (antes, silêncio);
+// - mensagem que a Jade não entende: na 1ª, "não entendi" com botões; na 2ª seguida, oferece a equipe.
 // Ligações: HANDOFF_DB (D1 mercadomacro-atendimento), JADE (station, entrypoint JadeWatchlist) e os segredos
 // META_APP_SECRET, WEBHOOK_VERIFY_TOKEN, WHATSAPP_PRODUCTION_ACCESS_TOKEN, WHATSAPP_ACCESS_TOKEN (só no painel).
 
 const PRODUCAO = '1342951915577900';
 const TESTE = '1350465961493820';
 export const LIMITE_HORA = 20;
+// botões (no máximo 3 por mensagem, título de até 20 letras): o toque chega com o id e vira o texto equivalente
+export const BOTOES = {
+  demo: { titulo: 'Ver demo', texto: 'demo' },
+  planos: { titulo: 'Planos e preços', texto: 'quanto custa' },
+  humano: { titulo: 'Falar com a equipe', texto: 'sim quero' },
+  noticias: { titulo: 'Notícias', texto: 'demo noticias' },
+  agenda: { titulo: 'Agenda', texto: 'demo agenda' },
+  ativo: { titulo: 'Um ativo', texto: 'demo ativos' },
+  teste: { titulo: 'Testar grátis', texto: 'teste gratis' },
+  pix: { titulo: 'Pagar no Pix', texto: 'pix' },
+  anual: { titulo: 'Menor custo mensal', texto: 'menor custo mensal' },
+};
+const MIDIAS = new Set(['audio', 'image', 'video', 'sticker', 'document']);
+const NOME_MIDIA = { audio: 'áudio', image: 'foto', video: 'vídeo', sticker: 'figurinha', document: 'documento' };
+const BOAS_VINDAS = 'Olá! Sou a Jade, assistente virtual do Mercado Macro. 😊\n\nPosso mostrar como funciona o terminal, consultar ativos e ajudar você a escolher um plano.\n\nPor onde quer começar?';
+const textoDe = (r) => (r && typeof r === 'object' ? r.texto : r) || '';
 
 export default {
   async fetch(request, env) {
@@ -102,11 +123,15 @@ export default {
         if (!accessToken) continue;
 
         for (const message of value.messages ?? []) {
-          if (message.type !== 'text' || !/^\d{8,15}$/.test(message.from ?? '')) continue;
-          const original = (message.text?.body ?? '').trim();
+          if (!/^\d{8,15}$/.test(message.from ?? '')) continue;
+          // toque num botão ou numa lista: vira o texto que a pessoa teria escrito
+          const toque = message.type === 'interactive' ? (message.interactive?.button_reply?.id || message.interactive?.list_reply?.id || '') : message.type === 'button' ? (message.button?.payload || message.button?.text || '') : '';
+          const midia = MIDIAS.has(message.type);
+          if (message.type !== 'text' && !toque && !midia) continue; // reação, aviso do sistema etc.
+          const original = midia ? '' : (BOTOES[toque]?.texto ?? (message.text?.body ?? toque)).trim();
           const text = original.normalize('NFD')
             .replace(/[̀-ͯ]/g, '').toLowerCase();
-          if (!text || text === 'sair') continue;
+          if ((!text && !midia) || text === 'sair') continue;
 
           const key = await hashHex(phoneId + ':' + message.from);
           const db = env.HANDOFF_DB;
@@ -116,6 +141,15 @@ export default {
           if (limite > LIMITE_HORA + 1) continue;
           if (limite === LIMITE_HORA + 1) {
             await enviar(phoneId, accessToken, message.from, 'Você enviou muitas mensagens em pouco tempo. Aguarde um pouco e tente de novo. Para falar com a equipe, escreva para contato@mercadomacro.com.br.');
+            continue;
+          }
+
+          if (midia) {
+            // durante o atendimento humano, a equipe fica sabendo; fora dele, a Jade explica que lê só texto
+            let pausada = false;
+            try { pausada = !!(await db.prepare('SELECT 1 AS p FROM jade_handoff WHERE conversation_key = ? AND expires_at > ?').bind(key, Date.now()).first()); } catch (error) { /* segue */ }
+            if (pausada) { await avisarEquipe(env, 'mensagem', phoneId, message.from, '[' + (NOME_MIDIA[message.type] || 'arquivo') + ']'); continue; }
+            await enviar(phoneId, accessToken, message.from, { texto: 'Ainda não consigo ' + (message.type === 'audio' ? 'ouvir áudios' : 'abrir ' + (NOME_MIDIA[message.type] || 'arquivos') + 's') + ' 🙂 Me escreva, por exemplo: *PETR4*, *notícias* ou *planos*. Ou toque numa opção:', botoes: ['demo', 'planos', 'humano'] });
             continue;
           }
 
@@ -136,7 +170,7 @@ export default {
           const wantsHuman = /^(?:sim[ ,]+quero)[.!?\s]*$/.test(text) || /\b(?:atendimento comercial|falar com (?:um consultor|uma pessoa|alguem|o atendente))\b/.test(text);
           // aceita "voltar", "volte" ou "volta" (sozinhos ou com "para a Jade"/"pra Jade"), "jade" ou "menu" (14/11/2026)
           const wantsJade = /^(?:(?:voltar|volte|volta)(?:\s+(?:para|pra)\s+(?:a\s+)?jade)?|jade|menu)[.!?\s]*$/.test(text);
-          let reply = null;
+          let reply = null, naoEntendeu = false;
           try {
             const now = Date.now();
             if (vimDoRadar && !wantsHuman) {
@@ -144,7 +178,7 @@ export default {
               await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
             } else if (wantsJade) {
               await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
-              reply = 'Voltei! Sou a Jade. Posso ajudar com ativos, notícias, agenda econômica ou planos.';
+              reply = { texto: 'Voltei! Sou a Jade. Posso ajudar com ativos, notícias, agenda econômica ou planos.', botoes: ['demo', 'noticias', 'planos'] };
             } else if (wantsHuman) {
               const result = await db.prepare('INSERT INTO jade_handoff (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = excluded.expires_at WHERE jade_handoff.expires_at <= ?').bind(key, now + 86400000, now).run();
               if (!result.meta.changes) {
@@ -169,7 +203,7 @@ export default {
           }
           if (reply === null && vimDoRadar && !wantsHuman) {
             await funil(env, phoneId, 'radar', 'inicio');
-            reply = 'Que bom que você veio do *Radar*! 👋 Sou a Jade, assistente do Mercado Macro.\n\nPor onde quer começar?\n• *Demo*: veja na prática (notícias, agenda ou um ativo, como BBAS3)\n• *Planos*: valores e o teste de 48 horas grátis\n• *SIM QUERO*: falar com a nossa equipe por aqui';
+            reply = { texto: 'Que bom que você veio do *Radar*! 👋 Sou a Jade, assistente do Mercado Macro.\n\nPor onde quer começar?\n• *Ver demo*: notícias, agenda ou um ativo, como BBAS3\n• *Planos*: valores e o teste de 48 horas grátis\n• *Falar com a equipe*: um consultor responde por aqui', botoes: ['demo', 'planos', 'humano'] };
           }
           if (reply === null && phoneId === PRODUCAO) {
             reply = await jadeWatchlistCommand(text, message.from, env);
@@ -186,60 +220,63 @@ export default {
           } else if ((reply = await jadeSalesReply(text, env, origem)) !== null) {
             // Commercial questions are handled before general market queries.
             // primeira vez que quem veio do Radar recebe o link dos planos ou da assinatura
-            if (origem && /mercadomacro\.com\.br\/(planos|assinar)/.test(reply)) {
+            if (origem && /mercadomacro\.com\.br\/(planos|assinar)/.test(textoDe(reply))) {
               const r = await db.prepare('UPDATE jade_origem SET planos = 1 WHERE conversation_key = ? AND planos = 0').bind(key).run().catch(() => null);
               if (r?.meta?.changes) await funil(env, phoneId, origem, 'planos');
             }
-          } else if ((reply = await jadeAssetCommand(text, key, db)) !== null) {
+          } else if ((reply = await jadeAssetCommand(text, key, db, env)) !== null) {
             // A specific asset takes precedence over general market queries.
           } else if (jadeAsset(text)) {
-            reply = await jadeMarketReply(jadeAsset(text));
+            reply = await jadeMarketReply(jadeAsset(text), env);
           } else if (/\b(radar|noticias?|manchetes?|resumo)\b/.test(text)) {
             reply = 'O feed está demorando para responder. Você pode acompanhar as manchetes em https://mercadomacro.com.br/';
-            try {
-              const response = await fetch('https://news.cota-cotacao10.workers.dev/', {
-                headers: { Accept: 'application/json' },
-                signal: AbortSignal.timeout(12000)
-              });
-              if (!response.ok) throw new Error('HTTP ' + response.status);
-              const items = await response.json();
-              const seen = new Set();
-              const headlines = [];
-              for (const item of items) {
-                const title = typeof item?.titulo === 'string' ? item.titulo.trim() : '';
-                const link = typeof item?.link === 'string' ? item.link.trim() : '';
-                if (!title || !/^https?:\/\//i.test(link) || link.length > 350 || seen.has(link)) continue;
-                seen.add(link);
-                const source = typeof item.fonte === 'string' ? item.fonte.trim().slice(0, 80) : '';
-                headlines.push('• ' + title.slice(0, 250) + (source ? ' (' + source + ')' : '') + '\n' + link);
-                if (headlines.length === 3) break;
+            const items = await noticiasPt(env);
+            // as de maior impacto das últimas 6 horas; sem elas, as mais recentes
+            const peso = { CRITICO: 3, ALTO: 2, MEDIO: 1 };
+            const seis = Date.now() - 6 * 3600000;
+            const ordem = items.slice().sort((a, b) => ((b.data >= seis ? peso[b.nivel] || 0 : 0) - (a.data >= seis ? peso[a.nivel] || 0 : 0)) || b.data - a.data);
+            const seen = new Set();
+            const headlines = [];
+            for (const item of ordem) {
+              const title = typeof item?.titulo === 'string' ? item.titulo.trim() : '';
+              const link = typeof item?.link === 'string' ? item.link.trim() : '';
+              const chave = title.toLowerCase().slice(0, 50);
+              if (!title || !/^https?:\/\//i.test(link) || link.length > 350 || seen.has(link) || seen.has(chave)) continue;
+              seen.add(link); seen.add(chave);
+              const source = typeof item.fonte === 'string' ? item.fonte.trim().slice(0, 80) : '';
+              headlines.push('• ' + title.slice(0, 250) + (source ? ' (' + source + ')' : '') + '\n' + link);
+              if (headlines.length === 3) break;
+            }
+            if (headlines.length) {
+              reply = 'Principais manchetes | Mercado Macro\n\n' + headlines.join('\n\n') + '\n\nMais notícias, ao vivo e traduzidas, no terminal: https://mercadomacro.com.br/';
+              if (/^(?:demo noticias|noticias|quero (?:ver|entender) (?:as )?noticias)[?.!]*$/.test(text)) {
+                const sample = headlines.join(' ').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+                const focus = /\b(fed|copom|banco central|selic|juros)\b/.test(sample)
+                  ? 'Se o tema for juros, vale acompanhar a próxima decisão e como as expectativas mudam.'
+                  : /\b(inflacao|ipca|cpi|ppi)\b/.test(sample)
+                    ? 'Em dados de inflação, compare o número divulgado com a expectativa do mercado.'
+                    : 'Confira a fonte e o horário de cada manchete. Se uma notícia citar um ativo da sua lista, envie o ticker para consultar sua variação.';
+                reply = { texto: reply + '\n\n*O que acompanhar*\n' + focus + '\n\nSe ainda não assinou, você pode experimentar a aba Notícias por 48 horas grátis.', botoes: ['teste', 'planos', 'demo'] };
               }
-              if (headlines.length) {
-                reply = 'Últimas manchetes | Mercado Macro\n\n' + headlines.join('\n\n');
-                if (/^(?:demo noticias|noticias|quero (?:ver|entender) (?:as )?noticias)[?.!]*$/.test(text)) {
-                  const sample = headlines.join(' ').toLowerCase();
-                  const focus = /\b(fed|copom|central bank|selic|juros)\b/.test(sample)
-                    ? 'Se o tema for juros, vale acompanhar a próxima decisão e como as expectativas mudam.'
-                    : /\b(inflacao|ipca|cpi|ppi)\b/.test(sample.normalize('NFD').replace(/\p{M}/gu, ''))
-                      ? 'Em dados de inflação, compare o número divulgado com a expectativa do mercado.'
-                      : 'Confira a fonte e o horário de cada manchete. Se uma notícia citar um ativo da sua lista, envie o ticker para consultar sua variação.';
-                  reply += '\n\n*O que acompanhar*\n' + focus + '\n\nSe ainda não assinou, você pode experimentar a aba Notícias por 48 horas grátis. Saiba mais em https://mercadomacro.com.br/planos';
-                }
-              }
-            } catch (error) {
-              console.warn('Jade: falha ao consultar o feed', error.name);
             }
           } else if (/\b(terminal|site|plataforma|o que (e|tem))\b/.test(text)) {
             reply = 'No terminal do Mercado Macro você pode acompanhar notícias, cotações e indicadores econômicos. Acesse https://mercadomacro.com.br/. Também posso ajudar com acesso, planos ou manchetes por aqui.';
           } else if (/^(oi|ola|opa|bom dia|boa tarde|boa noite|menu)[!.\s]*$/.test(text)) {
-            reply = 'Olá! Sou a Jade, assistente virtual do Mercado Macro. 😊\n\nPosso mostrar como funciona o terminal, consultar ativos e ajudar você a escolher um plano.\n\nPrefere conversar com um consultor comercial por aqui? Digite *SIM QUERO*.';
+            reply = { texto: BOAS_VINDAS, botoes: ['demo', 'planos', 'humano'] };
           } else if (/^(obrigad[oa]|valeu)[!.\s]*$/.test(text)) {
             reply = 'Por nada! Se precisar, estou por aqui.';
           } else {
-            reply = 'Olá! Sou a Jade, assistente virtual do Mercado Macro. 😊\n\nPosso mostrar como funciona o terminal, consultar ativos e ajudar você a escolher um plano.\n\nPrefere conversar com um consultor comercial por aqui? Digite *SIM QUERO*.';
+            naoEntendeu = true;
+            const n = await duvida(db, key, true).catch(() => 1);
+            reply = limite === 1 && n === 1
+              ? { texto: BOAS_VINDAS, botoes: ['demo', 'planos', 'humano'] } // primeira mensagem da hora: apresenta a Jade
+              : n >= 2
+                ? { texto: 'Ainda não entendi 😅 Quer que alguém da nossa equipe continue a conversa com você por aqui?', botoes: ['humano', 'demo', 'planos'] }
+                : { texto: 'Não entendi essa 🤔 Posso consultar um ativo (ex.: *PETR4*), mostrar as *notícias*, a *agenda* ou os *planos*. Toque numa opção:', botoes: ['demo', 'noticias', 'planos'] };
           }
           }
 
+          if (!naoEntendeu) await duvida(db, key, false).catch(() => {});
           await enviar(phoneId, accessToken, message.from, reply);
         }
       }
@@ -254,7 +291,13 @@ async function hashHex(texto) {
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function enviar(phoneId, accessToken, to, body) {
+async function enviar(phoneId, accessToken, to, reply) {
+  const body = textoDe(reply);
+  const botoes = (reply && typeof reply === 'object' ? reply.botoes || [] : []).filter((b) => BOTOES[b]).slice(0, 3);
+  // botões só cabem em mensagens de até 1.024 letras; acima disso vai texto puro
+  const msg = botoes.length && body.length <= 1024
+    ? { type: 'interactive', interactive: { type: 'button', body: { text: body }, action: { buttons: botoes.map((b) => ({ type: 'reply', reply: { id: b, title: BOTOES[b].titulo } })) } } }
+    : { type: 'text', text: { body, preview_url: false } };
   try {
     const response = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', {
       method: 'POST',
@@ -265,8 +308,7 @@ async function enviar(phoneId, accessToken, to, body) {
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         to,
-        type: 'text',
-        text: { body, preview_url: false }
+        ...msg
       }),
       signal: AbortSignal.timeout(3500)
     });
@@ -439,7 +481,7 @@ export async function jadeSalesReply(text, env, origem = null) {
     return trial + '\n\n' + (P ? 'Se quiser acesso completo por um mês, são ' + reais(P.cartao.mensal) + ' no cartão com renovação automática ou ' + reais(P.pix.mensal) + ' no Pix em pagamento único. ' : semPreco + '. ') + checkout;
   }
   if (/^(?:eu )?quero ver na pratica[?.!]*$|^demo[?.!]*$/.test(text)) {
-    return 'Escolha uma amostra: *Demo notícias*, *Demo agenda* ou *Demo BBAS3*. Você também pode enviar o ticker de outro ativo que acompanha.';
+    return { texto: 'Escolha uma amostra: *notícias*, *agenda* ou um *ativo* (como BBAS3). Você também pode enviar o ticker de outro ativo que acompanha.', botoes: ['noticias', 'agenda', 'ativo'] };
   }
   if (/\b(?:pix|sem renovacao|pagamento unico)\b/.test(text)) {
     return 'Se você prefere pagar uma vez e decidir depois se quer continuar, o *Pix* é a opção.\n\n' + (P ? '• *1 mês: ' + reais(P.pix.mensal) + '*\n• *6 meses: ' + reais(P.pix.semestral) + '*\n\n' : semPreco + '.\n\n') + 'Inclui o terminal completo, a watchlist e a IA. O acesso é liberado após a conferência do comprovante. Escolha o período em ' + checkout;
@@ -456,8 +498,9 @@ export async function jadeSalesReply(text, env, origem = null) {
     return 'Abra a página de assinatura, informe seu e-mail e escolha o plano. No cartão, o acesso é liberado após a aprovação. No Pix, após a conferência do comprovante.\n\n' + checkout;
   }
   if (/\b(?:quanto (?:custa|vou pagar)|precos?|valores? dos planos|planos?|cartao)\b/.test(text) && !/\b[A-Z]{4}(?:11|3|4|5|6|7|8|9|10)F?\b/i.test(text)) {
-    if (!P) return '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA, no cartão (com renovação automática) ou no Pix (sem renovação). ' + semPreco + '.\n\nQual caminho combina com você? Responda *48 horas*, *Pix* ou *menor custo mensal*.';
-    return '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA.\n\n*Cartão com renovação automática*\n• Mensal: ' + reais(P.cartao.mensal) + ' por mês\n• Semestral: ' + reais(P.cartao.semestral) + ' a cada 6 meses\n• Anual: ' + reais(P.cartao.anual) + ' por ano\n\n*Pix sem renovação automática*\n• 1 mês: ' + reais(P.pix.mensal) + '\n• 6 meses: ' + reais(P.pix.semestral) + '\n\nQual caminho combina com você? Responda *' + horas + ' horas*, *Pix* ou *menor custo mensal*.\nTermos: ' + plans;
+    if (!P) return { texto: '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA, no cartão (com renovação automática) ou no Pix (sem renovação). ' + semPreco + '.\n\nQual caminho combina com você?', botoes: ['teste', 'pix', 'anual'] };
+    const planos = '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA.\n\n*Cartão com renovação automática*\n• Mensal: ' + reais(P.cartao.mensal) + ' por mês\n• Semestral: ' + reais(P.cartao.semestral) + ' a cada 6 meses\n• Anual: ' + reais(P.cartao.anual) + ' por ano\n\n*Pix sem renovação automática*\n• 1 mês: ' + reais(P.pix.mensal) + '\n• 6 meses: ' + reais(P.pix.semestral) + '\n\nQual caminho combina com você?\nTermos: ' + plans;
+    return { texto: planos, botoes: ['teste', 'pix', 'anual'] };
   }
   if (/\b(?:como funciona|o que e (?:o )?mercado macro|o que tem (?:no painel|no terminal)|conhecer (?:o )?mercado macro)\b/.test(text)) {
     return 'O Mercado Macro reúne agenda econômica, notícias e cotações dos ativos que você acompanha.\n\nO que você quer resolver primeiro: *acompanhar sua watchlist, entender as notícias ou se preparar para os eventos da semana*? Para ver uma resposta na prática, envie “Demo BBAS3” ou outro ticker. Para comparar os planos, escreva “Quanto custa?”.';
@@ -478,7 +521,7 @@ async function tickersDaConversa(db, key) {
   return Array.isArray(l) ? l.filter(t => typeof t === 'string' && /^[A-Z]{4}\d{1,2}F?$/.test(t)).slice(0, 5) : [];
 }
 
-async function jadeAssetCommand(text, key, db) {
+async function jadeAssetCommand(text, key, db, env) {
   const tickers = [...new Set(text.toUpperCase().match(/\b[A-Z]{4}(?:11|3|4|5|6|7|8|9|10)F?\b/g) || [])];
   if (tickers.length > 5) return 'Envie até cinco tickers por comparação.';
   let ticker = tickers[0];
@@ -510,7 +553,7 @@ async function jadeAssetCommand(text, key, db) {
     return 'Qual ativo você quer consultar? Exemplo: notícias de BBAS3.';
   }
   const [newsResult, ...quotes] = await Promise.allSettled([
-    jadeJson('https://news.cota-cotacao10.workers.dev/', 10000),
+    noticiasPt(env),
     ...(!followUp ? tickers.map(code => jadeQuote(code.replace(/F$/, '') + '.SA', true)) : [])
   ]);
   const rows = tickers.map((code, index) => ({
@@ -565,10 +608,10 @@ async function jadeAssetCommand(text, key, db) {
 }
 
 
-async function jadeMarketReply([, name, symbol, matcher]) {
+async function jadeMarketReply([, name, symbol, matcher], env) {
   const [quote, news] = await Promise.allSettled([
     jadeQuote(symbol),
-    jadeJson('https://news.cota-cotacao10.workers.dev/', 10000)
+    noticiasPt(env)
   ]);
   const parts = ['*' + name + ' | Jade*'];
   parts.push((quote.status === 'fulfilled' ? quote.value : null) || (symbol ? 'Cotação indisponível nesta consulta.' : 'Nesta versão, consigo localizar notícias sobre juros futuros. A curva está na aba Mesa do terminal.'));
@@ -608,7 +651,7 @@ async function jadeWatchlistCommand(text, phone, env) {
     const sample = assets.slice(0, 5);
     const [quotes, news] = await Promise.all([
       Promise.allSettled(sample.map(({ s }) => jadeQuote(s, true))),
-      Promise.allSettled([jadeJson('https://news.cota-cotacao10.workers.dev/', 10000)]).then(([result]) => result)
+      Promise.allSettled([noticiasPt(env)]).then(([result]) => result)
     ]);
     const items = news.status === 'fulfilled' ? news.value : [];
     const now = Date.now();
@@ -644,4 +687,28 @@ async function jadeWatchlistCommand(text, phone, env) {
   } catch {
     return 'Não consegui consultar o serviço da watchlist agora. Tente novamente em alguns minutos.';
   }
+}
+
+// manchetes em português do site (arquivo de notícias); se o site não responder, o serviço antigo, só com fontes brasileiras
+const FONTES_PT = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha']);
+export async function noticiasPt(env) {
+  try {
+    if (env?.JADE?.noticias) {
+      const l = await env.JADE.noticias();
+      if (Array.isArray(l) && l.length) return l;
+    }
+  } catch (error) { console.warn('Jade: notícias do site indisponíveis', error.name); }
+  try {
+    const l = await jadeJson('https://news.cota-cotacao10.workers.dev/', 10000);
+    return (Array.isArray(l) ? l : []).filter((n) => FONTES_PT.has(n?.fonte));
+  } catch (error) { return []; }
+}
+
+// mensagens seguidas que a Jade não entendeu (30 minutos); zera quando ela entende
+async function duvida(db, key, somar) {
+  await db.prepare('CREATE TABLE IF NOT EXISTS jade_duvida (conversation_key TEXT PRIMARY KEY, n INTEGER NOT NULL, expires_at INTEGER NOT NULL)').run();
+  if (!somar) { await db.prepare('DELETE FROM jade_duvida WHERE conversation_key = ?').bind(key).run(); return 0; }
+  const agora = Date.now();
+  const r = await db.prepare('INSERT INTO jade_duvida (conversation_key, n, expires_at) VALUES (?, 1, ?) ON CONFLICT(conversation_key) DO UPDATE SET n = CASE WHEN jade_duvida.expires_at > ? THEN jade_duvida.n + 1 ELSE 1 END, expires_at = excluded.expires_at RETURNING n').bind(key, agora + 1800000, agora).first();
+  return Number(r?.n) || 1;
 }
