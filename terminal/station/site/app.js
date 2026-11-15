@@ -1301,6 +1301,18 @@ async function newsTraduzLote(textos) {
   if (out.length !== textos.length) throw new Error('tradução desalinhada');
   return out;
 }
+// 15/11/2026 (reclamação de cliente: manchetes ficando em inglês): um lote que volta desalinhado não derruba mais
+// todo o resto; ele é dividido ao meio até a manchete que atrapalha ser traduzida sozinha. Erro de rede ou limite
+// do Google (429) continua subindo, para tentar de novo mais tarde.
+async function newsTraduzSeguro(textos) {
+  try { return await newsTraduzLote(textos); }
+  catch (e) {
+    if (!/desalinhada/.test(e.message)) throw e;
+    if (textos.length === 1) return [''];
+    const meio = Math.ceil(textos.length / 2);
+    return (await newsTraduzSeguro(textos.slice(0, meio))).concat(await newsTraduzSeguro(textos.slice(meio)));
+  }
+}
 function newsLotes(itens, campo) {
   const lotes = []; let atual = [], tam = 0;
   for (const n of itens) {
@@ -1311,38 +1323,59 @@ function newsLotes(itens, campo) {
   if (atual.length) lotes.push(atual);
   return lotes;
 }
-let newsTraduzindo = false;
-// traduz no navegador de quem lê (só o que ainda não foi traduzido; fica guardado neste aparelho)
+let newsTraduzindo = false, newsTrDeNovo = false, newsTrEspera = 0, newsTrTimer = null;
+// traduz no navegador de quem lê (só o que ainda não foi traduzido; fica guardado neste aparelho).
+// 15/11/2026: as mais novas primeiro (as que chegam ao vivo ficam em português em 1 a 2 s); se chegar notícia
+// enquanto traduz, roda de novo no fim; se o Google limitar, tenta de novo em 20 s, 40 s, até 5 min.
 async function newsTraduzir() {
-  if (newsTraduzindo) return;
+  if (newsTraduzindo) { newsTrDeNovo = true; return; }
   const falta = newsAll.filter(n => NEWS_EN.has(n.fonte) && !n.traduzido && !(newsTr[n.link] && newsTr[n.link][0]));
-  if (!falta.length) return;
-  newsTraduzindo = true;
-  try {
-    falta.sort((a, b) => newsRank(b) - newsRank(a));
-    const sel = falta.slice(0, 160);
-    for (const lote of newsLotes(sel, 'titulo').slice(0, 10)) {
-      try {
-        const tr = await newsTraduzLote(lote.map(n => n.titulo.replace(/\n+/g, ' ')));
-        lote.forEach((n, i) => { if (tr[i]) newsTr[n.link] = [tr[i], (newsTr[n.link] || [])[1] || '']; });
-      } catch (e) { console.warn('[News] tradução:', e.message); break; }
-    }
-    const comTrecho = sel.filter(n => n.trecho && !(newsTr[n.link] && newsTr[n.link][1])).slice(0, 50)
-      .map(n => ({ n, trecho: n.trecho.replace(/\n+/g, ' ').slice(0, 400) }));
-    for (const lote of newsLotes(comTrecho, 'trecho').slice(0, 8)) {
-      try {
-        const tr = await newsTraduzLote(lote.map(x => x.trecho));
-        lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; });
-      } catch (e) { console.warn('[News] tradução:', e.message); break; }
-    }
-    // guarda só o que ainda está na lista
-    const vivos = new Set(newsAll.map(n => n.link));
-    Object.keys(newsTr).forEach(k => { if (!vivos.has(k)) delete newsTr[k]; });
+  const faltaTrecho = newsAll.filter(n => NEWS_EN.has(n.fonte) && n.trecho && !(newsTr[n.link] && newsTr[n.link][1])).length;
+  if (!falta.length && !faltaTrecho) return;
+  newsTraduzindo = true; newsTrDeNovo = false;
+  let falhou = false;
+  const aplica = () => {
     try { localStorage.setItem(NEWS_TR_KEY, JSON.stringify(newsTr)); } catch (e) { /* silencioso */ }
     newsAll.forEach(newsAplicaTraducao);
     renderNewsView();
     if (newsLiveShown()) renderLiveView();
-  } finally { newsTraduzindo = false; }
+    window.dispatchEvent(new Event('mm-news-traduzidas'));
+  };
+  try {
+    // as da última hora primeiro (por horário), depois o resto pela importância
+    const hora = Date.now() - 3600 * 1000;
+    const novas = falta.filter(n => n.data >= hora).sort((a, b) => b.data - a.data);
+    const resto = falta.filter(n => n.data < hora).sort((a, b) => newsRank(b) - newsRank(a));
+    const sel = novas.concat(resto).slice(0, 300);
+    let feitos = 0;
+    for (const lote of newsLotes(sel, 'titulo').slice(0, 20)) {
+      try {
+        const tr = await newsTraduzSeguro(lote.map(n => n.titulo.replace(/\n+/g, ' ')));
+        lote.forEach((n, i) => { if (tr[i]) newsTr[n.link] = [tr[i], (newsTr[n.link] || [])[1] || '']; });
+        if (++feitos === 1) aplica(); // o primeiro lote (as mais novas) aparece na hora
+      } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
+    }
+    if (!falhou) {
+      const comTrecho = newsAll.filter(n => NEWS_EN.has(n.fonte) && n.trecho && !(newsTr[n.link] && newsTr[n.link][1]))
+        .sort((a, b) => newsRank(b) - newsRank(a)).slice(0, 80)
+        .map(n => ({ n, trecho: n.trecho.replace(/\n+/g, ' ').slice(0, 400) }));
+      for (const lote of newsLotes(comTrecho, 'trecho').slice(0, 10)) {
+        try {
+          const tr = await newsTraduzSeguro(lote.map(x => x.trecho));
+          lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; });
+        } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
+      }
+    }
+    // guarda só o que ainda está na lista
+    const vivos = new Set(newsAll.map(n => n.link));
+    Object.keys(newsTr).forEach(k => { if (!vivos.has(k)) delete newsTr[k]; });
+    aplica();
+  } finally {
+    newsTraduzindo = false;
+    clearTimeout(newsTrTimer);
+    if (falhou) { newsTrEspera = Math.min((newsTrEspera || 10000) * 2, 300000); newsTrTimer = setTimeout(newsTraduzir, newsTrEspera); }
+    else { newsTrEspera = 0; if (newsTrDeNovo) newsTrTimer = setTimeout(newsTraduzir, 300); }
+  }
 }
 // Financial Juice e ForexLive mandam cada frase de um discurso como uma notícia ("Fed's Goolsbee: ...").
 // Junta as frases da mesma pessoa (até 6 h) num cartão só.
@@ -1483,7 +1516,7 @@ function checkNewsAlerts(list) {
     .filter(n => n.nivel === 'CRITICO' && Date.now() - n.data < 45 * 60 * 1000)
     .sort((a, b) => b.data - a.data)
     .slice(0, 3)
-    .forEach(n => {
+    .forEach(n => newsAlertaTraduzido(n, () => {
       const src = newsSourceLabel(n);
       toast(`Alto impacto: ${n.titulo}${src ? ` (${src})` : ''}`, 'warning');
       try {
@@ -1492,7 +1525,20 @@ function checkNewsAlerts(list) {
           note.onclick = () => { window.open(n.link, '_blank', 'noopener'); };
         }
       } catch (e) { /* silencioso */ }
-    });
+    }));
+}
+// manchete em inglês: espera a tradução (que roda logo depois) por até 4 s; se não vier, avisa assim mesmo
+function newsAlertaTraduzido(n, avisar) {
+  if (!NEWS_EN.has(n.fonte) || n.traduzido) { avisar(); return; }
+  let feito = false;
+  const fim = () => {
+    if (feito) return; feito = true; window.removeEventListener('mm-news-traduzidas', fim); clearTimeout(t);
+    const atual = newsAll.find(x => x.link === n.link);
+    if (atual && atual.traduzido) { n.titulo = atual.titulo; n.traduzido = true; }
+    avisar();
+  };
+  const t = setTimeout(fim, 4000);
+  window.addEventListener('mm-news-traduzidas', () => { const a = newsAll.find(x => x.link === n.link); if (a && a.traduzido) fim(); });
 }
 
 /* ---- Briefing por tema ---- */
