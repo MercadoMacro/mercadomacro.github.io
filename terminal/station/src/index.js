@@ -1409,6 +1409,7 @@ async function apiAdmin(req, env, acao, eu) {
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
+  if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
   if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
