@@ -88,7 +88,7 @@ export async function paginaBalanca() {
   }
   const ult = d.meses[d.meses.length - 1], s = ult.exp - ult.imp, ext = mesExt(ult.m);
   const titulo = `Balança comercial do Brasil em ${ext}: ${s >= 0 ? 'superávit' : 'déficit'} de US$ ${bi(Math.abs(s))} bi | Mercado Macro`;
-  const descricao = `Exportações de US$ ${bi(ult.exp)} bi e importações de US$ ${bi(ult.imp)} bi em ${ext}. Saldo mês a mês, commodities exportadas (petróleo, minério, soja) e principais destinos, com dados do Comex Stat (MDIC).`;
+  const descricao = `Exportações de US$ ${bi(ult.exp)} bi e importações de US$ ${bi(ult.imp)} bi em ${ext}. Saldo mês a mês, commodities e principais destinos (Comex Stat/MDIC).`;
   const at = (d.atualizado || '').slice(0, 10);
   const ld = { '@context': 'https://schema.org', '@type': 'Article', headline: `Balança comercial do Brasil em ${ext}`, description: descricao, inLanguage: 'pt-BR', mainEntityOfPage: SITE + '/balanca-comercial', ...(at ? { datePublished: at, dateModified: at } : {}), publisher: { '@type': 'Organization', name: 'Mercado Macro', url: SITE } };
   return resposta(pagina({

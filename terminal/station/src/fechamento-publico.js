@@ -150,6 +150,12 @@ ${nots}
 </div>`;
 }
 
+// o Google mostra cerca de 155 letras da descrição: corta na última palavra inteira (auditoria 15/11/2026)
+export function resumoGoogle(t, max = 155) {
+  const s = String(t || '').replace(/\s+/g, ' ').trim();
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).replace(/[\s,;:.]+\S*$/, '') + '…';
+}
 export function pagina({ titulo, descricao, canonico, h1, data, corpo, ld, rodape }) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
@@ -199,7 +205,7 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
       : '<p class="lead">O primeiro fechamento aparece aqui depois das 18h do próximo pregão.</p>';
     return resposta(pagina({
       titulo: 'Fechamento do mercado hoje: Ibovespa, dólar e bolsas | Mercado Macro',
-      descricao: 'Como fechou o mercado: Ibovespa, dólar, bolsas de Nova York, petróleo, ouro, bitcoin, maiores altas e baixas, juros e fluxo do estrangeiro. Atualizado todo dia após as 18h.',
+      descricao: 'Como fechou o mercado: Ibovespa, dólar, Nova York, petróleo, ouro, bitcoin, maiores altas e baixas, juros e fluxo estrangeiro. Atualizado após as 18h.',
       canonico: SITE + BASE, h1: 'Fechamento do mercado', data: 'Atualizado todo dia útil depois das 18h (horário de Brasília)', corpo,
       ld: {
         '@context': 'https://schema.org',
@@ -238,7 +244,7 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
   const titulo = `Fechamento do mercado ${ddmmaaaa(resto)}${rt ? `: ${rt}` : ''} | Mercado Macro`;
   const pub = new Date(resto + 'T21:00:00Z').toISOString();
   return resposta(pagina({
-    titulo, descricao: paragrafo(d).slice(0, 300), canonico: `${SITE}${BASE}/${resto}`,
+    titulo, descricao: resumoGoogle(paragrafo(d)), canonico: `${SITE}${BASE}/${resto}`,
     h1: `Fechamento do mercado em ${ddmmaaaa(resto)}${rt ? `: ${rt}` : ''}`, data: porExtenso(resto), corpo: corpoDia(d) + nav,
     ld: {
       '@context': 'https://schema.org',

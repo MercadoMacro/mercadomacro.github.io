@@ -282,6 +282,8 @@ export default {
       }
       return out;
     } catch (e) {
+      // registra o motivo nos logs da Cloudflare (só o endereço e a mensagem, sem dados da pessoa) para dar para investigar depois
+      console.error('erro 500', req.method, p, String(e && e.stack || e).slice(0, 800));
       return json({ erro: 'Erro no servidor. Tente de novo.' }, 500);
     }
   },
