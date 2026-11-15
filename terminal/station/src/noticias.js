@@ -135,9 +135,13 @@ function extractBody(itemContent, titulo) {
   if (!body || norm(body).startsWith(norm(titulo)) && body.length < titulo.length + 80) return '';
   return body;
 }
-function trechoDe(texto, max = 260) {
+// 15/11/2026: o Zero Hedge (e outros) repete a manchete e o "Authored by... via..." no começo do texto; o trecho
+// pula esses parágrafos, senão o cartão mostrava a própria manchete em inglês embaixo da tradução
+const sem = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9à-ú]+/g, '');
+function trechoDe(texto, max = 260, titulo = '') {
   if (!texto) return '';
-  const p = texto.split('\n\n')[0];
+  const ps = texto.split('\n\n').map((x) => x.trim()).filter(Boolean);
+  const p = ps.find((x) => sem(x) !== sem(titulo) && !/^(authored by|submitted by|via |by [A-Z][^.]{0,60},?$)/i.test(x) && x.length > 40) || ps[0] || '';
   if (p.length <= max) return p;
   return p.slice(0, max).replace(/\s+\S*$/, '') + '…';
 }
@@ -295,7 +299,7 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
         id: idDe(link),
         titulo, link,
         resumo, palavras,
-        trecho: trechoDe(resumo),
+        trecho: trechoDe(resumo, 260, titulo),
         fonte: feed.source,
         veiculo,
         data: pubDate,
