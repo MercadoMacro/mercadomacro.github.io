@@ -80,5 +80,5 @@ body.nw3-fontes .aba-borda, body.nw3-fontes #ia-fab, body.nw3-fontes #fab-summar
 .no-msg { text-align:center; color:var(--text-3); font-size:12.5px; margin:12px 0 0; }
 @media (max-width: 600px) { .no-item { flex-wrap:wrap; gap:4px 8px; } .no-item .no-t { flex-basis:100%; } }
 
-/* 15/11/2026: fonte sem nenhuma notícia nas últimas 48 h (feed parado) não ocupa espaço na lista; se estiver marcada, continua à vista */
-.ns-sub-bubble.nw2-vazio:not(.active) { display: none; }
+/* 15/11/2026: fonte sem nenhuma notícia nas últimas 48 h (feed parado) não ocupa espaço na lista; volta sozinha quando chegar notícia */
+.ns-sub-bubble.nw2-vazio { display: none; }
