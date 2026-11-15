@@ -410,14 +410,17 @@ async function especuladores() {
 
 async function resumoSemanal(env) {
   const hoje = new Date(Date.now() - 3 * 3600000);
-  const ate = new Date(hoje.getTime() - 86400000).toISOString().slice(0, 10); // ontem (domingo)
-  const de = new Date(hoje.getTime() - 7 * 86400000).toISOString().slice(0, 10); // segunda passada
+  const ate = new Date(hoje.getTime() - 86400000).toISOString().slice(0, 10); // ontem (o resumo sai no domingo: até sábado)
+  const de = new Date(hoje.getTime() - 7 * 86400000).toISOString().slice(0, 10); // 7 dias antes de hoje
   const isoDe = new Date(Date.parse(de + 'T03:00:00Z')).toISOString(), isoAte = new Date(Date.parse(ate + 'T03:00:00Z') + 86400000).toISOString();
   const v = await env.DB.prepare('SELECT tipo, SUM(n) n FROM visitas WHERE dia BETWEEN ? AND ? GROUP BY tipo').bind(de, ate).all();
   const n = (t) => (v.results.find((x) => x.tipo === t) || {}).n || 0;
   const um = (q, ...a) => env.DB.prepare(q).bind(...a).first().then((r) => r.n);
   const pedidos = await um('SELECT COUNT(*) n FROM usuarios WHERE criado >= ? AND criado < ?', isoDe, isoAte);
-  const logins = await um('SELECT COUNT(*) n FROM usuarios WHERE ultimo_acesso >= ? AND ultimo_acesso < ?', isoDe, isoAte);
+  // quem usou o terminal em algum dia da semana (uso_pessoa, por dia). Antes contava o último acesso, e quem voltou no
+  // domingo de manhã, antes do resumo, ficava de fora (15/11/2026)
+  const logins = await um('SELECT COUNT(DISTINCT usuario_id) n FROM uso_pessoa WHERE dia BETWEEN ? AND ?', de, ate)
+    .catch(() => um('SELECT COUNT(*) n FROM usuarios WHERE ultimo_acesso >= ? AND ultimo_acesso < ?', isoDe, isoAte));
   const pend = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`);
   const ativos = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo'`);
   const br = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
@@ -432,9 +435,10 @@ async function resumoSemanal(env) {
     `- Calculadora de juros compostos: ${n('juros')}`,
     `- Calculadora de aposentadoria: ${n('aposentadoria')}`,
     `- Indicadores de hoje: ${n('indicadores')}`,
+    `- Balança comercial: ${n('balanca')}`,
     '',
     `Terminal aberto por quem tem acesso: ${n('terminal')} vezes`,
-    `Pessoas que fizeram login: ${logins}`,
+    `Pessoas que usaram o terminal: ${logins}`,
     `Pedidos de acesso novos: ${pedidos}`,
     '',
     ...(org.length ? ['De onde vieram (visitas / pedidos de acesso):', ...org.map((o) => `- ${o.origem}: ${o.v} / ${o.c}`), ''] : []),
@@ -1131,6 +1135,9 @@ async function apiAuth(req, env, acao, ctx) {
     const comEmail = !!(await config(env)).mail_key;
     const ins = await env.DB.prepare(`INSERT INTO usuarios (nome, email, senha, status, criado, celular) VALUES (?, ?, ?, ?, ?, ?)`)
       .bind(nome, email, await hashSenha(senha), comEmail ? 'confirmar' : 'pendente', new Date().toISOString(), celular || null).run();
+    // de onde veio quem pediu acesso: a vitrine manda o Referer e o ?utm_source da primeira página da visita.
+    // 15/11/2026: contado aqui, antes do e-mail de confirmação (antes ficava depois e, com o e-mail ligado, nunca era contado)
+    contarOrigem(env, ctx, origemDe(b.ref, b.utm) || 'Páginas do site', 'cadastro');
     if (comEmail) {
       const r = await emailConfirmar(env, req, ins.meta.last_row_id, nome, email).catch(() => ({ ok: false }));
       if (r.ok) return json({ ok: true, confirmar: true, msg: MSG_CONF });
@@ -1140,8 +1147,6 @@ async function apiAuth(req, env, acao, ctx) {
         env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(ins.meta.last_row_id),
       ]);
     }
-    // de onde veio quem pediu acesso: a vitrine manda o Referer e o ?utm_source da primeira página da visita
-    contarOrigem(env, ctx, origemDe(b.ref, b.utm) || 'Páginas do site', 'cadastro');
     ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
     return json({ ok: true, msg: MSG_FILA });
   }
