@@ -2757,6 +2757,43 @@ h2 b{font-size:12px;font-weight:700}
   .painel table.t .t tr{background:var(--surface-2)}
   .cab-ac{width:100%;justify-content:space-between}
 }
+/* celular 14/11/2026: barra fixa com o menu de abas e o Atualizar, números compactos, tabelas em lista */
+.barra-cel,.menu-fundo{display:none}
+@media (max-width:999px){
+  .abas{display:none}
+  .barra-cel{display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -20px 16px;padding:8px 20px;border-bottom:1px solid var(--line)}
+  #menu-abas{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+  #menu-abas #menu-rot{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #menu-abas .ic{width:18px;height:18px;flex:none}
+  #menu-abas .seta{transition:transform .15s}
+  .menu-on #menu-abas .seta{transform:rotate(180deg)}
+  #menu-cnt:empty{display:none}
+  #recarregar-cel{min-height:42px;min-width:44px;justify-content:center}
+  .menu-on .abas{display:flex;flex-direction:column;gap:2px;position:fixed;top:62px;left:12px;right:12px;margin:0;max-height:calc(100vh - 80px);overflow-y:auto;z-index:40;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:8px;box-shadow:0 18px 40px rgba(0,0,0,.45);-webkit-mask-image:none;mask-image:none}
+  .menu-on .abas .grp{display:block;margin:12px 10px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+  .menu-on .abas .grp:first-child{margin-top:4px}
+  .menu-on .abas button{border:0;border-radius:9px;padding:12px;width:100%;gap:12px;font-weight:500}
+  .menu-on .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+  .menu-on .abas .ic{display:block;width:18px;height:18px}
+  .menu-on .abas .cnt{margin-left:auto}
+  .menu-fundo:not([hidden]){display:block;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45)}
+  .cab-ac #recarregar{display:none}
+}
+@media (max-width:760px){
+  #kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  #kpis .kpi{padding:10px;border-radius:11px}
+  #kpis .kpi small{font-size:11px;line-height:1.3;margin-bottom:4px;min-height:28px;align-items:flex-start}
+  #kpis .kpi strong{font-size:20px}
+  #kpis .kpi strong.lg{font-size:15px}
+  #kpis .kpi em{font-size:10.5px;line-height:1.3;white-space:normal}
+  table.lista-cel,table.lista-cel tbody,table.lista-cel tr,table.lista-cel td{display:block;width:100%}
+  table.lista-cel thead{display:none}
+  table.lista-cel tr{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 8px;background:var(--surface-2)}
+  table.lista-cel td{border:0;padding:3px 0;text-align:right}
+  table.lista-cel td::before{content:attr(data-l);color:var(--text-3);font-size:12px;float:left;margin-right:10px}
+  table.lista-cel td:first-child{font-weight:600;text-align:left}
+  table.lista-cel td:first-child::before{display:none}
+}
 </style></head><body><div class="app"><aside class="lado">
 <header class="top"><div class="marca"><img src="/icone-mercado-macro.png" alt="" width="30" height="30"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar ao site</a></header>
 <nav class="abas" role="tablist" aria-label="Seções">
@@ -2773,6 +2810,8 @@ h2 b{font-size:12px;font-weight:700}
   <div class="grp" aria-hidden="true">Sistema</div>
   <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
 </nav>
+<div class="barra-cel"><button type="button" id="menu-abas" aria-expanded="false" aria-haspopup="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="menu-rot">Visão geral</span><span class="cnt" id="menu-cnt"></span><svg class="ic seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><button type="button" class="b" id="recarregar-cel" aria-label="Atualizar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
+<div class="menu-fundo" id="menu-fundo" hidden></div>
 </aside><main>
 <div class="cab"><div><h1 id="tit">Visão geral</h1><p id="sub"></p></div><div class="cab-ac"><span id="agora" class="agora"></span><button type="button" class="b" id="recarregar" title="Buscar os números de novo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Atualizar</button></div></div>
 <p class="msg" id="msg" role="status" aria-live="polite"></p>
@@ -2890,7 +2929,7 @@ h2 b{font-size:12px;font-weight:700}
   // botão principal de cada situação; o resto fica no menu (...)
   var PRINCIPAL = { pendente: ['acesso'], ativo: ['acesso'], expirado: ['acesso'], confirmar: ['liberar'], recusado: ['acesso'], bloqueado: ['liberar'] };
   function botoes(u, zapPrincipal){
-    if (u.id === eu || u.admin) return '<span class="pill admin">administrador</span>';
+    if (u.id === eu || u.admin) return '';
     var todos = (BT[u.status] || []).slice(), pri = (PRINCIPAL[u.status] || []).slice();
     // WhatsApp entra antes de Excluir; nas listas de "precisa de você" e "vencem" fica à vista
     if (u.celular) { todos.splice(todos.length - 1, 0, ['zap', 'WhatsApp', '']); if (zapPrincipal) pri.push('zap'); }
@@ -3069,10 +3108,10 @@ h2 b{font-size:12px;font-weight:700}
     var no = L.filter(online).length;
     raiz.innerHTML = !L.length ? '<p class="vazio">Ninguém abriu o terminal hoje ainda.</p>'
       : '<p class="vazio" style="text-align:left;margin:0 0 8px;font-size:13px"><b>' + no + '</b> ' + (no === 1 ? 'pessoa no site agora' : 'pessoas no site agora') + ' · ' + L.length + ' usaram hoje</p>'
-      + '<div class="mmw"><table class="mm"><thead><tr><th>Assinante</th><th>Aparelho</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
+      + '<div class="mmw"><table class="mm lista-cel"><thead><tr><th>Assinante</th><th>Aparelho</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
       + L.map(function(p){
           var on = online(p), ab = Object.keys(p.abas).sort(function(a, b){ return p.abas[b] - p.abas[a]; });
-          return '<tr><td>' + esc(p.nome) + '</td><td>' + aparelho(p.aparelho) + '</td><td>' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td>' + (p.tot || 0) + '</td><td>'
+          return '<tr><td data-l="Assinante">' + esc(p.nome) + '</td><td data-l="Aparelho">' + aparelho(p.aparelho) + '</td><td data-l="Está em">' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td data-l="Aberturas hoje">' + (p.tot || 0) + '</td><td data-l="Abas hoje">'
             + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
   }
@@ -3149,6 +3188,8 @@ h2 b{font-size:12px;font-weight:700}
     document.querySelectorAll('.abas button').forEach(function(x){ x.setAttribute('aria-selected', x.dataset.aba === n); if (x.dataset.aba === n && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     var bt = document.querySelector('.abas button[data-aba="' + n + '"] .rot');
     document.getElementById('tit').textContent = bt ? bt.textContent : '';
+    var mr = document.getElementById('menu-rot'); if (mr) mr.textContent = bt ? bt.textContent : '';
+    menuAbas(false);
     document.getElementById('sub').textContent = SUBT[n] || '';
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
@@ -3208,6 +3249,21 @@ h2 b{font-size:12px;font-weight:700}
       }).join('') + '</tbody></table>';
     }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar o registro.</p>'; });
   }
+  // celular (14/11/2026): o menu de abas abre por cima, agrupado como no computador
+  function menuAbas(abrir){
+    var app = document.querySelector('.app'), b = document.getElementById('menu-abas'), f = document.getElementById('menu-fundo');
+    if (!app || !b) return;
+    app.classList.toggle('menu-on', !!abrir); b.setAttribute('aria-expanded', abrir ? 'true' : 'false'); f.hidden = !abrir;
+  }
+  document.getElementById('menu-abas').addEventListener('click', function(){ menuAbas(!document.querySelector('.app').classList.contains('menu-on')); });
+  document.getElementById('menu-fundo').addEventListener('click', function(){ menuAbas(false); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') menuAbas(false); });
+  document.getElementById('recarregar-cel').addEventListener('click', function(){ document.getElementById('recarregar').click(); });
+  // soma das pendências (cadastros + pagamentos) ao lado do nome da aba
+  setInterval(function(){
+    var n = 0; ['cnt-pessoas', 'cnt-pag'].forEach(function(id){ var el = document.getElementById(id); n += parseInt(el && el.textContent, 10) || 0; });
+    var mc = document.getElementById('menu-cnt'); if (mc && mc.textContent !== (n ? String(n) : '')) mc.textContent = n ? String(n) : '';
+  }, 1500);
   document.querySelector('.abas').addEventListener('click', function(e){ var b = e.target.closest('button[data-aba]'); if (b) aba(b.dataset.aba); });
   document.getElementById('chips').addEventListener('click', function(e){ var b = e.target.closest('button[data-f]'); if (b) { filtro = b.dataset.f; pessoas(); } });
   raiz.addEventListener('click', function(e){
