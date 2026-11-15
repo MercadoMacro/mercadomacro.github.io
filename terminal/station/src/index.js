@@ -2863,12 +2863,17 @@ h2 b{font-size:12px;font-weight:700}
   #kpis .kpi strong{font-size:20px}
   #kpis .kpi strong.lg{font-size:15px}
   #kpis .kpi em{font-size:10.5px;line-height:1.3;white-space:normal}
-  table.lista-cel,table.lista-cel tbody,table.lista-cel tr,table.lista-cel td{display:block;width:100%}
+  /* 15/11/2026: o texto quebra linha em vez de vazar (antes, linha comprida empurrava o cartão para fora) */
+  .mmw:has(> table.lista-cel){overflow:visible}
+  table.lista-cel{min-width:0;border:0;background:transparent}
+  table.lista-cel,table.lista-cel tbody,table.lista-cel tr{display:block;width:100%;max-width:100%}
   table.lista-cel thead{display:none}
   table.lista-cel tr{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 8px;background:var(--surface-2)}
-  table.lista-cel td{border:0;padding:3px 0;text-align:right}
-  table.lista-cel td::before{content:attr(data-l);color:var(--text-3);font-size:12px;float:left;margin-right:10px}
-  table.lista-cel td:first-child{font-weight:600;text-align:left}
+  table.lista-cel td{border:0;padding:3px 0;display:flex;gap:12px;justify-content:space-between;align-items:baseline;width:100%;white-space:normal;text-align:right}
+  table.lista-cel td::before{content:attr(data-l);color:var(--text-3);font-size:12px;flex:none}
+  table.lista-cel td .v{min-width:0;overflow-wrap:anywhere;text-align:right}
+  table.lista-cel td:first-child{font-weight:600;text-align:left;font-size:14px}
+  table.lista-cel td:first-child .v{text-align:left}
   table.lista-cel td:first-child::before{display:none}
 }
 </style></head><body><div class="app"><aside class="lado">
@@ -3188,8 +3193,8 @@ h2 b{font-size:12px;font-weight:700}
       + '<div class="mmw"><table class="mm lista-cel"><thead><tr><th>Assinante</th><th>Aparelho</th><th>Está em</th><th>Aberturas hoje</th><th>Abas que abriu hoje</th></tr></thead><tbody>'
       + L.map(function(p){
           var on = online(p), ab = Object.keys(p.abas).sort(function(a, b){ return p.abas[b] - p.abas[a]; });
-          return '<tr><td data-l="Assinante">' + esc(p.nome) + '</td><td data-l="Aparelho">' + aparelho(p.aparelho) + '</td><td data-l="Está em">' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</td><td data-l="Aberturas hoje">' + (p.tot || 0) + '</td><td data-l="Abas hoje">'
-            + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</td></tr>';
+          return '<tr><td data-l="Assinante"><span class="v">' + esc(p.nome) + '</span></td><td data-l="Aparelho"><span class="v">' + aparelho(p.aparelho) + '</span></td><td data-l="Está em"><span class="v">' + (on ? '<span style="color:var(--pos,#16c784)">●</span> <b>' + esc(nomes[p.aba] || p.aba || '—') + '</b>' : '<span style="color:var(--text-3)">saiu · última: ' + esc(nomes[p.aba] || '—') + ' ' + quando(p.ult) + '</span>') + '</span></td><td data-l="Aberturas hoje"><span class="v">' + (p.tot || 0) + '</span></td><td data-l="Abas hoje"><span class="v">'
+            + (ab.length ? ab.map(function(a){ return esc(nomes[a] || a) + ' <b>' + p.abas[a] + '</b>'; }).join(' · ') : '—') + '</span></td></tr>';
         }).join('') + '</tbody></table></div>';
   }
   // hora no cabeçalho e botão Atualizar
