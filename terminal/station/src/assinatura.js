@@ -497,6 +497,27 @@ export function planosVitrine(cartao = false) {
     : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
+// página inicial (15/11/2026): o menor preço por mês e as perguntas frequentes, com os preços do mesmo PLANOS
+export function menorPorMes(cartao = false) {
+  const v = Object.values(PLANOS).filter((p) => !p.oculto && p.meses && !(p.soCartao && !cartao))
+    .map((p) => Math.round(((cartao && p.valorCartao) || p.valor) / p.meses));
+  return reais(Math.min(...v));
+}
+export function perguntasVitrine(cartao = false) {
+  const m = PLANOS.mensal, s = PLANOS.semestral;
+  const precos = `No Pix, ${m.periodo} sai por ${reais(m.valor)} e ${s.periodo} por ${reais(s.valor)}, em pagamento único, sem renovação automática.`
+    + (cartao ? ` No cartão a assinatura renova sozinha e sai mais barata: a partir de ${menorPorMes(true)} por mês.` : '');
+  return [
+    ['O Mercado Macro é gratuito?', 'Você pode testar grátis por 48 horas, sem cartão, com a Mesa, as Notícias e a Educação. Para usar todas as abas (Mercado, Indicadores, Fundamentos, Calendário, Opções e as outras) e o assistente de IA, é preciso assinar. O fechamento do mercado, os indicadores de hoje e as calculadoras desta página são abertos para todos, sem cadastro.'],
+    ['Quanto custa?', precos + ' Não há taxa de adesão.'],
+    ['Preciso de cartão de crédito para testar?', 'Não. Basta criar a conta com nome, e-mail e senha. As 48 horas grátis valem uma vez por pessoa.'],
+    ['Como cancelo?', 'No cartão, você cancela quando quiser na página de assinatura, sem multa, e o acesso continua até o fim do período pago. No Pix não há renovação: o acesso termina na data de validade. Na primeira assinatura, dá para pedir o reembolso integral em até 7 dias.'],
+    ['Funciona no celular?', 'Sim. O painel se ajusta à tela do celular e pode ser instalado como aplicativo, no celular e no computador. A conta pode ficar aberta em até 2 aparelhos ao mesmo tempo.'],
+    ['O Mercado Macro recomenda investimentos?', 'Não. O conteúdo é informativo: o painel organiza dados, notícias e ferramentas para você acompanhar o mercado, mas não faz recomendação de compra ou venda de ativos.'],
+    ['De onde vêm os dados?', 'De fontes oficiais e de mercado, como Banco Central, IBGE, B3, CVM, Tesouro Direto, FRED e Yahoo Finance. Algumas cotações podem ter atraso; quando uma fonte falha, o painel mostra o último dado conhecido e avisa.'],
+  ];
+}
+
 /* ---------------- página /assinar ---------------- */
 export function paginaAssinar() {
   return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">

@@ -20,8 +20,8 @@
   function aba(cad, foco) {
     tE.setAttribute('aria-selected', !cad); tC.setAttribute('aria-selected', cad);
     $('p-entrar').hidden = cad; $('p-cad').hidden = !cad;
-    $('auth-t').textContent = cad ? 'Peça seu acesso' : 'Entre no painel';
-    $('auth-s').textContent = cad ? 'Leva menos de um minuto. Depois é só escolher seu plano.' : 'Acesso exclusivo para usuários liberados.';
+    $('auth-t').textContent = cad ? 'Crie sua conta grátis' : 'Entre no painel';
+    $('auth-s').textContent = cad ? 'Leva menos de um minuto. Você começa com 48 horas grátis.' : 'Já tem conta? Entre com seu e-mail e senha.';
     if (foco) (cad ? fC : fE).querySelector('input').focus({ preventScroll: true });
   }
   tE.onclick = function () { aba(false, true); };
@@ -107,7 +107,7 @@
         $('pronto-plt').textContent = 'Comece grátis';
         $('pronto-pls').textContent = 'Depois das 48 horas, se gostar, você escolhe um plano lá dentro.';
         $('pronto-entrar').firstChild.textContent = (confirmar ? 'Já confirmei: entrar e começar grátis ' : 'Entrar e começar grátis ');
-        $('pronto-pl').innerHTML = '<li class="destaque"><span><b>Grátis</b><small>48 horas de acesso completo, sem pagar nada. Uma vez só.</small></span><strong>R$ 0</strong></li>';
+        $('pronto-pl').innerHTML = '<li class="destaque"><span><b>Grátis</b><small>48 horas com a Mesa, as Notícias e a Educação, sem pagar nada. Uma vez só.</small></span><strong>R$ 0</strong></li>';
         $('pronto-planos').hidden = false;
       } else if (j.planos && j.planos.length) {
         $('pronto-pl').innerHTML = j.planos.map(function (p) {

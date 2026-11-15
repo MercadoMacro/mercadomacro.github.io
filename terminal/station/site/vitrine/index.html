@@ -24,9 +24,10 @@
 <meta name="twitter:image" content="https://mercadomacro.com.br/previa-link-mercado-macro.png?v=2">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
- {"@type":"Organization","@id":"https://mercadomacro.com.br/#org","name":"Mercado Macro","url":"https://mercadomacro.com.br/","logo":"https://mercadomacro.com.br/icone-512.png"},
+ {"@type":"Organization","@id":"https://mercadomacro.com.br/#org","name":"Mercado Macro","alternateName":["Macro Mercado","MercadoMacro"],"url":"https://mercadomacro.com.br/","logo":"https://mercadomacro.com.br/icone-512.png","sameAs":["https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs","https://whatsapp.com/channel/0029Vb9buP2CRs1jw66ZrH41"]},
  {"@type":"WebSite","@id":"https://mercadomacro.com.br/#site","name":"Mercado Macro","url":"https://mercadomacro.com.br/","inLanguage":"pt-BR","publisher":{"@id":"https://mercadomacro.com.br/#org"}},
- {"@type":"WebApplication","name":"Mercado Macro","url":"https://mercadomacro.com.br/","applicationCategory":"FinanceApplication","operatingSystem":"Web","inLanguage":"pt-BR","description":"Terminal financeiro com cotações ao vivo, indicadores do Brasil e dos EUA, balanços de empresas, fluxo do estrangeiro na B3 e calculadoras.","publisher":{"@id":"https://mercadomacro.com.br/#org"}}
+ {"@type":"WebApplication","name":"Mercado Macro","url":"https://mercadomacro.com.br/","applicationCategory":"FinanceApplication","operatingSystem":"Web","inLanguage":"pt-BR","description":"Terminal financeiro com cotações ao vivo, indicadores do Brasil e dos EUA, balanços de empresas, fluxo do estrangeiro na B3 e calculadoras.","publisher":{"@id":"https://mercadomacro.com.br/#org"}},
+ <!--FAQ_LD-->
 ]}
 </script>
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
@@ -37,7 +38,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/vitrine/vitrine.css?v=19">
+<link rel="stylesheet" href="/vitrine/vitrine.css?v=20">
 <link rel="stylesheet" href="/vitrine/ajuda.css?v=1">
 </head>
 <body>
@@ -50,10 +51,11 @@
     <a href="#por-dentro">Por dentro</a>
     <a href="#ferramentas">Ferramentas</a>
     <a href="#fontes">Fontes</a>
+    <a href="#planos">Planos</a>
   </nav>
   <div class="vt-top-bts">
     <button type="button" class="vt-bt ghost" data-ir="entrar">Entrar</button>
-    <button type="button" class="vt-bt" data-ir="cadastrar">Pedir acesso</button>
+    <button type="button" class="vt-bt" data-ir="cadastrar">Testar grátis</button>
   </div>
 </header>
 
@@ -67,6 +69,11 @@
       <p class="vt-eyebrow"><span class="vt-dot" aria-hidden="true"></span><span id="status-mercado">Terminal financeiro · Brasil e mundo</span></p>
       <h1>O mercado inteiro.<br><span>Numa só tela.</span></h1>
       <p class="vt-lead">Cotações ao vivo, mesa de operações, mapa de calor, indicadores do Brasil, dos EUA e da Europa, balanços de empresas, fluxo do investidor estrangeiro na B3, posição dos grandes investidores, calculadoras e opções. Tudo num painel profissional, organizado para quem acompanha o mercado de perto.</p>
+      <div class="vt-hero-cta">
+        <button type="button" class="vt-bt big" data-ir="cadastrar">Testar grátis por 48 horas <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+        <a class="vt-bt ghost big" href="#planos">Ver planos e preços</a>
+      </div>
+      <p class="vt-hero-nota">Sem cartão de crédito para testar. Depois, planos a partir de <b><!--APARTIR--></b> por mês.</p>
       <ul class="vt-proof">
         <li><b>Acompanhe</b><span>Brasil e exterior no mesmo painel</span></li>
         <li><b>Entenda</b><span>Notícias, fundamentos e indicadores</span></li>
@@ -77,14 +84,14 @@
       <p class="vt-fine">Amostra ao vivo, com os dados reais deste momento.</p>
     </div>
 
-    <aside class="vt-auth" id="acesso" aria-label="Entrar ou pedir acesso">
+    <aside class="vt-auth" id="acesso" aria-label="Entrar ou criar conta">
       <div class="vt-auth-card">
         <div id="forms">
           <h2 class="vt-auth-t" id="auth-t">Entre no painel</h2>
-          <p class="vt-auth-s" id="auth-s">Acesso exclusivo para usuários liberados.</p>
+          <p class="vt-auth-s" id="auth-s">Já tem conta? Entre com seu e-mail e senha.</p>
           <div class="vt-abas" role="tablist" aria-label="Entrar ou cadastrar">
             <button type="button" role="tab" id="t-entrar" aria-selected="true" aria-controls="p-entrar">Entrar</button>
-            <button type="button" role="tab" id="t-cad" aria-selected="false" aria-controls="p-cad">Pedir acesso</button>
+            <button type="button" role="tab" id="t-cad" aria-selected="false" aria-controls="p-cad">Criar conta grátis</button>
           </div>
           <div id="p-entrar" role="tabpanel" aria-labelledby="t-entrar"><form id="f-entrar">
             <label for="e-email">E-mail</label><input id="e-email" name="email" type="email" autocomplete="email" required>
@@ -98,15 +105,15 @@
             <label for="c-email">E-mail</label><input id="c-email" name="email" type="email" autocomplete="email" required>
             <label for="c-cel">Celular com DDD <span class="vt-opc">(opcional, para avisos do seu acesso)</span></label><input id="c-cel" name="celular" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="20">
             <label for="c-senha">Senha (mínimo 8 caracteres)</label><input id="c-senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
-            <button class="vt-enviar" type="submit">Pedir meu acesso <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+            <button class="vt-enviar" type="submit">Criar conta e testar grátis <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
             <p class="vt-msg" role="status" aria-live="polite"></p>
-            <p class="vt-nota"><i class="fas fa-shield-alt" aria-hidden="true"></i> Depois do cadastro você escolhe seu plano. Para conhecer, comece com 48 horas grátis.</p>
-            <p class="vt-cad-priv">Ao pedir acesso você concorda com a <a href="/privacidade">política de privacidade</a>.</p>
+            <p class="vt-nota"><i class="fas fa-shield-alt" aria-hidden="true"></i> Você começa com 48 horas grátis, sem cartão. Depois, se gostar, escolhe um plano.</p>
+            <p class="vt-cad-priv">Ao criar a conta você concorda com os <a href="/planos">termos</a> e a <a href="/privacidade">política de privacidade</a>.</p>
           </form></div>
         </div>
         <div class="vt-pronto" id="pronto" hidden>
           <span class="vt-pronto-ic"><i class="fas fa-check" aria-hidden="true"></i></span>
-          <h2 id="pronto-tit">Pedido enviado</h2>
+          <h2 id="pronto-tit">Conta criada</h2>
           <p id="pronto-txt">Cadastro feito. Agora é só entrar com seu e-mail e senha e escolher seu plano para começar a usar.</p>
           <div class="vt-plx" id="pronto-planos" hidden>
             <p class="vt-plx-t" id="pronto-plt">Escolha seu plano</p>
@@ -234,10 +241,33 @@
     </ul>
   </section>
 
+  <section class="vt-sec" id="planos">
+    <div class="vt-sec-head">
+      <p class="vt-kicker">Planos</p>
+      <h2>Comece grátis. Assine se gostar.</h2>
+      <p>48 horas grátis para conhecer, sem cartão. Depois, escolha o tempo de acesso. Sem taxa de adesão; no cartão, cancela quando quiser.</p>
+    </div>
+    <ul class="vt-planos"><!--PLANOS--></ul>
+    <div class="vt-planos-pe">
+      <button type="button" class="vt-bt big" data-ir="cadastrar">Testar grátis por 48 horas <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+      <a href="/planos">O que cada plano inclui, pagamento e reembolso</a>
+    </div>
+  </section>
+
+  <section class="vt-sec" id="duvidas">
+    <div class="vt-sec-head">
+      <p class="vt-kicker">Dúvidas</p>
+      <h2>Perguntas frequentes</h2>
+    </div>
+    <div class="vt-faq">
+<!--FAQ-->
+    </div>
+  </section>
+
   <section class="vt-cta">
     <h2>Pronto para ver tudo por dentro?</h2>
-    <p>Peça seu acesso em menos de um minuto.</p>
-    <button type="button" class="vt-bt big" data-ir="cadastrar">Pedir acesso <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+    <p>Crie sua conta em menos de um minuto e teste grátis por 48 horas.</p>
+    <button type="button" class="vt-bt big" data-ir="cadastrar">Testar grátis <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
   </section>
 </main>
 
@@ -246,7 +276,7 @@
   <p>Conteúdo informativo. Não é recomendação de compra ou venda de ativos. <a href="/calculadora-renda-fixa">Renda fixa</a> · <a href="/calculadora-juros-compostos">Juros compostos</a> · <a href="/calculadora-aposentadoria">Aposentadoria</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/fechamento-do-mercado">Fechamento do mercado</a> · <a href="/balanca-comercial">Balança comercial</a> · <a href="/telegram?de=rodape" target="_blank" rel="noopener">Canal no Telegram</a> · <a href="/radar?de=rodape" target="_blank" rel="noopener">Radar no WhatsApp</a> · <a href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs" target="_blank" rel="noopener">Podcast no Spotify</a> · <a href="/planos">Planos e termos</a> · <a href="/privacidade">Política de privacidade</a></p>
 </footer>
 
-<script src="/vitrine/vitrine.js?v=28"></script>
+<script src="/vitrine/vitrine.js?v=29"></script>
 <script defer src="/vitrine/ajuda-conteudo.js?v=3"></script>
 <script defer src="/vitrine/ajuda.js?v=1"></script>
 </body>

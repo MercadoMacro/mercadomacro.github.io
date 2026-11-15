@@ -13,7 +13,7 @@ import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA } from './assistente.js';
 import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
-import { PLANOS, planosVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
+import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
@@ -2485,7 +2485,14 @@ async function paginaEntrar(req, env, jaSemLogin) {
     const css = await env.ASSETS.fetch(new Request(new URL(m[1], req.url)));
     if (css.ok) { const texto = await css.text(); corpo = corpo.replace(m[0], () => '<style>' + texto + '</style>'); }
   }
-  corpo = corpo.replace('<!--PLANOS-->', () => planosVitrine());
+  // planos, menor preço por mês e perguntas frequentes (15/11/2026), com o cartão ligado ou não
+  const cartao = await stripeLigado(env).catch(() => false);
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const faq = perguntasVitrine(cartao);
+  corpo = corpo.replace('<!--PLANOS-->', () => planosVitrine(cartao))
+    .replace('<!--APARTIR-->', () => menorPorMes(cartao))
+    .replace('<!--FAQ-->', () => faq.map(([p, r], i) => `      <details${i ? '' : ' open'}><summary>${esc(p)}</summary><p>${esc(r)}</p></details>`).join('\n'))
+    .replace('<!--FAQ_LD-->', () => JSON.stringify({ '@type': 'FAQPage', mainEntity: faq.map(([p, r]) => ({ '@type': 'Question', name: p, acceptedAnswer: { '@type': 'Answer', text: r } })) }).replace(/</g, '\\u003c'));
   return new Response(corpo, { status: r.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY' } });
 }
 
