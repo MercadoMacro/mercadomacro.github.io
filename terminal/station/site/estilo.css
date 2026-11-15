@@ -3471,14 +3471,14 @@ html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !impor
    do app e à vitrine. No celular, no topo; no computador, na barra lateral (recolhida: só o símbolo).
    Para voltar ao logo anterior: apagar este bloco e restaurar o .side-brand do app.js e as imagens do h1. */
 @media (max-width: 900px) {
-  html body .topbar.topbar .mm-logo .mm-img { display:block !important; height:34px; width:auto; }
+  html body .topbar.topbar .mm-logo .mm-img { display:block !important; height:22px; width:auto; opacity:.92; }
   html body.light .topbar.topbar .mm-logo .mm-dark, html body:not(.light) .topbar.topbar .mm-logo .mm-light { display:none !important; }
   html body .topbar.topbar .mm-mini { display:none !important; }
 }
-@media (max-width: 359px) { html body .topbar.topbar .mm-logo .mm-img { height:28px; } }
-body.has-side .side-brand { min-height:40px; }
-body.has-side .side-brand .sb-logo { height:36px; width:auto; display:block; }
-body.has-side .side-brand .sb-marca { height:30px; width:auto; display:none; }
+@media (max-width: 359px) { html body .topbar.topbar .mm-logo .mm-img { height:19px; } }
+body.has-side .side-brand { min-height:32px; }
+body.has-side .side-brand .sb-logo { height:27px; width:auto; display:block; }
+body.has-side .side-brand .sb-marca { height:24px; width:auto; display:none; }
 body.has-side .side-brand .sb-claro, body.light.has-side .side-brand .sb-escuro { display:none !important; }
 body.light.has-side .side-brand .sb-logo.sb-claro { display:block !important; }
 body.has-side.side-collapsed .side-brand .sb-logo { display:none !important; }
