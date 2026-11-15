@@ -275,3 +275,25 @@ test('não entendi: apresentação na 1ª, ajuda na 2ª e oferta da equipe na 3�
   await mensagem(env, 'blablabla', '5511999990005');
   assert.match(enviadas[4], /Não entendi essa/);
 });
+
+test('perfil comercial: gravado pela API uma vez por versão, na produção', async () => {
+  const { env } = ambiente();
+  const perfis = [];
+  const antes = globalThis.fetch;
+  globalThis.fetch = async (u, op) => { if (String(u).includes('whatsapp_business_profile')) { perfis.push(JSON.parse(op.body)); return new Response('{"success":true}'); } return antes(u, op); };
+  try {
+    const esperas = [];
+    const ctx = { waitUntil: (p) => esperas.push(p) };
+    const corpo = JSON.stringify({ entry: [{ changes: [{ field: 'messages', value: { metadata: { phone_number_id: '1342951915577900' }, messages: [{ type: 'text', from: '5511999990009', text: { body: 'oi' } }] } }] }] });
+    for (let i = 0; i < 2; i++) {
+      const req = new Request('https://x.workers.dev/webhook', { method: 'POST', body: corpo, headers: { 'X-Hub-Signature-256': await assinar(corpo) } });
+      await worker.fetch(req, env, ctx);
+      await Promise.all(esperas.splice(0));
+    }
+    assert.equal(perfis.length, 1);
+    assert.equal(perfis[0].vertical, 'FINANCE');
+    assert.ok(perfis[0].about.length <= 139);
+    assert.ok(perfis[0].description.length <= 512);
+    assert.deepEqual(perfis[0].websites, ['https://mercadomacro.com.br/', 'https://mercadomacro.com.br/radar']);
+  } finally { globalThis.fetch = antes; }
+});
