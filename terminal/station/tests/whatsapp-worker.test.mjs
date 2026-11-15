@@ -27,16 +27,21 @@ async function assinar(corpo) {
   const s = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(corpo)));
   return 'sha256=' + Array.from(s, (b) => b.toString(16).padStart(2, '0')).join('');
 }
-async function mensagem(env, texto, de = '5511999990001') {
-  const corpo = JSON.stringify({ entry: [{ changes: [{ field: 'messages', value: { metadata: { phone_number_id: '1342951915577900' }, messages: [{ type: 'text', from: de, text: { body: texto } }] } }] }] });
+async function mensagem(env, texto, de = '5511999990001', msg = null) {
+  const corpo = JSON.stringify({ entry: [{ changes: [{ field: 'messages', value: { metadata: { phone_number_id: '1342951915577900' }, messages: [msg ? { from: de, ...msg } : { type: 'text', from: de, text: { body: texto } }] } }] }] });
   return worker.fetch(new Request('https://x.workers.dev/webhook', { method: 'POST', body: corpo, headers: { 'X-Hub-Signature-256': await assinar(corpo) } }), env);
 }
 
 function ambiente() {
-  const enviadas = [], avisos = [], funis = [];
+  const enviadas = [], avisos = [], funis = [], botoes = [];
   globalThis.fetch = async (url, op = {}) => {
     const u = String(url);
-    if (u.startsWith('https://graph.facebook.com/')) { enviadas.push(JSON.parse(op.body).text.body); return new Response('{}'); }
+    if (u.startsWith('https://graph.facebook.com/')) {
+      const m = JSON.parse(op.body);
+      enviadas.push(m.type === 'interactive' ? m.interactive.body.text : m.text.body);
+      botoes.push(m.type === 'interactive' ? m.interactive.action.buttons.map((b) => b.reply.id) : []);
+      return new Response('{}');
+    }
     if (u.startsWith('https://news.cota-cotacao10.workers.dev')) return new Response(JSON.stringify([{ titulo: 'Petrobras anuncia dividendos', link: 'https://x.test/1', data: Date.now() - 60000, fonte: 'Valor' }]));
     if (u.includes('finance.yahoo.com')) return new Response(JSON.stringify({ chart: { result: [{ meta: { regularMarketPrice: 11, regularMarketTime: Math.floor(Date.now() / 1000), exchangeTimezoneName: 'America/Sao_Paulo' }, timestamp: [Math.floor(Date.now() / 1000) - 86400 * 2], indicators: { quote: [{ close: [10] }] } }] } }));
     throw new Error('fetch inesperado ' + u);
@@ -49,9 +54,13 @@ function ambiente() {
       watchlist: async () => null, link: async () => false,
       insiders: async (t) => 'INSIDERS:' + t,
       funil: async (o, e) => { funis.push([o, e]); return true; },
+      noticias: async () => [
+        { titulo: 'Ibovespa sobe com Petrobras e Vale', link: 'https://valor.test/1', fonte: 'Valor Econômico', data: Date.now() - 600000, nivel: 'ALTO' },
+        { titulo: 'Petrobras anuncia dividendos', link: 'https://valor.test/2', fonte: 'InfoMoney', data: Date.now() - 60000, nivel: 'NORMAL' },
+      ],
     },
   };
-  return { env, enviadas, avisos, funis };
+  return { env, enviadas, avisos, funis, botoes };
 }
 
 test('assinatura errada é recusada', async () => {
@@ -207,4 +216,62 @@ test('"Voltar" sozinho também tira a pausa', async () => {
   await mensagem(env, 'SIM QUERO', '5511999990009');
   await mensagem(env, 'Voltar', '5511999990009');
   assert.match(enviadas[1], /Voltei/);
+});
+
+test('notícias vêm do site, em português, com as de maior impacto primeiro', async () => {
+  const { env, enviadas } = ambiente();
+  await mensagem(env, 'noticias');
+  assert.match(enviadas[0], /Principais manchetes/);
+  assert.ok(enviadas[0].indexOf('Ibovespa sobe') < enviadas[0].indexOf('Petrobras anuncia'));
+  assert.match(enviadas[0], /\(Valor Econômico\)/);
+});
+
+test('botões: boas-vindas com botões e o toque vira o texto equivalente', async () => {
+  const { env, enviadas, botoes } = ambiente();
+  await mensagem(env, 'oi');
+  assert.deepEqual(botoes[0], ['demo', 'planos', 'humano']);
+  await mensagem(env, '', '5511999990001', { type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'planos', title: 'Planos e preços' } } });
+  assert.match(enviadas[1], /Planos do Mercado Macro/);
+  assert.match(enviadas[1], /R\$ 21,90/);
+  assert.deepEqual(botoes[1], ['teste', 'pix', 'anual']);
+  await mensagem(env, '', '5511999990001', { type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'demo', title: 'Ver demo' } } });
+  assert.deepEqual(botoes[2], ['noticias', 'agenda', 'ativo']);
+});
+
+test('botão Falar com a equipe pede atendimento como o SIM QUERO', async () => {
+  const { env, avisos } = ambiente();
+  await mensagem(env, '', '5511999990002', { type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'humano', title: 'Falar com a equipe' } } });
+  assert.equal(avisos[0][0], 'pedido');
+});
+
+test('áudio recebe resposta; durante o atendimento vai para a equipe', async () => {
+  const { env, enviadas, avisos } = ambiente();
+  await mensagem(env, '', '5511999990003', { type: 'audio', audio: { id: 'x' } });
+  assert.match(enviadas[0], /ouvir áudios/);
+  await mensagem(env, 'SIM QUERO', '5511999990003');
+  const antes = enviadas.length;
+  await mensagem(env, '', '5511999990003', { type: 'image', image: { id: 'y' } });
+  assert.equal(enviadas.length, antes);
+  assert.equal(avisos.at(-1)[2], '[foto]');
+});
+
+test('reação e mensagens do sistema são ignoradas', async () => {
+  const { env, enviadas } = ambiente();
+  await mensagem(env, '', '5511999990004', { type: 'reaction', reaction: { emoji: '👍' } });
+  assert.equal(enviadas.length, 0);
+});
+
+test('não entendi: apresentação na 1ª, ajuda na 2ª e oferta da equipe na 3ª', async () => {
+  const { env, enviadas, botoes } = ambiente();
+  await mensagem(env, 'xpto qwerty', '5511999990005');
+  assert.match(enviadas[0], /Sou a Jade/);
+  await mensagem(env, 'abobrinha zzz', '5511999990005');
+  assert.match(enviadas[1], /Ainda não entendi|Não entendi/);
+  await mensagem(env, 'abobrinha de novo', '5511999990005');
+  assert.match(enviadas[2], /equipe/);
+  assert.equal(botoes[2][0], 'humano');
+  // quando entende, zera
+  await mensagem(env, 'noticias', '5511999990005');
+  await mensagem(env, 'blablabla', '5511999990005');
+  assert.match(enviadas[4], /Não entendi essa/);
 });
