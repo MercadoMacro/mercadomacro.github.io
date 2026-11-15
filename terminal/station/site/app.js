@@ -4814,6 +4814,10 @@ window.__onTabSwitch = (tabId) => {
     ['fa-user-tie', 'Radar de insiders', 'insiders cvm 44 controladores diretores compras vendas', () => { switchTab('analysis-panel'); setTimeout(() => window.__anaSecao?.('ins'), 250); }]
   ].map(([ic, label, kw, run]) => ({ sec: 'Ações', icon: `<i class="fas ${ic}"></i>`, label, kw, run }));
 
+  // seções de dentro das abas (Fed, Copom, Balanços, Proventos, Focus...), vindas do menu-sub.js
+  const areasList = () => (window.MMMenuSub?.areas() || []).map(a => ({
+    sec: 'Áreas do terminal', icon: a.ic, label: a.t, hint: a.nome, kw: a.kw, run: a.ir
+  }));
   const assetsList = () => MARKET_SECTIONS.flatMap(sec => sec.items.map(it => {
     const key = it.symbol || it.type;
     const d = marketDataCache[key];
@@ -4843,8 +4847,10 @@ window.__onTabSwitch = (tabId) => {
 
   function render() {
     const q = norm($('#cmdk-q').value.trim());
-    const all = [...tabsList(), ...ACTIONS, ...assetsList()];
-    items = q ? all.filter(o => norm(`${o.label} ${o.hint || ''} ${o.kw || ''} ${o.sec}`).includes(q))
+    const all = [...tabsList(), ...areasList(), ...ACTIONS, ...assetsList()];
+    // cada palavra digitada precisa aparecer (15/11/2026: "taxa de juros" também acha)
+    const palavras = q.split(/\s+/).filter(w => w.length > 1 && !['de', 'da', 'do', 'das', 'dos', 'e'].includes(w));
+    items = q ? all.filter(o => { const t = norm(`${o.label} ${o.hint || ''} ${o.kw || ''} ${o.sec}`); return palavras.length ? palavras.every(w => t.includes(w)) : t.includes(q); })
               : [...tabsList(), ...ACTIONS];
     items = items.slice(0, 40);
     sel = Math.min(sel, Math.max(0, items.length - 1));

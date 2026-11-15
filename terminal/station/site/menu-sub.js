@@ -29,13 +29,13 @@
     {
       aba: 'calendar-panel', nome: 'Calendário',
       // o "Investing (original)" continua como botão dentro da Agenda, fora do menu
-      lista: () => [['list', 'Agenda econômica', fa('fa-calendar-day')], ['bbr', 'Balanços B3', FLAG.br], ['earn', 'Balanços EUA', FLAG.us], ['prov', 'Proventos', fa('fa-hand-holding-dollar')], ['focus', 'Boletim Focus', fa('fa-chart-line')]],
+      lista: () => [['list', 'Agenda econômica', fa('fa-calendar-day')], ['bbr', 'Balanços Brasil', FLAG.br], ['earn', 'Balanços EUA', FLAG.us], ['prov', 'Proventos', fa('fa-hand-holding-dollar')], ['focus', 'Boletim Focus', fa('fa-chart-line')]],
       atual: () => { const v = document.querySelector('#calendar-panel .ecal-view-btn.active')?.dataset.view; return v === 'iframe' ? 'list' : v; },
       ir: (k) => clicaQuando(`#calendar-panel .ecal-view-btn[data-view="${k}"]`),
     },
     {
       aba: 'indicators-panel', nome: 'Indicadores',
-      lista: () => [['br', 'Brasil', FLAG.br], ['us', 'Estados Unidos', FLAG.us], ['eu', 'Europa', FLAG.eu]],
+      lista: () => [['br', 'Brasil', FLAG.br], ['us', 'EUA', FLAG.us], ['eu', 'Europa', FLAG.eu]],
       atual: () => document.querySelector('#ind-root .ind-area button.on')?.dataset.a,
       ir: (k) => clicaQuando(`#ind-root .ind-area button[data-a="${k}"]`),
     },
@@ -100,7 +100,10 @@
     }
     lista.addEventListener('click', (e) => {
       const s = e.target.closest('[data-mn-abre]');
-      if (s) { const d = document.getElementById('mn-sub-' + s.dataset.mnAbre); if (d) { d.classList.toggle('aberto'); if (d.classList.contains('aberto')) d.dataset.manual = '1'; else delete d.dataset.manual; s.setAttribute('aria-expanded', String(d.classList.contains('aberto'))); } return; }
+      if (s) { const d = document.getElementById('mn-sub-' + s.dataset.mnAbre); if (d) {
+        // um submenu aberto por vez (15/11/2026)
+        if (!d.classList.contains('aberto')) lista.querySelectorAll('.mn-sub.aberto').forEach((o) => { if (o !== d) { o.classList.remove('aberto'); delete o.dataset.manual; document.querySelector(`[data-mn-abre="${o.id.slice(7)}"]`)?.setAttribute('aria-expanded', 'false'); } });
+        d.classList.toggle('aberto'); if (d.classList.contains('aberto')) d.dataset.manual = '1'; else delete d.dataset.manual; s.setAttribute('aria-expanded', String(d.classList.contains('aberto'))); } return; }
       const b = e.target.closest('.mn-subitem[data-sub-secao]'); if (!b) return;
       lista.hidden = true;
       document.querySelector('#mobile-navigation .mn-all')?.setAttribute('aria-expanded', 'false');
@@ -140,6 +143,62 @@
   }
   sync();
 
+  /* 15/11/2026: as seções de dentro das abas viram resultados da busca (Ctrl+K), num bloco "Áreas do terminal", com
+     palavras que as pessoas usam ("juros" acha Fed, Copom, Focus e Indicadores; "dividendos" acha Proventos) */
+  const PALAVRAS = {
+    fluxo: 'fluxo estrangeiro investidor estrangeiro capital entrada saida b3 compra venda institucional pessoa fisica',
+    ins: 'insiders cvm controladores diretores administradores compras vendas',
+    cot: 'cftc cot especuladores posicao futuros comprados vendidos',
+    f13: '13f grandes fundos gestoras carteira buffett berkshire',
+    fed: 'juros fed fomc eua probabilidade taxa basica powell decisao',
+    copom: 'juros selic copom banco central probabilidade taxa basica decisao',
+    mercado: 'analise avancada humor comparador desempenho',
+    list: 'agenda economica eventos calendario semana divulgacoes',
+    bbr: 'balancos resultados brasil b3 trimestre lucro empresas',
+    earn: 'balancos resultados eua earnings trimestre lucro',
+    prov: 'proventos dividendos jcp juros sobre capital data com pagamento',
+    focus: 'boletim focus expectativas inflacao selic pib cambio juros banco central',
+    br: 'indicadores brasil ipca selic pib desemprego juros inflacao',
+    us: 'indicadores eua cpi payroll pce juros inflacao emprego',
+    eu: 'indicadores europa bce zona do euro inflacao juros',
+    empresa: 'fundamentos empresas balanco p/l dividend yield roe lucro',
+    ranking: 'ranking acoes p/l dy roe melhores',
+  };
+  const nomeSecao = (aba, k) => { const A = porAba.get(aba); const x = A && A.lista().find(([kk]) => kk === k); return x ? x[1] : ''; };
+  window.MMMenuSub = {
+    areas: () => ABAS.flatMap((A) => A.lista().map(([k, t, ic]) => ({ aba: A.aba, k, nome: A.nome, t, ic, kw: (PALAVRAS[k] || '') + ' ' + A.nome, ir: () => ir(A.aba, k) }))),
+    // "Calendário → Balanços EUA" para a aba aberta (etiqueta da barra recolhida)
+    caminho: (aba) => { const A = porAba.get(aba); if (!A || !ativa(aba)) return ''; const t = nomeSecao(aba, A.atual()); return t ? A.nome + ' → ' + t : ''; },
+  };
+
+  /* barra recolhida: etiqueta com o nome ao chegar pelo teclado (antes só o balão do navegador, que não aparece no
+     teclado); na aba aberta, o caminho até a seção. Com o mouse, a barra se abre sozinha mostrando os nomes. */
+  const etq = document.createElement('div');
+  etq.className = 'side-etq'; etq.setAttribute('role', 'tooltip'); etq.hidden = true;
+  document.body.appendChild(etq);
+  const mostraEtq = (el) => {
+    if (!document.body.classList.contains('side-collapsed') || document.body.classList.contains('side-peek')) return;
+    const nome = el.querySelector('.si-lbl')?.textContent?.trim() || el.getAttribute('aria-label') || '';
+    if (!nome) return;
+    const cam = el.dataset.tab ? window.MMMenuSub.caminho(el.dataset.tab) : '';
+    etq.textContent = cam || nome;
+    const r = el.getBoundingClientRect();
+    etq.hidden = false;
+    etq.style.top = Math.round(r.top + r.height / 2) + 'px';
+    etq.style.left = Math.round(r.right + 10) + 'px';
+  };
+  const escondeEtq = () => { etq.hidden = true; };
+  const lado = document.querySelector('.side');
+  if (lado) {
+    // com o mouse, a barra já se abre por cima (side-peek) mostrando os nomes; a etiqueta é para quem navega pelo teclado
+    // e para telas sem mouse
+    if (!matchMedia('(hover: hover)').matches) lado.addEventListener('pointerdown', (e) => { const b = e.target.closest('.side-item'); if (b) mostraEtq(b); });
+    lado.addEventListener('focusin', (e) => { const b = e.target.closest('.side-item'); if (b) mostraEtq(b); });
+    lado.addEventListener('focusout', escondeEtq);
+    lado.addEventListener('click', escondeEtq);
+    window.addEventListener('scroll', escondeEtq, { passive: true });
+  }
+
   const css = document.createElement('style');
   css.textContent = `
   .side-item .si-chev { flex:0 0 auto; opacity:.45; transition:transform .2s ease; }
@@ -161,6 +220,10 @@
   #mobile-navigation .mn-abre { flex:0 0 auto; width:40px; min-height:40px; display:inline-flex; align-items:center; justify-content:center; border:0; background:none; color:var(--text-3); cursor:pointer; padding:0; }
   #mobile-navigation .mn-abre .si-chev { transition:transform .2s ease; }
   #mobile-navigation .mn-abre[aria-expanded="true"] .si-chev { transform:rotate(90deg); color:var(--text); }
+  .side-etq { position:fixed; z-index:1200; transform:translateY(-50%); pointer-events:none; background:var(--text); color:var(--bg); font-size:12.5px; font-weight:600; padding:6px 10px; border-radius:8px; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.3); }
+  .side-etq::before { content:""; position:absolute; left:-5px; top:50%; transform:translateY(-50%); border:5px solid transparent; border-left:0; border-right-color:var(--text); }
+  /* Auto-atualizar e Aparência saem da barra (ficam em Ajustes; o tema também no atalho Alt+L) para sobrar altura */
+  body.has-side .side #side-live, body.has-side .side #side-theme { display:none !important; }
   `;
   document.head.appendChild(css);
 })();
