@@ -269,6 +269,9 @@ export async function apiAssinatura(req, env, conta, acao) {
     const validade = somarPeriodo(baseValidade(conta.status === 'ativo' ? conta.expira : null), PLANOS.gratis);
     await env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = 'gratis', aviso_venc = NULL, decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END WHERE id = ?`)
       .bind(validade, agora, conta.id).run();
+    // conta o teste começado (resumo semanal, 15/11/2026)
+    await env.DB.prepare('INSERT INTO visitas (dia, tipo, n) VALUES (?, ?, 1) ON CONFLICT(dia, tipo) DO UPDATE SET n = n + 1')
+      .bind(new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10), 'teste_gratis').run().catch(() => {});
     limparCacheSessao();
     await registrar(env, conta.id, `Ativou o plano grátis de 48 horas, acesso até ${new Date(validade).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}`);
     await avisar(env, 'Plano grátis ativado', `${conta.nome} começou as 48 horas grátis.`).catch(() => {});

@@ -408,42 +408,106 @@ async function especuladores() {
   }
 }
 
+// Resumo semanal (Telegram, domingo). 15/11/2026: linha de resumo comparando com a semana anterior, negócio (dinheiro,
+// assinaturas novas, renovações, testes grátis, quem vence), uso (abas, Jade, WhatsApp, canais), saúde do site e sem
+// os sites de tráfego falso na lista de origens. Tudo vem de tabelas que o site já guarda.
+const ORIGEM_FALSA = /blogspot\.|\.xyz$|semalt|buttons-for|free-?traffic|seo-?|best-?seo|traffic2|darodar|ilovevitaly|priceg|hulfingtonpost/i;
 async function resumoSemanal(env) {
   const hoje = new Date(Date.now() - 3 * 3600000);
-  const ate = new Date(hoje.getTime() - 86400000).toISOString().slice(0, 10); // ontem (o resumo sai no domingo: até sábado)
-  const de = new Date(hoje.getTime() - 7 * 86400000).toISOString().slice(0, 10); // 7 dias antes de hoje
-  const isoDe = new Date(Date.parse(de + 'T03:00:00Z')).toISOString(), isoAte = new Date(Date.parse(ate + 'T03:00:00Z') + 86400000).toISOString();
-  const v = await env.DB.prepare('SELECT tipo, SUM(n) n FROM visitas WHERE dia BETWEEN ? AND ? GROUP BY tipo').bind(de, ate).all();
-  const n = (t) => (v.results.find((x) => x.tipo === t) || {}).n || 0;
-  const um = (q, ...a) => env.DB.prepare(q).bind(...a).first().then((r) => r.n);
+  const dia = (k) => new Date(hoje.getTime() - k * 86400000).toISOString().slice(0, 10);
+  const ate = dia(1), de = dia(7), ateA = dia(8), deA = dia(14); // esta semana (até ontem) e a anterior
+  const iso = (d, mais = 0) => new Date(Date.parse(d + 'T03:00:00Z') + mais).toISOString();
+  const isoDe = iso(de), isoAte = iso(ate, 86400000), isoDeA = iso(deA), isoAteA = iso(ateA, 86400000);
+  const q = (sql, ...a) => env.DB.prepare(sql).bind(...a);
+  const um = (sql, ...a) => q(sql, ...a).first().then((r) => (r && r.n) || 0).catch(() => 0);
+  const todos = (sql, ...a) => q(sql, ...a).all().then((r) => r.results || []).catch(() => []);
+  const br = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const mil = (x) => Number(x || 0).toLocaleString('pt-BR');
+  const reais = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
+  const seta = (a, b, pct = true) => {
+    if (!b && !a) return '';
+    if (!b) return ' (▲ novo)';
+    const d = a - b; if (!d) return ' (=)';
+    return ' (' + (d > 0 ? '▲ ' : '▼ ') + (pct ? Math.round(Math.abs(d) / b * 100) + '%' : mil(Math.abs(d))) + ')';
+  };
+
+  const vis = async (d1, d2) => { const r = await todos('SELECT tipo, SUM(n) n FROM visitas WHERE dia BETWEEN ? AND ? GROUP BY tipo', d1, d2); const o = {}; r.forEach((x) => { o[x.tipo] = x.n; }); return o; };
+  const [V, VA] = await Promise.all([vis(de, ate), vis(deA, ateA)]);
+  const n = (t) => V[t] || 0, nA = (t) => VA[t] || 0;
   const pedidos = await um('SELECT COUNT(*) n FROM usuarios WHERE criado >= ? AND criado < ?', isoDe, isoAte);
-  // quem usou o terminal em algum dia da semana (uso_pessoa, por dia). Antes contava o último acesso, e quem voltou no
-  // domingo de manhã, antes do resumo, ficava de fora (15/11/2026)
-  const logins = await um('SELECT COUNT(DISTINCT usuario_id) n FROM uso_pessoa WHERE dia BETWEEN ? AND ?', de, ate)
-    .catch(() => um('SELECT COUNT(*) n FROM usuarios WHERE ultimo_acesso >= ? AND ultimo_acesso < ?', isoDe, isoAte));
+  const pedidosA = await um('SELECT COUNT(*) n FROM usuarios WHERE criado >= ? AND criado < ?', isoDeA, isoAteA);
+  // quem usou o terminal em algum dia da semana (antes: último acesso, que perdia quem voltou no domingo)
+  const pessoas = await um('SELECT COUNT(DISTINCT usuario_id) n FROM uso_pessoa WHERE dia BETWEEN ? AND ?', de, ate);
+  const pessoasA = await um('SELECT COUNT(DISTINCT usuario_id) n FROM uso_pessoa WHERE dia BETWEEN ? AND ?', deA, ateA);
   const pend = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'pendente'`);
   const ativos = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo'`);
-  const br = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
-  const org = await env.DB.prepare(`SELECT origem, SUM(CASE WHEN tipo = 'visita' THEN n ELSE 0 END) v, SUM(CASE WHEN tipo = 'cadastro' THEN n ELSE 0 END) c
-    FROM origens WHERE dia BETWEEN ? AND ? GROUP BY origem ORDER BY v DESC, c DESC LIMIT 6`).bind(de, ate).all().then((r) => r.results).catch(() => []);
+
+  // negócio: pagamentos aprovados (Pix e cartão; renovação do cartão também entra como pagamento)
+  const pags = async (d1, d2) => todos(`SELECT p.usuario_id, p.plano, p.valor, p.ref,
+      (SELECT COUNT(*) FROM pagamentos x WHERE x.usuario_id = p.usuario_id AND x.status IN ('aprovado', 'vencido') AND x.decidido < p.decidido) antes
+    FROM pagamentos p WHERE p.status IN ('aprovado', 'vencido') AND p.decidido >= ? AND p.decidido < ?`, d1, d2);
+  const [P, PA] = await Promise.all([pags(isoDe, isoAte), pags(isoDeA, isoAteA)]);
+  const soma = (l) => l.reduce((t, x) => t + (x.valor || 0), 0);
+  const novas = P.filter((x) => !x.antes).length, renov = P.length - novas;
+  const noCartao = P.filter((x) => /^stripe:/.test(x.ref || '')).length;
+  const pagantes = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo' AND plano IN ('mensal', 'semestral', 'anual', 'trimestral', 'degustacao')`);
+  const semRenovar = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo' AND stripe_assinatura IS NOT NULL AND stripe_cancela IS NOT NULL`);
+  const testes = n('teste_gratis'), testesA = nA('teste_gratis');
+  const vencem = await todos(`SELECT nome, expira, plano FROM usuarios WHERE status = 'ativo' AND expira >= ? AND expira < ?
+    AND COALESCE(plano, '') NOT IN ('cortesia') AND (stripe_assinatura IS NULL OR stripe_cancela IS NOT NULL) ORDER BY expira LIMIT 8`,
+    new Date().toISOString(), new Date(Date.now() + 7 * 86400000).toISOString());
+  const nomePlano = (p) => ({ gratis: 'teste grátis', degustacao: 'degustação' }[p] || p || 'sem plano');
+
+  // uso
+  const abas = await todos('SELECT aba, SUM(n) n FROM uso_abas WHERE dia BETWEEN ? AND ? GROUP BY aba ORDER BY n DESC LIMIT 5', de, ate);
+  const jade = await um('SELECT COUNT(*) n FROM jade_perguntas WHERE dia BETWEEN ? AND ?', de, ate);
+  const funil = await todos(`SELECT evento, SUM(n) n FROM funil_whatsapp WHERE origem = 'radar' AND dia BETWEEN ? AND ? GROUP BY evento`, de, ate);
+  const fn = (e) => (funil.find((x) => x.evento === e) || {}).n || 0;
+  const canais = await todos(`SELECT origem, SUM(n) n FROM origens WHERE tipo = 'canal' AND dia BETWEEN ? AND ? GROUP BY origem`, de, ate);
+  const cliques = (re) => canais.filter((c) => re.test(c.origem)).reduce((t, c) => t + c.n, 0);
+  const clWa = cliques(/^WhatsApp · /), clTg = cliques(/^(?!WhatsApp · )/);
+
+  // de onde vieram, sem tráfego falso
+  const org = await todos(`SELECT origem, SUM(CASE WHEN tipo = 'visita' THEN n ELSE 0 END) v, SUM(CASE WHEN tipo = 'cadastro' THEN n ELSE 0 END) c
+    FROM origens WHERE dia BETWEEN ? AND ? AND tipo IN ('visita', 'cadastro') GROUP BY origem ORDER BY v DESC, c DESC LIMIT 20`, de, ate);
+  const falsas = org.filter((o) => ORIGEM_FALSA.test(o.origem) && !o.c);
+  const boas = org.filter((o) => !falsas.includes(o)).slice(0, 6);
+
+  // saúde: fontes de notícias barradas e avisos de segurança
+  const feeds = (await todos('SELECT fonte, SUM(ok) ok, SUM(limite) lim, SUM(erro) err FROM feeds_status WHERE dia BETWEEN ? AND ? GROUP BY fonte', de, ate))
+    .filter((f) => f.lim + f.err >= 3 && (f.lim + f.err) / (f.ok + f.lim + f.err) >= 0.2);
+  const csp = await um('SELECT SUM(n) n FROM csp_avisos WHERE dia BETWEEN ? AND ?', de, ate);
+  const cspTop = csp ? (await todos('SELECT bloqueado, SUM(n) n FROM csp_avisos WHERE dia BETWEEN ? AND ? GROUP BY bloqueado ORDER BY n DESC LIMIT 1', de, ate))[0] : null;
+
+  const receita = soma(P), receitaA = soma(PA);
   const txt = [
-    `Semana de ${br(de)} a ${br(ate)}:`,
+    `Semana de ${br(de)} a ${br(ate)} (comparada com ${br(deA)} a ${br(ateA)})`,
     '',
-    `Vitrine (página de entrada) aberta: ${n('vitrine')} vezes`,
-    'Páginas abertas ao público:',
-    `- Calculadora de renda fixa: ${n('calculadora')}`,
-    `- Calculadora de juros compostos: ${n('juros')}`,
-    `- Calculadora de aposentadoria: ${n('aposentadoria')}`,
-    `- Indicadores de hoje: ${n('indicadores')}`,
-    `- Balança comercial: ${n('balanca')}`,
+    `📌 Em uma linha: terminal aberto ${mil(n('terminal'))} vezes${seta(n('terminal'), nA('terminal'))}, ${pessoas} pessoas usando${seta(pessoas, pessoasA, false)}, ${pedidos} pedidos de acesso${seta(pedidos, pedidosA, false)}, ${novas} ${novas === 1 ? 'assinatura nova' : 'assinaturas novas'} e ${reais(receita)} recebidos${seta(receita, receitaA)}.`,
     '',
-    `Terminal aberto por quem tem acesso: ${n('terminal')} vezes`,
-    `Pessoas que usaram o terminal: ${logins}`,
-    `Pedidos de acesso novos: ${pedidos}`,
+    '💰 Negócio',
+    `- Recebido: ${reais(receita)} em ${P.length} ${P.length === 1 ? 'pagamento' : 'pagamentos'} (${noCartao} no cartão, ${P.length - noCartao} no Pix)${seta(receita, receitaA)}`,
+    `- Assinaturas novas: ${novas} · renovações: ${renov}`,
+    `- Testes grátis começados: ${testes}${seta(testes, testesA, false)}`,
+    `- Assinantes pagantes agora: ${pagantes}${semRenovar ? ` (${semRenovar} com a renovação do cartão desligada)` : ''}`,
+    `- Usuários liberados no total: ${ativos} · aguardando liberação: ${pend}${pend ? ' (https://mercadomacro.com.br/admin)' : ''}`,
+    ...(vencem.length ? ['', '⏰ Vencem nos próximos 7 dias (sem renovação automática):', ...vencem.map((u) => `- ${String(u.nome || '').split(' ')[0]} (${nomePlano(u.plano)}): ${br(String(u.expira).slice(0, 10))}`)] : ['', '⏰ Ninguém vence nos próximos 7 dias sem renovação automática.']),
     '',
-    ...(org.length ? ['De onde vieram (visitas / pedidos de acesso):', ...org.map((o) => `- ${o.origem}: ${o.v} / ${o.c}`), ''] : []),
-    `Aguardando liberação agora: ${pend}${pend ? ' (https://mercadomacro.com.br/admin)' : ''}`,
-    `Usuários liberados no total: ${ativos}`,
+    '👀 Visitas',
+    `- Vitrine (página de entrada): ${mil(n('vitrine'))}${seta(n('vitrine'), nA('vitrine'))}`,
+    `- Páginas públicas: renda fixa ${n('calculadora')}, juros compostos ${n('juros')}, aposentadoria ${n('aposentadoria')}, indicadores ${n('indicadores')}, balança comercial ${n('balanca')}`,
+    ...(boas.length ? ['- De onde vieram (visitas / pedidos):', ...boas.map((o) => `  · ${o.origem}: ${mil(o.v)} / ${o.c}`)] : []),
+    ...(falsas.length ? [`  · Tráfego falso escondido: ${mil(falsas.reduce((t, o) => t + o.v, 0))} visitas (${falsas.map((o) => o.origem).slice(0, 3).join(', ')})`] : []),
+    '',
+    '📊 Uso do terminal',
+    ...(abas.length ? [`- Abas mais abertas: ${abas.map((a) => `${ABAS_USO[a.aba] || a.aba} ${mil(a.n)}`).join(', ')}`] : []),
+    `- Perguntas à Jade no site: ${mil(jade)}`,
+    `- WhatsApp (vindos do Radar): ${fn('inicio')} conversas, ${fn('atendimento')} pediram atendimento, ${fn('planos')} receberam o link dos planos`,
+    `- Cliques para entrar nos canais: Telegram ${clTg}, WhatsApp ${clWa}`,
+    '',
+    '🩺 Saúde do site',
+    feeds.length ? `- Fontes de notícias com bloqueio: ${feeds.map((f) => `${f.fonte} (${f.lim + f.err} de ${f.ok + f.lim + f.err} leituras)`).join(', ')}` : '- Fontes de notícias: nenhuma com bloqueio relevante',
+    csp ? `- Avisos de segurança (CSP): ${mil(csp)}${cspTop ? ` (o mais comum: ${cspTop.bloqueado === 'inline' ? 'código embutido na página' : String(cspTop.bloqueado).slice(0, 60)})` : ''}. Só avisos: nada é bloqueado ainda`` : '- Avisos de segurança (CSP): nenhum',
     '',
     'Mais detalhes (países, aparelhos): painel da Cloudflare > Web Analytics.',
   ].join('\n') + await especuladores();
