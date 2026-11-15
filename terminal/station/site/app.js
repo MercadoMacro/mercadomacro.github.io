@@ -184,7 +184,7 @@ $('#current-date').textContent = new Date().toLocaleDateString('pt-BR', { weekda
 function applyTheme(t) {
   document.body.classList.toggle('light', t === 'light');
   const themeButton = $('#theme-toggle');
-  themeButton.innerHTML = t === 'light' ? '<i class="fas fa-moon" aria-hidden="true"></i>' : '<i class="fas fa-sun" aria-hidden="true"></i>';
+  themeButton.innerHTML = '<i class="fas fa-adjust" aria-hidden="true"></i>'; // meio círculo: o sol parecia uma segunda engrenagem ao lado de Ajustes
   const themeAction = t === 'light' ? 'Ativar tema escuro (Alt+L)' : 'Ativar tema claro (Alt+L)';
   themeButton.setAttribute('aria-label', themeAction);
   themeButton.title = themeAction;
@@ -5155,7 +5155,7 @@ function newsReadMins(n) {
 (() => {
   try { localStorage.removeItem('mercado_novo'); } catch (e) { /* sem armazenamento */ }
   const sc = document.createElement('script');
-  sc.src = 'mercado-novo.js?v=35';
+  sc.src = 'mercado-novo.js?v=36';
   document.body.appendChild(sc);
 })();
 /* =========================================================

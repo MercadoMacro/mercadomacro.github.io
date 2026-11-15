@@ -3438,3 +3438,10 @@ html[data-term="on"] body.has-side .side-brand .sb-l1 { color:var(--text) !impor
   html body.mm-rolou > .topbar { display:none !important; }
   html body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea) { font-size:16px !important; }
 }
+
+/* celular 14/11/2026: topo mais baixo e a faixa de cotações com a mesma letra do site */
+@media (max-width: 640px) {
+  html body .topbar.topbar { padding-bottom:4px; margin-bottom:6px; }
+  html body .topbar .topbar-right .icon-btn { width:40px; height:40px; }
+  html body .ticker .val, html body .ticker .chg { font-family:inherit; font-variant-numeric:tabular-nums; font-weight:600; }
+}
