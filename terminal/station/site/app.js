@@ -2234,8 +2234,25 @@ function termosDasManchetes(lista, n = 10) {
   return [...res.entries()].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, c]) => [grafia(k), c]);
 }
 
+// a biblioteca de gráficos (~200 KB) só serve para este gráfico do Resumo de mercado: baixa na primeira vez que
+// o resumo abre, e não mais junto com o terminal (auditoria 15/11/2026)
+let chartLib = null;
+function carregarChartLib() {
+  if (window.Chart) return Promise.resolve();
+  return chartLib ||= new Promise((ok, falha) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
+    s.onload = ok; s.onerror = () => { chartLib = null; falha(new Error('gráfico indisponível')); };
+    document.head.appendChild(s);
+  });
+}
 function generateWordFrequencyChart() {
   const chartContainer = $('#chart-container');
+  if (!window.Chart) {
+    if (chartContainer) chartContainer.style.display = 'none';
+    carregarChartLib().then(generateWordFrequencyChart, () => {});
+    return;
+  }
   if (!chartContainer || newsAll.length === 0) {
     if (chartContainer) chartContainer.style.display = 'none';
     return;
