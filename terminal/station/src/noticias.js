@@ -433,3 +433,23 @@ export async function noticiasCache(ctx, { rapida = false } = {}) {
   }
   return renovarLista(chave, ctx);
 }
+
+// diagnóstico (15/11/2026): lê cada feed agora, direto da fonte, e conta o que veio. Só o /admin usa (api/admin/feeds-diag)
+export async function diagnosticoFeeds() {
+  const um = async (f) => {
+    const t0 = Date.now(), r = { nome: f.name };
+    try {
+      const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(f.url, { headers: { 'User-Agent': f.honesto ? 'MercadoMacro/1.0 (+https://mercadomacro.com.br)' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }, signal: ctrl.signal, cache: 'no-store' });
+      r.status = res.status; r.tipo = (res.headers.get('content-type') || '').slice(0, 40);
+      const txt = await res.text().finally(() => clearTimeout(to));
+      r.bytes = txt.length; r.itens = (txt.match(/<(item|entry)\b/g) || []).length;
+      const datas = [...txt.matchAll(/<(pubDate|published|updated|dc:date)>([\s\S]*?)<\/\1>/g)].map((m) => Date.parse(m[2].trim())).filter((d) => Number.isFinite(d) && d < Date.now() + 600000);
+      r.maisNovaMin = datas.length ? Math.round((Date.now() - Math.max(...datas)) / 60000) : null;
+      if (!r.itens) r.inicio = txt.replace(/\s+/g, ' ').slice(0, 120);
+    } catch (e) { r.erro = e.name === 'AbortError' ? 'tempo esgotado (8 s)' : e.message; }
+    r.ms = Date.now() - t0;
+    return r;
+  };
+  return Promise.all(FEEDS.map(um));
+}
