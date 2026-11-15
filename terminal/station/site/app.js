@@ -3120,7 +3120,7 @@ async function generateSummary() {
   if (my !== summarySeq) return;
   ta.value = rodape(txt);
   if (calFeedError && !(calFeed && calFeed.length)) {
-    $('#summary-hint').textContent = `Agenda internacional indisponível (${calFeedError.message}). Copom e seus Compromissos continuam aparecendo.`;
+    $('#summary-hint').textContent = 'Agenda internacional indisponível agora. Copom e seus Compromissos continuam aparecendo.';
   }
 }
 
@@ -3245,7 +3245,8 @@ function renderEcal() {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (!feed.length) {
-    list.innerHTML = `<div class="ecal-empty">Não foi possível carregar o calendário${calFeedError ? ` (${escapeHTML(calFeedError.message)})` : ''}.
+    if (calFeedError) console.warn('calendário:', calFeedError.message); // o detalhe técnico fica no console, não na tela (auditoria 15/11/2026)
+    list.innerHTML = `<div class="ecal-empty">Não foi possível carregar o calendário agora. Tente de novo em instantes ou veja a versão do Investing.
       <button class="btn-sm" id="ecal-go-iframe">Ver calendário do Investing</button></div>`;
     $('#ecal-go-iframe')?.addEventListener('click', () => ecalSetView('iframe'));
     return;

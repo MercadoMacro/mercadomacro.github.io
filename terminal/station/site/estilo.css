@@ -2462,6 +2462,9 @@ body.light :is(.ecal-view-btn.active, .side-item.active, .nm-toggle button.activ
   html body :is(.wl-star, .wl-x, .ind-info, .rs-ic, .ms-link, .refresh-btn, .qc-head button)::after {
     content:''; position:absolute; inset:-10px; }
   html body .wl-star { padding:4px 6px; font-size:13px; }
+  /* Indicadores: "Ampliar" e "O que é?" ficam lado a lado; maiores e com área extra menor, para um não pegar o toque do outro (15/11/2026) */
+  html body .ind-info { width:30px; height:30px; font-size:12px; }
+  html body .ind-info::after { inset:-4px; }
   /* chips e alternadores baixos (Pré/IPCA+, prazos etc.) */
   html body :is(.ms-tg button, .ms-seg button, [data-curve], .cl-quick button, .chip, .ecal-chip, .ecal-view-btn) { min-height:32px; }
   html body input:is([type=checkbox], [type=radio]) { width:20px; height:20px; }
