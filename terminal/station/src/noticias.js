@@ -391,8 +391,11 @@ export async function coletarNoticias(ctx) {
   if (ctx) ctx.waitUntil(caches.default.put(new Request(CHAVE_ULTIMOS), new Response(JSON.stringify(guardar), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=43200' } })).catch(() => {}));
   const agora = Date.now();
   const vistos = new Set(), porFonte = {};
+  // 15/11/2026: a mesma manchete às vezes vem duas vezes da mesma fonte com links diferentes (Google News manda o
+  // mesmo texto por endereços de redirecionamento distintos); a repetida sai
+  const chaveTitulo = (n) => (n.fonte || '') + '|' + String(n.titulo || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 90);
   const todas = res.flat()
-    .filter((n) => agora - n.data < MAX_IDADE && !vistos.has(n.link) && vistos.add(n.link))
+    .filter((n) => agora - n.data < MAX_IDADE && !vistos.has(n.link) && !vistos.has(chaveTitulo(n)) && vistos.add(n.link) && vistos.add(chaveTitulo(n)))
     .sort((a, b) => b.data - a.data)
     .filter((n) => (porFonte[n.fonte] = (porFonte[n.fonte] || 0) + 1) <= POR_FONTE);
   return { todas, falharam };
