@@ -80,12 +80,12 @@ ${topo}
 ${blocos.map(htmlBloco).join('\n')}
 </td></tr>
 <tr><td align="left" style="padding:4px 28px 8px"><a href="${SITE}/" style="background:#f0b90b;color:#111111;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:15px;padding:12px 22px;border-radius:8px;display:inline-block">Abrir o Mercado Macro</a></td></tr>
-${tg ? `<tr><td style="font-family:Arial,Helvetica,sans-serif;padding:10px 28px 24px;font-size:14px;color:#4a5568">Abertura e fechamento no celular: <a href="${tg}" style="color:#1d4ed8;font-weight:700">entrar no canal do Telegram</a></td></tr>` : '<tr><td style="padding:0 0 16px"></td></tr>'}
+${tg ? `<tr><td style="font-family:Arial,Helvetica,sans-serif;padding:10px 28px 24px;font-size:14px;color:#4a5568">Abertura e fechamento no celular: <a href="${tg}" style="color:#1d4ed8;font-weight:700">canal do Telegram</a> ou <a href="${SITE}/radar?de=email" style="color:#15803d;font-weight:700">Radar no WhatsApp</a></td></tr>` : '<tr><td style="padding:0 0 16px"></td></tr>'}
 <tr><td style="font-family:Arial,Helvetica,sans-serif;padding:16px 28px 22px;background:#f5f7fb;font-size:12px;line-height:1.5;color:#6b7280">
 Você recebe este e-mail porque assinou o Mercado Macro. Conteúdo informativo, não é recomendação de investimento. · <a href="${SITE}/" style="color:#6b7280">mercadomacro.com.br</a></td></tr>
 </table></td></tr></table></body></html>`;
   const texto = [pagamento ? `Pagamento confirmado: plano ${pagamento.plano} (${pagamento.valor}). Seu acesso vale até ${pagamento.ate}.\n` : '',
-    troca(t.texto).trim(), '', `Abrir o Mercado Macro: ${SITE}/`, tg ? `Canal no Telegram: ${tg}` : '', '',
+    troca(t.texto).trim(), '', `Abrir o Mercado Macro: ${SITE}/`, tg ? `Canal no Telegram: ${tg}` : '', tg ? `Radar no WhatsApp: ${SITE}/radar?de=email` : '', '',
     'Conteúdo informativo, não é recomendação de investimento.'].filter((x, i) => x || i > 0).join('\n');
   return { assunto, texto, html: htmlEmail };
 }
