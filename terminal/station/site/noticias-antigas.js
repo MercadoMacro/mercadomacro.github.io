@@ -52,13 +52,21 @@
 
   async function traduzir(lote) {
     if (typeof NEWS_EN === 'undefined' || typeof newsTraduzLote !== 'function') return;
+    const tr = typeof newsTraduzSeguro === 'function' ? newsTraduzSeguro : newsTraduzLote;
     const en = lote.filter((n) => NEWS_EN.has(n.fonte));
-    for (let i = 0; i < en.length; i += 20) {
-      const parte = en.slice(i, i + 20);
+    // usa o que este aparelho já traduziu na lista ao vivo
+    const ja = typeof newsTr === 'object' && newsTr ? newsTr : {};
+    const falta = en.filter((n) => { const t = ja[n.link]; if (t && t[0]) { n.tituloOriginal = n.titulo; n.titulo = t[0]; return false; } return true; });
+    for (let i = 0; i < falta.length; i += 20) {
+      const parte = falta.slice(i, i + 20);
       try {
-        const pt = await newsTraduzLote(parte.map((n) => n.titulo.replace(/\n/g, ' ')));
+        const pt = await tr(parte.map((n) => n.titulo.replace(/\n/g, ' ')));
         parte.forEach((n, j) => { if (pt[j]) { n.tituloOriginal = n.titulo; n.titulo = pt[j]; } });
-      } catch (e) { return; } // fica em inglês
+      } catch (e) { // limite do Google: espera 3 s e tenta este pedaço uma vez mais
+        await new Promise((r) => setTimeout(r, 3000));
+        try { const pt = await tr(parte.map((n) => n.titulo.replace(/\n/g, ' '))); parte.forEach((n, j) => { if (pt[j]) { n.tituloOriginal = n.titulo; n.titulo = pt[j]; } }); }
+        catch (e2) { return; } // fica em inglês
+      }
     }
   }
 
