@@ -39,7 +39,7 @@ const FEEDS = [
   { name: 'ADVFN BR', url: 'https://br.advfn.com/common/news/feeds/paperbr/rss', source: 'ADVFN BR', weight: 6 },
   { name: 'Notícia Brasil', url: 'https://noticiabrasil.net.br/export/rss2/archive/index.xml', source: 'Notícia Brasil', weight: 5 },
   { name: 'BeInCrypto BR', url: 'https://br.beincrypto.com/feed/', source: 'BeInCrypto BR', weight: 5 },
-  { name: 'Cointelegraph BR', url: 'https://cointelegraph.com.br/rss', source: 'Cointelegraph BR', weight: 5 },
+  // Cointelegraph BR saiu em 15/11/2026: o RSS passou a exigir pagamento por leitura (HTTP 402)
   { name: 'Money Times', url: 'https://www.moneytimes.com.br/feed/', source: 'Money Times', weight: 7 },
   { name: 'InvestNews', url: 'https://investnews.com.br/feed/', source: 'InvestNews', weight: 6 },
   { name: 'Valor Investe', url: 'https://pox.globo.com/rss/valorinveste/', source: 'Valor Investe', weight: 6 },
@@ -374,21 +374,63 @@ export async function noticiasRapidas(agora = Date.now()) {
   return l.flatMap((x) => [...x].sort((a, b) => b.data - a.data).slice(0, 20));
 }
 
-export async function coletarNoticias(ctx) {
+// Reserva global (15/11/2026): as cópias acima valem só para o servidor da Cloudflare que atendeu (São Paulo, Miami…).
+// O Google News e a Reuters recusam os servidores de São Paulo (503 ou sem resposta), mas respondem ao servidor que
+// roda o relógio de 15 min. Então a última leitura boa de cada feed também fica no banco (feeds_ultimos), e qualquer
+// servidor usa essa cópia quando a fonte não responde para ele. Grava no máximo a cada 10 min por processo.
+const RESERVA_MS = 10 * 60000;
+let reservaGravadaEm = 0, reservaTabela = false;
+async function tabelaReserva(db) {
+  if (reservaTabela) return;
+  await db.prepare('CREATE TABLE IF NOT EXISTS feeds_ultimos (url TEXT PRIMARY KEY, itens TEXT NOT NULL, ts INTEGER NOT NULL)').run();
+  reservaTabela = true;
+}
+async function lerReserva(db, urls) {
+  if (!db || !urls.length) return {};
+  try {
+    await tabelaReserva(db);
+    const r = await db.prepare(`SELECT url, itens FROM feeds_ultimos WHERE ts > ? AND url IN (${urls.map(() => '?').join(',')})`).bind(Date.now() - MAX_IDADE, ...urls).all();
+    const out = {};
+    for (const x of r.results || []) { try { out[x.url] = JSON.parse(x.itens); } catch (e) { /* ignora */ } }
+    return out;
+  } catch (e) { return {}; }
+}
+async function gravarReserva(db, bons) {
+  const urls = Object.keys(bons);
+  if (!db || !urls.length || Date.now() - reservaGravadaEm < RESERVA_MS) return;
+  reservaGravadaEm = Date.now();
+  try {
+    await tabelaReserva(db);
+    const agora = Date.now();
+    await db.batch(urls.map((u) => db.prepare('INSERT INTO feeds_ultimos (url, itens, ts) VALUES (?, ?, ?) ON CONFLICT(url) DO UPDATE SET itens = excluded.itens, ts = excluded.ts')
+      .bind(u, JSON.stringify(bons[u].slice(0, 40)), agora)));
+  } catch (e) { reservaGravadaEm = 0; }
+}
+
+export async function coletarNoticias(ctx, env = null) {
   const res = await Promise.all(FEEDS.map((f) => fetchOneFeed(f)));
   const falharam = [];
   let ultimos = null;
   if (res.some((r) => !r.length)) {
     try { const r = await caches.default.match(new Request(CHAVE_ULTIMOS)); if (r) ultimos = await r.json(); } catch (e) { /* sem cache */ }
   }
-  const guardar = {};
+  const guardar = {}, bons = {};
   FEEDS.forEach((f, i) => {
-    if (res[i].length) { cacheFeed.set(f.url, res[i]); guardar[f.url] = res[i]; return; }
+    if (res[i].length) { cacheFeed.set(f.url, res[i]); guardar[f.url] = res[i]; bons[f.url] = res[i]; return; }
     falharam.push(f.name);
-    res[i] = cacheFeed.get(f.url) || (ultimos && ultimos[f.url]) || [];
+  });
+  // para as fontes que falharam aqui: a cópia global do banco, se for mais nova que a local
+  const semLeitura = FEEDS.filter((f, i) => !res[i].length);
+  const reserva = env?.DB ? await lerReserva(env.DB, semLeitura.map((f) => f.url)) : {};
+  const maisNova = (l) => (l && l.length ? Math.max(...l.map((n) => n.data || 0)) : 0);
+  FEEDS.forEach((f, i) => {
+    if (res[i].length) return;
+    const opcoes = [cacheFeed.get(f.url), ultimos && ultimos[f.url], reserva[f.url]].filter((l) => l && l.length);
+    res[i] = opcoes.sort((a, b) => maisNova(b) - maisNova(a))[0] || [];
     if (res[i].length) guardar[f.url] = res[i];
   });
   if (ctx) ctx.waitUntil(caches.default.put(new Request(CHAVE_ULTIMOS), new Response(JSON.stringify(guardar), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=43200' } })).catch(() => {}));
+  if (env?.DB) { const g = gravarReserva(env.DB, bons); if (ctx?.waitUntil) ctx.waitUntil(g); else await g; }
   const agora = Date.now();
   const vistos = new Set(), porFonte = {};
   // 15/11/2026: a mesma manchete às vezes vem duas vezes da mesma fonte com links diferentes (Google News manda o
@@ -412,14 +454,14 @@ export async function noticiasSoCache() {
 // abertura, histórico) continuam esperando a lista fresca, e o relógio de 15 min mantém a guardada em dia.
 const FRESCA_MS = 120000;
 let renovando = null;
-async function renovarLista(chave, ctx) {
-  const { todas, falharam } = await coletarNoticias(ctx);
+async function renovarLista(chave, ctx, env) {
+  const { todas, falharam } = await coletarNoticias(ctx, env);
   if (todas.length) {
     await caches.default.put(chave, new Response(JSON.stringify(todas), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600', 'X-Gerado': String(Date.now()), 'X-Falharam': falharam.join(', ') } }));
   }
   return { lista: todas, cache: 'MISS', falharam: falharam.join(', ') };
 }
-export async function noticiasCache(ctx, { rapida = false } = {}) {
+export async function noticiasCache(ctx, { rapida = false, env = null } = {}) {
   const chave = new Request(CHAVE_LISTA);
   const hit = await caches.default.match(chave);
   if (hit) {
@@ -427,11 +469,11 @@ export async function noticiasCache(ctx, { rapida = false } = {}) {
     if (idade < FRESCA_MS || rapida) {
       const lista = await hit.json(), falharam = hit.headers.get('X-Falharam') || '';
       if (idade < FRESCA_MS) return { lista, cache: 'HIT', falharam };
-      if (!renovando) { renovando = renovarLista(chave, ctx).catch(() => null).finally(() => { renovando = null; }); ctx?.waitUntil?.(renovando); }
+      if (!renovando) { renovando = renovarLista(chave, ctx, env).catch(() => null).finally(() => { renovando = null; }); ctx?.waitUntil?.(renovando); }
       return { lista, cache: 'STALE', falharam };
     }
   }
-  return renovarLista(chave, ctx);
+  return renovarLista(chave, ctx, env);
 }
 
 // diagnóstico (15/11/2026): lê cada feed agora, direto da fonte, e conta o que veio. Só o /admin usa (api/admin/feeds-diag)
