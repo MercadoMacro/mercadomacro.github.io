@@ -741,6 +741,9 @@ async function atualizarPerfil(env, phoneId, accessToken) {
   const corpo = await res.text().catch(() => '');
   await db.prepare("INSERT INTO jade_config (chave, valor) VALUES ('perfil_resultado', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor")
     .bind(new Date().toISOString() + ' ' + res.status + ' ' + corpo.slice(0, 300)).run();
-  if (!res.ok) { await db.prepare("DELETE FROM jade_config WHERE chave = 'perfil_versao'").run(); return false; }
+  // só tenta de novo em falha passageira (5xx). Erro de permissão (403: número ligado ao app WhatsApp Business no
+  // celular, onde o perfil é editado) fica registrado e não repete a cada mensagem
+  if (!res.ok && res.status >= 500) { await db.prepare("DELETE FROM jade_config WHERE chave = 'perfil_versao'").run(); return false; }
+  if (!res.ok) return false;
   return true;
 }
