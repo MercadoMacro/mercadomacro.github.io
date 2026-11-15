@@ -484,17 +484,18 @@ export async function apiAdminAssinatura(req, env, acao) {
 }
 
 /* ---------------- planos na vitrine (montados aqui para os preços nunca ficarem diferentes) ---------------- */
-export function planosVitrine(cartao = false) {
+// curto (página inicial, 15/11/2026): só nome, preço, preço por mês e uma frase; os detalhes de Pix e cartão ficam em /planos
+export function planosVitrine(cartao = false, curto = false) {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
   // com o cartão ligado, cada plano mostra também o preço no cartão (renovação automática)
-  const noCartao = (p) => (cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, renova sozinho</small>` : '');
+  const noCartao = (p) => (!curto && cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, renova sozinho</small>` : '');
   const nota = { gratis: 'Abre a Mesa, Notícias e Educação, sem a IA', degustacao: 'Uma semana, uma vez só', mensal: 'Para experimentar', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
   // plano só no cartão: aparece só com o Stripe ligado, com o preço do cartão no lugar do Pix
   const soCartao = (p) => ({ ...p, valor: p.valorCartao });
   // degustação saiu da página de assinatura (04/11/2026), então também não aparece nas páginas públicas (07/11/2026)
   return Object.entries(PLANOS).filter(([id, p]) => !p.oculto && id !== 'degustacao' && !(p.soCartao && !cartao)).map(([id, p]) => p.soCartao
-    ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>Só no cartão, renova sozinho</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
-    : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
+    ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>${curto ? 'No cartão' : 'Só no cartão, renova sozinho'}</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
+    : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.gratis ? (curto ? 'Sem cartão' : p.periodo + ' de acesso') : curto ? (cartao ? 'Pix ou cartão' : 'No Pix') : p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
 // página inicial (15/11/2026): o menor preço por mês e as perguntas frequentes, com os preços do mesmo PLANOS
