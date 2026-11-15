@@ -2851,14 +2851,15 @@ h2 b{font-size:12px;font-weight:700}
 .pop-status{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--line)}
 .pop-status .selo{margin-left:0}.pop-status .d{color:var(--text-3)}
 .pop-fundo{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.6);display:grid;place-items:center;padding:16px;backdrop-filter:blur(3px)}
-.pop-card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px 22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.45);color:var(--text)}
+.pop-card{position:relative;width:100%;max-width:440px;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px 22px 0;box-shadow:0 24px 60px rgba(0,0,0,.45);color:var(--text)}
+.pop-x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-size:15px;cursor:pointer;z-index:2}
 .pop-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:20px;padding:4px 10px}
-.pop-card h3{font-size:19px;margin:12px 0 8px;line-height:1.3}
+.pop-card h3{font-size:19px;margin:12px 0 8px;line-height:1.3;padding-right:40px}
 .pop-tx{font-size:14.5px;line-height:1.55;color:var(--text-2)}.pop-tx p{margin:0 0 8px}.pop-tx ul{margin:0 0 8px;padding-left:20px}.pop-tx li{margin:3px 0}
-.pop-bts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.pop-bts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding:12px 0 16px;border-top:1px solid var(--line)}
 .pop-bts button{font:inherit;font-weight:600;font-size:14px;border-radius:10px;padding:10px 16px;min-height:42px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text)}
 .pop-bts .pop-b1{background:var(--accent);color:var(--on-accent);border-color:transparent}
-.pop-nota{font-size:11.5px;color:var(--text-3);margin:10px 0 0;text-align:center}
+.pop-nota{font-size:11.5px;color:var(--text-3);margin:0 0 14px;text-align:center}
 /* celular 14/11/2026: barra fixa com o menu de abas e o Atualizar, números compactos, tabelas em lista */
 .barra-cel,.menu-fundo{display:none}
 @media (max-width:999px){
@@ -3821,9 +3822,13 @@ h2 b{font-size:12px;font-weight:700}
   }
   function popPrevia(d){
     var f = document.createElement('div'); f.className = 'pop-fundo';
-    f.innerHTML = '<div class="pop-card" role="dialog" aria-modal="true"><span class="pop-tag">✨ Novidade no site</span><h3>' + esc(d.titulo || 'Título') + '</h3><div class="pop-tx">' + popTexto(d.texto || 'Texto do aviso.') + '</div><div class="pop-bts">'
+    f.innerHTML = '<div class="pop-card" role="dialog" aria-modal="true"><button type="button" class="pop-x" aria-label="Fechar prévia">✕</button><span class="pop-tag">✨ Novidade no site</span><h3>' + esc(d.titulo || 'Título') + '</h3><div class="pop-tx">' + popTexto(d.texto || 'Texto do aviso.') + '</div><div class="pop-bts">'
       + (d.botao ? '<button type="button" class="pop-b1">' + esc(d.botao) + '</button>' : '') + '<button type="button" class="pop-b2">Entendi</button></div><p class="pop-nota">Prévia: é assim que o assinante vê.</p></div>';
-    f.addEventListener('click', function(e){ if (e.target === f || e.target.closest('button')) f.remove(); });
+    // fecha no ✕, nos botões, tocando fora ou no Esc (15/11/2026: com texto longo no celular não havia como sair)
+    function sai(){ f.remove(); document.removeEventListener('keydown', tecla); }
+    function tecla(e){ if (e.key === 'Escape') sai(); }
+    f.addEventListener('click', function(e){ if (e.target === f || (e.target.closest && e.target.closest('button'))) sai(); });
+    document.addEventListener('keydown', tecla);
     document.body.appendChild(f);
   }
   function popupAdm(){
