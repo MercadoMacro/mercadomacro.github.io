@@ -217,7 +217,7 @@ export default {
       }
       if (p === '/api/assistente') return await apiAssistente(req, env, u, soGratis(u), {
         // de onde o assistente tira os dados de agora (assistente-dados.js): servidor de dados, cache de notícias, fluxo da B3
-        api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx)).lista, fluxo: fluxoEstrangeiro,
+        api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx, { env })).lista, fluxo: fluxoEstrangeiro,
         busca: (pergunta, onde) => buscaConteudo(env, pergunta, onde),
         arquivo: (desde, termo) => arquivoParaJade(env, desde, termo), // manchetes guardadas da semana (noticias_hist)
       });
@@ -250,7 +250,7 @@ export default {
         const d = await dadosAbertura(env);
         return json({ manha: d.manha || null }, 200, { 'Cache-Control': 'no-store' });
       }
-      if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx)).lista);
+      if (p === '/api/noticias/resumo') return await apiResumoNoticias(req, env, u, soGratis(u), async () => (await noticiasCache(ctx, { env })).lista);
       // notícias dos últimos 7 dias, aos poucos (botão "Ver notícias mais antigas" da aba Notícias)
       if (p === '/api/noticias/antigas') {
         const fontes = (url.searchParams.get('fontes') || '').split('|').map((f) => f.trim()).filter(Boolean);
@@ -259,7 +259,7 @@ export default {
       }
       if (p === '/api/noticias') {
         // rapida: responde na hora com a lista guardada e renova em segundo plano (X-Cache: STALE avisa o navegador)
-        const { lista, cache, falharam } = await noticiasCache(ctx, { rapida: true });
+        const { lista, cache, falharam } = await noticiasCache(ctx, { rapida: true, env });
         if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
         return new Response(JSON.stringify(lista), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
       }
@@ -2180,7 +2180,7 @@ async function roboFechamentoFoto(req, env) {
    por dia para o índice. A Jade só busca com busca_ligada = '1' em config, e cada mês tem no máximo busca_limite
    buscas (padrão 2000; 1.000 grátis por mês, depois US$ 0,75 por mil): no limite, a Jade responde sem a busca. */
 async function guardarNoticias(env, ctx) {
-  const { lista } = await noticiasCache(ctx);
+  const { lista } = await noticiasCache(ctx, { env });
   if (lista && lista.length) await arquivarNoticias(env, lista, 'lista'); // src/noticias-arquivo.js (só grava as novas)
   // guarda 180 dias (o índice da busca mantém os arquivos de cada dia)
   if (new Date().getUTCHours() === 4 && new Date().getUTCMinutes() < 15) await limparArquivo(env);
@@ -2246,7 +2246,7 @@ async function noticiasNoCanal(env, ctx) {
   // coluna do estado da entrega (as linhas de antes já tinham sido entregues)
   await env.DB.prepare("ALTER TABLE canal_noticias ADD COLUMN estado TEXT NOT NULL DEFAULT 'enviada'").run().catch(() => {});
   await env.DB.prepare("DELETE FROM canal_noticias WHERE estado = 'reservada' AND quando < ?").bind(agora - CANAL_TRAVA).run();
-  const { lista } = await noticiasCache(ctx);
+  const { lista } = await noticiasCache(ctx, { env });
   const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   const cands = (lista || []).filter((n) => {
     if (!(n && n.titulo && /^https?:\/\//i.test(n.link || '') && FONTES_PT.has(n.fonte))) return false;
