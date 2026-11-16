@@ -73,8 +73,9 @@ globalThis.MMAssetHistory = (() => {
           ...(sutil?{leftPriceScale:{visible:true,borderVisible:false,scaleMargins:{top:.14,bottom:.06}}}:{}),
           timeScale:{borderColor:grid,timeVisible:intra,...(sutil?{borderVisible:false,tickMarkFormatter:marca,fixLeftEdge:true,fixRightEdge:true}:{})},
           localization:{locale:'pt-BR',dateFormat:'dd/MM/yyyy',...(sutil?{priceFormatter:p=>p.toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(p)>=1000?0:Math.abs(p)>=10?2:4})}:{})},
-          handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
-          handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},
+          // Mesa 2 (16/11/2026): a rodinha do mouse rola a página em vez de ficar presa no gráfico (o período já mostra tudo)
+          handleScroll:{mouseWheel:!sutil,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+          handleScale:{mouseWheel:!sutil,pinch:true,axisPressedMouseMove:true},
           crosshair:sutil?{mode:L.CrosshairMode.Magnet,vertLine:{style:L.LineStyle.Dashed,labelVisible:false},horzLine:{visible:false,labelVisible:false}}:{mode:L.CrosshairMode.Normal}
         });
         const precision=all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<1)?6:all.some(p=>Math.abs(p.c)>0&&Math.abs(p.c)<10)?4:2;
