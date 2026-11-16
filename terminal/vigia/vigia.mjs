@@ -39,7 +39,8 @@ const daqui = (n) => ymd(new Date(hoje.getTime() + n * 86400000));
 
 // [nome que aparece na issue, caminho, validação do JSON (devolve texto de erro ou nada)]
 const ROTAS = [
-  ['Site (tela de login)', SITE + '/', null, (t) => (/Pedir acesso/.test(t) ? '' : 'a tela de login não apareceu')],
+  // procura o formulário de entrar, não um texto de botão ("Pedir acesso" virou "Criar conta grátis" em 15/11/2026)
+  ['Site (tela de login)', SITE + '/', null, (t) => (/id="auth-t"|id="p-entrar"|Entre no painel/.test(t) ? '' : 'a tela de login não apareceu')],
   ['Cotações (/quotes)', API + '/quotes?symbols=%5EBVSP,BRL=X', (j) => {
     const ok = Object.values(j).filter((v) => v && v.chart && v.chart.result).length;
     return ok ? '' : 'nenhum símbolo veio do Yahoo';
@@ -56,8 +57,10 @@ const ROTAS = [
   ['FRED (/fred/series)', API + '/fred/series?id=FEDFUNDS&limit=3', (j) => (temLista(j.obs) ? '' : 'série vazia')],
   ['Tesouro Direto (/tesouro)', API + '/tesouro', (j) => {
     if (!temLista(j.titulos)) return 'sem títulos';
-    const pre = j.titulos.filter((t) => /prefixado/i.test(t.nome) && /^\d{2}\/\d{2}\/\d{4}$/.test(t.vencimento || ''));
-    return pre.length >= 2 ? '' : 'títulos sem data de vencimento (o CSV do Tesouro mudou?)';
+    // o que indica quebra é título sem data de vencimento. Quando o Tesouro suspende a negociação (mercado agitado),
+    // o arquivo traz só o Selic e o Reserva: isso não é defeito nosso (16/11/2026)
+    const semData = j.titulos.filter((t) => !/^\d{2}\/\d{2}\/\d{4}$/.test(t.vencimento || ''));
+    return semData.length ? 'títulos sem data de vencimento (o CSV do Tesouro mudou?)' : '';
   }],
   ['Boletim Focus (/focus)', API + '/focus?full=1', (j) => (temLista(j.anuais) ? '' : 'sem expectativas')],
   ['Minério de ferro (/minerio)', API + '/minerio', (j) => (j.valor > 0 ? '' : 'sem preço')],

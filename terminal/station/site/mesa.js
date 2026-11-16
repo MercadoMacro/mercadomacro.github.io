@@ -301,8 +301,17 @@
     try {
       const j = await getJSON(`${PROXY}/tesouro`);
       if (!Array.isArray(j.titulos) || !j.titulos.length) throw new Error('vazio');
-      curve = { t: j.titulos, ts: j.ts || Date.now() };
-      curveErr = '';
+      curve = { t: j.titulos, ts: j.tsTaxas || j.ts || Date.now(), old: !!j.suspenso };
+      // negociação suspensa no Tesouro: as taxas são as da última abertura (16/11/2026)
+      curveErr = j.suspenso ? 'Negociação suspensa no Tesouro Direto: taxas da última abertura.' : '';
+      if (j.suspenso) {
+        // sem a última lista completa no servidor: usa a curva salva neste aparelho
+        if (j.titulos.filter((t) => /prefixado|ipca\+/i.test(t.nome)).length < 2) {
+          const snaps = allSnaps(), k = Object.keys(snaps).sort().pop();
+          if (k) curve = { t: snaps[k].map(([nome, taxa, vencimento]) => ({ nome, taxa, vencimento })), ts: new Date(k + 'T12:00:00').getTime(), old: true };
+        }
+        return;
+      }
       // guarda a curva do dia para comparar depois (até 60 dias)
       const snaps = loadSnaps();
       snaps[isoDay()] = j.titulos.filter((t) => /prefixado|ipca\+/i.test(t.nome) && !/renda\+|educa\+/i.test(t.nome)).map((t) => [t.nome, t.taxa, t.vencimento]);
@@ -355,7 +364,7 @@
         <label>Comparar com <select class="ms-cmp" ${days.length ? '' : 'disabled'}>${days.length ? `<option value="">Sem comparação</option>${days.map((k) => `<option value="${k}" ${k === curveCmp ? 'selected' : ''}>${fmtDay(k)}</option>`).join('')}` : '<option>sem histórico ainda</option>'}</select></label>
       </div>
       <div class="ms-curve" data-n="${pts.length}">${pts.length >= 2 ? '' : `<div class="ms-empty">${curve ? 'Sem títulos desse tipo no arquivo do Tesouro.' : (curveErr || 'Carregando curva…')}</div>`}</div>
-      <div class="ms-foot">${curve ? `Taxas de compra do Tesouro Direto${curve.old ? `, salvas em ${new Date(curve.ts).toLocaleDateString('pt-BR')} (fonte fora do ar agora)` : `, ${new Date(curve.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}.` : ''}${histCurva ? ' Curvas anteriores: Tesouro Transparente.' : days.length ? '' : ' A comparação aparece a partir do segundo dia de uso, com as curvas que o painel guarda.'}</div>`;
+      <div class="ms-foot">${curve ? `Taxas de compra do Tesouro Direto${curve.old ? `, salvas em ${new Date(curve.ts).toLocaleDateString('pt-BR')} (${curveErr ? 'negociação suspensa no Tesouro agora' : 'fonte fora do ar agora'})` : `, ${new Date(curve.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}.` : ''}${histCurva ? ' Curvas anteriores: Tesouro Transparente.' : days.length ? '' : ' A comparação aparece a partir do segundo dia de uso, com as curvas que o painel guarda.'}</div>`;
   }
   const segHTML = () => `<div class="ms-seg" role="group" aria-label="Tipo de curva">
           <button type="button" data-curve="di" class="${curveKind === 'di' ? 'on' : ''}" title="Curva DI x pré da B3 (DI futuro)">DI</button>
