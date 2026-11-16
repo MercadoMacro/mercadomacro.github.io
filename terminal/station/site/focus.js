@@ -72,8 +72,23 @@
     return { anuais: a.value || [], copom: c.value || [] };
   }
 
+  // segunda-feira do relatório mais recente que já deveria ter saído (8h25 de Brasília)
+  function relatorioEsperado() {
+    const agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const d = new Date(agora); d.setHours(8, 25, 0, 0);
+    let volta = (d.getDay() + 6) % 7;   // dias desde a última segunda
+    if (volta === 0 && agora < d) volta = 7;
+    d.setDate(d.getDate() - volta);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  const ultimaData = () => (cache && cache.anuais.length ? cache.anuais.reduce((m, r) => (r.Data > m ? r.Data : m), '') : '');
+  // o dado guardado é de um relatório anterior ao que já saiu: busca de novo (a cada 5 min, até o BCB publicar)
+  const atrasado = () => cache && ultimaData() && relatorio(ultimaData()) < relatorioEsperado();
+
   async function load(force = false) {
-    if (!force && cache && Date.now() - cache.ts < TTL) { draw(); return; }
+    if (!force && cache && Date.now() - cache.ts < (atrasado() ? 5 * 60 * 1000 : TTL)) { draw(); return; }
+    // relatório novo que ainda não chegou pelo servidor: vai direto ao Banco Central
+    if (!force && atrasado()) force = true;
     busy = true; erro = ''; draw();
     try {
       let j;
@@ -101,10 +116,12 @@
     .sort((a, b) => b.Data.localeCompare(a.Data)).map((r) => [r.Data, +r.Mediana, r.numeroRespondentes]);
 
   // comportamento semanal: direção da última semana e há quantas semanas seguidas ela se repete (como no relatório)
-  function comportamento(pts, d0) {
+  // compara com as mesmas casas decimais que aparecem na tela (16/11/2026): 5,22 contra 5,22 é estabilidade,
+  // como no relatório do BCB, mesmo que o valor sem arredondar tenha mudado na terceira casa
+  function comportamento(pts, d0, dec = 2) {
     const sem = [0, 1, 2, 3, 4, 5].map((i) => ate(pts, addDays(d0, -7 * i))).map((x) => (x ? x[1] : null));
     if (!ok(sem[0]) || !ok(sem[1])) return { dir: null, n: 0 };
-    const sinal = (a, b) => Math.sign(+(a - b).toFixed(4));
+    const sinal = (a, b) => Math.sign(+(+a).toFixed(dec) - +(+b).toFixed(dec));
     const dir = sinal(sem[0], sem[1]);
     let n = 1;
     for (let i = 1; i < sem.length - 1 && ok(sem[i + 1]); i++) { if (sinal(sem[i], sem[i + 1]) === dir) n++; else break; }
@@ -124,7 +141,7 @@
       const celulas = (ind, y, dec) => {
         const pts = serieDe(ind, y);
         const hoje = ate(pts, d0), s1 = ate(pts, addDays(d0, -7)), s4 = ate(pts, addDays(d0, -28));
-        const { dir, n } = comportamento(pts, d0);
+        const { dir, n } = comportamento(pts, d0, dec);
         const comp = dir == null ? '<span class="fo-c">—</span>'
           : dir > 0 ? `<span class="fo-c up" title="Aumento há ${n} semana(s) seguida(s)">▲ <i>(${n})</i></span>`
           : dir < 0 ? `<span class="fo-c dn" title="Diminuição há ${n} semana(s) seguida(s)">▼ <i>(${n})</i></span>`
@@ -162,12 +179,13 @@
         ${copom}`;
     }
     // próximo relatório: toda segunda-feira, 8h25 (Brasília)
-    const prox = (() => { const n = new Date(); const d = new Date(n); d.setHours(8, 25, 0, 0); let add = (8 - d.getDay()) % 7; if (add === 0 && n > d) add = 7; d.setDate(d.getDate() + add); return d; })();
+    const esperado = relatorioEsperado(), faltaHoje = atrasado();
+    const prox = (() => { const d = new Date(esperado + 'T12:00:00'); if (!faltaHoje) d.setDate(d.getDate() + 7); return d; })();
     root.innerHTML = `
       <div class="er-bar">
         <div class="ecal-chips">${chip('todos', 'Todos os anos')}${chip(0, `${ano} e ${ano + 1}`)}${chip(1, `${ano + 2} e ${ano + 3}`)}</div>
         <span class="fo-leg"><span class="fo-c up">▲ Aumento</span><span class="fo-c dn">▼ Diminuição</span><span class="fo-c eq">= Estabilidade</span></span>
-        <span class="fo-next">Próximo relatório: segunda, ${prox.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, 8h25</span>
+        <span class="fo-next">${faltaHoje ? `Relatório de ${dm(esperado)}: aguardando o Banco Central publicar` : `Próximo relatório: segunda, ${prox.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, 8h25`}</span>
         <span class="er-st">${busy ? 'Atualizando…' : erro ? (cache ? esc(erro) + ' Mostrando o último dado salvo.' : '') : cache ? `Atualizado às ${new Date(cache.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}</span>
         <button type="button" class="btn-sm fo-atu" ${busy ? 'disabled' : ''} title="Buscar o Focus de novo no Banco Central"><i class="fas fa-sync-alt${busy ? ' fa-spin' : ''}" aria-hidden="true"></i> Atualizar</button>
       </div>
