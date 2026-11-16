@@ -1,7 +1,7 @@
 /* Campanha no WhatsApp (16/11/2026, pedido do Dante): "assine 1 mês, ganhe 2" para quem testou e não assinou.
    O admin vê cada pessoa com nome, número e um botão que abre o WhatsApp com a mensagem pronta (o envio é dele,
    no próprio WhatsApp). Os grupos saem do banco na hora: quem gerou Pix e não pagou, quem pagou a degustação,
-   quem usou nas últimas 3 semanas e quem quase não usou. Fica marcado quem já recebeu (tabela campanha_envios). */
+   quem usou nas últimas 2 semanas e quem quase não usou. Fica marcado quem já recebeu (tabela campanha_envios). */
 
 export const CAMPANHA = {
   id: 'assine1ganhe2-2026-11',
@@ -23,7 +23,7 @@ export const GRUPOS = {
   },
   recente: {
     nome: 'Usaram recentemente',
-    dica: 'Entraram nas últimas 3 semanas',
+    dica: 'Entraram nas últimas 2 semanas',
     texto: ASSINATURA + 'Vi que você aproveitou o terminal nos últimos dias. Para você continuar acompanhando o mercado com a gente, liberei uma condição: assinando 1 mês (R$ 24,90 no Pix), você ganha 2 meses de acesso.\n\n' + COMO + ' Qualquer dúvida, me chama aqui.',
   },
   pouco: {
@@ -53,7 +53,7 @@ async function tabela(env) {
 export async function listaCampanha(env) {
   await tabela(env);
   const agora = Date.now();
-  const tresSemanas = new Date(agora - 21 * 864e5).toISOString();
+  const duasSemanas = new Date(agora - 14 * 864e5).toISOString();
   const r = await env.DB.prepare(`SELECT u.id, u.nome, u.celular, u.plano, u.status, u.expira, u.ultimo_acesso, u.sem_novidades,
       (SELECT COUNT(*) FROM pagamentos p WHERE p.usuario_id = u.id AND p.status IN ('vencido', 'aguardando') AND p.plano <> 'degustacao') pix_aberto,
       (SELECT COUNT(*) FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' AND p.plano = 'degustacao') degust,
@@ -69,7 +69,7 @@ export async function listaCampanha(env) {
     if (u.pagou || u.conferir || (u.status === 'ativo' && PAGOS.has(u.plano))) continue;
     // só quem está para vencer (até 7 dias) ou já venceu
     if (u.status === 'ativo' && u.expira && Date.parse(u.expira) > agora + 7 * 864e5) continue;
-    const grupo = u.pix_aberto ? 'quase' : u.degust ? 'degustacao' : (u.ultimo_acesso && u.ultimo_acesso >= tresSemanas) ? 'recente' : 'pouco';
+    const grupo = u.pix_aberto ? 'quase' : u.degust ? 'degustacao' : (u.ultimo_acesso && u.ultimo_acesso >= duasSemanas) ? 'recente' : 'pouco';
     const nome = primeiroNome(u.nome);
     const numero = numeroWa(u.celular);
     pessoas.push({
