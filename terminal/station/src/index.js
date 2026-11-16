@@ -1412,6 +1412,7 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
+  if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
   if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
   if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
@@ -2852,6 +2853,18 @@ h2 b{font-size:12px;font-weight:700}
   .cab-ac{width:100%;justify-content:space-between}
 }
 /* pop-up de novidades: formulário no admin e prévia (15/11/2026) */
+/* campanha no WhatsApp (16/11/2026) */
+.camp-top{margin:0 0 6px;font-size:13.5px;color:var(--text-2)}
+.camp-g{font-size:14px;margin:18px 0 8px}.camp-g span{font-weight:400;color:var(--text-3);font-size:12.5px}
+.camp-l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.camp-l li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.camp-l li.ok{opacity:.55}
+.camp-p{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}.camp-p span{font-size:12.5px;color:var(--text-3)}
+.camp-l .b{text-decoration:none;white-space:nowrap}
+.camp-env{background:#25d366!important;color:#0b2b17!important;border-color:transparent!important;font-weight:700}
+.camp-feito{font-size:12.5px;color:var(--ok,#22c55e);font-weight:600}
+.camp-sem{margin:14px 0 0}
+@media (max-width:600px){.camp-l .b{flex:1;text-align:center}}
 .pop-adm .pc{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-3);margin:0 0 10px;flex:1;min-width:0}
 .pop-adm .pc[hidden]{display:none}
 .pop-adm .pc input,.pop-adm .pc textarea,.pop-adm .pc select{font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;min-height:40px;width:100%;box-sizing:border-box;color-scheme:dark light}
@@ -2955,7 +2968,7 @@ h2 b{font-size:12px;font-weight:700}
   <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
-<section data-p="comunicado" hidden><h2>Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="comunicado" hidden><h2>Campanha no WhatsApp</h2><p class="d" style="margin:-4px 0 10px">Toque em Enviar: o WhatsApp abre com o nome e a mensagem prontos, e você só confirma o envio.</p><div id="camp"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
 <section data-p="jade" hidden>
   <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
   <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
@@ -3911,6 +3924,34 @@ h2 b{font-size:12px;font-weight:700}
   }
   comunicado();
   popupAdm();
+  // campanha no WhatsApp (16/11/2026): nome, número e um botão que abre o WhatsApp com a mensagem pronta
+  function campanha(){
+    var el = document.getElementById('camp'); if (!el) return;
+    fetch('/api/admin/campanha', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var ps = j.pessoas || [], gs = j.grupos || {};
+      var com = ps.filter(function(p){ return p.numero; }), feitos = com.filter(function(p){ return p.enviado; }).length;
+      var semCel = ps.filter(function(p){ return !p.numero; });
+      var h = '<div class="caixa camp"><p class="camp-top"><b>' + esc(j.campanha.titulo) + '</b> · até ' + esc(j.campanha.ate) + ' · enviadas <b>' + feitos + '</b> de ' + com.length + '</p>';
+      Object.keys(gs).forEach(function(k){
+        var lista = com.filter(function(p){ return p.grupo === k; }); if (!lista.length) return;
+        h += '<h3 class="camp-g">' + esc(gs[k].nome) + ' <span>' + esc(gs[k].dica) + ' · ' + lista.length + '</span></h3><ul class="camp-l">';
+        lista.forEach(function(p){
+          var n = p.numero, tel = '+' + n.slice(0, 2) + ' ' + n.slice(2, 4) + ' ' + n.slice(4, n.length - 4) + '-' + n.slice(n.length - 4);
+          var sit = p.ativo ? 'vence ' + p.expira.split('-').reverse().join('/') : 'vencido';
+          h += '<li class="' + (p.enviado ? 'ok' : '') + '"><div class="camp-p"><b>' + esc(p.nome) + '</b><span>' + esc(tel) + ' · ' + sit + (p.ultimo ? ' · último acesso ' + p.ultimo.split('-').reverse().join('/') : '') + '</span></div>'
+            + (p.enviado ? '<span class="camp-feito">Enviada</span><button type="button" class="b camp-des" data-id="' + p.id + '">Desfazer</button>'
+              : '<a class="b pri camp-env" target="_blank" rel="noopener" data-id="' + p.id + '" href="' + esc(p.link) + '">Enviar no WhatsApp</a>') + '</li>';
+        });
+        h += '</ul>';
+      });
+      if (semCel.length) h += '<p class="d camp-sem">Sem celular cadastrado (' + semCel.length + '): ' + semCel.map(function(p){ return esc(p.nome); }).join(', ') + '. Para essas pessoas, só por e-mail.</p>';
+      if (!ps.length) h += '<p class="vazio">Ninguém na lista agora.</p>';
+      el.innerHTML = h + '</div>';
+      el.querySelectorAll('.camp-env').forEach(function(a){ a.addEventListener('click', function(){ post('/api/admin/campanha', { acao: 'enviado', id: Number(a.dataset.id) }).then(function(){ setTimeout(campanha, 600); }, function(){}); }); });
+      el.querySelectorAll('.camp-des').forEach(function(b){ b.addEventListener('click', function(){ post('/api/admin/campanha', { acao: 'desmarcar', id: Number(b.dataset.id) }).then(campanha, function(){}); }); });
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  campanha();
   // e-mail de boas-vindas (src/boasvindas.js): texto editável, envio sozinho no primeiro pagamento e para quem já pagou
   function boasVindas(){
     var raiz = document.getElementById('bv');
