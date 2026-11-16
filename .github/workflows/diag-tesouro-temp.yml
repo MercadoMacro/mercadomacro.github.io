@@ -1,0 +1,16 @@
+# temporário (16/11/2026): ver o formato atual do CSV do Tesouro. Não vai para a main.
+name: Diagnóstico Tesouro (temporário)
+on:
+  pull_request:
+    paths: ['.github/workflows/diag-tesouro-temp.yml']
+permissions:
+  contents: read
+jobs:
+  ver:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - run: |
+          curl -sSL -A "Mozilla/5.0" "https://www.tesourodireto.com.br/documents/d/guest/rendimento-investir-csv?download=true" -o t.csv -w "HTTP %{http_code} %{content_type} %{size_download}\n"
+          file t.csv; iconv -f latin1 -t utf-8 t.csv | head -6 | cat -A | cut -c1-300
+          echo ---; curl -sS "https://shrill-meadow-89c1.danilo-nillo.workers.dev/tesouro" | head -c 700
