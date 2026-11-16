@@ -112,6 +112,7 @@ body.light .m2-vidro::before{display:none}
 /* Radar do Copom */
 .m2-radar-top{display:grid;grid-template-columns:auto auto 1fr;gap:18px;align-items:end;margin-bottom:4px}
 .m2-radar-top>div{display:flex;flex-direction:column;gap:2px}
+.m2-radar-top .m2-prov{font-family:Inter,system-ui,sans-serif;white-space:nowrap}.m2-radar-top .m2-prov .num{font-size:.8em;opacity:.85}
 .m2-radar-top small{color:var(--text-3);font-size:11px}
 .m2-radar-top b{font-size:20px;color:var(--text)}.m2-radar-top b.ouro{color:var(--m2-ouro)}
 .m2-radar-sp{align-items:flex-end;text-align:right}.m2-radar-sp .m2-spark{width:110px;height:26px}
