@@ -2489,7 +2489,7 @@ async function paginaEntrar(req, env, jaSemLogin) {
   const cartao = await stripeLigado(env).catch(() => false);
   const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const faq = perguntasVitrine(cartao);
-  corpo = corpo.replace('<!--PLANOS-->', () => planosVitrine(cartao))
+  corpo = corpo.replace('<!--PLANOS-->', () => planosVitrine(cartao, true))
     .replace('<!--APARTIR-->', () => menorPorMes(cartao))
     .replace('<!--FAQ-->', () => faq.map(([p, r], i) => `      <details${i ? '' : ' open'}><summary>${esc(p)}</summary><p>${esc(r)}</p></details>`).join('\n'))
     .replace('<!--FAQ_LD-->', () => JSON.stringify({ '@type': 'FAQPage', mainEntity: faq.map(([p, r]) => ({ '@type': 'Question', name: p, acceptedAnswer: { '@type': 'Answer', text: r } })) }).replace(/</g, '\\u003c'));
