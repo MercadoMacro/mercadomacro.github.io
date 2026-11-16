@@ -505,12 +505,9 @@ export function menorPorMes(cartao = false) {
   return reais(Math.min(...v));
 }
 export function perguntasVitrine(cartao = false) {
-  const m = PLANOS.mensal, s = PLANOS.semestral;
-  const precos = `No Pix, ${m.periodo} sai por ${reais(m.valor)} e ${s.periodo} por ${reais(s.valor)}, em pagamento único, sem renovação automática.`
-    + (cartao ? ` No cartão a assinatura renova sozinha e sai mais barata: a partir de ${menorPorMes(true)} por mês.` : '');
+  // sem preços na página inicial por enquanto (15/11/2026, pedido do Dante): eles aparecem depois do cadastro e em /planos
   return [
     ['O Mercado Macro é gratuito?', 'Você pode testar grátis por 48 horas, sem cartão, com a Mesa, as Notícias e a Educação. Para usar todas as abas (Mercado, Indicadores, Fundamentos, Calendário, Opções e as outras) e o assistente de IA, é preciso assinar. O fechamento do mercado, os indicadores de hoje e as calculadoras desta página são abertos para todos, sem cadastro.'],
-    ['Quanto custa?', precos + ' Não há taxa de adesão.'],
     ['Preciso de cartão de crédito para testar?', 'Não. Basta criar a conta com nome, e-mail e senha. As 48 horas grátis valem uma vez por pessoa.'],
     ['Como cancelo?', 'No cartão, você cancela quando quiser na página de assinatura, sem multa, e o acesso continua até o fim do período pago. No Pix não há renovação: o acesso termina na data de validade. Na primeira assinatura, dá para pedir o reembolso integral em até 7 dias.'],
     ['Funciona no celular?', 'Sim. O painel se ajusta à tela do celular e pode ser instalado como aplicativo, no celular e no computador. A conta pode ficar aberta em até 2 aparelhos ao mesmo tempo.'],
