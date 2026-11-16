@@ -94,7 +94,7 @@ body.light .m2-vidro::before{display:none}
 /* 16/11/2026: o gráfico da curva não encolhe (antes o cartão apertava a curva e os anos do eixo ficavam por cima da
    tabela de contratos); quem cede espaço é a tabela, que rola por dentro */
 .m2 .m2-c-juros .ms-curve{flex:0 0 auto}
-.m2 .m2-c-juros .ms-dilw{flex:1 1 auto;min-height:56px}
+.m2 .m2-c-juros .ms-dilw{flex:1 1 auto;min-height:92px}
 .m2 .m2-c-juros>.ms-head{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-bottom:1px solid var(--line);margin:0}
 .m2 .m2-c-juros>.ms-head::before{content:'';width:8px;height:8px;border-radius:50%;flex:none;background:var(--m2-azul);box-shadow:0 0 10px color-mix(in srgb,var(--m2-azul) 70%,transparent)}
 .m2 .m2-c-juros>.ms-head h3::before{display:none}
