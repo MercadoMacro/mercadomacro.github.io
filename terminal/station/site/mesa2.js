@@ -338,12 +338,14 @@ globalThis.MMMesa2 = (() => {
     const soma = cen.reduce((s, x) => s + x.p, 0) || 1;
     const top = [...cen].sort((a, b) => b.p - a.p).slice(0, 4).sort((a, b) => a.bps - b.bps);
     const nome = (b) => (b === 0 ? 'Manutenção' : `${b < 0 ? 'Corte' : 'Alta'} de ${api.nf(Math.abs(b) / 100, 2)} pp`);
-    const esperada = ok(copom.selic) ? copom.selic + cen.reduce((s, x) => s + x.bps / 100 * x.p / soma, 0) : null;
+    // cenário mais provável (16/11/2026, pedido do Dante): no lugar da "Selic esperada" (média ponderada, ex.: 13,76%,
+    // que o Copom não pode decidir porque só mexe de 0,25 em 0,25)
+    const prov = cen.length ? [...cen].sort((a, b) => b.p - a.p)[0] : null;
     const corte = r.hist.slice(-20).map((h) => Object.entries(h.p || {}).reduce((s, [k, v]) => s + (+k < 0 ? +v : 0), 0));
     const dias = Math.max(0, Math.round((Date.parse(r.data + 'T12:00:00Z') - Date.now()) / 864e5));
     const mxp = Math.max(...top.map((x) => x.p), 1);
     return cab(t, 'ouro', `<span class="m2-hint">${esc(r.data.split('-').reverse().slice(0, 2).join('/'))} · em ${dias} dia${dias === 1 ? '' : 's'}</span>`) + `<div class="m2-body m2-radar">
-      <div class="m2-radar-top"><div><small>Selic hoje</small><b class="num">${ok(copom.selic) ? api.nf(copom.selic, 2) + '%' : '—'}</b></div><div><small>Selic esperada</small><b class="num ouro">${ok(esperada) ? api.nf(esperada, 2) + '%' : '—'}</b></div>
+      <div class="m2-radar-top"><div><small>Selic hoje</small><b class="num">${ok(copom.selic) ? api.nf(copom.selic, 2) + '%' : '—'}</b></div><div><small>Cenário mais provável</small><b class="ouro m2-prov">${prov ? `${esc(nome(prov.bps))} <span class="num">${api.nf(prov.p / soma * 100, 0)}%</span>` : '—'}</b></div>
         <div class="m2-radar-sp"><small>Chance de corte, 20 pregões</small>${spark(corte, corte.length > 1 ? corte[corte.length - 1] - corte[0] : 0)}</div></div>
       ${top.map((x) => `<div class="m2-cen"><span>${nome(x.bps)}</span><div class="m2-bar"><i class="${x.bps < 0 ? 'dn' : x.bps > 0 ? 'up' : 'eq'}" style="width:${Math.max(2, x.p / mxp * 100).toFixed(0)}%"></i></div><b class="num">${api.nf(x.p / soma * 100, 0)}%</b></div>`).join('')}
       <small class="m2-fonte">Opções de Copom da B3 · ${esc(ult.d.split('-').reverse().join('/'))}</small><button type="button" class="m2-link" data-go="analysis-panel">Copom e Fed completos</button></div>`;
