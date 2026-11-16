@@ -1504,8 +1504,11 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'passe' && req.method === 'GET') {
     const desde = new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10);
     try {
-      const r = await env.DB.prepare('SELECT dia, rota, motivo, quem, n FROM passe_registro WHERE dia >= ? ORDER BY dia DESC, n DESC LIMIT 500').bind(desde).all();
-      return json({ linhas: r.results });
+      // pedidos de testes no próprio computador (127.0.0.1, localhost) não são acesso de fora: ficam só num total (16/11/2026)
+      const LOCAL = "(quem LIKE '127.0.0.1%' OR quem LIKE 'localhost%' OR quem LIKE '[::1]%')";
+      const r = await env.DB.prepare(`SELECT dia, rota, motivo, quem, n FROM passe_registro WHERE dia >= ? AND NOT ${LOCAL} ORDER BY dia DESC, n DESC LIMIT 500`).bind(desde).all();
+      const loc = await env.DB.prepare(`SELECT COALESCE(SUM(n), 0) n FROM passe_registro WHERE dia >= ? AND ${LOCAL}`).bind(desde).first();
+      return json({ linhas: r.results, locais: loc ? loc.n : 0 });
     } catch (e) {
       return json({ linhas: [] }); // a tabela nasce no primeiro pedido sem passe
     }
@@ -2861,7 +2864,7 @@ h2 b{font-size:12px;font-weight:700}
 .camp-l li.ok{opacity:.55}
 .camp-p{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}.camp-p span{font-size:12.5px;color:var(--text-3)}
 .camp-l .b{text-decoration:none;white-space:nowrap}
-.camp-env{background:#25d366!important;color:#0b2b17!important;border-color:transparent!important;font-weight:700}
+.camp-env{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;min-height:36px;border-radius:8px;font-size:13px;border:1px solid transparent;background:#25d366!important;color:#0b2b17!important;border-color:transparent!important;font-weight:700}
 .camp-feito{font-size:12.5px;color:var(--ok,#22c55e);font-weight:600}
 .camp-sem{margin:14px 0 0}
 @media (max-width:600px){.camp-l .b{flex:1;text-align:center}}
@@ -3312,7 +3315,7 @@ h2 b{font-size:12px;font-weight:700}
   }
   // abas (lembradas no endereço: /admin#pessoas)
   var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
-  function iniciais(n){ var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
+  function iniciais(n){ var p = String(n || '?').trim().split(/\\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
     document.querySelectorAll('[data-p]').forEach(function(x){ x.hidden = x.dataset.p !== n; });
@@ -3374,8 +3377,9 @@ h2 b{font-size:12px;font-weight:700}
       L.forEach(function(l){ if (l.dia >= sete) soma[l.motivo] = (soma[l.motivo] || 0) + l.n; });
       var nomes = { faltou: 'Sem passe', invalido: 'Passe falso', vencido: 'Passe vencido', vitrine: 'Páginas públicas', 'sem-chave': 'Sem conferir' };
       res.innerHTML = Object.keys(nomes).filter(function(k){ return soma[k]; }).map(function(k){ return '<div class="kpi" style="cursor:default"><small>' + nomes[k] + '</small><strong>' + soma[k].toLocaleString('pt-BR') + '</strong><em>últimos 7 dias</em></div>'; }).join('');
-      if (!L.length) { tab.innerHTML = '<p class="vazio">Nenhum pedido sem passe nos últimos 14 dias.</p>'; return; }
-      tab.innerHTML = '<table class="t"><thead><tr><th>Dia</th><th>Rota</th><th>Motivo</th><th>De onde</th><th style="text-align:right">Vezes</th></tr></thead><tbody>' + L.map(function(l){
+      var nota = j.locais ? '<p class="d" style="margin:0 0 10px">Fora da conta: ' + j.locais.toLocaleString('pt-BR') + ' pedidos de testes do site no próprio computador (127.0.0.1), nos últimos 14 dias.</p>' : '';
+      if (!L.length) { tab.innerHTML = nota + '<p class="vazio">Nenhum pedido sem passe nos últimos 14 dias.</p>'; return; }
+      tab.innerHTML = nota + '<table class="t"><thead><tr><th>Dia</th><th>Rota</th><th>Motivo</th><th>De onde</th><th style="text-align:right">Vezes</th></tr></thead><tbody>' + L.map(function(l){
         return '<tr><td class="c" data-r="Dia">' + esc(l.dia.split('-').reverse().join('/')) + '</td><td data-r="Rota">' + esc(l.rota) + '</td><td class="c" data-r="Motivo">' + esc(l.motivo) + '</td><td class="c" data-r="De onde">' + esc(l.quem) + '</td><td class="c" data-r="Vezes" style="text-align:right">' + l.n.toLocaleString('pt-BR') + '</td></tr>';
       }).join('') + '</tbody></table>';
     }).catch(function(){ tab.innerHTML = '<p class="vazio">Não foi possível carregar o registro.</p>'; });
@@ -3421,6 +3425,8 @@ h2 b{font-size:12px;font-weight:700}
   // fecha o menu (...) ao clicar fora
   document.addEventListener('click', function(e){ document.querySelectorAll('details.mais[open]').forEach(function(d){ if (!d.contains(e.target)) d.open = false; }); });
   aba(location.hash.slice(1) || 'geral');
+  // link com #aba dentro do próprio admin (ou o endereço trocado à mão) também troca de aba (16/11/2026)
+  window.addEventListener('hashchange', function(){ var h = location.hash.slice(1); if (h && document.querySelector('.abas button[data-aba="' + h + '"]')) aba(h); });
   document.querySelector('main').addEventListener('click', function(ev){
     var b = ev.target.closest('button[data-a]'); if (!b) return;
     var dm = b.closest('details'); if (dm) dm.open = false;
@@ -3859,8 +3865,10 @@ h2 b{font-size:12px;font-weight:700}
     fetch('/api/admin/popup', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var p = j.popup || {}, st = j.stats || {};
       var alvoSel = !p.alvo ? '' : /^tab:/.test(p.alvo) ? p.alvo : 'link';
+      // passou da data de "Mostrar até": não aparece mais para ninguém (16/11/2026)
+      var encerrado = !!(p.ate && Date.now() > Date.parse(p.ate + 'T23:59:59-03:00'));
       el.innerHTML = '<div class="caixa pop-adm">'
-        + (p.id ? '<div class="pop-status"><span class="selo ' + (p.ligado ? 'ok' : 'off') + '">' + (p.ligado ? 'No ar' : 'Desligado') + '</span>'
+        + (p.id ? '<div class="pop-status"><span class="selo ' + (p.ligado && !encerrado ? 'ok' : 'off') + '">' + (encerrado ? 'Encerrado' : p.ligado ? 'No ar' : 'Desligado') + '</span>'
           + '<span>Viram: <b>' + (st.mostrou || 0) + '</b> · Fecharam: <b>' + (st.fechou || 0) + '</b> · Clicaram no botão: <b>' + (st.clicou || 0) + '</b></span>'
           + '<span class="d">Publicado em ' + new Date(p.criado).toLocaleDateString('pt-BR') + (p.ate ? ' · mostra até ' + p.ate.split('-').reverse().join('/') : '') + '</span></div>' : '')
         + '<label class="pc">Título<input id="pp-tit" maxlength="90" value="' + esc(p.titulo || '') + '" placeholder="Ex.: Notícias agora traduzidas na hora"></label>'

@@ -181,7 +181,8 @@ export async function apiComunicado(req, env, eu) {
   const c = COMUNICADO;
   const contar = async () => {
     const tot = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE ${DESTINO}`).first();
-    const env_ = await env.DB.prepare(`SELECT COUNT(*) n FROM comunicados_envios e JOIN usuarios u ON u.id = e.usuario_id WHERE e.comunicado = ? AND u.admin = 0 AND u.sem_novidades = 0`).bind(c.id).first();
+    // enviados = quem está no público e já recebeu (16/11/2026: antes contava também quem saiu do público, e a conta não fechava: 44 = 38 + 7)
+    const env_ = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE ${DESTINO} AND id IN (SELECT usuario_id FROM comunicados_envios WHERE comunicado = ?)`).bind(c.id).first();
     const pend = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE ${DESTINO} AND id NOT IN (SELECT usuario_id FROM comunicados_envios WHERE comunicado = ?)`).bind(c.id).first();
     const sairam = await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios WHERE sem_novidades = 1`).first();
     return { total: tot.n, enviados: env_.n, pendentes: pend.n, sairam: sairam.n };
