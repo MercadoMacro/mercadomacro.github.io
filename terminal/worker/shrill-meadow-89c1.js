@@ -1135,8 +1135,11 @@ const rotas = async (request, env, ctx) => {
         const desde = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
         const base = 'https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/';
         const q = (ep, filtro, campos) => `${base}${ep}?$top=1500&$format=json&$orderby=Data%20desc&$select=${campos}&$filter=${encodeURIComponent(filtro)}`;
+        // segunda de manhã (Brasília), quando o relatório novo sai às 8h25: cache curto para ele aparecer logo (16/11/2026)
+        const brt = new Date(Date.now() - 3 * 3600000);
+        const ttl = brt.getUTCDay() === 1 && brt.getUTCHours() >= 8 && brt.getUTCHours() < 12 ? 120 : 1800;
         const get = async (url) => {
-          const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: 1800, cacheEverything: true } });
+          const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: ttl, cacheEverything: true } });
           if (!r.ok) throw new Error('BCB Olinda HTTP ' + r.status);
           return (await r.json()).value || [];
         };
@@ -1152,7 +1155,7 @@ const rotas = async (request, env, ctx) => {
           get(q('ExpectativasMercadoSelic', `baseCalculo eq 0 and Data ge '${desde}'`, 'Data,Reuniao,Mediana')).catch(() => [])
         ]);
         if (!anuais.length) return json({ error: 'Focus sem dados' }, 502, cors);
-        return json({ anuais, copom, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=1800' });
+        return json({ anuais, copom, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=' + ttl });
       } catch (err) {
         return json({ error: 'Focus falhou: ' + err.message }, 502, cors);
       }
