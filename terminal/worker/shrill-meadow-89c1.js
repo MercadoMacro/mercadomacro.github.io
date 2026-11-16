@@ -1120,7 +1120,21 @@ const rotas = async (request, env, ctx) => {
             vencimento: DATA.test(c[iVenc] || '') ? c[iVenc] : (c.find((x) => DATA.test(x)) || null) }))
           .filter((t) => t.taxa !== null && !isNaN(t.taxa));
         if (!titulos.length) return json({ error: 'CSV do Tesouro sem títulos' }, 502, cors);
-        return json({ titulos, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=600' });
+        // negociação suspensa (16/11/2026): quando o mercado fica agitado, o Tesouro tira do arquivo os prefixados e
+        // os de IPCA e deixa só o Selic e o Reserva. Aí devolvemos as últimas taxas completas, com suspenso: true.
+        const CHAVE = new Request('https://cache.mercadomacro.local/tesouro-ultimo-completo');
+        const completo = (l) => l.filter((t) => /prefixado|ipca/i.test(t.nome)).length >= 2;
+        if (completo(titulos)) {
+          ctx.waitUntil(caches.default.put(CHAVE, new Response(JSON.stringify({ titulos, ts: Date.now() }), { headers: { 'Cache-Control': 'public, max-age=1209600' } })).catch(() => {}));
+          return json({ titulos, ts: Date.now() }, 200, cors, { 'Cache-Control': 'public, max-age=600' });
+        }
+        const ultimo = await caches.default.match(CHAVE).then((r) => (r ? r.json() : null)).catch(() => null);
+        if (ultimo && Array.isArray(ultimo.titulos)) {
+          const agora = new Set(titulos.map((t) => t.nome));
+          const junto = titulos.concat(ultimo.titulos.filter((t) => !agora.has(t.nome)));
+          return json({ titulos: junto, ts: Date.now(), suspenso: true, tsTaxas: ultimo.ts }, 200, cors, { 'Cache-Control': 'public, max-age=300' });
+        }
+        return json({ titulos, ts: Date.now(), suspenso: true }, 200, cors, { 'Cache-Control': 'public, max-age=300' });
       } catch (err) {
         return json({ error: 'Tesouro falhou: ' + err.message }, 502, cors);
       }
