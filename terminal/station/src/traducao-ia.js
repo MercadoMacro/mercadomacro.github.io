@@ -59,7 +59,9 @@ export async function traduzir(env, textos, modelo = MODELO_PADRAO) {
     + '"shares" = ações; "bonds" = títulos; "rally" = alta forte; "sell-off" = onda de vendas; "crude" = petróleo; "bps" = pontos-base; '
     + '"retail sales" = vendas no varejo; "lows" / "highs" = mínimas / máximas; "print" (de um indicador) = leitura ou dado; '
     + '"safe haven" ou "haven" = porto seguro; "hot" (inflação) = acima do esperado. '
-    + 'Escreva sempre em português do Brasil, nunca de Portugal (varejo e não retalho; ações e não acções). '
+    + '"West Bank" = Cisjordânia (não é a Faixa de Gaza); "Gaza Strip" = Faixa de Gaza; "euro zone" ou "eurozone" = zona do euro; "Iran" = Irã; '
+    + '"public debt" ou "government debt" = dívida pública; "two more rate hikes" = mais duas altas de juros; o Fed é masculino (o Fed, do Fed). '
+    + 'Escreva sempre em português do Brasil, nunca de Portugal (varejo e não retalho; ações e não acções; Irã e não Irão; econômico e não económico; fato e não facto). '
     + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim. '
     + 'Responda só com as traduções, uma por linha, com o mesmo número na frente, sem comentários.';
   const r = await env.AI.run(M.id, { messages: [{ role: 'system', content: sistema }, { role: 'user', content: linhas }], max_tokens: Math.min(4000, 60 + pedacos(linhas) * 2), temperature: 0.1 });
@@ -87,6 +89,28 @@ export async function testeAdmin(env, fontesBR) {
   return { originais: tit, fontes, res };
 }
 
+/* 17/11/2026: a IA às vezes ainda escreve como em Portugal ("Irão", "zona euro", "económico", "a Fed") e trocou
+   "West Bank" por "Faixa de Gaza". Esta revisão corrige depois da tradução (vale também para o que já estava guardado). */
+const PT_BR = [
+  ['Irão', 'Irã'], ['Teerão', 'Teerã'], ['Moscovo', 'Moscou'], ['zona euro', 'zona do euro'], ['o débito público agregado', 'a dívida pública agregada'], ['débito público agregado', 'dívida pública agregada'],
+  ['do débito público', 'da dívida pública'], ['o débito público', 'a dívida pública'], ['débito público', 'dívida pública'],
+  ['facto', 'fato'], ['factos', 'fatos'], ['registo', 'registro'], ['registos', 'registros'], ['equipa', 'equipe'], ['equipas', 'equipes'],
+  ['accionista', 'acionista'], ['accionistas', 'acionistas'], ['acção', 'ação'], ['acções', 'ações'], ['retalho', 'varejo'],
+  ['projecto', 'projeto'], ['projectos', 'projetos'], ['objectivo', 'objetivo'], ['objectivos', 'objetivos'], ['director', 'diretor'],
+  ['sector', 'setor'], ['sectores', 'setores'], ['actual', 'atual'], ['actuais', 'atuais'], ['telemóvel', 'celular'], ['ecrã', 'tela'],
+  ['a Fed', 'o Fed'], ['da Fed', 'do Fed'], ['na Fed', 'no Fed'], ['pela Fed', 'pelo Fed'], ['à Fed', 'ao Fed'],
+];
+const PT_BR_RE = PT_BR.map(([de, para]) => [new RegExp(`(?<![\\p{L}])${de}(?![\\p{L}])`, 'giu'), para]);
+const igualCaixa = (orig, novo) => (orig[0] === orig[0].toUpperCase() && orig[0] !== orig[0].toLowerCase() ? novo[0].toUpperCase() + novo.slice(1) : novo);
+export function paraBrasil(pt, original = '') {
+  let t = String(pt || '');
+  if (!t) return t;
+  for (const [re, para] of PT_BR_RE) t = t.replace(re, (m) => igualCaixa(m, para));
+  t = t.replace(/(?<![\p{L}])económic/giu, (m) => igualCaixa(m, 'econômic'));
+  if (/west bank/i.test(original) && !/gaza/i.test(original)) t = t.replace(/Faixa de Gaza/g, 'Cisjordânia');
+  return t;
+}
+
 /* ---------- uso no site: a lista de notícias sai com tituloPt e trechoPt ---------- */
 export const FONTES_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha', 'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
 const limpaTit = (t) => String(t || '').replace(/^FinancialJuice:\s*/i, '').trim();
@@ -108,7 +132,7 @@ export async function aplicarTraducoes(env, ctx, lista) {
     const faltam = [];
     for (const n of en) {
       const t = achou.get(n.id);
-      if (t && t.titulo) { n.tituloPt = t.titulo; if (t.trecho) n.trechoPt = t.trecho; } else faltam.push(n);
+      if (t && t.titulo) { n.tituloPt = paraBrasil(t.titulo, n.titulo); if (t.trecho) n.trechoPt = paraBrasil(t.trecho, n.trecho); } else faltam.push(n);
     }
     if (faltam.length && env.AI && !traduzindo) {
       traduzindo = true;
