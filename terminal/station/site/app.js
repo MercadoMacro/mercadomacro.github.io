@@ -1288,6 +1288,9 @@ function newsPrepara(list) {
   out.forEach(n => {
     n.titulo = String(n.titulo).replace(/^FinancialJuice:\s*/i, '');
     n._br = NEWS_BR.has(n.fonte);
+    // tradução feita no servidor pela IA da Cloudflare (16/11/2026): entra como se já estivesse guardada aqui; o que
+    // ainda não veio traduzido o aparelho traduz como antes
+    if (!n._br && n.tituloPt && !newsTr[n.link]) newsTr[n.link] = [n.tituloPt, n.trechoPt || ''];
     newsAplicaTraducao(n);
   });
   newsBruto = out;

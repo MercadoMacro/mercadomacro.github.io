@@ -1412,6 +1412,13 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
   // teste de tradução com a IA da Cloudflare (16/11/2026): 20 manchetes em inglês, dois modelos, nada é guardado
+  if (acao === 'ia-uso' && req.method === 'GET') {
+    const T = await import('./traducao-ia.js'); await T.tabelas(env);
+    const uso = await T.usoHoje(env);
+    const tot = await env.DB.prepare('SELECT COUNT(*) n FROM traducao_ia').first().catch(() => null);
+    const sem = await env.DB.prepare("SELECT COALESCE(SUM(neuronios), 0) n, COALESCE(SUM(itens), 0) i FROM ia_uso WHERE dia >= date('now', '-6 day')").first().catch(() => null);
+    return json({ ...uso, guardadas: tot ? tot.n : 0, semana: sem ? { neuronios: sem.n, itens: sem.i } : null, modelo: T.MODELOS[T.MODELO_PADRAO].id }, 200, { 'Cache-Control': 'no-store' });
+  }
   if (acao === 'ia-teste' && req.method === 'GET') { const { testeAdmin } = await import('./traducao-ia.js'); return json(await testeAdmin(env, FONTES_BR_IA), 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
@@ -3013,6 +3020,7 @@ h2 b{font-size:12px;font-weight:700}
     <section class="painel"><header><h2>Avisos no Telegram</h2><span class="selo" data-selo="avisos"></span></header><div id="avisos"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>IA da Cloudflare (tradução)</h2><span class="selo" data-selo="ia"></span></header><div id="ia-cf"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
   </div>
@@ -3944,6 +3952,20 @@ h2 b{font-size:12px;font-weight:700}
   }
   comunicado();
   popupAdm();
+  // IA da Cloudflare (16/11/2026): quanto a tradução das notícias gastou hoje da cota grátis, com o limitador
+  function iaAdm(){
+    var el = document.getElementById('ia-cf'); if (!el) return;
+    fetch('/api/admin/ia-uso', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var pct = Math.min(100, Math.round(j.neuronios / j.limite * 100));
+      var sb = document.querySelector('[data-selo="ia"]');
+      if (sb) { sb.className = 'selo ' + (j.neuronios >= j.limite ? 'off' : 'ok'); sb.textContent = j.neuronios >= j.limite ? 'Limite do dia atingido' : 'Ligada'; }
+      el.innerHTML = '<p class="d" style="margin:0 0 10px">As notícias em inglês são traduzidas uma vez no servidor e todo assinante já recebe em português. Limite: <b>' + j.limite.toLocaleString('pt-BR') + '</b> neurônios por dia (a cota grátis do plano é 10.000); passou disso, o aparelho de cada pessoa traduz como antes.</p>'
+        + '<div style="height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin:0 0 6px"><i style="display:block;height:100%;width:' + pct + '%;background:' + (pct >= 90 ? 'var(--erro,#ef4444)' : 'var(--accent)') + '"></i></div>'
+        + '<p style="margin:0 0 4px">Hoje: <b>' + j.neuronios.toLocaleString('pt-BR') + '</b> de ' + j.limite.toLocaleString('pt-BR') + ' neurônios (' + pct + '%) · <b>' + j.itens + '</b> notícias traduzidas</p>'
+        + (j.semana ? '<p class="d" style="margin:0">Últimos 7 dias: ' + Number(j.semana.neuronios).toLocaleString('pt-BR') + ' neurônios, ' + j.semana.itens + ' notícias. Guardadas agora: ' + j.guardadas + '. Custo extra: R$ 0 enquanto ficar dentro da cota.</p>' : '');
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  iaAdm();
   // campanha no WhatsApp (16/11/2026): nome, número e um botão que abre o WhatsApp com a mensagem pronta
   function campanha(){
     var el = document.getElementById('camp'); if (!el) return;

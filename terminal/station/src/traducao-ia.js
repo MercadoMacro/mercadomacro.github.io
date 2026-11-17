@@ -52,12 +52,14 @@ export async function traduzir(env, textos, modelo = MODELO_PADRAO) {
   const sistema = 'Você traduz manchetes e trechos de notícias financeiras do inglês para o português do Brasil. '
     + 'Mantenha nomes de empresas, siglas, tickers e números como estão. Use o vocabulário do mercado financeiro brasileiro '
     + '(ex.: "yields" = rendimentos, "Treasuries" = títulos do Tesouro americano, "earnings" = resultados, "Fed" fica Fed). '
+    + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim. '
     + 'Responda só com as traduções, uma por linha, com o mesmo número na frente, sem comentários.';
   const r = await env.AI.run(M.id, { messages: [{ role: 'system', content: sistema }, { role: 'user', content: linhas }], max_tokens: Math.min(4000, 60 + pedacos(linhas) * 2), temperature: 0.1 });
   const resp = String(r && (r.response ?? r.result?.response) || '');
   const mapa = {};
   resp.split('\n').forEach((l) => { const m = l.match(/^\s*(\d+)[.)]\s*(.+)$/); if (m) mapa[+m[1]] = m[2].trim(); });
-  const out = textos.map((t, i) => (t ? mapa[i + 1] || '' : ''));
+  // sem ponto final quando o original não tinha (manchete)
+  const out = textos.map((t, i) => { let x = t ? mapa[i + 1] || '' : ''; if (x && !/[.!?]$/.test(String(t).trim())) x = x.replace(/\.$/, ''); return x; });
   const ent = pedacos(sistema) + pedacos(linhas);
   return { textos: out, neuronios: custo(modelo, ent, pedacos(resp)) };
 }
@@ -75,4 +77,60 @@ export async function testeAdmin(env, fontesBR) {
     catch (e) { res[m] = { erro: String(e.message || e).slice(0, 200) }; }
   }
   return { originais: tit, fontes, res };
+}
+
+/* ---------- uso no site: a lista de notícias sai com tituloPt e trechoPt ---------- */
+export const FONTES_BR = new Set(['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha', 'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil']);
+const limpaTit = (t) => String(t || '').replace(/^FinancialJuice:\s*/i, '').trim();
+let traduzindo = false;
+
+// põe as traduções guardadas na lista e, em segundo plano, traduz as que faltam (no máximo 36 por vez)
+export async function aplicarTraducoes(env, ctx, lista) {
+  if (!env?.DB || !Array.isArray(lista)) return;
+  const en = lista.filter((n) => n && n.id && n.titulo && !FONTES_BR.has(n.fonte));
+  if (!en.length) return;
+  try {
+    await tabelas(env);
+    const ids = [...new Set(en.map((n) => n.id))], achou = new Map();
+    for (let i = 0; i < ids.length; i += 90) {
+      const parte = ids.slice(i, i + 90);
+      const r = await env.DB.prepare(`SELECT id, titulo, trecho FROM traducao_ia WHERE id IN (${parte.map(() => '?').join(',')})`).bind(...parte).all();
+      (r.results || []).forEach((x) => achou.set(x.id, x));
+    }
+    const faltam = [];
+    for (const n of en) {
+      const t = achou.get(n.id);
+      if (t && t.titulo) { n.tituloPt = t.titulo; if (t.trecho) n.trechoPt = t.trecho; } else faltam.push(n);
+    }
+    if (faltam.length && env.AI && !traduzindo) {
+      traduzindo = true;
+      const job = traduzirPendentes(env, faltam.sort((a, b) => (b.data || 0) - (a.data || 0)).slice(0, 36)).catch(() => {}).finally(() => { traduzindo = false; });
+      if (ctx?.waitUntil) ctx.waitUntil(job); else await job;
+    }
+  } catch (e) { /* sem tradução do servidor: o aparelho traduz como antes */ }
+}
+
+async function traduzirPendentes(env, itens) {
+  for (let i = 0; i < itens.length; i += 12) {
+    const uso = await usoHoje(env);
+    if (uso.neuronios >= LIMITE_DIA) return; // limitador: acabou a cota do dia
+    const lote = itens.slice(i, i + 12);
+    const textos = [];
+    lote.forEach((n) => { textos.push(limpaTit(n.titulo)); textos.push(String(n.trecho || '').replace(/\s+/g, ' ').trim()); });
+    const r = await traduzir(env, textos, MODELO_PADRAO);
+    const agora = Date.now(), st = [];
+    lote.forEach((n, k) => {
+      const tit = r.textos[k * 2], tre = r.textos[k * 2 + 1];
+      if (tit) st.push(env.DB.prepare('INSERT OR REPLACE INTO traducao_ia (id, titulo, trecho, modelo, ts) VALUES (?, ?, ?, ?, ?)').bind(n.id, tit.slice(0, 400), (tre || '').slice(0, 600), MODELO_PADRAO, agora));
+    });
+    if (st.length) await env.DB.batch(st);
+    await somarUso(env, r.neuronios, st.length);
+  }
+}
+
+// limpeza: traduções com mais de 30 dias saem do banco (as notícias já saíram da lista)
+export async function limparTraducoes(env) {
+  await tabelas(env);
+  await env.DB.prepare('DELETE FROM traducao_ia WHERE ts < ?').bind(Date.now() - 30 * 864e5).run();
+  await env.DB.prepare("DELETE FROM ia_uso WHERE dia < date('now', '-90 day')").run();
 }
