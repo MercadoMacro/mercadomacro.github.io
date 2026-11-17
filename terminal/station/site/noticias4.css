@@ -1,0 +1,60 @@
+/* Aba Notícias, 17/11/2026 (noticias4.js): preço desde a notícia, linha do tempo, "Do seu interesse" e modo lista */
+
+/* preço desde a notícia */
+.nw4-px { display:inline-flex; align-items:center; gap:5px; align-self:flex-start; font-size:11.5px; color:var(--text-2);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:99px; padding:3px 9px; font-variant-numeric:tabular-nums; }
+.nw4-px i { font-size:10px; color:var(--text-3); }
+.nw4-px b { font-weight:700; color:var(--text); }
+.nw4-px b.up { color:var(--pos); }
+.nw4-px b.dn { color:var(--neg); }
+.nw4-px-nr { margin:0 0 14px; font-size:12.5px; padding:5px 12px; }
+
+/* linha do tempo no leitor */
+.nw4-tl ol { list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--line-2); }
+.nw4-tl li { position:relative; display:grid; grid-template-columns:62px 1fr; column-gap:10px; align-items:baseline; padding:6px 0; }
+.nw4-tl li::before { content:''; position:absolute; left:-20px; top:12px; width:10px; height:10px; border-radius:50%; background:var(--surface); border:2px solid var(--line-2); }
+.nw4-tl li.eu::before { background:var(--accent); border-color:var(--accent); }
+.nw4-tl time { font:600 11.5px 'JetBrains Mono', monospace; color:var(--text-3); }
+.nw4-tl li > span { font-weight:700; color:var(--text); font-size:13.5px; line-height:1.45; }
+.nw4-tl li .nr-link { margin:0; padding:0; border:0; background:none; font-size:13.5px; line-height:1.45; color:var(--text-2); }
+.nw4-tl li .nr-link:hover { color:var(--text); background:none; }
+.nw4-tl li small { grid-column:2; font-size:11px; color:var(--text-3); }
+
+/* Do seu interesse */
+.nw4-int { border:1px solid var(--accent-line); background:var(--accent-soft); border-radius:12px; padding:12px 14px; margin:0 0 16px; }
+.nw4-int header { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; margin-bottom:8px; }
+.nw4-int header b { color:var(--accent-ink); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+.nw4-int header span { color:var(--text-2); font-size:12.5px; }
+.nw4-int-l { display:flex; flex-direction:column; gap:4px; }
+.nw4-int-l button { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:baseline; text-align:left; width:100%; background:var(--surface);
+  border:1px solid var(--line); border-radius:9px; padding:8px 10px; color:var(--text); font:inherit; cursor:pointer; }
+.nw4-int-l button:hover { border-color:var(--line-2); }
+.nw4-int-a { font:700 11px 'JetBrains Mono', monospace; color:var(--accent-ink); }
+.nw4-int-t { font-size:13px; font-weight:600; line-height:1.4; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.nw4-int-l small { font-size:11px; color:var(--text-3); }
+
+/* seletor Cards / Lista */
+.nw4-modo { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; flex:none; }
+.nw4-modo button { display:inline-flex; align-items:center; gap:6px; border:0; background:var(--surface-2); color:var(--text-3); font:inherit; font-size:12px; font-weight:600;
+  padding:7px 11px; min-height:34px; cursor:pointer; }
+.nw4-modo button + button { border-left:1px solid var(--line); }
+.nw4-modo button[aria-pressed="true"] { background:var(--accent-soft); color:var(--accent-ink); }
+
+/* modo lista: uma notícia por linha, sem foto e sem trecho; nada de cartão com metade vazia */
+#news-view.nw4-lista .nc-grid { display:flex; flex-direction:column; gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); }
+body.nw2 #news-view.nw4-lista .nc-card, #news-view.nw4-lista .nc-card { border:0; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; background:transparent;
+  padding:12px 16px 12px 18px; gap:6px; min-height:0; }
+#news-view.nw4-lista .nc-card:last-child { border-bottom:0; }
+#news-view.nw4-lista .nc-card:hover { background:var(--surface-2); }
+#news-view.nw4-lista .nc-img, #news-view.nw4-lista .nc-excerpt, #news-view.nw4-lista .nc-kicker, #news-view.nw4-lista .nc-falas, #news-view.nw4-lista .nc-readhere { display:none; }
+body.nw2 #news-view.nw4-lista .nc-card.nc-lead { padding:12px 16px 12px 18px; background:transparent; }
+body.nw2 #news-view.nw4-lista .nc-card.nc-lead .nc-title, body.nw2 #news-view.nw4-lista .nc-title { font-size:15px; font-weight:700; -webkit-line-clamp:3; }
+body.nw2 #news-view.nw4-lista .nc-card.com-img .nc-top { margin-top:0; }
+body.nw2 #news-view.nw4-lista .nc-footer { border-top:0; padding-top:0; margin-top:0; }
+#news-view.nw4-lista .nc-porque { font-size:12.5px; }
+/* só os ícones até telas bem largas, para a busca não encolher */
+@media (max-width: 1699px) { .nw4-modo span { display:none; } .nw4-modo button { padding:7px 10px; } }
+@media (max-width: 700px) {
+  #news-view.nw4-lista .nc-grid { border-radius:10px; }
+  body.nw2 #news-view.nw4-lista .nc-card { padding:11px 12px 11px 14px; }
+}
