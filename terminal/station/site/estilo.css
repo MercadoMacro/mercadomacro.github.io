@@ -3496,3 +3496,31 @@ body.light.has-side .side-brand .sb-logo.sb-claro { display:block !important; }
 body.has-side.side-collapsed .side-brand .sb-logo { display:none !important; }
 body.has-side.side-collapsed .side-brand .sb-marca.sb-escuro { display:block; }
 body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:block !important; }
+
+/* LOGO "SINAL E PULSO" (17/11/2026, escolhido pelo Dante): barras + M no tom do tema e a seta de alta na cor de destaque,
+   com um brilho no topo do M. Desenhado em SVG aqui mesmo, então acompanha o tema (claro, escuro, Terminal) e a cor
+   de destaque escolhida em Ajustes. As imagens logo-*.png e icone-*.png (vitrine, e-mails, ícone do app) foram refeitas
+   com o mesmo desenho. Para voltar ao anterior: git revert do commit "Logo Sinal e Pulso". */
+:root { --mm-c1:#8e9bb0; --mm-c2:#e9eef6; }
+body.light { --mm-c1:#0f2747; --mm-c2:#2b6a9e; }
+html[data-term="on"] body:not(.light) { --mm-c1:#7d7d7d; --mm-c2:#ececec; }
+html[data-term="on"] body.light { --mm-c1:#111; --mm-c2:#5a5a5a; }
+.mm-logo2 { --mm-texto:var(--text); --mm-seta:var(--accent); display:inline-flex; align-items:center; gap:7px; line-height:1; }
+.mm-logo2 .mm-marca { width:40px; height:29px; flex:0 0 auto; overflow:visible; }
+html body .mm-logo2 .mm-nome { display:inline-flex; flex-direction:column; font-family:Montserrat, Inter, system-ui, sans-serif !important; line-height:.86; white-space:nowrap; }
+html body .mm-logo2 .mm-nome i { font-style:normal; font-weight:400; font-size:10.4px; letter-spacing:.255em; margin-right:-.255em; color:var(--mm-c2); font-family:inherit !important; }
+html body .mm-logo2 .mm-nome b { font-weight:800; font-size:18.2px; letter-spacing:.012em; color:var(--mm-texto); font-family:inherit !important; }
+body.has-side .side-brand .mm-logo2 { padding:2px 0; }
+body.has-side.side-collapsed .side-brand .mm-logo2 .mm-nome { display:none; }
+body.has-side.side-collapsed .side-brand .mm-marca { width:38px; height:28px; }
+/* topo do celular */
+@media (max-width: 900px) {
+  html body .topbar.topbar .mm-logo .mm-logo2 { display:inline-flex; gap:6px; }
+  html body .topbar.topbar .mm-logo .mm-marca { width:34px; height:25px; }
+  html body .topbar.topbar .mm-logo .mm-logo2 .mm-nome i { font-size:9px; }
+  html body .topbar.topbar .mm-logo .mm-logo2 .mm-nome b { font-size:15.6px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mm-logo2 .mm-pulso { animation: mmPulso 3.2s ease-in-out infinite; transform-origin:20.5px 10.5px; transform-box:view-box; }
+  @keyframes mmPulso { 0%,100% { opacity:.65; transform:scale(.85); } 50% { opacity:1; transform:scale(1.12); } }
+}
