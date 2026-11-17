@@ -354,3 +354,5 @@ main { width: 100%; }
   .vt-hero-cta .vt-bt { width: 100%; justify-content: center; }
   .vt-planos { grid-template-columns: 1fr; }
 }
+.vt-ts { margin: 12px 0 0; }
+.vt-ts:empty { display: none; }

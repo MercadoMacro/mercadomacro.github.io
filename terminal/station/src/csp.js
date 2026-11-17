@@ -6,7 +6,7 @@
    Para consultar: SELECT diretiva, bloqueado, SUM(n) FROM csp_avisos GROUP BY 1, 2 ORDER BY 3 DESC. */
 const LISTA = {
   'default-src': ["'self'"],
-  'script-src': ["'self'", "'report-sample'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://s3.tradingview.com'],
+  'script-src': ["'self'", "'report-sample'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://s3.tradingview.com', 'https://challenges.cloudflare.com'],
   // estilos escritos dentro das páginas são muitos (e de baixo risco): ficam liberados
   'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
   'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
@@ -18,7 +18,7 @@ const LISTA = {
     // achados na prévia local de 12/11 (todas as abas abertas uma vez)
     'https://mercadomacro-vitrine.cota-cotacao10.workers.dev', 'https://fred-proxy.cota-cotacao10.workers.dev', 'https://apisidra.ibge.gov.br',
     'https://economia.awesomeapi.com.br', 'https://latest.currency-api.pages.dev', 'wss://data-stream.binance.vision', 'wss://api.derivws.com'],
-  'frame-src': ["'self'", 'https://s.tradingview.com', 'https://www.tradingview-widget.com', 'https://sslecal2.investing.com', 'https://open.spotify.com'],
+  'frame-src': ["'self'", 'https://s.tradingview.com', 'https://www.tradingview-widget.com', 'https://sslecal2.investing.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com'],
   'worker-src': ["'self'"],
   'manifest-src': ["'self'"],
   'object-src': ["'none'"],

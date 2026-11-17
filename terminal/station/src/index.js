@@ -1181,6 +1181,12 @@ async function apiAuth(req, env, acao, ctx) {
 
   if (acao === 'cadastrar') {
     if (!(await dentroDoLimite(env, 'cad:' + ip, 5, 3600))) return json({ erro: 'Muitos cadastros deste endereço. Tente mais tarde.' }, 429);
+    // 16/11/2026: proteção contra robôs (Turnstile da Cloudflare), só depois que a chave secreta é colada em /admin
+    const cfgTs = await config(env);
+    if (cfgTs.ts_secret && cfgTs.ts_site) {
+      const v = await conferirTurnstile(cfgTs.ts_secret, b['cf-turnstile-response'], ip);
+      if (v === false) return json({ erro: 'Não conseguimos confirmar que é uma pessoa. Espere a verificação terminar e tente de novo.', turnstile: true }, 400);
+    }
     const nome = String(b.nome || '').trim().replace(/\s+/g, ' ').slice(0, 80);
     if (nome.length < 2) return json({ erro: 'Digite seu nome.' }, 400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ erro: 'E-mail inválido.' }, 400);
@@ -1681,6 +1687,26 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'assistente') return await apiAdminAssistente(req, env);
   if (acao === 'stripe') return await apiAdminStripe(req, env);
+  if (acao === 'turnstile') {
+    const c = await config(env);
+    if (req.method === 'GET') return json(c.ts_secret && c.ts_site ? { ligado: true, site: c.ts_site } : { ligado: false });
+    if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
+    const b = await req.json().catch(() => ({}));
+    if (b.acao === 'chave') {
+      const site = String(b.site || '').trim(), secreta = String(b.secreta || '').trim();
+      if (!/^[0-3]x[\w-]{10,100}$/.test(site)) return json({ erro: 'Cole a chave do site como aparece na Cloudflare (começa com 0x).' }, 400);
+      if (!/^[0-3]x[\w-]{10,200}$/.test(secreta)) return json({ erro: 'Cole a chave secreta como aparece na Cloudflare (começa com 0x).' }, 400);
+      if (site === secreta) return json({ erro: 'As duas chaves são diferentes: a do site e a secreta.' }, 400);
+      // confere a chave secreta: com um código de teste qualquer, a Cloudflare responde "código inválido" (chave certa) ou "chave inválida"
+      const t = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: new URLSearchParams({ secret: secreta, response: 'teste' }) }).then((r) => r.json()).catch(() => null);
+      if (!t) return json({ erro: 'Não foi possível falar com a Cloudflare agora. Tente de novo.' }, 502);
+      if ((t['error-codes'] || []).includes('invalid-input-secret')) return json({ erro: 'A Cloudflare não aceitou a chave secreta.' }, 400);
+      await salvarConfig(env, { ts_site: site, ts_secret: secreta });
+      return json({ ok: true });
+    }
+    if (b.acao === 'desligar') { await salvarConfig(env, { ts_site: null, ts_secret: null }); return json({ ok: true }); }
+    return json({ erro: 'Ação inválida.' }, 400);
+  }
   if (acao === 'capital') {
     const c = await config(env);
     if (req.method === 'GET') return json(c.cap_key ? { ligado: true, login: mascarar(c.cap_id), ambiente: c.cap_amb || 'demo' } : { ligado: false });
@@ -2416,6 +2442,21 @@ function protegerResposta(r) {
   return out;
 }
 const CSP_AMOSTRA = 0.1;
+// Turnstile: true = pessoa, false = recusado, null = a Cloudflare não respondeu (aí o cadastro segue, com os outros limites)
+async function conferirTurnstile(secreta, token, ip) {
+  token = String(token || '');
+  if (!token || token.length > 2048) return false;
+  const corpo = new URLSearchParams({ secret: secreta, response: token });
+  if (ip && ip !== 'local') corpo.set('remoteip', ip);
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: corpo });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.success) return true;
+    const erros = j['error-codes'] || [];
+    return erros.includes('internal-error') ? null : false;
+  } catch (e) { return null; }
+}
 async function sha256hex(s) {
   return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
 }
@@ -2507,6 +2548,8 @@ async function paginaEntrar(req, env, jaSemLogin) {
   const cartao = await stripeLigado(env).catch(() => false);
   const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const faq = perguntasVitrine(cartao);
+  const cfgTs = await config(env).catch(() => ({}));
+  corpo = corpo.replace('<!--TURNSTILE-->', () => (cfgTs.ts_secret && cfgTs.ts_site ? `<div class="vt-ts" id="c-ts" data-chave="${esc(cfgTs.ts_site)}"></div>` : ''));
   corpo = corpo.replace('<!--PLANOS-->', () => planosVitrine(cartao, true))
     .replace('<!--APARTIR-->', () => menorPorMes(cartao))
     .replace('<!--FAQ-->', () => faq.map(([p, r], i) => `      <details${i ? '' : ' open'}><summary>${esc(p)}</summary><p>${esc(r)}</p></details>`).join('\n'))
@@ -3021,6 +3064,7 @@ h2 b{font-size:12px;font-weight:700}
     <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>IA da Cloudflare (tradução)</h2><span class="selo" data-selo="ia"></span></header><div id="ia-cf"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Proteção do cadastro (Turnstile)</h2><span class="selo" data-selo="ts"></span></header><div id="ts-adm"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
   </div>
@@ -3966,6 +4010,32 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   iaAdm();
+  // proteção do cadastro contra robôs (Turnstile, 16/11/2026): as duas chaves são coladas aqui pelo Dante
+  function tsAdm(){
+    var el = document.getElementById('ts-adm'); if (!el) return;
+    var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+    var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
+    fetch('/api/admin/turnstile', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var sb = document.querySelector('[data-selo="ts"]');
+      if (sb) { sb.className = 'selo ' + (j.ligado ? 'ok' : 'off'); sb.textContent = j.ligado ? 'Ligada' : 'Desligada'; }
+      el.innerHTML = (j.ligado
+        ? '<div class="caixa"><p>Ligada. Quem cria conta na página inicial passa por uma verificação da Cloudflare (quase sempre invisível). Robôs são recusados. Chave do site: ' + esc(j.site) + '.</p><div class="linha"><button type="button" id="ts-off" style="' + bt + '">Desligar e apagar as chaves</button></div></div>'
+        : '<div class="caixa"><p>Na Cloudflare, em Turnstile, abra o widget do mercadomacro.com.br e copie as duas chaves: a <b>chave do site</b> e a <b>chave secreta</b>. O site confere a chave secreta antes de ligar.</p>'
+          + '<div class="linha"><input id="ts-site" aria-label="Chave do site do Turnstile" autocomplete="off" spellcheck="false" placeholder="chave do site (0x...)" style="' + inp + '"></div>'
+          + '<div class="linha"><input id="ts-sec" aria-label="Chave secreta do Turnstile" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="chave secreta (0x...)" style="' + inp + '"><button type="button" id="ts-salvar" style="' + bt + '">Salvar e ligar</button></div>'
+          + '<p>A chave secreta fica guardada só no servidor do site e não aparece de novo nesta página.</p></div>') + '<p class="msg" id="ts-msg"></p>';
+      var m = document.getElementById('ts-msg');
+      function diz(ok, t){ m.className = 'msg ' + (ok ? 'ok' : 'erro'); m.textContent = t; }
+      function acao(corpo, b){ if (b) b.disabled = true; diz(true, 'Aguarde…');
+        fetch('/api/admin/turnstile', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+          .then(function(r){ return r.json().then(function(x){ if (!r.ok) throw x; return x; }); })
+          .then(function(){ tsAdm(); }, function(e){ diz(false, (e && e.erro) || 'Não foi possível.'); if (b) b.disabled = false; }); }
+      var x;
+      if ((x = document.getElementById('ts-salvar'))) x.onclick = function(){ acao({ acao: 'chave', site: document.getElementById('ts-site').value, secreta: document.getElementById('ts-sec').value }, this); };
+      if ((x = document.getElementById('ts-off'))) x.onclick = function(){ if (confirm('Desligar a proteção do cadastro?')) acao({ acao: 'desligar' }, this); };
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  tsAdm();
   // campanha no WhatsApp (16/11/2026): nome, número e um botão que abre o WhatsApp com a mensagem pronta
   function campanha(){
     var el = document.getElementById('camp'); if (!el) return;
