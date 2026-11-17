@@ -35,6 +35,8 @@ export async function limparArquivo(env, agora = Date.now()) {
   await env.DB.prepare('DELETE FROM noticias_hist WHERE data < ?').bind(agora - 180 * DIA).run();
   const { limparTraducoes } = await import('./traducao-ia.js');
   await limparTraducoes(env).catch(() => {});
+  const { limparGrupos } = await import('./grupos-ia.js');
+  await limparGrupos(env).catch(() => {});
 }
 
 const linha = (r) => ({ link: r.link, titulo: r.titulo, fonte: r.fonte || '', veiculo: r.veiculo || '', data: r.data, nivel: r.nivel || 'NORMAL', tags: r.tags ? String(r.tags).split(',') : [] });

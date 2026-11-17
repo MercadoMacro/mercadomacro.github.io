@@ -25,7 +25,7 @@ export async function usoHoje(env) {
   const r = await env.DB.prepare('SELECT neuronios, itens FROM ia_uso WHERE dia = ?').bind(hojeUTC()).first().catch(() => null);
   return { neuronios: r ? r.neuronios : 0, itens: r ? r.itens : 0, limite: LIMITE_DIA };
 }
-async function somarUso(env, neuronios, itens) {
+export async function somarUso(env, neuronios, itens) {
   await env.DB.prepare('INSERT INTO ia_uso (dia, neuronios, itens) VALUES (?, ?, ?) ON CONFLICT(dia) DO UPDATE SET neuronios = neuronios + excluded.neuronios, itens = itens + excluded.itens')
     .bind(hojeUTC(), Math.ceil(neuronios), itens).run();
 }

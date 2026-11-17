@@ -2313,6 +2313,11 @@
   .nc-title { font-size: 15px; line-height: 1.4; font-weight: 600; }
   .nc-excerpt { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.6;
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  /* "Por que importa" (16/11/2026): uma frase da IA nos assuntos com 3 fontes ou mais */
+  .nc-porque { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text); background: var(--accent-soft); border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0; padding: 7px 10px; }
+  .nc-porque b { color: var(--accent-ink); font-weight: 700; margin-right: 2px; }
+  .nc-porque i { font-size: 11px; margin-right: 3px; }
   .nc-footer { align-items: center; margin-top: auto; }
   .nc-readhere { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; transition: color .15s, transform .15s; }
   .nc-readhere i { font-size: 10px; margin-left: 3px; }
@@ -2356,6 +2361,10 @@
   .nr-lede { font-size: calc(var(--fs) * 1.02); line-height: 1.7; color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-line);
     border-radius: 12px; padding: 12px 16px; margin: 0 0 18px; }
   .nr-lede small { display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); font-weight: 700; margin-bottom: 4px; }
+  .nr-porque { display: flex; flex-direction: column; gap: 3px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; }
+  .nr-porque b { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); }
+  .nr-porque span { font-size: calc(var(--fs) * 1.02); line-height: 1.6; color: var(--text); }
+  .nr-porque small { font-size: 11px; color: var(--text-3); }
   .nr-body { font-size: var(--fs); line-height: 1.8; color: var(--text); }
   .nr-body p { margin: 0 0 1.05em; }
   .nr-body p:first-child::first-letter { font-size: 2.6em; float: left; line-height: .9; margin: .08em .08em 0 0; font-weight: 700; color: var(--accent-ink); }

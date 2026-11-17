@@ -1428,6 +1428,7 @@ async function apiAdmin(req, env, acao, eu) {
     return json({ ...uso, guardadas: tot ? tot.n : 0, semana: sem ? { neuronios: sem.n, itens: sem.i } : null, modelo: T.MODELOS[T.MODELO_PADRAO].id }, 200, { 'Cache-Control': 'no-store' });
   }
   if (acao === 'ia-teste' && req.method === 'GET') { const { testeAdmin } = await import('./traducao-ia.js'); return json(await testeAdmin(env, FONTES_BR_IA), 200, { 'Cache-Control': 'no-store' }); }
+  if (acao === 'ia-grupos' && req.method === 'GET') { const { testeGrupos } = await import('./grupos-ia.js'); const u = new URL(req.url); return json(await testeGrupos(env, Number(u.searchParams.get('limiar')) || undefined, Number(u.searchParams.get('horas')) || 12), 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'backup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiBackupAdmin } = await import('./backup.js'); return apiBackupAdmin(req, env, json); }
   if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
