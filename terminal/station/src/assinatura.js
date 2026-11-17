@@ -81,6 +81,8 @@ export async function garantirAssinatura(env) {
   // ref = fatura do Stripe ("stripe:in_..."), para não somar a mesma fatura duas vezes
   const pcols = (await env.DB.prepare('PRAGMA table_info(pagamentos)').all()).results.map((c) => c.name);
   if (!pcols.includes('ref')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN ref TEXT').run();
+  // 16/11/2026: comprovante guardado no R2 (pix/<id>) em vez de dentro do banco; no_r2 = 1 quando está lá
+  if (!pcols.includes('no_r2')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN no_r2 INTEGER NOT NULL DEFAULT 0').run();
   pronto = true;
 }
 
@@ -209,8 +211,17 @@ export async function rotinaAssinaturas(env) {
     if (r.ok || r.desligado) { await env.DB.prepare('UPDATE usuarios SET aviso_venc = expira WHERE id = ?').bind(u.id).run(); if (r.ok) avisados++; }
   }
   // comprovantes saem do banco 30 dias depois da decisão; pedidos sem comprovante somem em 7 dias
+  const corteArq = new Date(Date.now() - ARQ_DIAS * 864e5).toISOString();
+  if (env.BACKUP) {
+    const velhos = (await env.DB.prepare('SELECT id FROM pagamentos WHERE no_r2 = 1 AND decidido IS NOT NULL AND decidido < ?').bind(corteArq).all()).results || [];
+    if (velhos.length) {
+      await env.BACKUP.delete(velhos.map((p) => chaveComp(p.id)));
+      await env.DB.prepare(`UPDATE pagamentos SET no_r2 = 0 WHERE id IN (${velhos.map(() => '?').join(',')})`).bind(...velhos.map((p) => p.id)).run();
+    }
+    await moverComprovantes(env).catch((e) => console.error('mover comprovantes:', e.message));
+  }
   await env.DB.batch([
-    env.DB.prepare('UPDATE pagamentos SET arquivo = NULL WHERE arquivo IS NOT NULL AND decidido IS NOT NULL AND decidido < ?').bind(new Date(Date.now() - ARQ_DIAS * 864e5).toISOString()),
+    env.DB.prepare('UPDATE pagamentos SET arquivo = NULL WHERE arquivo IS NOT NULL AND decidido IS NOT NULL AND decidido < ?').bind(corteArq),
     // pedido sem comprovante há 7 dias: fica guardado como "vencido" (se a pessoa pagar o QR antigo, dá para achar pelo número)
     env.DB.prepare(`UPDATE pagamentos SET status = 'vencido' WHERE status = 'aguardando' AND criado < ?`).bind(new Date(Date.now() - 7 * 864e5).toISOString()),
   ]);
@@ -313,13 +324,34 @@ export async function apiAssinatura(req, env, conta, acao) {
     if (abertos.n >= 2) return json({ erro: 'Você já tem comprovantes esperando conferência. Aguarde a resposta por e-mail.' }, 429);
     if (!(await dentroDoLimite(env, 'comp:' + conta.id, 6, 3600))) return json({ erro: 'Muitos envios seguidos. Tente de novo mais tarde.' }, 429);
     const dados = new Uint8Array(await arq.arrayBuffer());
-    await env.DB.prepare(`UPDATE pagamentos SET status = 'enviado', enviado = ?, arquivo = ?, tipo_arq = ? WHERE id = ?`).bind(new Date().toISOString(), dados, tipo, id).run();
+    // no R2 quando ligado (o banco fica leve e a cópia diária menor); sem R2 (ou se falhar), no banco como antes
+    const noR2 = await guardarComprovante(env, id, dados, tipo);
+    await env.DB.prepare(`UPDATE pagamentos SET status = 'enviado', enviado = ?, arquivo = ?, tipo_arq = ?, no_r2 = ? WHERE id = ?`).bind(new Date().toISOString(), noR2 ? null : dados, tipo, noR2 ? 1 : 0, id).run();
     const plano = PLANOS[p.plano];
     await registrar(env, conta.id, `Enviou comprovante do plano ${plano.nome} (${reais(p.valor)}, pedido MM${String(p.id).padStart(6, '0')})`);
     await telegramArquivo(env, dados, tipo, `Pagamento para conferir\n${conta.nome} (${conta.email})\nPlano ${plano.nome}: ${reais(p.valor)} (pedido MM${String(p.id).padStart(6, '0')})\nAprovar em ${SITE}/admin`).catch(() => {});
     return json({ ok: true });
   }
   return json({ erro: 'Não encontrado.' }, 404);
+}
+const chaveComp = (id) => 'pix/' + id;
+async function guardarComprovante(env, id, dados, tipo) {
+  if (!env.BACKUP) return false;
+  try { await env.BACKUP.put(chaveComp(id), dados, { httpMetadata: { contentType: tipo } }); return true; }
+  catch (e) { console.error('comprovante no R2:', e.message); return false; }
+}
+// comprovantes que ainda estão dentro do banco vão para o R2 (poucos por vez; roda junto da rotina diária)
+export async function moverComprovantes(env, max = 20) {
+  if (!env.BACKUP) return 0;
+  await garantirAssinatura(env);
+  const r = await env.DB.prepare('SELECT id, arquivo, tipo_arq FROM pagamentos WHERE arquivo IS NOT NULL LIMIT ?').bind(max).all();
+  let n = 0;
+  for (const p of r.results || []) {
+    if (!(await guardarComprovante(env, p.id, new Uint8Array(p.arquivo), p.tipo_arq || 'application/octet-stream'))) continue;
+    await env.DB.prepare('UPDATE pagamentos SET arquivo = NULL, no_r2 = 1 WHERE id = ?').bind(p.id).run();
+    n++;
+  }
+  return n;
 }
 async function telegramArquivo(env, dados, tipo, legenda) {
   const c = await config(env);
@@ -427,7 +459,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'pagamentos' && req.method === 'GET') {
-    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, p.arquivo IS NOT NULL tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao,
+    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, (p.arquivo IS NOT NULL OR p.no_r2 = 1) tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
       WHERE p.status = 'enviado' OR (p.status IN ('aprovado', 'recusado') AND p.decidido > ?) ORDER BY p.status = 'enviado' DESC, p.id DESC LIMIT 60`)
       .bind(new Date(Date.now() - 60 * 864e5).toISOString()).all();
@@ -438,7 +470,11 @@ export async function apiAdminAssinatura(req, env, acao) {
   }
   if (acao === 'comprovante' && req.method === 'GET') {
     const id = Number(new URL(req.url).searchParams.get('id'));
-    const p = await env.DB.prepare('SELECT arquivo, tipo_arq FROM pagamentos WHERE id = ?').bind(id).first();
+    const p = await env.DB.prepare('SELECT arquivo, tipo_arq, no_r2 FROM pagamentos WHERE id = ?').bind(id).first();
+    if (p && p.no_r2 && env.BACKUP) {
+      const o = await env.BACKUP.get(chaveComp(id));
+      if (o) p.arquivo = new Uint8Array(await o.arrayBuffer());
+    }
     if (!p || !p.arquivo) return new Response('Comprovante não encontrado (eles são apagados 30 dias depois da decisão).', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     return new Response(new Uint8Array(p.arquivo), { headers: { 'Content-Type': p.tipo_arq, 'Content-Disposition': 'inline', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; object-src 'self'" } });
   }
