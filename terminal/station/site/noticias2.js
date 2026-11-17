@@ -34,15 +34,18 @@
   const filtroOrig = filterNewsByAsset;
   filterNewsByAsset = (list) => {
     if (newsAsset !== 'fav') return filtroOrig(list);
-    const ids = new Set(getNewsPicks().map((p) => p.id));
-    return list.filter((n) => ids.has(n.id));
+    // 17/11/2026: as favoritas ficam na conta por 30 dias; a que já saiu da lista do dia volta pela cópia guardada
+    const favs = getNewsFavs(), vivas = new Map(list.map((n) => [n.id, n]));
+    return favs.map((x) => vivas.get(x.id) || newsFavComoNoticia(x))
+      .filter((n) => !newsActiveSources.size || newsActiveSources.has(n.fonte));
   };
   const rotulaFav = () => {
-    const n = getNewsPicks().length;
+    const n = getNewsFavs().length;
     const b = $('#news-assets [data-v="fav"]');
     if (b) b.innerHTML = `<span class="np-star">★</span> Favoritas (${n})`;
     const p = $('#nw2-picks');
-    if (p) { p.textContent = `★ ${n}`; p.hidden = false; }
+    // no botão do Briefing conta só as que vão para o resumo do cliente (marcadas nas últimas 36 h)
+    if (p) { const r = getNewsPicks().length; p.textContent = `★ ${r}`; p.hidden = false; }
   };
   const picksOrig = renderPicksBar;
   renderPicksBar = () => { picksOrig(); rotulaFav(); };
