@@ -2399,9 +2399,12 @@ function protegerResposta(r) {
   const out = new Response(r.body, r);
   for (const [k, v] of Object.entries(PROTECAO)) if (!out.headers.has(k)) out.headers.set(k, v);
   // regra de scripts no modo "só avisar" (src/csp.js): o navegador não bloqueia nada, só conta o que bloquearia
-  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only')) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
+  // 16/11/2026: só em 1 de cada 10 páginas. Cada página gerava vários avisos e /api/csp virou ~1/4 dos chamados ao
+  // servidor; uma amostra de 10% já mostra o que precisa ser corrigido (os números do admin passam a ser 1/10 do total)
+  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only') && Math.random() < CSP_AMOSTRA) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
   return out;
 }
+const CSP_AMOSTRA = 0.1;
 async function sha256hex(s) {
   return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
 }
