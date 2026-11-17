@@ -277,7 +277,9 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
       if (feed.widget) veiculo = decodeEntities((itemContent.match(/<category>([^<]*)<\/category>/) || [])[1] || '');
 
       const img0 = extractImage(itemContent);
-      const imagem = img0 && /^https?:\/\//i.test(img0) ? decodeEntities(img0) : null;
+      // 17/11/2026: o feed do Valor Investe manda as fotos num endereço que não existe (s2-valorinveste.glbimg.com);
+      // a mesma foto está no servidor de imagens do Valor
+      const imagem = img0 && /^https?:\/\//i.test(img0) ? decodeEntities(img0).replace('//s2-valorinveste.glbimg.com/', '//s2-valor.glbimg.com/') : null;
       const tituloLower = titulo.toLowerCase();
       let impactScore = 0;
       let nivel = 'NORMAL';
