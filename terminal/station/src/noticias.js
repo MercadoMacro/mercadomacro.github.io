@@ -310,7 +310,9 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
     }
     return noticias;
   } catch (err) {
-    console.error(`Erro em ${feed.name}:`, err.message);
+    // fonte que não respondeu é rotina (o site usa a última leitura boa): fica como aviso, não como erro, para não
+    // encher a lista de erros da Cloudflare com o Google recusando São Paulo (16/11/2026)
+    console.warn(`Fonte sem resposta: ${feed.name}:`, err.message);
     return [];
   }
 }
