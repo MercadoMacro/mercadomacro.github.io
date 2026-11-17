@@ -154,9 +154,10 @@
       <section class="aj-sec">
         <h3>Tema</h3>
         ${seg('mode', MODES, curMode())}
-        <p class="aj-note">${P.mode === 'terminal' ? 'Letras âmbar, cantos retos e fonte de terminal, no estilo das plataformas profissionais. A chave Aparência (ou Alt+L) alterna entre o Terminal escuro e o Terminal claro.' : P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
+        ${P.mode === 'terminal' ? `<div class="aj-term-modo">${seg('termClaro', [['0', 'Terminal escuro', 'fa-moon'], ['1', 'Terminal claro', 'fa-sun']], P.termClaro ? '1' : '0')}</div>` : ''}
+        <p class="aj-note">${P.mode === 'terminal' ? 'Letras âmbar, cantos retos e fonte de terminal, no estilo das plataformas profissionais. Escolha acima o Terminal escuro ou claro; o atalho Alt+L também alterna.' : P.mode === 'auto' ? 'Segue o tema do seu computador ou celular e troca sozinho.' : P.mode === 'hour'
           ? `Claro das <select data-num="dayFrom">${[...Array(24).keys()].map((h) => `<option ${h === P.dayFrom ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select> às <select data-num="dayTo">${[...Array(24).keys()].map((h) => `<option ${h === P.dayTo ? 'selected' : ''} value="${h}">${h}h</option>`).join('')}</select>, escuro no resto do dia.`
-          : 'A chave Aparência na barra lateral (ou Alt+L) também troca.'}</p>
+          : 'O atalho Alt+L também troca entre claro e escuro.'}</p>
       </section>
       <section class="aj-sec">
         <h3>Cor de destaque</h3>
@@ -496,6 +497,8 @@
     }
     if (b.dataset.set) {
       const k = b.dataset.set, raw = b.dataset.v;
+      // 17/11/2026 (Dante não achava como trocar no computador: a chave Aparência saiu da barra lateral): escuro/claro do Terminal aqui
+      if (k === 'termClaro') { semTransicao(); P.termClaro = raw === '1'; save(); applyAll(); syncTheme(); render(); return; }
       if (k === 'mode') {
         if (P.mode === 'terminal' || raw === 'terminal') semTransicao();
         delete P.voltaTerminal;
@@ -784,6 +787,7 @@
   .aj-row:first-of-type { margin-top:0; }
   .aj-row > span { flex:0 0 100%; font-size:12px; color:var(--text-3); }
   .aj-row .aj-seg { flex:1; }
+  .aj-term-modo { margin-top:8px; }
   .aj-row select { flex:1; min-width:0; max-width:100%; height:34px; padding:0 10px; font-size:12.5px; text-overflow:ellipsis; }
   /* 14/11/2026: o que só funciona no computador some no celular; exclusão recolhida; Dados em grade */
   @media (max-width:900px) { .aj .aj-so-pc { display:none !important; } }
