@@ -1,10 +1,10 @@
-/* Cofre de chaves (12/11/2026). As chaves de serviços (Stripe, Resend, Gemini, Telegram, Capital.com) e as chaves
+/* Cofre de chaves (12/11/2026). As chaves de serviços (Stripe, Resend, Gemini, Telegram, Capital.com, Turnstile) e as chaves
    privadas do site, guardadas na tabela config do D1, ficam cifradas com AES-GCM. A chave-mestra (COFRE_CHAVE, 32 bytes
    em base64) fica só nos segredos do worker na Cloudflare, criada pelo robô criar-cofre.yml sem ninguém ver o valor:
    quem lê o banco vê apenas "cofre1:...". O /admin continua igual (colar a chave e salvar).
    Valores antigos em texto puro continuam valendo e o agendador os cifra (cifrarPendentes, de hora em hora).
    Sem COFRE_CHAVE (testes locais) tudo segue em texto puro. Perder a COFRE_CHAVE = colar de novo as chaves em /admin. */
-export const SENSIVEIS = ['stripe_key', 'stripe_whsec', 'mail_key', 'gemini_key', 'cap_key', 'cap_pw', 'tg_token', 'passe_jwk', 'vapid_jwk'];
+export const SENSIVEIS = ['stripe_key', 'stripe_whsec', 'mail_key', 'gemini_key', 'cap_key', 'cap_pw', 'tg_token', 'passe_jwk', 'vapid_jwk', 'ts_secret'];
 const PREFIXO = 'cofre1:';
 const txt = new TextEncoder();
 const b64 = (u8) => btoa(String.fromCharCode(...u8));

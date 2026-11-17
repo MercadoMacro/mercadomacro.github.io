@@ -52,16 +52,48 @@
       setTimeout(function () { (b.dataset.ir === 'cadastrar' ? fC : fE).querySelector('input').focus({ preventScroll: true }); }, reduz ? 0 : 450);
     });
   });
+  /* proteção contra robôs no cadastro (Turnstile da Cloudflare, 16/11/2026): só existe quando ligada em /admin.
+     O script carrega quando a pessoa abre "Criar conta"; na maioria das vezes não aparece nada para clicar. */
+  var tsEl = $('c-ts'), tsId = null, tsCarregou = false;
+  function tsCarregar() {
+    if (!tsEl || tsCarregou) return;
+    tsCarregou = true;
+    window.mmTsPronto = function () {
+      try { tsId = window.turnstile.render(tsEl, { sitekey: tsEl.dataset.chave, language: 'pt-br', appearance: 'interaction-only', action: 'cadastro' }); } catch (e) { /* sem proteção no aparelho: o servidor decide */ }
+    };
+    var sc = document.createElement('script');
+    sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=mmTsPronto';
+    sc.async = true; sc.defer = true;
+    document.head.appendChild(sc);
+  }
+  function tsToken() { try { return tsId != null && window.turnstile ? window.turnstile.getResponse(tsId) || '' : ''; } catch (e) { return ''; } }
+  function tsReiniciar() { try { if (tsId != null && window.turnstile) window.turnstile.reset(tsId); } catch (e) { /* segue */ } }
+  if (tsEl) {
+    if (!$('p-cad').hidden) tsCarregar();
+    tC.addEventListener('click', tsCarregar);
+    fC.addEventListener('focusin', tsCarregar);
+  }
   function enviar(form, rota, ok) {
     form.onsubmit = function (ev) {
       ev.preventDefault();
       var msg = form.querySelector('.vt-msg'), bt = form.querySelector('.vt-enviar');
+      // a verificação ainda está rodando: espera até 8 segundos antes de mandar
+      if (rota === 'cadastrar' && tsEl && !tsToken() && !form._tsEsperou) {
+        tsCarregar();
+        msg.className = 'vt-msg'; msg.textContent = 'Só um instante, conferindo a segurança…'; bt.disabled = true;
+        var t0 = Date.now();
+        (function espera() {
+          if (tsToken() || Date.now() - t0 > 8000) { bt.disabled = false; form._tsEsperou = true; form.requestSubmit ? form.requestSubmit() : form.onsubmit(ev); form._tsEsperou = false; return; }
+          setTimeout(espera, 250);
+        })();
+        return;
+      }
       var dados = {}; new FormData(form).forEach(function (v, k) { dados[k] = v; });
       if (rota === 'cadastrar') try { var o = JSON.parse(sessionStorage.getItem('mm_origem') || '{}'); dados.ref = o.ref || ''; dados.utm = o.utm || ''; } catch (e) { /* sem origem */ }
       msg.className = 'vt-msg'; msg.textContent = ''; bt.disabled = true;
       fetch('/api/auth/' + rota, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados), credentials: 'same-origin' })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { r: r, j: j }; }); })
-        .then(function (x) { if (x.r.ok) ok(x.j); else { msg.className = 'vt-msg erro'; msg.textContent = x.j.erro || 'Não foi possível. Tente de novo.'; } })
+        .then(function (x) { if (x.r.ok) ok(x.j); else { msg.className = 'vt-msg erro'; msg.textContent = x.j.erro || 'Não foi possível. Tente de novo.'; if (rota === 'cadastrar') tsReiniciar(); } })
         .catch(function () { msg.className = 'vt-msg erro'; msg.textContent = 'Sem conexão. Tente de novo.'; })
         .then(function () { bt.disabled = false; });
     };
@@ -78,7 +110,7 @@
     if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-entrar').firstChild.textContent = 'Já confirmei: entrar e escolher meu plano '; }
     if (j.msg) $('pronto-txt').textContent = j.msg;
     emailCad = $('c-email').value;
-    $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); conviteCanal(); });
+    $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); tsReiniciar(); conviteCanal(); });
   // depois do cadastro: entra e cai direto na escolha do plano (/assinar)
   $('pronto-entrar').onclick = function () {
     try { history.replaceState(null, '', location.pathname + '?volta=' + encodeURIComponent(volta)); } catch (e) { /* segue sem trocar o endereço */ }
