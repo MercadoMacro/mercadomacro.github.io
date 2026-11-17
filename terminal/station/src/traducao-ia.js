@@ -52,11 +52,14 @@ export async function traduzir(env, textos, modelo = MODELO_PADRAO) {
   const sistema = 'Você traduz manchetes e trechos de notícias financeiras do inglês para o português do Brasil. '
     + 'Mantenha nomes de empresas, siglas, tickers e números como estão. Use o vocabulário do mercado financeiro brasileiro '
     + '(ex.: "yields" = rendimentos, "Treasuries" = títulos do Tesouro americano, "earnings" = resultados, "Fed" fica Fed). '
-    + 'Glossário obrigatório: "minutes" (do Fed, do BCE, do Copom etc.) = ata; "bullish" = de alta / otimista; "bearish" = de baixa / pessimista; '
+    + 'Glossário obrigatório: "minutes" (do Fed, do BCE, do Copom etc.) = ata; "bullish" = de alta / otimista ("bullish USD" = dólar em alta); "bearish" = de baixa / pessimista; '
     + '"rate cut" = corte de juros; "rate hike" = alta de juros; "hawkish" = mais duro (contra a inflação); "dovish" = mais brando; '
     + '"payrolls" ou "nonfarm payrolls" = payroll (vagas fora do setor agrícola); "jobless claims" = pedidos de seguro-desemprego; '
     + '"guidance" = projeção da empresa; "beats" / "misses" (estimates) = supera / fica abaixo das estimativas; "stocks" = ações; '
-    + '"shares" = ações; "bonds" = títulos; "rally" = alta forte; "sell-off" = onda de vendas; "crude" = petróleo; "bps" = pontos-base. '
+    + '"shares" = ações; "bonds" = títulos; "rally" = alta forte; "sell-off" = onda de vendas; "crude" = petróleo; "bps" = pontos-base; '
+    + '"retail sales" = vendas no varejo; "lows" / "highs" = mínimas / máximas; "print" (de um indicador) = leitura ou dado; '
+    + '"safe haven" ou "haven" = porto seguro; "hot" (inflação) = acima do esperado. '
+    + 'Escreva sempre em português do Brasil, nunca de Portugal (varejo e não retalho; ações e não acções). '
     + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim. '
     + 'Responda só com as traduções, uma por linha, com o mesmo número na frente, sem comentários.';
   const r = await env.AI.run(M.id, { messages: [{ role: 'system', content: sistema }, { role: 'user', content: linhas }], max_tokens: Math.min(4000, 60 + pedacos(linhas) * 2), temperature: 0.1 });
