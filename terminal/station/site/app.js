@@ -5063,6 +5063,8 @@ function newsReadMins(n) {
         : short ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>Este é o trecho que ${escapeHTML(srcOf(n))} libera pelo feed. A matéria completa fica no site.</span></div>` : ''}
       ${related.length ? `<section class="nr-sec"><h3>Também noticiado por</h3>${related.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}
       ${more.length ? `<section class="nr-sec"><h3>Mais sobre ${escapeHTML(tags.join(', '))}</h3>${more.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}`;
+    // 17/11/2026: noticias4.js acrescenta a linha do tempo do assunto e a variação do preço desde a notícia
+    try { window.dispatchEvent(new CustomEvent('mm:leitor', { detail: { n, art } })); } catch (e) { /* segue sem os extras */ }
     $('#nr-pos').textContent = idx >= 0 ? `${idx + 1} de ${list.length}` : '';
     $('#nr-prev').disabled = idx <= 0;
     $('#nr-next').disabled = idx < 0 || idx >= list.length - 1;
