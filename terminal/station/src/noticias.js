@@ -458,6 +458,8 @@ const FRESCA_MS = 120000;
 let renovando = null;
 async function renovarLista(chave, ctx, env) {
   const { todas, falharam } = await coletarNoticias(ctx, env);
+  // tradução no servidor (16/11/2026): as notícias em inglês saem com tituloPt e trechoPt (src/traducao-ia.js)
+  if (env) { const { aplicarTraducoes } = await import('./traducao-ia.js'); await aplicarTraducoes(env, ctx, todas); }
   if (todas.length) {
     await caches.default.put(chave, new Response(JSON.stringify(todas), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600', 'X-Gerado': String(Date.now()), 'X-Falharam': falharam.join(', ') } }));
   }
