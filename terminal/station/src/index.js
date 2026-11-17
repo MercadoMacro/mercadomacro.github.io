@@ -2524,7 +2524,12 @@ async function existeArquivo(req, env) {
 function texto(s, tipo) {
   return new Response(s, { headers: { 'Content-Type': tipo + '; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
 }
-const ROBOTS = `User-agent: *
+// sinais de conteúdo (16/11/2026, pedido do Dante): pode aparecer em buscas e em respostas de IA (com link), mas o
+// conteúdo não pode ser usado para treinar modelos de IA. Formato da Content Signals Policy (contentsignals.org).
+const ROBOTS = `# Sinais de conteúdo: search = aparecer em buscas; ai-input = ser usado para responder perguntas em IA;
+# ai-train = ser usado para treinar ou ajustar modelos de IA. yes = permitido, no = não permitido.
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
 Disallow: /api/
 Disallow: /admin
