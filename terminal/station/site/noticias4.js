@@ -20,7 +20,7 @@
     ['BRL=X', 'USD/BRL', /d[óo]lar.{0,40}(R\$|real|reais)|(R\$|real|reais).{0,40}d[óo]lar|d[óo]lar (sobe|cai|dispara|recua|fecha|abre|avança|opera)|c[âa]mbio/i, true],
     ['DX-Y.NYB', 'Dólar global (DXY)', /\bDXY\b|\bdollar\b|greenback/i],
     ['^IXIC', 'Nasdaq', /nasdaq/i],
-    ['^GSPC', 'S&P 500', /S&P\s?500|wall street|bolsas? (de|em) nova york/i],
+    ['^GSPC', 'S&P 500', /S&P(?:\s?500)?(?![\w])(?! Global)|wall street|bolsas? (de|em) nova york/i],
     ['BZ=F', 'Petróleo Brent', /petr[óo]leo|\bbrent\b|\bwti\b|\bcrude\b|\boil\b|\bopep\b|\bopec\b/i],
     ['GC=F', 'Ouro', /\bouro\b|\bgold\b/i],
     ['BTC-USD', 'Bitcoin', /bitcoin|\bbtc\b|cripto|crypto/i],
