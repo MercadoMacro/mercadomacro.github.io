@@ -1222,11 +1222,26 @@ const NEWS_MAX_IDADE = 48 * 3600 * 1000; // feeds às vezes reenviam matérias d
 const NEWS_TR_KEY = 'news_tr_v2'; // v2 (15/11/2026): descarta os trechos antigos, que no Zero Hedge eram a manchete repetida
 let newsTr = {};
 try { newsTr = JSON.parse(localStorage.getItem(NEWS_TR_KEY) || '{}') || {}; } catch (e) { newsTr = {}; }
+// 17/11/2026: português de Portugal que escapa da tradução (a do servidor já vem revisada; esta cobre a do aparelho)
+const NEWS_PT_BR = [['o débito público agregado', 'a dívida pública agregada'], ['do débito público', 'da dívida pública'], ['o débito público', 'a dívida pública'],
+  ['débito público', 'dívida pública'], ['Irão', 'Irã'], ['Teerão', 'Teerã'], ['Moscovo', 'Moscou'], ['zona euro', 'zona do euro'], ['facto', 'fato'],
+  ['registo', 'registro'], ['equipa', 'equipe'], ['acções', 'ações'], ['acção', 'ação'], ['accionistas', 'acionistas'], ['retalho', 'varejo'],
+  ['sector', 'setor'], ['actual', 'atual'], ['a Fed', 'o Fed'], ['da Fed', 'do Fed'], ['na Fed', 'no Fed'], ['pela Fed', 'pelo Fed'], ['à Fed', 'ao Fed']]
+  .map(([de, para]) => [new RegExp(`(?<![\\p{L}])${de}(?![\\p{L}])`, 'giu'), para]);
+function newsParaBrasil(t, orig = '') {
+  if (!t) return t;
+  const caixa = (m, p) => (m[0] !== m[0].toLowerCase() ? p[0].toUpperCase() + p.slice(1) : p);
+  let x = String(t);
+  for (const [re, p] of NEWS_PT_BR) x = x.replace(re, (m) => caixa(m, p));
+  x = x.replace(/(?<![\p{L}])económic/giu, (m) => caixa(m, 'econômic'));
+  if (/west bank/i.test(orig) && !/gaza/i.test(orig)) x = x.replace(/Faixa de Gaza/g, 'Cisjordânia');
+  return x;
+}
 function newsAplicaTraducao(n) {
   const t = newsTr[n.link];
   if (!t) return;
-  if (t[0] && !n.traduzido) { n.tituloOriginal = n.titulo; n.titulo = t[0]; n.traduzido = true; }
-  if (t[1]) n.trechoPt = t[1]; // 15/11/2026: o trecho chega depois do título; antes ficava de fora até recarregar
+  if (t[0] && !n.traduzido) { n.tituloOriginal = n.titulo; n.titulo = newsParaBrasil(t[0], n.titulo); n.traduzido = true; }
+  if (t[1]) n.trechoPt = newsParaBrasil(t[1], n.trecho); // 15/11/2026: o trecho chega depois do título; antes ficava de fora até recarregar
 }
 // tira notícias velhas, o "FinancialJuice:" do começo e aplica as traduções já guardadas
 // Notícias Agrícolas lidas no navegador do leitor (09/11/2026): o site deles passou a barrar leitura automática
@@ -1400,10 +1415,17 @@ function newsJuntaFalas(list) {
     const orig = n.tituloOriginal || n.titulo;
     const m = /^([A-Z][^:]{2,40}):\s+\S/.exec(orig);
     if (!m || !NEWS_EN.has(n.fonte) || /^(ICYMI|BREAKING|WATCH|UPDATE)/i.test(m[1])) { out.push(n); return; }
-    const chave = m[1].toLowerCase();
+    // 17/11/2026: "Trump on Iran:", "Trump on Taiwan:", "Trump, re Kim:" são a mesma pessoa: a chave é só quem fala,
+    // e o tema fica na frase ("Sobre o Irã: ...")
+    const quem = m[1].replace(/,?\s+(on|about|re|says|said|to|regarding)\b.*$/i, '').trim();
+    const chave = quem.toLowerCase();
     const g = grupos.get(chave);
     if (g && g.data - n.data < 6 * 3600 * 1000) {
-      g.falas.push(n.titulo.replace(/^[^:]{2,60}:\s*/, ''));
+      const comTema = quem.length < m[1].trim().length;
+      const nomeRe = new RegExp('^' + quem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[,:]?\\s*', 'i');
+      let fala = comTema && nomeRe.test(n.titulo) ? n.titulo.replace(nomeRe, '') : n.titulo.replace(/^[^:]{2,60}:\s*/, '');
+      fala = fala.charAt(0).toUpperCase() + fala.slice(1);
+      g.falas.push(fala);
       g.impactScore = Math.max(g.impactScore || 0, n.impactScore || 0);
       g.finalScore = Math.max(g.finalScore || 0, n.finalScore || 0) + (g.falas.length <= 3 ? 2 : 0);
       return;
@@ -2092,7 +2114,7 @@ function renderNewsView() {
   // manchete principal: a mais relevante que tenha texto
   const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
   // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
-  let criticos = 0;
+  let criticos = 0, relevantes = 0;
   // Divisórias por horário (09/11/2026): Última hora, Hoje, Ontem e Antes, mantendo a ordem de relevância dentro de cada uma
   const diaBrt = (t) => new Date(t - 3 * 3600 * 1000).toISOString().slice(0, 10);
   const hojeBrt = diaBrt(Date.now()), ontemBrt = diaBrt(Date.now() - 86400000);
@@ -2105,6 +2127,8 @@ function renderNewsView() {
   const cartao = ([n, idx]) => {
     let nivel = n.nivel.toLowerCase();
     if (nivel === 'critico' && ++criticos > 5) nivel = 'alto';
+    // 17/11/2026: "Relevante" só nas 10 mais fortes (antes 35 de 40 cartões tinham o selo e ele não ajudava a escolher)
+    if (nivel === 'alto' && ++relevantes > 10) nivel = 'medio';
     const impactBadge = nivel === 'critico' ? '<span class="nc-impact critico">Alto impacto</span>'
                       : nivel === 'alto' ? '<span class="nc-impact alto">Relevante</span>'
                       : n.impactScore >= 4 ? '<span class="nc-impact medio">Mercado</span>' : '';

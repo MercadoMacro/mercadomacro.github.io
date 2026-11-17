@@ -68,20 +68,25 @@ const FEEDS = [
   { name: 'Google Cripto', url: 'https://news.google.com/rss/search?q=bitcoin+cripto+mercado+when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419', source: 'Google News', weight: 5 }
 ];
 
+// 17/11/2026 (Dante): "Alto impacto" fica para os eventos que mexem com o mercado (decisão de juros, payroll, CPI,
+// IPCA, PIB...). Palavras gerais como "juros", "Fed", "inflação" e "balanço" passaram para Relevante: antes uma matéria
+// de serviço ("os juros mais buscados no Google") virava Manchete principal com Alto impacto.
 const DICIONARIO = {
-  CRITICO: ['payroll', 'nfp', 'cpi', 'fomc', 'fed', 'copom', 'selic', 'pib', 'gdp', 'juros', 'inflação', 'decisão de juros', 'ata do copom', 'balanço', 'taxa de juros', 'reunião do copom', 'ipca', 'inpc'],
-  ALTO: ['powell', 'lagarde', 'williams', 'tarifas', 'trump', 'guerra', 'brent', 'petróleo', 'hawkish', 'dovish', 'sanções', 'fusão', 'aquisição', 'petrobras', 'ibovespa', 'dólar', 'bitcoin', 'cripto', 'etf'],
+  CRITICO: ['payroll', 'nfp', 'cpi', 'fomc', 'copom', 'selic', 'pib', 'gdp', 'decisão de juros', 'ata do copom', 'taxa de juros', 'reunião do copom', 'ipca', 'inpc', 'pce'],
+  ALTO: ['fed', 'juros', 'inflação', 'balanço', 'powell', 'lagarde', 'williams', 'galípolo', 'tarifas', 'trump', 'guerra', 'brent', 'petróleo', 'hawkish', 'dovish', 'sanções', 'fusão', 'aquisição', 'petrobras', 'ibovespa', 'dólar', 'bitcoin', 'cripto', 'etf'],
   MEDIO: ['emprego', 'desemprego', 'varejo', 'pmi', 'confiança do consumidor', 'euro', 'bolsa', 'ações', 'commodities', 'minério', 'soja', 'boi', 'halving', 'altcoin']
 };
 // Termos em inglês (as fontes internacionais chegam em inglês e a nota é calculada antes da tradução)
-DICIONARIO.CRITICO.push('rate decision', 'nonfarm', 'non-farm', 'payrolls', 'jobs report', 'inflation', 'rate cut', 'rate hike');
-DICIONARIO.ALTO.push('tariff', 'tariffs', 'oil', 'crude', 'opec', 'war', 'sanctions', 'merger', 'acquisition', 'treasury', 'yields', 'gold', 'recession');
+DICIONARIO.CRITICO.push('rate decision', 'nonfarm', 'non-farm', 'payrolls', 'jobs report', 'rate cut', 'rate hike', 'rate cuts', 'rate hikes');
+DICIONARIO.ALTO.push('inflation', 'fed', 'tariff', 'tariffs', 'oil', 'crude', 'opec', 'war', 'sanctions', 'merger', 'acquisition', 'treasury', 'yields', 'gold', 'recession');
 DICIONARIO.MEDIO.push('jobs', 'unemployment', 'retail sales', 'stocks', 'earnings', 'housing', 'consumer confidence');
 
 // Casa a palavra inteira (com acentos): "fed" não pega "Federal", "euro" não pega "Europa", "boi" não pega "boicote"
 const termRegex = (t) => new RegExp(`(?<![\\p{L}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu');
 const DICT_RE = Object.fromEntries(Object.entries(DICIONARIO).map(([k, arr]) => [k, arr.map(termRegex)]));
 const has = (lista, txt) => lista.some((re) => re.test(txt));
+// matéria de serviço ou explicação (sempre atual, sem fato novo): nunca passa de "Mercado"
+const SERVICO_RE = /^(como |o que (é|são) |entenda|guia |dicas? |passo a passo|quanto rende|vale a pena|simulador|calculadora|aprenda|veja (como|quanto|onde|o que)|saiba (como|quanto))|mais buscad|para iniciantes|\b(how to|what is|explained|explainer|beginner'?s guide)\b/i;
 // "Vale" empresa: com maiúscula e sem ser "vale a pena", "vale-refeição", "Vale do Silício"...
 const VALE_RE = /(?<![\p{L}])Vale(?![\p{L}-])(?! (a pena|do |dos |da |o |ressaltar|lembrar|destacar))/u;
 
@@ -280,6 +285,7 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
       if (has(DICT_RE.CRITICO, titulo)) { impactScore = 10; nivel = 'CRITICO'; }
       else if (has(DICT_RE.ALTO, titulo) || VALE_RE.test(titulo)) { impactScore = 7; nivel = 'ALTO'; }
       else if (has(DICT_RE.MEDIO, titulo)) { impactScore = 4; nivel = 'MEDIO'; }
+      if (impactScore > 4 && SERVICO_RE.test(titulo)) { impactScore = 4; nivel = 'MEDIO'; }
 
       const finalScore = (impactScore * 10) + feed.weight;
 

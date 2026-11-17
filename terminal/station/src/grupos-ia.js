@@ -3,7 +3,7 @@
    1) Cada manchete vira uma "impressão digital" de sentido (embedding, modelo bge-m3, que entende inglês e português
       juntos). É calculada uma vez por notícia e guardada (tabela noticia_grupo, 3 dias).
    2) Notícia nova com sentido muito parecido com outra das últimas 12 horas entra no mesmo grupo.
-   3) Grupo com 3 fontes ou mais ganha uma frase curta da IA explicando por que importa (tabela grupo_porque),
+   3) Grupo com 2 fontes ou mais ganha uma frase curta da IA explicando por que importa (tabela grupo_porque),
       uma vez por grupo, e todo assinante recebe pronta.
    Tudo dentro do mesmo limite diário de neurônios da tradução (src/traducao-ia.js). Custo típico: < 100 neurônios/dia. */
 import { usoHoje, somarUso, LIMITE_DIA, MODELOS, FONTES_BR } from './traducao-ia.js';
@@ -12,7 +12,7 @@ const MODELO_VET = '@cf/baai/bge-m3';
 const NEUR_VET = 1075; // neurônios por milhão de pedaços de texto
 export const LIMIAR_PADRAO = 0.8; // parecido a partir daqui = mesmo assunto (ajustável em config: grupo_limiar)
 const JANELA = 12 * 3600 * 1000;
-const MIN_FONTES = 3;
+const MIN_FONTES = 2; // 17/11/2026: era 3, e quase nenhum assunto ganhava a frase
 const POR_DIA = 80; // no máximo 80 frases "por que importa" por dia
 const pedacos = (t) => Math.ceil(String(t || '').length / 4);
 let trabalhando = false;
@@ -104,7 +104,7 @@ async function agrupar(env, novos) {
   for (let i = 0; i < st.length; i += 50) await env.DB.batch(st.slice(i, i + 50));
 }
 
-// grupos com 3 fontes ou mais, sem frase ainda: até 6 por vez, no máximo POR_DIA por dia
+// grupos com 2 fontes ou mais, sem frase ainda: até 6 por vez, no máximo POR_DIA por dia
 async function explicar(env, itens, feito) {
   const porGrupo = new Map();
   for (const n of itens) if (n.grupo) { if (!porGrupo.has(n.grupo)) porGrupo.set(n.grupo, []); porGrupo.get(n.grupo).push(n); }
