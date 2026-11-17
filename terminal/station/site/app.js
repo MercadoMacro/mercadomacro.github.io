@@ -1429,11 +1429,14 @@ function clusterNews(list) {
     const set = new Set(tk);
     const lead = leads.find(l => {
       if (Math.abs(l.data - n.data) > 12 * 3600 * 1000) return false;
+      // 16/11/2026: o servidor compara o sentido das manchetes (IA) e manda o mesmo "grupo" para o mesmo fato,
+      // mesmo com palavras diferentes ou uma em inglês e outra em português
+      if (n.grupo && (l.grupo === n.grupo || l.related.some(r => r.grupo === n.grupo))) return true;
       const common = l._tk.filter(w => set.has(w)).length;
       const ratio = common / Math.max(1, Math.min(l._tk.length, set.size));
       return (common >= 4 && ratio >= 0.6) || (common >= 3 && ratio >= 0.75);
     });
-    if (lead) lead.related.push(n);
+    if (lead) { lead.related.push(n); if (!lead.porque && n.porque) lead.porque = n.porque; }
     else leads.push({ ...n, _tk: [...set], related: [] });
   });
   return leads;
@@ -2045,6 +2048,7 @@ function renderNewsView() {
         </div>
         ${isLead ? '<div class="nc-kicker">Manchete principal</div>' : ''}
         <div class="nc-title">${escapeHTML(n.titulo)}</div>
+        ${n.porque ? `<p class="nc-porque" title="Explicação curta feita por IA a partir das manchetes"><b><i class="fas fa-lightbulb" aria-hidden="true"></i> Por que importa:</b> ${escapeHTML(n.porque)}</p>` : ''}
         ${exc ? `<p class="nc-excerpt">${escapeHTML(exc)}</p>` : ''}${falas}
         <div class="nc-footer">
           ${veic}${impactBadge}
@@ -5044,6 +5048,7 @@ function newsReadMins(n) {
       <h1 class="nr-title">${escapeHTML(n.titulo)}</h1>
       ${n.traduzido && n.tituloOriginal ? `<div class="nr-orig">${escapeHTML(n.tituloOriginal)}</div>` : ''}
       <div class="nr-tags">${impact}${tags.map(t => `<span class="nc-tag ${t.toLowerCase()}">${t}</span>`).join('')}</div>
+      ${n.porque ? `<div class="nr-porque"><b><i class="fas fa-lightbulb" aria-hidden="true"></i> Por que importa</b><span>${escapeHTML(n.porque)}</span><small>Explicação curta feita por IA a partir de ${related.length + 1} manchetes sobre o mesmo fato.</small></div>` : ''}
       <div class="nr-actions">
         <a class="btn-sm" href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> Abrir no site</a>
         <button class="btn-sm${bionicOn ? ' on' : ''}" id="nr-bionic" title="Ativar/desativar Leitura Dinâmica (Bionic Reading)"><i class="fas fa-bolt"></i> Leitura Rápida</button>
