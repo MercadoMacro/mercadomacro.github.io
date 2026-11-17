@@ -2,7 +2,9 @@
   "name": "mercadomacro-revisao-local",
   "main": "../src/index.js",
   "compatibility_date": "2025-06-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "assets": {
     "directory": "../site",
     "binding": "ASSETS",
@@ -31,6 +33,13 @@
       "new_sqlite_classes": [
         "NewsRelay"
       ]
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BACKUP",
+      "bucket_name": "mm-backup-local",
+      "remote": false
     }
   ]
 }

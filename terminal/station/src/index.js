@@ -89,6 +89,8 @@ export default {
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       ctx.waitUntil(cifrarPendentes(env).catch((e) => console.error('cofre:', e.message))); // chaves ainda em texto puro no D1
+      // 3h15 (Brasília): cópia do banco no R2 (src/backup.js); se falhar, avisa o administrador no Telegram
+      if (quando.getUTCHours() === 6 && env.BACKUP) ctx.waitUntil(import('./backup.js').then((m) => m.fazerBackup(env)).catch((e) => { console.error('backup:', e.message); return avisar(env, 'Cópia do banco falhou', 'A cópia diária do banco no R2 não foi feita: ' + e.message + '. Dá para tentar de novo em /admin, Integrações.').catch(() => {}); }));
       if (quando.getUTCHours() === 12) {
         ctx.waitUntil(rotinaAssinaturas(env).catch((e) => console.error('assinaturas:', e.message)));
       }
@@ -1427,6 +1429,7 @@ async function apiAdmin(req, env, acao, eu) {
   }
   if (acao === 'ia-teste' && req.method === 'GET') { const { testeAdmin } = await import('./traducao-ia.js'); return json(await testeAdmin(env, FONTES_BR_IA), 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
+  if (acao === 'backup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiBackupAdmin } = await import('./backup.js'); return apiBackupAdmin(req, env, json); }
   if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
   if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
   if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
@@ -3064,6 +3067,7 @@ h2 b{font-size:12px;font-weight:700}
     <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>IA da Cloudflare (tradução)</h2><span class="selo" data-selo="ia"></span></header><div id="ia-cf"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Cópia do banco (R2)</h2><span class="selo" data-selo="bk"></span></header><div id="bk-adm"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Proteção do cadastro (Turnstile)</h2><span class="selo" data-selo="ts"></span></header><div id="ts-adm"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
@@ -4036,6 +4040,32 @@ h2 b{font-size:12px;font-weight:700}
     }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   tsAdm();
+  // cópia diária do banco no R2 (16/11/2026): últimas cópias, baixar e fazer uma agora
+  function bkAdm(){
+    var el = document.getElementById('bk-adm'); if (!el) return;
+    var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+    function mb(b){ return (b / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' MB'; }
+    fetch('/api/admin/backup', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var sb = document.querySelector('[data-selo="bk"]');
+      var ult = j.ultimas && j.ultimas[0], ok = ult && (Date.now() - Date.parse(ult.quando)) < 30 * 3600000;
+      if (sb) { sb.className = 'selo ' + (ok ? 'ok' : 'off'); sb.textContent = !j.ligado ? 'Desligada' : ok ? 'Em dia' : 'Sem cópia recente'; }
+      if (!j.ligado) { el.innerHTML = '<p class="vazio">O R2 não está ligado neste servidor.</p>'; return; }
+      var h = '<p class="d" style="margin:0 0 10px">Todo dia às 3h15 o banco inteiro (cadastros, pagamentos, configurações, histórico) vai para um arquivo compactado no R2, fechado e sem link público. Ficam as cópias dos últimos ' + j.dias + ' dias. Guardado agora: ' + j.quantas + ' cópias, ' + mb(j.total) + ' (a cota grátis é 10.000 MB).</p>';
+      if (j.ultimas.length) {
+        h += '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="color:var(--text-3);text-align:left"><th>Dia</th><th>Tamanho</th><th>Linhas</th><th></th></tr>';
+        j.ultimas.forEach(function(x){ h += '<tr style="border-top:1px solid var(--line)"><td>' + esc(x.chave.slice(3, 13).split('-').reverse().join('/')) + '</td><td>' + mb(x.bytes) + '</td><td>' + (x.linhas || 0).toLocaleString('pt-BR') + '</td><td style="text-align:right"><a href="/api/admin/backup?baixar=' + encodeURIComponent(x.chave) + '">Baixar</a></td></tr>'; });
+        h += '</table>';
+      } else h += '<p class="vazio">Nenhuma cópia ainda. A primeira sai hoje às 3h15, ou clique abaixo.</p>';
+      el.innerHTML = h + '<div class="linha" style="margin-top:10px"><button type="button" id="bk-agora" style="' + bt + '">Fazer uma cópia agora</button></div><p class="msg" id="bk-msg"></p>';
+      document.getElementById('bk-agora').onclick = function(){
+        var b = this, m = document.getElementById('bk-msg'); b.disabled = true; m.className = 'msg ok'; m.textContent = 'Copiando…';
+        fetch('/api/admin/backup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'agora' }) })
+          .then(function(r){ return r.json().then(function(x){ if (!r.ok) throw x; return x; }); })
+          .then(function(x){ bkAdm(); }, function(e){ m.className = 'msg erro'; m.textContent = (e && e.erro) || 'Não foi possível.'; b.disabled = false; });
+      };
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  bkAdm();
   // campanha no WhatsApp (16/11/2026): nome, número e um botão que abre o WhatsApp com a mensagem pronta
   function campanha(){
     var el = document.getElementById('camp'); if (!el) return;
