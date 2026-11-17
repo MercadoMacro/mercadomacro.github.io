@@ -31,6 +31,8 @@
   // repasse ao vivo da Capital.com (src/capital.js): um objeto só, uma conexão com a Capital
   "durable_objects": { "bindings": [{ "name": "CAPITAL", "class_name": "CapitalRelay" }, { "name": "NEWS", "class_name": "NewsRelay" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CapitalRelay"] }, { "tag": "v2-news", "new_sqlite_classes": ["NewsRelay"] }],
+  // IA da Cloudflare (Workers AI): tradução das notícias no servidor (src/traducao-ia.js), com limite diário
+  "ai": { "binding": "AI" },
   "d1_databases": [
     { "binding": "DB", "database_name": "mercadomacro-usuarios", "database_id": "5e07a14a-0498-4338-a785-785648d4d879" }
   ]

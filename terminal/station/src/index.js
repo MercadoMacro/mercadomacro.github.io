@@ -1411,6 +1411,8 @@ async function apiAdmin(req, env, acao, eu) {
     return r.ok ? json({ ok: true }) : json({ erro: r.erro }, 502);
   }
   if (acao === 'comunicado') return apiComunicado(req, env, eu);
+  // teste de tradução com a IA da Cloudflare (16/11/2026): 20 manchetes em inglês, dois modelos, nada é guardado
+  if (acao === 'ia-teste' && req.method === 'GET') { const { testeAdmin } = await import('./traducao-ia.js'); return json(await testeAdmin(env, FONTES_BR_IA), 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
   if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
@@ -2185,6 +2187,8 @@ async function roboFechamentoFoto(req, env) {
    noticias_hist guarda as manchetes que passam pelo terminal (a cada 15 min), e o worker da busca manda um arquivo
    por dia para o índice. A Jade só busca com busca_ligada = '1' em config, e cada mês tem no máximo busca_limite
    buscas (padrão 2000; 1.000 grátis por mês, depois US$ 0,75 por mil): no limite, a Jade responde sem a busca. */
+// fontes em português (o resto é traduzido); a mesma lista do terminal (site/app.js, NEWS_BR)
+const FONTES_BR_IA = ['Valor Econômico', 'InfoMoney', 'Investing.com BR', 'ADVFN BR', 'Notícia Brasil', 'BeInCrypto BR', 'Cointelegraph BR', 'Google News', 'Money Times', 'InvestNews', 'Valor Investe', 'Bloomberg Línea', 'Suno', 'BMC News', 'Invezz', 'Notícias Agrícolas', 'Folha', 'O Antagonista', 'Poder360', 'G1 Política', 'Agência Brasil'];
 async function guardarNoticias(env, ctx) {
   const { lista } = await noticiasCache(ctx, { env });
   if (lista && lista.length) await arquivarNoticias(env, lista, 'lista'); // src/noticias-arquivo.js (só grava as novas)
