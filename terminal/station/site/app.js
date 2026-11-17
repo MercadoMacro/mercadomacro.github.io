@@ -1303,6 +1303,8 @@ function newsPrepara(list) {
   out.forEach(n => {
     n.titulo = String(n.titulo).replace(/^FinancialJuice:\s*/i, '');
     n._br = NEWS_BR.has(n.fonte);
+    // foto do Valor Investe vem num endereço que não existe (erro vermelho no console); a mesma foto está no do Valor
+    if (n.imagem) n.imagem = String(n.imagem).replace('//s2-valorinveste.glbimg.com/', '//s2-valor.glbimg.com/');
     // tradução feita no servidor pela IA da Cloudflare (16/11/2026): entra como se já estivesse guardada aqui; o que
     // ainda não veio traduzido o aparelho traduz como antes
     if (!n._br && n.tituloPt && !newsTr[n.link]) newsTr[n.link] = [n.tituloPt, n.trechoPt || ''];
