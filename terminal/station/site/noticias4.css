@@ -58,3 +58,5 @@ body.nw2 #news-view.nw4-lista .nc-footer { border-top:0; padding-top:0; margin-t
   #news-view.nw4-lista .nc-grid { border-radius:10px; }
   body.nw2 #news-view.nw4-lista .nc-card { padding:11px 12px 11px 14px; }
 }
+/* 17/11/2026: um cartão 1 px mais largo que a área fazia aparecer uma barra de rolagem horizontal embaixo das notícias */
+#news-panel > .news-wrap { overflow-x: hidden; }

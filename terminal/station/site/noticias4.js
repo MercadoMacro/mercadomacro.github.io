@@ -57,13 +57,14 @@
   function serie(sym) {
     const s = series.get(sym);
     if (s && Date.now() - s.ts < 5 * 60e3) return s.p;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=15m&range=5d`;
+    // 17/11/2026: com o pré e o pós-mercado, a notícia das 7h sobre a Nvidia já mostra o quanto a ação andou antes da abertura
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=15m&range=5d&includePrePost=true`;
     const p = fetchT(`${CORS_PROXY}/?url=${encodeURIComponent(url)}`, {}, 15000).then((r) => r.ok ? r.json() : null).then((j) => {
       const r = j && j.chart && j.chart.result && j.chart.result[0];
       if (!r || !r.timestamp) return null;
       const c = r.indicators?.quote?.[0]?.close || [], t = [], cl = [];
       r.timestamp.forEach((x, i) => { if (c[i] != null) { t.push(x * 1000); cl.push(c[i]); } });
-      return t.length ? { t, c: cl, agora: r.meta?.regularMarketPrice ?? cl[cl.length - 1] } : null;
+      return t.length ? { t, c: cl, agora: cl[cl.length - 1] ?? r.meta?.regularMarketPrice } : null; // último negócio, inclusive fora do pregão
     }).catch(() => null);
     series.set(sym, { ts: Date.now(), p });
     return p;

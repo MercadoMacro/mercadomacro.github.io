@@ -282,7 +282,9 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
       let impactScore = 0;
       let nivel = 'NORMAL';
 
-      if (has(DICT_RE.CRITICO, titulo)) { impactScore = 10; nivel = 'CRITICO'; }
+      // "payroll contributions/tax" (contribuição sobre a folha) não é o payroll americano
+      const tituloNota = titulo.replace(/payroll (contributions?|tax(es)?)/gi, 'folha de pagamento');
+      if (has(DICT_RE.CRITICO, tituloNota)) { impactScore = 10; nivel = 'CRITICO'; }
       else if (has(DICT_RE.ALTO, titulo) || VALE_RE.test(titulo)) { impactScore = 7; nivel = 'ALTO'; }
       else if (has(DICT_RE.MEDIO, titulo)) { impactScore = 4; nivel = 'MEDIO'; }
       if (impactScore > 4 && SERVICO_RE.test(titulo)) { impactScore = 4; nivel = 'MEDIO'; }

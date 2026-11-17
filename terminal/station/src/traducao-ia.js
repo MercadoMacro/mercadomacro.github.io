@@ -60,6 +60,8 @@ export async function traduzir(env, textos, modelo = MODELO_PADRAO) {
     + '"retail sales" = vendas no varejo; "lows" / "highs" = mínimas / máximas; "print" (de um indicador) = leitura ou dado; '
     + '"safe haven" ou "haven" = porto seguro; "hot" (inflação) = acima do esperado. '
     + '"West Bank" = Cisjordânia (não é a Faixa de Gaza); "Gaza Strip" = Faixa de Gaza; "euro zone" ou "eurozone" = zona do euro; "Iran" = Irã; '
+    + '"crackdown" = endurecimento ou restrições (não repressão, quando o assunto é regra ou comércio); "amid" = em meio a; '
+    + 'use a colocação do Brasil ("o ouro se consolida", não "o ouro consolida-se"; "em um" em vez de "num"); '
     + '"public debt" ou "government debt" = dívida pública; "two more rate hikes" = mais duas altas de juros; o Fed é masculino (o Fed, do Fed). '
     + 'Escreva sempre em português do Brasil, nunca de Portugal (varejo e não retalho; ações e não acções; Irã e não Irão; econômico e não económico; fato e não facto). '
     + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim. '
