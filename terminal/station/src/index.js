@@ -1101,8 +1101,26 @@ const CHAVES_DADOS = {
     return f.length <= 200 && q.length <= 200 && f.every(k => id(k) && v.feitas[k] === true)
       && q.every(k => id(k) && obj(v.quiz[k]) && Object.keys(v.quiz[k]).length <= 10
         && Object.entries(v.quiz[k]).every(([i, o]) => /^\d$/.test(i) && Number.isInteger(o) && o >= 0 && o < 10));
+  },
+  // notícias favoritas (17/11/2026, pedido do Dante): cópia da notícia marcada com ★, por 30 dias, até 200
+  noticias_fav: v => {
+    if (!v || v.v !== 1 || !Array.isArray(v.itens) || v.itens.length > NEWS_FAV_MAX) return false;
+    const s = (x, m) => typeof x === 'string' && x.length <= m, op = (x, m) => x == null || s(x, m), num = x => Number.isFinite(x) && x > 0;
+    const ids = new Set();
+    return v.itens.every(x => {
+      if (!x || !s(x.id, 40) || !/^[\w-]{1,40}$/.test(x.id) || ids.has(x.id) || !s(x.titulo, 400) || !x.titulo || !s(x.link, 1000)
+        || !(x.link === '#' || /^https?:\/\//i.test(x.link)) || !s(x.fonte, 80) || !num(x.data) || !num(x.em)) return false;
+      ids.add(x.id);
+      return op(x.tituloOriginal, 400) && op(x.veiculo, 80) && op(x.trecho, 500) && op(x.trechoPt, 500) && op(x.nivel, 12)
+        && (x.tags == null || Array.isArray(x.tags) && x.tags.length <= 8 && x.tags.every(t => s(t, 24)))
+        && (x.impactScore == null || Number.isFinite(x.impactScore) && Math.abs(x.impactScore) <= 1000);
+    });
   }
 };
+const NEWS_FAV_MAX = 200;
+const NEWS_FAV_CAMPOS = ['id', 'titulo', 'tituloOriginal', 'fonte', 'veiculo', 'link', 'data', 'trecho', 'trechoPt', 'nivel', 'tags', 'impactScore', 'traduzido', 'fr', 'em'];
+const limpaFav = x => Object.fromEntries(NEWS_FAV_CAMPOS.filter(k => x[k] != null && x[k] !== '' && x[k] !== false)
+  .map(k => [k, k === 'traduzido' || k === 'fr' ? true : k === 'tags' ? x.tags.slice() : x[k]]));
 async function apiDados(req, env, u) {
   const url = new URL(req.url);
   if (req.method === 'GET') {
@@ -1114,9 +1132,11 @@ async function apiDados(req, env, u) {
   if (req.method !== 'PUT') return json({ erro: 'Método não permitido.' }, 405);
   if (!mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403);
   const txt = await req.text();
-  if (txt.length > 64000) return json({ erro: 'Lista grande demais.' }, 413);
+  // as favoritas guardam uma cópia de cada notícia (até 200): cabem até 300 KB; o resto continua com 64 KB
+  if (txt.length > 300000) return json({ erro: 'Lista grande demais.' }, 413);
   let b;
   try { b = JSON.parse(txt); } catch (e) { return json({ erro: 'Dados inválidos.' }, 400); }
+  if (b?.k !== 'noticias_fav' && txt.length > 64000) return json({ erro: 'Lista grande demais.' }, 413);
   // Uma aba antiga não pode gravar dados depois que outra conta entrou neste navegador.
   if (!b || b.usuario !== u.id) return json({ erro: 'A conta mudou. Reabra o painel antes de salvar.' }, 409);
   const ok = CHAVES_DADOS[b && b.k];
@@ -1131,6 +1151,7 @@ async function apiDados(req, env, u) {
   const cleanItems = items => items.map(x => x.n ? { s: x.s, n: x.n } : { s: x.s });
   const v = b.k === 'mesa' || b.k === 'mesa1' ? { v: 1, itens: Object.fromEntries(Object.entries(b.v.itens).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }])) }
     : b.k === 'edu' ? { feitas: b.v.feitas, quiz: b.v.quiz, ultima: b.v.ultima || null }
+    : b.k === 'noticias_fav' ? { v: 1, itens: b.v.itens.map(limpaFav) }
     : b.k === 'mesa2sel' ? { v: 1, abas: Object.fromEntries(Object.entries(b.v.abas).map(([id, l]) => [id, l.slice()])) }
     : b.k === 'watchlists'
     ? { version: 1, lists: b.v.lists.map(l => ({ id: l.id, name: l.name.trim().replace(/\s+/g, ' '), items: cleanItems(l.items) })) }
@@ -1146,7 +1167,7 @@ async function apiDados(req, env, u) {
     ON CONFLICT(usuario_id, chave) DO UPDATE SET valor = excluded.valor, ts = excluded.ts WHERE excluded.ts > dados_usuario.ts`)
     .bind(u.id, b.k, JSON.stringify(v), ts).run();
   // nada gravado: a conta já tem uma versão mais nova (de outro aparelho); o site deve recarregar a da conta
-  if (res.meta?.changes === 0) return json({ erro: b.k === 'edu' ? 'Seu progresso mudou em outro aparelho.' : b.k === 'mesa' || b.k === 'mesa1' ? 'Sua mesa mudou em outro aparelho.' : 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
+  if (res.meta?.changes === 0) return json({ erro: b.k === 'edu' ? 'Seu progresso mudou em outro aparelho.' : b.k === 'mesa' || b.k === 'mesa1' ? 'Sua mesa mudou em outro aparelho.' : b.k === 'noticias_fav' ? 'Suas favoritas mudaram em outro aparelho.' : 'Suas listas mudaram em outro aparelho.', codigo: 'versao-mais-nova' }, 409);
   return json({ ok: true });
 }
 

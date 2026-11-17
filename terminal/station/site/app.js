@@ -1442,40 +1442,129 @@ function clusterNews(list) {
   return leads;
 }
 
-/* ---- Curadoria: "⭐ Mandar ao cliente" ---- */
-const NEWS_PICKS_KEY = 'news_picks_v1';
-function getNewsPicks() {
-  try {
-    const arr = JSON.parse(localStorage.getItem(NEWS_PICKS_KEY) || '[]');
-    return arr.filter(p => Date.now() - p.pickedAt < 36 * 3600 * 1000);
-  } catch (e) { return []; }
+/* ---- Favoritas (★) e "Mandar ao cliente" ----
+   17/11/2026 (pedido do Dante): a notícia marcada com ★ fica guardada NA CONTA por 30 dias (até 200), com uma cópia
+   do título, fonte, link e trecho. Assim ela aparece em qualquer aparelho e continua lá mesmo depois de sair da
+   lista do dia. As marcadas nas últimas 36 h continuam indo para os Destaques do resumo do cliente, como antes.
+   Sincroniza como as outras preferências da conta (/api/conta/dados, chave noticias_fav): o aparelho guarda o que
+   veio da conta (base) e as mudanças ainda não enviadas (pend); se outro aparelho gravou antes, refaz as mudanças
+   sobre a versão da conta e tenta de novo. */
+const NEWS_PICKS_KEY = 'news_picks_v1'; // formato antigo (só neste aparelho, 36 h): entra na conta na 1ª sincronização
+const NEWS_FAV_KEY = 'mm_news_fav_v1';
+const NEWS_FAV_DIAS = 30, NEWS_FAV_MAX = 200, NEWS_RESUMO_MS = 36 * 3600 * 1000;
+const newsFav = (() => {
+  let c = null; try { c = JSON.parse(localStorage.getItem(NEWS_FAV_KEY) || 'null'); } catch (e) { /* sem armazenamento */ }
+  return { user: c?.user ?? null, base: Array.isArray(c?.base) ? c.base : [], ts: Number(c?.ts) || 0, pend: Array.isArray(c?.pend) ? c.pend : [], timer: null, enviando: false, sinc: 0 };
+})();
+function newsFavGrava() {
+  try { localStorage.setItem(NEWS_FAV_KEY, JSON.stringify({ user: newsFav.user, base: newsFav.base, ts: newsFav.ts, pend: newsFav.pend })); } catch (e) { /* a conta ainda guarda */ }
 }
-function setNewsPicks(arr) {
-  try { localStorage.setItem(NEWS_PICKS_KEY, JSON.stringify(arr)); } catch (e) { /* silencioso */ }
+function newsFavAplica(base, pend) {
+  let itens = base.slice();
+  for (const p of pend) {
+    if (p.a === 'add' && p.item && !itens.some(x => x.id === p.item.id)) itens.unshift(p.item);
+    else if (p.a === 'del') itens = itens.filter(x => x.id !== p.id);
+    else if (p.a === 'fora') itens = itens.map(x => p.ids.includes(x.id) ? { ...x, fr: true } : x);
+  }
+  const corte = Date.now() - NEWS_FAV_DIAS * 864e5;
+  return itens.filter(x => x && x.id && x.em > corte).sort((a, b) => b.em - a.em).slice(0, NEWS_FAV_MAX);
+}
+// todas as favoritas (30 dias), a mais recente primeiro
+function getNewsFavs() { return newsFavAplica(newsFav.base, newsFav.pend); }
+// as que vão para os Destaques do resumo do cliente: marcadas nas últimas 36 h e não tiradas do resumo
+function getNewsPicks() { const agora = Date.now(); return getNewsFavs().filter(x => agora - x.em < NEWS_RESUMO_MS && !x.fr); }
+function newsFavCopia(n) {
+  const s = (t, m) => String(t || '').slice(0, m);
+  const item = { id: s(n.id, 40), titulo: s(n.titulo, 400) || '(sem título)', fonte: s(n.fonte, 80), link: /^https?:\/\//i.test(n.link || '') ? s(n.link, 1000) : '#',
+    data: Number(n.data) || Date.now(), em: Date.now(), nivel: s(n.nivel || 'normal', 12), impactScore: Number(n.impactScore) || 0 };
+  if (n.veiculo) item.veiculo = s(n.veiculo, 80);
+  if (n.traduzido) { item.traduzido = true; if (n.tituloOriginal) item.tituloOriginal = s(n.tituloOriginal, 400); }
+  const tr = n.trechoPt || (NEWS_EN.has(n.fonte) ? '' : n.trecho) || '';
+  if (tr) item[n.trechoPt ? 'trechoPt' : 'trecho'] = tr.length <= 500 ? tr : tr.slice(0, 497).replace(/\s+\S*$/, '') + '…';
+  if (Array.isArray(n.tags) && n.tags.length) item.tags = n.tags.slice(0, 8).map(t => s(t, 24));
+  return item;
+}
+// cópia guardada vira notícia de novo para os cartões e o leitor (marcada com _salva: sem o texto completo)
+function newsFavComoNoticia(x) { return { ...x, _salva: true, _br: NEWS_BR.has(x.fonte), finalScore: x.impactScore || 0, tags: x.tags || [] }; }
+function newsFavMuda(op) {
+  newsFav.pend.push(op); newsFavGrava();
+  clearTimeout(newsFav.timer); newsFav.timer = setTimeout(newsFavEnvia, 1200);
+}
+async function newsFavEnvia(tent = 0) {
+  if (!newsFav.user || !newsFav.pend.length || window.__mmLoggingOut) return;
+  if (newsFav.enviando) { clearTimeout(newsFav.timer); newsFav.timer = setTimeout(newsFavEnvia, 1500); return; }
+  newsFav.enviando = true;
+  const pend = newsFav.pend.slice(), itens = newsFavAplica(newsFav.base, pend), ts = Math.max(Date.now(), newsFav.ts + 1), user = newsFav.user;
+  try {
+    const r = await fetch('/api/conta/dados', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario: user, k: 'noticias_fav', v: { v: 1, itens }, ts }) });
+    if (user !== newsFav.user) return;
+    if (r.ok) {
+      newsFav.base = itens; newsFav.ts = ts; newsFav.pend = newsFav.pend.slice(pend.length); newsFavGrava();
+      if (newsFav.pend.length) newsFavEnvia();
+      return;
+    }
+    const j = await r.json().catch(() => ({}));
+    // outro aparelho gravou antes: pega a versão da conta e refaz as mudanças daqui por cima
+    if (r.status === 409 && j.codigo === 'versao-mais-nova' && tent < 3) { newsFav.enviando = false; await newsFavSincroniza(false); return newsFavEnvia(tent + 1); }
+    throw new Error(j.erro || 'HTTP ' + r.status);
+  } catch (e) {
+    console.warn('[Favoritas] não sincronizou:', e.message); // fica guardada neste aparelho e vai na próxima vez
+  } finally { newsFav.enviando = false; }
+}
+async function newsFavSincroniza(enviar = true) {
+  try {
+    const r = await fetch('/api/conta/dados?k=noticias_fav', { credentials: 'same-origin', cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!Number.isSafeInteger(j.usuario) || j.usuario <= 0) return;
+    if (newsFav.user != null && newsFav.user !== j.usuario) { newsFav.base = []; newsFav.pend = []; newsFav.ts = 0; } // outra conta neste navegador
+    newsFav.user = j.usuario;
+    newsFav.base = j.v && Array.isArray(j.v.itens) ? j.v.itens : [];
+    newsFav.ts = Number(j.ts) || 0;
+    newsFav.sinc = Date.now();
+    // as estrelas do formato antigo (só deste aparelho) entram na conta uma vez
+    let antigas = []; try { antigas = JSON.parse(localStorage.getItem(NEWS_PICKS_KEY) || '[]'); } catch (e) { /* nada */ }
+    if (Array.isArray(antigas) && antigas.length) {
+      antigas.filter(p => p && p.id && p.titulo).forEach(p => newsFav.pend.push({ a: 'add', item: { ...newsFavCopia(p), em: Number(p.pickedAt) || Date.now() } }));
+      try { localStorage.removeItem(NEWS_PICKS_KEY); } catch (e) { /* nada */ }
+    }
+    newsFavGrava();
+    newsFavRedesenha();
+    if (enviar && newsFav.pend.length) newsFavEnvia();
+  } catch (e) { /* sem rede: fica o que está neste aparelho */ }
+}
+function newsFavRedesenha() {
   renderPicksBar();
+  const ids = new Set(getNewsFavs().map(x => x.id));
+  $$('.nc-star').forEach(b => b.classList.toggle('on', ids.has(b.dataset.id)));
+  if (newsAsset === 'fav' && document.getElementById('news-panel')?.classList.contains('active')) renderNewsView();
 }
 function toggleNewsPick(id) {
-  const picks = getNewsPicks();
-  const i = picks.findIndex(p => p.id === id);
-  if (i >= 0) picks.splice(i, 1);
+  const tem = getNewsFavs().some(x => x.id === id);
+  if (tem) newsFavMuda({ a: 'del', id });
   else {
-    const n = newsAll.find(x => x.id === id);
+    const n = newsAll.find(x => x.id === id) || (window.__newsLeads || []).find(x => x.id === id);
     if (!n) return;
-    const fonte = n.fonte === 'Google News' ? (n.veiculo || 'Google News') : n.fonte;
-    picks.push({ id: n.id, titulo: n.titulo, fonte, link: n.link, data: n.data, finalScore: 999, pickedAt: Date.now() });
+    if (getNewsFavs().length >= NEWS_FAV_MAX) toast(`Você chegou a ${NEWS_FAV_MAX} favoritas: a mais antiga sai para esta entrar.`, 'info');
+    newsFavMuda({ a: 'add', item: newsFavCopia(n) });
   }
-  setNewsPicks(picks);
-  $$(`.nc-star[data-id="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle('on', i < 0));
+  renderPicksBar();
+  $$(`.nc-star[data-id="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle('on', !tem));
 }
 function renderPicksBar() {
   const el = $('#news-picks');
   if (!el) return;
   const n = getNewsPicks().length;
   el.innerHTML = n
-    ? `<span><span class="np-star">★</span> ${n} ${n > 1 ? 'notícias escolhidas' : 'notícia escolhida'} para o resumo do cliente</span><button class="btn-sm" id="news-picks-clear">Limpar</button>`
-    : '<span class="np-dica">Toque na <span class="np-star">★</span> de uma notícia para colocá-la nos Destaques do resumo do cliente.</span>';
-  $('#news-picks-clear')?.addEventListener('click', () => { setNewsPicks([]); renderNewsView(); });
+    ? `<span><span class="np-star">★</span> ${n} ${n > 1 ? 'notícias escolhidas' : 'notícia escolhida'} para o resumo do cliente</span><button class="btn-sm" id="news-picks-clear" title="Tira do resumo do cliente; elas continuam nas Favoritas">Tirar do resumo</button>`
+    : '<span class="np-dica">Toque na <span class="np-star">★</span> de uma notícia para guardá-la nas Favoritas (30 dias, em qualquer aparelho) e colocá-la nos Destaques do resumo do cliente.</span>';
+  $('#news-picks-clear')?.addEventListener('click', () => { newsFavMuda({ a: 'fora', ids: getNewsPicks().map(x => x.id) }); renderPicksBar(); renderNewsView(); });
 }
+// confere a conta ao abrir e quando a pessoa volta para a página (outro aparelho pode ter marcado)
+setTimeout(() => newsFavSincroniza(), 1500);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - newsFav.sinc > 120000) newsFavSincroniza(); });
+window.addEventListener('online', () => newsFavEnvia());
 
 /* ---- Filtros por ativo ---- */
 const NEWS_ASSETS = [
@@ -1991,14 +2080,14 @@ function renderNewsView() {
     const outras = leads.filter(n => n.impactScore < 4);
     destaques = [...destaques, ...outras];
   }
-  destaques = newsMistura(destaques).slice(0, busca ? 120 : 40);
+  destaques = newsMistura(destaques).slice(0, newsAsset === 'fav' ? NEWS_FAV_MAX : busca ? 120 : 40);
 
   if (!destaques.length) {
     view.innerHTML = `<div class="nl-empty">${busca ? `Nenhuma notícia com "${escapeHTML(document.getElementById('news-search').value.trim())}" nesta seleção.` : newsAsset === 'movers' ? 'Nenhuma notícia sobre as maiores altas e baixas de hoje.' : 'Nenhuma notícia para esta seleção.'}</div>`;
     return;
   }
 
-  const picked = new Set(getNewsPicks().map(p => p.id));
+  const picked = new Set(getNewsFavs().map(p => p.id));
   window.__newsLeads = destaques;
   // manchete principal: a mais relevante que tenha texto
   const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
@@ -2044,7 +2133,7 @@ function renderNewsView() {
           <span class="nc-source" style="${newsSourceBadgeStyle(n.fonte)}">${escapeHTML(srcName)}</span>
           <span class="nc-time" title="${escapeHTML(new Date(n.data).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}">${hora} · ${timeAgoShort(n.data)}</span>
           ${mins ? `<span class="nc-mins" title="Tempo de leitura do texto disponível">${mins} min</span>` : ''}
-          <button class="nc-star${picked.has(n.id) ? ' on' : ''}" data-id="${escapeHTML(n.id)}" title="Mandar ao cliente (entra nos Destaques do resumo)">★</button>
+          <button class="nc-star${picked.has(n.id) ? ' on' : ''}" data-id="${escapeHTML(n.id)}" title="Favoritar: fica guardada 30 dias na sua conta e entra nos Destaques do resumo do cliente">★</button>
         </div>
         ${isLead ? '<div class="nc-kicker">Manchete principal</div>' : ''}
         <div class="nc-title">${escapeHTML(n.titulo)}</div>
@@ -5022,7 +5111,7 @@ function newsReadMins(n) {
     const n = cur;
     const art = $('#nr-art');
     art.style.setProperty('--fs', fs + 'px');
-    const picked = getNewsPicks().some(p => p.id === n.id);
+    const picked = getNewsFavs().some(p => p.id === n.id);
     const d = new Date(n.data);
     const mins = newsReadMins(n);
     const intl = isIntl(n);
@@ -5052,14 +5141,15 @@ function newsReadMins(n) {
       <div class="nr-actions">
         <a class="btn-sm" href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> Abrir no site</a>
         <button class="btn-sm${bionicOn ? ' on' : ''}" id="nr-bionic" title="Ativar/desativar Leitura Dinâmica (Bionic Reading)"><i class="fas fa-bolt"></i> Leitura Rápida</button>
-        <button class="btn-sm${picked ? ' on' : ''}" id="nr-pick"><i class="fas fa-star"></i> ${picked ? 'No resumo do cliente' : 'Mandar ao cliente'}</button>
+        <button class="btn-sm${picked ? ' on' : ''}" id="nr-pick"><i class="fas fa-star"></i> ${picked ? 'Nas favoritas' : 'Favoritar'}</button>
         <button class="btn-sm" id="nr-copy"><i class="fab fa-whatsapp"></i> Copiar para WhatsApp</button>
         ${intl && n.resumo && !tr && !traduzindo ? `<button class="btn-sm" id="nr-tr"><i class="fas fa-language"></i> ${verOrig ? 'Ver em português' : 'Traduzir texto completo'}</button>` : ''}
         ${intl && tr ? '<button class="btn-sm" id="nr-orig"><i class="fas fa-language"></i> Ver original em inglês</button>' : ''}
       </div>
       ${intl && ledeBoa && !tr && !traduzindo ? `<div class="nr-lede"><small>Resumo em português</small>${escapeHTML(n.trechoPt)}</div>` : ''}
       <div class="nr-body" id="nr-body">${traduzindo ? nrTradBox() : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
-      ${!text ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>${escapeHTML(srcOf(n))} envia só a manchete pelo feed, sem o texto. ${related.length ? 'Veja abaixo como outras fontes noticiaram o mesmo fato.' : ''}</span></div>`
+      ${!text && n._salva ? `<div class="nr-note"><i class="fas fa-star"></i><span>Notícia guardada nas suas Favoritas. O texto completo está no site de ${escapeHTML(srcOf(n))}: use “Abrir no site”.</span></div>`
+        : !text ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>${escapeHTML(srcOf(n))} envia só a manchete pelo feed, sem o texto. ${related.length ? 'Veja abaixo como outras fontes noticiaram o mesmo fato.' : ''}</span></div>`
         : short ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>Este é o trecho que ${escapeHTML(srcOf(n))} libera pelo feed. A matéria completa fica no site.</span></div>` : ''}
       ${related.length ? `<section class="nr-sec"><h3>Também noticiado por</h3>${related.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}
       ${more.length ? `<section class="nr-sec"><h3>Mais sobre ${escapeHTML(tags.join(', '))}</h3>${more.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}`;
