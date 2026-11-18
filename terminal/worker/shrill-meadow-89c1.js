@@ -789,16 +789,24 @@ const US_FINNHUB = {
   },
   async fund({ s }, key) {
     const sym = encodeURIComponent(s);
-    const [perfil, met, cot] = await Promise.all([
+    // 17/11/2026: + recomendação dos analistas e surpresa dos últimos balanços (plano gratuito; se o Finnhub negar, fica de fora)
+    const [perfil, met, cot, rec, surp] = await Promise.all([
       finnhubGet(`stock/profile2?symbol=${sym}`, key, 86400),
       finnhubGet(`stock/metric?symbol=${sym}&metric=all`, key, 21600),
-      finnhubGet(`quote?symbol=${sym}`, key, 60).catch(() => null)
+      finnhubGet(`quote?symbol=${sym}`, key, 60).catch(() => null),
+      finnhubGet(`stock/recommendation?symbol=${sym}`, key, 21600).catch(() => null),
+      finnhubGet(`stock/earnings?symbol=${sym}`, key, 21600).catch(() => null)
     ]);
     if ((!perfil || !perfil.name) && (!met || !met.metric || !Object.keys(met.metric).length)) return { naoAchou: true };
     // só as séries anuais usadas no site, últimos 10 anos
     const anual = {}, src = (met && met.series && met.series.annual) || {};
     US_SERIES.forEach((k) => { if (Array.isArray(src[k])) anual[k] = src[k].slice(0, 10); });
-    return { s, perfil: perfil || {}, m: (met && met.metric) || {}, anual, cot: cot && cot.c ? cot : null };
+    const n = (x) => (typeof x === 'number' && isFinite(x) ? x : 0);
+    const recs = Array.isArray(rec) ? rec.filter((r) => r && r.period).sort((a, b) => (a.period < b.period ? 1 : -1)).slice(0, 4)
+      .map((r) => ({ p: r.period, cf: n(r.strongBuy), c: n(r.buy), m: n(r.hold), v: n(r.sell), vf: n(r.strongSell) })) : [];
+    const surpresas = Array.isArray(surp) ? surp.filter((e) => e && e.period && typeof e.actual === 'number').sort((a, b) => (a.period < b.period ? 1 : -1)).slice(0, 4)
+      .map((e) => ({ p: e.period, ano: e.year ?? null, tri: e.quarter ?? null, real: e.actual, prev: typeof e.estimate === 'number' ? e.estimate : null, pct: typeof e.surprisePercent === 'number' ? e.surprisePercent : null })) : [];
+    return { s, perfil: perfil || {}, m: (met && met.metric) || {}, anual, cot: cot && cot.c ? cot : null, recs, surpresas };
   },
   async search({ q }, key) {
     const j = await finnhubGet(`search?q=${encodeURIComponent(q)}&exchange=US`, key, 86400);
