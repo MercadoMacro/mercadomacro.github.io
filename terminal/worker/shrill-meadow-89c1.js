@@ -808,6 +808,17 @@ const US_FINNHUB = {
       .map((e) => ({ p: e.period, ano: e.year ?? null, tri: e.quarter ?? null, real: e.actual, prev: typeof e.estimate === 'number' ? e.estimate : null, pct: typeof e.surprisePercent === 'number' ? e.surprisePercent : null })) : [];
     return { s, perfil: perfil || {}, m: (met && met.metric) || {}, anual, cot: cot && cot.c ? cot : null, recs, surpresas };
   },
+  // 17/11/2026: calendário de IPOs dos EUA (plano gratuito); guardado 6 horas
+  async ipo({ from, to }, key) {
+    const j = await finnhubGet(`calendar/ipo?from=${from}&to=${to}`, key, 21600);
+    if (!j || !Array.isArray(j.ipoCalendar)) throw new Error('Finnhub: formato inesperado');
+    const num = (x) => (typeof x === 'number' && isFinite(x) ? x : null);
+    const lista = j.ipoCalendar.filter((e) => e && e.date && e.name).slice(0, 300).map((e) => ({
+      d: String(e.date).slice(0, 10), s: String(e.symbol || '').slice(0, 12), n: String(e.name).slice(0, 120), b: String(e.exchange || '').slice(0, 40),
+      st: String(e.status || '').toLowerCase().slice(0, 20), p: String(e.price || '').slice(0, 30), q: num(e.numberOfShares), v: num(e.totalSharesValue)
+    }));
+    return { from, to, lista };
+  },
   async search({ q }, key) {
     const j = await finnhubGet(`search?q=${encodeURIComponent(q)}&exchange=US`, key, 86400);
     const lista = (j.result || []).filter((e) => e && US_SYM.test(e.symbol) && !/\.(?!B$)/.test(e.symbol))
@@ -1274,11 +1285,12 @@ const rotas = async (request, env, ctx) => {
     // ENDPOINT: /finnhub/earnings?from=AAAA-MM-DD&to=AAAA-MM-DD
     // ENDPOINT: /finnhub/fund?s=AAPL
     // ENDPOINT: /finnhub/search?q=apple
+    // ENDPOINT: /finnhub/ipo?from=AAAA-MM-DD&to=AAAA-MM-DD (calendário de IPOs, até 45 dias)
     // =========================================================
-    if (path === '/finnhub/earnings' || path === '/finnhub/fund' || path === '/finnhub/search') {
+    if (path === '/finnhub/earnings' || path === '/finnhub/fund' || path === '/finnhub/search' || path === '/finnhub/ipo') {
       if (!env.FINNHUB_API_KEY && !env.FMP_API_KEY) return json({ error: 'FINNHUB_API_KEY não configurada no Worker' }, 500, cors);
       let args;
-      if (path === '/finnhub/earnings') {
+      if (path === '/finnhub/earnings' || path === '/finnhub/ipo') {
         const from = url.searchParams.get('from') || '', to = url.searchParams.get('to') || '';
         const re = /^\d{4}-\d{2}-\d{2}$/;
         if (!re.test(from) || !re.test(to) || isNaN(Date.parse(from)) || isNaN(Date.parse(to)) || Date.parse(to) - Date.parse(from) > 45 * 86400000 || Date.parse(to) < Date.parse(from)) {
@@ -1298,7 +1310,7 @@ const rotas = async (request, env, ctx) => {
       const erros = [];
       for (const [nome, fn] of [['finnhub', US_FINNHUB[kind]], ['fmp', US_FMP[kind]]]) {
         const key = nome === 'finnhub' ? env.FINNHUB_API_KEY : env.FMP_API_KEY;
-        if (!key) continue;
+        if (!key || !fn) continue; // a reserva (FMP) não tem todas as rotas, como o calendário de IPOs
         try {
           const out = await fn(args, key);
           if (out && out.naoAchou) { erros.push(nome + ': não encontrado'); continue; }
