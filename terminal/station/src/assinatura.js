@@ -524,13 +524,13 @@ export async function apiAdminAssinatura(req, env, acao) {
 export function planosVitrine(cartao = false, curto = false) {
   const porMes = (p) => (p.meses > 1 ? `<small>${reais(Math.round(p.valor / p.meses))} por mês</small>` : '<small>&nbsp;</small>');
   // com o cartão ligado, cada plano mostra também o preço no cartão (renovação automática)
-  const noCartao = (p) => (!curto && cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, renova sozinho</small>` : '');
+  const noCartao = (p) => (!curto && cartao && p.valorCartao ? `<small class="vt-pl-cartao">No cartão: <b>${reais(p.valorCartao)}</b>${p.meses > 1 ? ` (${reais(Math.round(p.valorCartao / p.meses))} por mês)` : ''}, com renovação automática</small>` : '');
   const nota = { gratis: 'Abre a Mesa, Notícias e Educação, sem a IA', degustacao: 'Uma semana, uma vez só', mensal: 'Para experimentar', semestral: 'Mais tempo, menos por mês', anual: 'O menor preço por mês' };
   // plano só no cartão: aparece só com o Stripe ligado, com o preço do cartão no lugar do Pix
   const soCartao = (p) => ({ ...p, valor: p.valorCartao });
   // degustação saiu da página de assinatura (04/11/2026), então também não aparece nas páginas públicas (07/11/2026)
   return Object.entries(PLANOS).filter(([id, p]) => !p.oculto && id !== 'degustacao' && !(p.soCartao && !cartao)).map(([id, p]) => p.soCartao
-    ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>${curto ? 'No cartão' : 'Só no cartão, renova sozinho'}</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
+    ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>${curto ? 'No cartão' : 'Só no cartão, com renovação automática'}</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
     : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.gratis ? (curto ? 'Sem cartão' : p.periodo + ' de acesso') : curto ? (cartao ? 'Pix ou cartão' : 'No Pix') : p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }
 
@@ -688,7 +688,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     var h = situacao(j);
     if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento no cartão recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
     if (j.renovaCartao && j.cancelaEm) h += '<div class="sit">Renovação automática no cartão <b>cancelada</b>: não haverá nova cobrança e o acesso continua até o fim do período já pago. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Reativar ou ver faturas</button></div>';
-    else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e a validade é renovada sozinha. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
+    else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e o acesso é renovado automaticamente. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
     if (enviado) h += '<div class="sit">Recebemos seu comprovante do plano <b>' + esc(nomePlano(enviado.plano)) + '</b> (' + reais(enviado.valor) + '). Você recebe um e-mail quando o pagamento for conferido.</div>';
     if (temGratis()) h += '<div class="sit alerta"><b>Ainda não conhece?</b> Comece com 48 horas grátis, sem pagar nada e sem cadastrar cartão. <button type="button" class="bt2" id="gratis-abrir" style="margin-left:6px">Começar grátis</button><div id="gratis-box"></div></div>';
@@ -704,7 +704,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
         h += '<h2>1. Como você quer pagar</h2><div class="forma">'
           + '<button type="button" class="fm" data-f="cartao" aria-pressed="' + (forma === 'cartao') + '"><span class="t">Cartão de crédito <span class="selo">Mais barato</span></span>'
           + '<span class="marcas">' + marca('visa') + marca('mastercard') + marca('applepay') + '</span>'
-          + '<span class="s">Assinatura que renova sozinha. Cancele quando quiser.</span><span class="a">a partir de ' + reais(menorPorMes('cartao')) + ' por mês</span></button>'
+          + '<span class="s">Renovação automática. Cancele quando quiser.</span><span class="a">a partir de ' + reais(menorPorMes('cartao')) + ' por mês</span></button>'
           + '<button type="button" class="fm" data-f="pix" aria-pressed="' + (forma === 'pix') + '"><span class="t"><span class="px">' + MARCAS.pix + '</span>Pix</span>'
           + '<span class="s">Pagamento único, sem renovação automática. Quando acabar, você renova se quiser.</span><span class="a">a partir de ' + reais(menorPorMes('pix')) + ' por mês</span></button>'
           + '</div>';
@@ -712,7 +712,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       h += '<h2>' + (formas.length > 1 ? '2. Escolha o plano' : 'Escolha o plano') + (formas.length === 1 ? (forma === 'pix' ? ' no Pix' : ' no cartão') : '') + '</h2><div id="planos"></div><div id="acao"></div>';
     }
     h += '<h2>Dúvidas frequentes</h2><div class="faq">'
-      + '<details><summary>O que acontece no fim do período?</summary><p><b>No cartão</b>, o Stripe cobra o mesmo valor e o acesso é renovado sozinho, até você cancelar. <b>No Pix</b>, o acesso termina na data marcada; avisamos por e-mail 3 dias antes e você renova só se quiser.</p></details>'
+      + '<details><summary>O que acontece no fim do período?</summary><p><b>No cartão</b>, o Stripe cobra o mesmo valor e o acesso é renovado automaticamente, até você cancelar. <b>No Pix</b>, o acesso termina na data marcada; avisamos por e-mail 3 dias antes e você renova só se quiser.</p></details>'
       + '<details><summary>Como cancelo a assinatura no cartão?</summary><p>Aqui nesta página, no botão "Trocar cartão ou cancelar". Não tem multa, e o acesso continua até o fim do período já pago.</p></details>'
       + '<details><summary>Tem reembolso?</summary><p>Na primeira assinatura, você pode pedir o reembolso integral em até 7 dias depois do pagamento. Depois desse prazo, e nas renovações, não há reembolso do período em curso, mas você pode cancelar para não ser cobrado de novo. Detalhes em <a href="/planos" style="color:var(--accent-text)">Planos e termos</a>.</p></details>'
       + '<details><summary>Quais cartões são aceitos?</summary><p>Visa, Mastercard e os demais cartões de crédito aceitos pelo Stripe. No iPhone e no Mac, o Apple Pay também aparece na hora de pagar. Os dados do cartão ficam com o Stripe; o Mercado Macro não vê nem guarda o número do cartão.</p></details>'
@@ -723,7 +723,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (feitos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + feitos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
-    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante do Pix é usado só para conferir o pagamento e é apagado 30 dias depois. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
+    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante do Pix é usado apenas para conferir o pagamento e é apagado após 30 dias. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
     raiz.innerHTML = h;
     var g = document.getElementById('gerenciar');
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
@@ -746,15 +746,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
         + '<span class="u">' + (cartao ? CADA[p.meses] || ('a cada ' + p.meses + ' meses') : 'pagamento único') + '</span>'
         + '<span class="e">' + (p.meses > 1 ? (cartao ? 'equivale a ' + reais(porMes(p, forma)) + ' por mês' : 'equivale a ' + p.meses + ' × ' + reais(porMes(p, forma))) : '') + '</span>'
         + '<span class="r">' + (cartao
-          ? 'Renova sozinho ' + (p.meses === 1 ? 'todo mês' : p.meses === 12 ? 'todo ano' : 'a cada ' + p.meses + ' meses') + ' por ' + reais(v) + '. Cancele quando quiser.'
-          : esc(p.periodo) + ' de acesso. Não renova sozinho: quando acabar, você paga de novo se quiser.') + '</span></button>';
+          ? 'Renovação automática: ' + reais(v) + ' ' + (p.meses === 1 ? 'todo mês' : p.meses === 12 ? 'todo ano' : 'a cada ' + p.meses + ' meses') + '. Cancele quando quiser.'
+          : esc(p.periodo) + ' de acesso, sem renovação automática. Ao fim do período, você renova se quiser.') + '</span></button>';
     }).join('') + '</div>';
     // no Pix, lembra que no cartão sai mais barato
     if (forma === 'pix' && podeCartao()) {
       var m = planosDe('cartao').filter(function(p){ return p.meses === 1; })[0];
       if (m) h += '<p class="dica">No cartão o plano mensal sai por <b>' + reais(m.valorCartao) + ' por mês</b> (no Pix, ' + reais(m.valor) + '). <button type="button" id="ver-cartao">Ver planos no cartão</button></p>';
     }
-    if (forma === 'cartao') h += '<p class="dica"><b>Preço de lançamento:</b> quem assina no cartão agora continua pagando este valor nas renovações, mesmo se o preço subir depois.</p>';
+    if (forma === 'cartao') h += '<p class="dica"><b>Preço de lançamento:</b> quem assinar no cartão agora mantém este valor nas renovações, mesmo que o preço suba depois.</p>';
     box.innerHTML = h;
     var vc = document.getElementById('ver-cartao');
     if (vc) vc.onclick = function(){ trocarForma('cartao'); };
@@ -791,7 +791,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
     if (forma === 'cartao') {
       var v = pl.valorCartao, nome = NOME_CARTAO[pl.meses] || pl.nome, cada = pl.meses === 1 ? 'todo mês' : pl.meses === 12 ? 'todo ano' : 'a cada ' + pl.meses + ' meses';
       box.innerHTML = '<div class="caixa"><h3>' + esc(nome) + ' no cartão: ' + reais(v) + ' ' + (CADA[pl.meses] || '') + '</h3>'
-        + '<p class="sub">Você paga ' + reais(v) + ' agora e depois ' + reais(v) + ' ' + cada + ', até cancelar.' + (pl.valor && !pl.soCartao ? ' No Pix, o mesmo período custa ' + reais(pl.valor) + '.' : '') + '</p>'
+        + '<p class="sub">Você paga ' + reais(v) + ' agora e depois ' + reais(v) + ' ' + cada + ', até você cancelar.' + (pl.valor && !pl.soCartao ? ' No Pix, o mesmo período custa ' + reais(pl.valor) + '.' : '') + '</p>'
         + '<ul class="lista"><li>' + CHECK + 'Acesso liberado assim que o pagamento é aprovado.</li>'
         + '<li>' + CHECK + 'Cancele aqui mesmo quando quiser, sem multa. O acesso continua até o fim do período pago.</li>'
         + '<li>' + CHECK + 'Pagamento na página segura do Stripe. O Mercado Macro não vê os dados do cartão.</li></ul>'
