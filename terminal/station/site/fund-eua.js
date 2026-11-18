@@ -201,7 +201,9 @@
           </table></div>` : '<div class="fd-msg">Sem séries anuais para esta empresa.</div>'}
         </section>
       </div>
-      ${extras(d)}`;
+      ${extras(d)}
+      <section class="fd-box fe-news" id="fe-news"><div class="fd-bh"><h3>Últimas notícias ${esc(nomeCurto(p.name || d.s))}</h3><span class="fd-leg">últimos 7 dias</span></div><div class="fd-msg">Carregando notícias…</div></section>`;
+    noticias(d.s);
     body.querySelector('.fd-tk[data-sym]')?.addEventListener('click', () => {
       if (typeof window.openAssetChart === 'function') window.openAssetChart(d.s, p.name || d.s, [{ s: d.s, n: p.name || d.s }]);
     });
@@ -235,6 +237,45 @@
         <div class="fe-rec-leg"><span><i class="c"></i>Compra</span><span><i class="m"></i>Manter</span><span><i class="v"></i>Venda</span></div></section>`;
     }
     return `<div class="fd-grid fe-extras">${bal}${ana}</div>`;
+  }
+  // 18/11/2026: notícias da empresa (Finnhub company-news), manchete traduzida e link para a matéria original
+  const NEWS = {}, NEWS_TTL = 30 * 60 * 1000;
+  function nomeCurto(n) {
+    const c = String(n).replace(/,?\s+(Inc|Corp|Corporation|Co|Company|Ltd|Limited|plc|PLC|SA|S\.A\.|NV|N\.V\.|AG|Holdings?|Group|Platforms|Class [A-C])\.?$/i, '').trim();
+    const nome = c.replace(/,?\s+(Inc|Corp|Corporation|Ltd|plc|Holdings?)\.?$/i, '').trim() || n;
+    return `da ${nome.length > 28 ? nome.slice(0, 28) + '…' : nome}`;
+  }
+  function quando(t) {
+    const min = Math.round((Date.now() - t) / 60000);
+    if (min < 60) return `há ${Math.max(1, min)} min`;
+    if (min < 24 * 60) return `há ${Math.round(min / 60)} h`;
+    const dt = new Date(t);
+    return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+  }
+  async function noticias(s) {
+    const box = () => root.querySelector('#fe-news');
+    const pinta = (lista) => {
+      const b = box(); if (!b || prefs.s !== s) return;
+      const msg = b.querySelector('.fd-msg, .fe-nl'); if (!msg) return;
+      if (!lista.length) { msg.outerHTML = '<div class="fd-msg">Nenhuma notícia desta empresa nos últimos 7 dias.</div>'; return; }
+      const linha = (n, i) => `<li${i >= 6 ? ' class="fe-mais" hidden' : ''}><a href="${esc(n.u)}" target="_blank" rel="noopener" title="${esc(n.h)}${n.r ? '\n\n' + esc(n.r) : ''}">${esc(n.pt || n.h)}</a><span>${esc(n.f)}${n.f ? ' · ' : ''}${esc(quando(n.t))}</span></li>`;
+      msg.outerHTML = `<ul class="fe-nl">${lista.map(linha).join('')}</ul>${lista.length > 6 ? `<button class="fe-nmais" type="button">Ver mais ${lista.length - 6}</button>` : ''}`;
+      b.querySelector('.fe-nmais')?.addEventListener('click', (e) => { b.querySelectorAll('.fe-mais').forEach((li) => { li.hidden = false; }); e.currentTarget.remove(); });
+    };
+    const c = NEWS[s];
+    if (c && Date.now() - c.ts < NEWS_TTL) { pinta(c.lista); return; }
+    let lista;
+    try { lista = (await getJSON(`${PROXY}/finnhub/news?s=${encodeURIComponent(s)}`, 12000)).lista || []; }
+    catch (e) { const b = box(); const m = b?.querySelector('.fd-msg'); if (m && prefs.s === s) m.textContent = 'Não foi possível carregar as notícias agora.'; return; }
+    // manchete em português (o mesmo tradutor das Notícias); se falhar, fica em inglês
+    try {
+      if (lista.length && typeof newsTraduzSeguro === 'function') {
+        const pt = await newsTraduzSeguro(lista.map((n) => n.h.replace(/\s+/g, ' ')));
+        lista.forEach((n, i) => { if (pt[i]) n.pt = typeof newsParaBrasil === 'function' ? newsParaBrasil(pt[i]) : pt[i]; });
+      }
+    } catch { /* fica o original */ }
+    NEWS[s] = { ts: Date.now(), lista };
+    pinta(lista);
   }
   function chart(pts) {
     pts = pts.filter(([, v]) => ok(v));
@@ -281,6 +322,12 @@
   .fe-rec-b { display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--surface-2); }
   .fe-rec-b i, .fe-rec-leg i { display:block; } .fe-rec-b .c, .fe-rec-leg .c { background:var(--pos); } .fe-rec-b .m, .fe-rec-leg .m { background:color-mix(in srgb, var(--text-3) 55%, transparent); } .fe-rec-b .v, .fe-rec-leg .v { background:var(--neg); }
   .fe-rec-n { font:500 11px 'JetBrains Mono', monospace; text-align:right; }
+  .fe-news .fe-nl { list-style:none; margin:4px 0 0; padding:0 14px 6px; }
+  .fe-nl li { display:flex; flex-direction:column; gap:3px; padding:9px 0; border-top:1px solid var(--line); } .fe-nl li:first-child { border-top:0; } .fe-nl li[hidden] { display:none; }
+  .fe-nl a { color:var(--text); text-decoration:none; font-size:13.5px; font-weight:600; line-height:1.35; } .fe-nl a:hover { color:var(--accent); text-decoration:underline; }
+  .fe-nl span { font-size:11.5px; color:var(--text-3); }
+  .fe-nmais { margin:0 14px 14px; padding:6px 12px; border:1px solid var(--line-2); border-radius:8px; background:transparent; color:var(--text-2); font-size:12px; cursor:pointer; } .fe-nmais:hover { color:var(--text); }
+  .fe-news > .fd-msg { margin:10px 14px 14px; }
   .fe-rec-leg { display:flex; gap:14px; margin-top:10px; font-size:11px; color:var(--text-3); } .fe-rec-leg span { display:inline-flex; align-items:center; gap:5px; } .fe-rec-leg i { width:9px; height:9px; border-radius:2px; }`;
   document.head.appendChild(css);
 })();

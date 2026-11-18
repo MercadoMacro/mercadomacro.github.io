@@ -247,7 +247,7 @@
     if (window.__fundEua) { window.__fundEua(el, foot); naBarra(); return; }
     if (document.querySelector('script[data-fund-eua]')) return;
     const sc = document.createElement('script');
-    sc.src = 'fund-eua.js?v=4'; sc.dataset.fundEua = '1';
+    sc.src = 'fund-eua.js?v=5'; sc.dataset.fundEua = '1';
     sc.onload = () => { if (prefs.view === 'eua' && window.__fundEua) { window.__fundEua(root.querySelector('#fd-eua') || el, foot); naBarra(); } };
     sc.onerror = () => { el.innerHTML = '<div class="fd-msg">Não foi possível carregar o modo EUA.</div>'; sc.remove(); };
     document.head.appendChild(sc);
