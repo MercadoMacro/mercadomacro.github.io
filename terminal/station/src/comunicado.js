@@ -32,7 +32,7 @@ export const COMUNICADO = {
     ['Novos temas', 'Escuro, claro ou o novo tema Terminal: fundo preto, números em destaque e fonte de terminal profissional.'],
   ],
   planos: [
-    ['Mensal no cartão', 'renova sozinho, cancele quando quiser', 'R$ 19,90 por mês'],
+    ['Mensal no cartão', 'renovação automática, cancele quando quiser', 'R$ 19,90 por mês'],
     ['Semestral no cartão', 'equivale a R$ 16,65 por mês', 'R$ 99,90'],
     ['Anual no cartão', 'equivale a R$ 14,99 por mês', 'R$ 179,90'],
     ['1 mês no Pix', 'pagamento único, sem renovação', 'R$ 24,90'],

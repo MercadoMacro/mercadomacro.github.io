@@ -372,7 +372,7 @@
     return `<div class="aj-plano${perto ? ' perto' : ''}">${topo}
       <div class="aj-plano-linha"><span class="aj-selo">${esc(C.plano || '—')}</span><span class="aj-plano-falta">${quando}</span></div>
       ${pct != null ? `<div class="aj-plano-barra" role="progressbar" aria-label="Tempo de acesso restante" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ''}
-      <span class="aj-plano-ate">${C.renova ? `Renova sozinho no cartão em ${data}` : data ? `Acesso até ${data}` : ''}</span>
+      <span class="aj-plano-ate">${C.renova ? `Renovação automática no cartão em ${data}` : data ? `Acesso até ${data}` : ''}</span>
       <a class="aj-plano-bt${bt[1]}" href="/assinar">${bt[0]}</a></div>`;
   }
 
@@ -681,7 +681,7 @@
             const cart = cartao && !p.soCartao && p.valorCartao ? `<em>No cartão: ${reais(p.valorCartao)}</em>` : '';
             return `<a href="/assinar?plano=${encodeURIComponent(p.id)}"><b>${esc(p.nome)}</b><strong>${reais(v)}</strong><span>${sub}</span>${cart}</a>`;
           }).join('')}</div>
-          <p class="mm-venc-nota">${cartao ? 'No Pix, pagamento único, sem renovação automática. No cartão, renova sozinho até você cancelar.' : 'Pagamento por Pix, sem renovação automática.'}</p>` : ''}
+          <p class="mm-venc-nota">${cartao ? 'No Pix, pagamento único, sem renovação automática. No cartão, a renovação é automática até você cancelar.' : 'Pagamento por Pix, sem renovação automática.'}</p>` : ''}
           <div class="mm-venc-ac"><button type="button" data-x>Agora não</button><a href="/assinar">Ver assinatura</a></div>
         </div>`;
       const fechar = () => { el.remove(); document.removeEventListener('keydown', esc_); };
