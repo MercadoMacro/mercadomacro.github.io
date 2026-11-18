@@ -2502,6 +2502,7 @@ $('#briefing-modal-close-btn')?.addEventListener('click', closeBriefingModal);
    CALENDÁRIO ECONÔMICO
    ========================================================= */
 $('#calendar-refresh-btn')?.addEventListener('click', () => {
+  if (typeof ecalPrefs !== 'undefined' && ecalPrefs.view !== 'iframe') return; // só a visão Investing recarrega o quadro
   const iframe = $('#economic-calendar');
   if (!iframe) return;
   const btn = $('#calendar-refresh-btn');
@@ -2644,6 +2645,14 @@ function openNoteModal(key) {
   if (!modal || !title) return;
   title.textContent = formatDateFull(key);
   renderNoteList(key);
+  // 17/11/2026: eventos importantes do dia (as bolinhas vermelhas do calendário) e atalho para a agenda daquele dia
+  let ag = $('#note-agenda');
+  if (!ag) { ag = document.createElement('div'); ag.id = 'note-agenda'; ag.className = 'note-agenda'; title.insertAdjacentElement('afterend', ag); }
+  const evs = (window.__calKeyDays || {})[key] || [];
+  const naAgenda = (window.__calFeed || []).some((e) => e && e.date && spDay(e.date) === key);
+  ag.hidden = !evs.length && !naAgenda;
+  ag.innerHTML = `${evs.length ? `<b>Eventos importantes</b><ul>${evs.map((t) => `<li>${escapeHTML(t)}</li>`).join('')}</ul>` : ''}${naAgenda ? '<button type="button" class="btn-sm" id="note-ver-agenda"><i class="fas fa-calendar-day"></i> Ver a agenda deste dia</button>' : ''}`;
+  $('#note-ver-agenda')?.addEventListener('click', () => { closeNoteModal(); ecalPrefs.day = key; ecalSetView('list'); renderEcal(); });
   $('#note-textarea').value = '';
   modal.classList.add('visible');
   setTimeout(() => $('#note-textarea')?.focus(), 150);
@@ -3436,7 +3445,14 @@ async function refreshEcal(force = false) {
 }
 
 $$('.ecal-view-btn').forEach(b => b.addEventListener('click', () => ecalSetView(b.dataset.view)));
-$('#calendar-refresh-btn')?.addEventListener('click', () => refreshEcal(true));
+// 17/11/2026: o Recarregar fica na linha dos botões e vale para a visão aberta
+$('#calendar-refresh-btn')?.addEventListener('click', () => {
+  const v = ecalPrefs.view, btn = $('#calendar-refresh-btn');
+  btn?.classList.add('spinning'); setTimeout(() => btn?.classList.remove('spinning'), 1200);
+  if (v === 'list' || v === 'iframe') { refreshEcal(true); return; }
+  const alvo = { earn: ['#earn-root', '__earnRender'], ipo: ['#ipo-root', '__ipoRender'], bbr: ['#bbr-root', '__bbrRender'], prov: ['#prov-root', '__provRender'], focus: ['#focus-root', '__focusRender'] }[v];
+  if (alvo && window[alvo[1]]) window[alvo[1]]($(alvo[0]), true);
+});
 ecalSetView(ecalPrefs.view);
 refreshEcal();
 // mantém resultados e o "próximo" em dia
