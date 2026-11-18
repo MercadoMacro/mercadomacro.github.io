@@ -29,7 +29,7 @@
     {
       aba: 'calendar-panel', nome: 'Calendário',
       // o "Investing (original)" continua como botão dentro da Agenda, fora do menu
-      lista: () => [['list', 'Agenda econômica', fa('fa-calendar-day')], ['bbr', 'Balanços Brasil', FLAG.br], ['earn', 'Balanços EUA', FLAG.us], ['prov', 'Proventos', fa('fa-hand-holding-dollar')], ['focus', 'Boletim Focus', fa('fa-chart-line')]],
+      lista: () => [['list', 'Agenda econômica', fa('fa-calendar-day')], ['focus', 'Boletim Focus', fa('fa-chart-line')], ['bbr', 'Balanços Brasil', FLAG.br], ['earn', 'Balanços EUA', FLAG.us], ['ipo', 'IPOs EUA', fa('fa-rocket')], ['prov', 'Proventos', fa('fa-hand-holding-dollar')]],
       atual: () => { const v = document.querySelector('#calendar-panel .ecal-view-btn.active')?.dataset.view; return v === 'iframe' ? 'list' : v; },
       ir: (k) => clicaQuando(`#calendar-panel .ecal-view-btn[data-view="${k}"]`),
     },
@@ -156,6 +156,7 @@
     list: 'agenda economica eventos calendario semana divulgacoes',
     bbr: 'balancos resultados brasil b3 trimestre lucro empresas',
     earn: 'balancos resultados eua earnings trimestre lucro',
+    ipo: 'ipo ipos estreia bolsa oferta inicial acoes eua nasdaq nyse',
     prov: 'proventos dividendos jcp juros sobre capital data com pagamento',
     focus: 'boletim focus expectativas inflacao selic pib cambio juros banco central',
     br: 'indicadores brasil ipca selic pib desemprego juros inflacao',

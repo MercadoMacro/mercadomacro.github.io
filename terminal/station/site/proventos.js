@@ -18,11 +18,15 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ok = (v) => v != null && isFinite(v);
   // valor por ação: até 8 casas como a B3 informa, sem zeros sobrando
-  const valor = (v) => (ok(v) ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 8 }) : '—');
+  // 17/11/2026: na tela até 4 casas (R$ 0,5566); o valor exato que a B3 informa fica no title da célula
+  const valor = (v) => (ok(v) ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '—');
+  const valorExato = (v) => (ok(v) ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 8 }) : '');
   const dmy = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}` : '');
   const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-  const diaLongo = (iso) => { const d = new Date(iso + 'T12:00:00Z'); return `${DIAS[d.getUTCDay()]}, ${+iso.slice(8, 10)} ${MES[+iso.slice(5, 7) - 1]}`; };
+  // 17/11/2026: cabeçalho de dia no mesmo formato da Agenda e dos Balanços ("terça, 17 de nov", em maiúsculas pelo CSS)
+  const DIAS_L = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const diaLongo = (iso) => { const d = new Date(iso + 'T12:00:00Z'); return `${DIAS_L[d.getUTCDay()]}, ${+iso.slice(8, 10)} de ${MES[+iso.slice(5, 7) - 1]}`; };
   const MINUSC = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
   const nomeCurto = (s) => String(s || '').replace(/\s+(S\.?A\.?|S\/A)\.?$/i, '').trim().split(/\s+/).map((w, i) => {
     const l = w.toLocaleLowerCase('pt-BR');
@@ -117,7 +121,7 @@
           return `<tr class="pv-ev">
             <td class="pv-at"><button class="pv-tk" data-tk="${esc(e.tk)}" data-nm="${esc(nomeCurto(e.emp))}" title="Ver o gráfico de ${esc(e.tk)}">${esc(e.tk)}</button><small>${esc(nomeCurto(e.emp))}</small></td>
             <td class="pv-ti"><span class="pv-tp ${e.tipo === 'JCP' ? 'jcp' : e.tipo === 'Dividendo' ? 'div' : 'out'}">${esc(e.tipo)}</span></td>
-            <td class="n pv-vl">${valor(e.valor)}</td>
+            <td class="n pv-vl" title="${esc(valorExato(e.valor))} por ação">${valor(e.valor)}</td>
             <td class="n pv-cm${prefs.ordem === 'com' ? ' k' : ''}" data-l="Data com">${e.com ? dmy(e.com) : '—'}</td>
             <td class="n pv-pg${prefs.ordem === 'pag' ? ' k' : ''}" data-l="Pagamento">${pag}</td>
             <td class="pv-av">${av ? `<a href="${esc(av.link)}" target="_blank" rel="noopener" title="${esc(av.cat)}: ${esc(av.assunto)}, ${dmy(av.data)}">CVM</a>` : '<span class="pv-tbd">—</span>'}</td></tr>`;
@@ -173,7 +177,7 @@
   .pv-tbl .n { text-align:right; font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; }
   .pv-tbl td.k { color:var(--text); font-weight:700; }
   .pv-tbl td.n:not(.k) { color:var(--text-2); }
-  .pv-dia th { background:color-mix(in srgb, var(--surface-2) 75%, transparent); font-size:11.5px; font-weight:700; color:var(--text-2); text-transform:capitalize; }
+  .pv-dia th { background:color-mix(in srgb, var(--surface-2) 75%, transparent); font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--text-2); text-transform:uppercase; }
   .pv-dia th span { float:right; font-weight:500; color:var(--text-3); text-transform:none; }
   .pv-tbl em { font-style:normal; font-size:10px; font-weight:700; text-transform:uppercase; color:var(--accent-ink); margin-left:6px; letter-spacing:.05em; }
   .pv-ev:hover { background:color-mix(in srgb, var(--accent) 5%, transparent); }
