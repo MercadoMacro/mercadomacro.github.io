@@ -833,7 +833,7 @@ const US_FINNHUB = {
       finnhubGet(`company-news?symbol=${encodeURIComponent(s)}&from=${d(de)}&to=${d(hoje)}`, key, 1800),
       nasdaqNews(s)
     ]);
-    const j = (fh.status === 'fulfilled' && Array.isArray(fh.value) ? fh.value : []).concat(nq.status === 'fulfilled' ? nq.value : []);
+    const j = (fh.status === 'fulfilled' && Array.isArray(fh.value) ? fh.value : []).concat(nq.status === 'fulfilled' ? nq.value.map((e) => ({ ...e, _nq: 1 })) : []);
     const fontes = { finnhub: fh.status === 'fulfilled' ? (Array.isArray(fh.value) ? fh.value.length : 'formato') : String(fh.reason?.message || 'erro').slice(0, 60),
       nasdaq: nq.status === 'fulfilled' ? nq.value.length : String(nq.reason?.message || 'erro').slice(0, 60) };
     if (!j.length && fh.status === 'rejected') throw fh.reason;
@@ -850,10 +850,13 @@ const US_FINNHUB = {
     const vistos = new Set();
     const lista = j.filter((e) => e && e.headline && /^https:\/\//i.test(e.url || '') && e.datetime && cita(`${e.headline} ${e.summary || ''}`))
       .sort((a, b) => b.datetime - a.datetime)
-      .filter((e) => { const k = String(e.headline).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70); if (vistos.has(k)) return false; vistos.add(k); return true; })
-      .slice(0, 12)
+      .filter((e) => { const k = String(e.headline).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70); if (vistos.has(k)) return false; vistos.add(k); return true; });
+    // as duas fontes aparecem: o Finnhub fica com 7 (ou mais, se a Nasdaq tiver pouco), completando 12 com a que tiver mais, e depois por horário
+    const a1 = lista.filter((e) => !e._nq), a2 = lista.filter((e) => e._nq);
+    const n1 = Math.min(a1.length, Math.max(7, 12 - a2.length)), n2 = Math.min(a2.length, 12 - n1);
+    const final = a1.slice(0, n1).concat(a2.slice(0, n2)).sort((a, b) => b.datetime - a.datetime)
       .map((e) => ({ t: e.datetime * 1000, h: String(e.headline).slice(0, 300), f: String(e.source || '').slice(0, 40), u: String(e.url).slice(0, 600), r: String(e.summary || '').slice(0, 400) }));
-    return { s, lista, fontes };
+    return { s, lista: final, fontes };
   },
   // 17/11/2026: calendário de IPOs dos EUA (plano gratuito); guardado 6 horas
   async ipo({ from, to }, key) {
