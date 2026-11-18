@@ -200,12 +200,42 @@
             <tbody>${linhas.map(([n, f, cl]) => `<tr><th>${esc(n)}</th>${anos.map((y) => `<td class="${cl ? cl(y) : ''}">${esc(f(y))}</td>`).join('')}</tr>`).join('')}</tbody>
           </table></div>` : '<div class="fd-msg">Sem séries anuais para esta empresa.</div>'}
         </section>
-      </div>`;
+      </div>
+      ${extras(d)}`;
     body.querySelector('.fd-tk[data-sym]')?.addEventListener('click', () => {
       if (typeof window.openAssetChart === 'function') window.openAssetChart(d.s, p.name || d.s, [{ s: d.s, n: p.name || d.s }]);
     });
   }
 
+  // 17/11/2026: balanços previsto x divulgado (últimos 4 trimestres) e recomendação dos analistas (Finnhub, plano gratuito)
+  function extras(d) {
+    const S = Array.isArray(d.surpresas) ? d.surpresas : [], R = Array.isArray(d.recs) ? d.recs : [];
+    if (!S.length && !R.length) return '';
+    const triN = (e) => (e.tri && e.ano ? `${e.tri}º tri ${e.ano}` : String(e.p).slice(0, 7).split('-').reverse().join('/'));
+    let bal = '';
+    if (S.length) {
+      const bateu = S.filter((e) => e.prev != null && e.real >= e.prev).length, comPrev = S.filter((e) => e.prev != null).length;
+      bal = `<section class="fd-box">
+        <div class="fd-bh"><h3>Balanços: previsto x divulgado</h3><span class="fd-leg" title="Lucro por ação na moeda do balanço da empresa, por trimestre do ano fiscal dela">lucro por ação · tri fiscal</span></div>
+        ${comPrev ? `<p class="fe-resumo">Superou a previsão dos analistas em <b>${bateu} de ${comPrev}</b> trimestres.</p>` : ''}
+        <div class="fd-tbl"><table><thead><tr><th>Trimestre</th><th>Previsto</th><th>Divulgado</th><th>Surpresa</th></tr></thead><tbody>
+        ${S.map((e) => { const cl = e.pct == null ? '' : e.pct >= 0 ? 'up' : 'dn'; return `<tr><th>${esc(triN(e))}</th><td>${e.prev == null ? '—' : esc(nf(e.prev, 2))}</td><td>${esc(nf(e.real, 2))}</td><td class="${cl}">${e.pct == null ? '—' : `${e.pct >= 0 ? '+' : '−'}${esc(nf(Math.abs(e.pct), 1))}%`}</td></tr>`; }).join('')}
+        </tbody></table></div></section>`;
+    }
+    let ana = '';
+    if (R.length) {
+      const MES = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+      const mes = (p) => { const [y, m] = String(p).split('-'); return `${MES[+m - 1] || ''} ${y}`; };
+      const at = R[0], compra = at.cf + at.c, manter = at.m, venda = at.v + at.vf, tot = compra + manter + venda;
+      const barra = (r) => { const c = r.cf + r.c, m = r.m, v = r.v + r.vf, t = c + m + v || 1; return `<div class="fe-rec"><span class="fe-rec-m">${esc(mes(r.p))}</span><div class="fe-rec-b" title="${c} compra · ${m} manter · ${v} venda"><i class="c" style="width:${(c / t * 100).toFixed(1)}%"></i><i class="m" style="width:${(m / t * 100).toFixed(1)}%"></i><i class="v" style="width:${(v / t * 100).toFixed(1)}%"></i></div><span class="fe-rec-n">${c}/${m}/${v}</span></div>`; };
+      ana = `<section class="fd-box">
+        <div class="fd-bh"><h3>Recomendação dos analistas</h3><span class="fd-leg">compra / manter / venda</span></div>
+        ${tot ? `<p class="fe-resumo">Em ${esc(mes(at.p))}: <b class="${compra ? 'up' : ''}">${compra} compra</b>, <b>${manter} manter</b> e <b class="${venda ? 'dn' : ''}">${venda} venda</b>, de ${tot} analistas.</p>` : ''}
+        ${R.map(barra).join('')}
+        <div class="fe-rec-leg"><span><i class="c"></i>Compra</span><span><i class="m"></i>Manter</span><span><i class="v"></i>Venda</span></div></section>`;
+    }
+    return `<div class="fd-grid fe-extras">${bal}${ana}</div>`;
+  }
   function chart(pts) {
     pts = pts.filter(([, v]) => ok(v));
     if (!pts.length) return '<div class="fd-msg">Sem lucro por ação anual.</div>';
@@ -243,6 +273,14 @@
   .fe-52 { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-3); max-width:520px; }
   .fe-52 b { font:600 12px 'JetBrains Mono', monospace; color:var(--text-2); }
   .fe-52b { position:relative; flex:1; height:6px; border-radius:3px; background:linear-gradient(90deg, color-mix(in srgb, var(--neg) 55%, transparent), color-mix(in srgb, var(--pos) 55%, transparent)); }
-  .fe-52b i { position:absolute; top:-4px; width:3px; height:14px; margin-left:-1.5px; border-radius:2px; background:var(--text); }`;
+  .fe-52b i { position:absolute; top:-4px; width:3px; height:14px; margin-left:-1.5px; border-radius:2px; background:var(--text); }
+  .fe-extras { margin-top:14px; }
+  .fe-extras .fe-resumo, .fe-extras .fe-rec, .fe-extras .fe-rec-leg { margin-left:14px; margin-right:14px; } .fe-extras .fe-resumo { margin-top:10px; } .fe-extras .fe-rec-leg { margin-bottom:14px; }
+  .fe-resumo { margin:2px 0 10px; font-size:13px; color:var(--text-2); } .fe-resumo b.up, .fd-tbl td.up { color:var(--pos); } .fe-resumo b.dn, .fd-tbl td.dn { color:var(--neg); }
+  .fe-rec { display:grid; grid-template-columns:70px 1fr 64px; align-items:center; gap:10px; margin:7px 0; font-size:12px; color:var(--text-3); }
+  .fe-rec-b { display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--surface-2); }
+  .fe-rec-b i, .fe-rec-leg i { display:block; } .fe-rec-b .c, .fe-rec-leg .c { background:var(--pos); } .fe-rec-b .m, .fe-rec-leg .m { background:color-mix(in srgb, var(--text-3) 55%, transparent); } .fe-rec-b .v, .fe-rec-leg .v { background:var(--neg); }
+  .fe-rec-n { font:500 11px 'JetBrains Mono', monospace; text-align:right; }
+  .fe-rec-leg { display:flex; gap:14px; margin-top:10px; font-size:11px; color:var(--text-3); } .fe-rec-leg span { display:inline-flex; align-items:center; gap:5px; } .fe-rec-leg i { width:9px; height:9px; border-radius:2px; }`;
   document.head.appendChild(css);
 })();
