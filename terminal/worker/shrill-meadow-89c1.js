@@ -777,6 +777,23 @@ async function fmpGet(ep, key, ttl) {
   if (!r.ok || !j || (!Array.isArray(j) && (j['Error Message'] || j.error))) throw new Error('FMP HTTP ' + r.status + (j && (j['Error Message'] || j.error) ? ': ' + String(j['Error Message'] || j.error).slice(0, 80) : ''));
   return j;
 }
+// 18/11/2026: RSS da Nasdaq por empresa, no mesmo formato do company-news do Finnhub; 30 minutos de cache
+async function nasdaqNews(s) {
+  const r = await fetch(`https://www.nasdaq.com/feed/rssoutbound?symbol=${encodeURIComponent(s)}`, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', Accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9' },
+    cf: { cacheTtl: 1800, cacheEverything: true },
+    signal: AbortSignal.timeout(6000)
+  });
+  if (!r.ok) throw new Error('Nasdaq HTTP ' + r.status);
+  const xml = await r.text();
+  const tag = (it, t) => { const m = it.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`)); return m ? htmlText(m[1].replace(/<!\[CDATA\[|\]\]>/g, '')).replace(/\s+/g, ' ').trim() : ''; };
+  const itens = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+  if (!itens.length && !/<rss|<channel/i.test(xml)) throw new Error('Nasdaq: resposta não é RSS');
+  return itens.map((it) => ({
+    headline: tag(it, 'title'), url: tag(it, 'link'), summary: tag(it, 'description'),
+    source: tag(it, 'dc:creator') || 'Nasdaq', datetime: Math.floor((Date.parse(tag(it, 'pubDate')) || 0) / 1000)
+  })).filter((e) => e.headline && e.datetime > Date.now() / 1000 - 7 * 86400);
+}
 const US_FINNHUB = {
   async earnings({ from, to }, key) {
     const data = await finnhubGet(`calendar/earnings?from=${from}&to=${to}`, key, 1800);
@@ -811,8 +828,15 @@ const US_FINNHUB = {
   // 18/11/2026: notícias da empresa (últimos 7 dias, plano gratuito); guardado 30 minutos
   async news({ s }, key) {
     const hoje = new Date(), de = new Date(hoje.getTime() - 7 * 864e5), d = (x) => x.toISOString().slice(0, 10);
-    const j = await finnhubGet(`company-news?symbol=${encodeURIComponent(s)}&from=${d(de)}&to=${d(hoje)}`, key, 1800);
-    if (!Array.isArray(j)) throw new Error('Finnhub: formato inesperado');
+    // 18/11/2026: o feed da Nasdaq por empresa entra junto (Motley Fool, Zacks, RTTNews); se ele barrar, fica só o Finnhub
+    const [fh, nq] = await Promise.allSettled([
+      finnhubGet(`company-news?symbol=${encodeURIComponent(s)}&from=${d(de)}&to=${d(hoje)}`, key, 1800),
+      nasdaqNews(s)
+    ]);
+    const j = (fh.status === 'fulfilled' && Array.isArray(fh.value) ? fh.value : []).concat(nq.status === 'fulfilled' ? nq.value : []);
+    const fontes = { finnhub: fh.status === 'fulfilled' ? (Array.isArray(fh.value) ? fh.value.length : 'formato') : String(fh.reason?.message || 'erro').slice(0, 60),
+      nasdaq: nq.status === 'fulfilled' ? nq.value.length : String(nq.reason?.message || 'erro').slice(0, 60) };
+    if (!j.length && fh.status === 'rejected') throw fh.reason;
     // o Finnhub mistura notícias de outras empresas do setor; fica só o que cita a empresa (ticker ou nome) no título ou no resumo
     let nome = '';
     try { nome = String((await finnhubGet(`stock/profile2?symbol=${encodeURIComponent(s)}`, key, 86400))?.name || ''); } catch { /* sem nome, usa só o ticker */ }
@@ -826,10 +850,10 @@ const US_FINNHUB = {
     const vistos = new Set();
     const lista = j.filter((e) => e && e.headline && /^https:\/\//i.test(e.url || '') && e.datetime && cita(`${e.headline} ${e.summary || ''}`))
       .sort((a, b) => b.datetime - a.datetime)
-      .filter((e) => { const k = String(e.headline).toLowerCase().slice(0, 80); if (vistos.has(k)) return false; vistos.add(k); return true; })
+      .filter((e) => { const k = String(e.headline).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70); if (vistos.has(k)) return false; vistos.add(k); return true; })
       .slice(0, 12)
       .map((e) => ({ t: e.datetime * 1000, h: String(e.headline).slice(0, 300), f: String(e.source || '').slice(0, 40), u: String(e.url).slice(0, 600), r: String(e.summary || '').slice(0, 400) }));
-    return { s, lista };
+    return { s, lista, fontes };
   },
   // 17/11/2026: calendário de IPOs dos EUA (plano gratuito); guardado 6 horas
   async ipo({ from, to }, key) {
