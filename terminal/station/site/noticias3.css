@@ -40,8 +40,8 @@ body.nw3 #news-view > .nc-sep:first-child { margin-top:2px; }
   body.nw3 #news-panel .news-toolbar { gap:6px; padding:8px; margin-bottom:12px; }
   body.nw3 .news-toolbar .news-search { order:3; flex:1 1 0; min-width:0; }
   body.nw3 .news-toolbar .news-search { height:40px; }
-  /* botões menores numa faixa que rola de lado, abaixo da busca */
-  body.nw3 .nw3-acoes { order:5; flex:1 0 100%; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -8px -2px; padding:0 8px 2px; }
+  /* botões menores abaixo da busca; 18/11/2026: quebram linha em vez de rolar de lado (o Atualizar ficava escondido) */
+  body.nw3 .nw3-acoes { order:5; flex:1 0 100%; display:flex; flex-wrap:wrap; gap:6px; }
   body.nw3 .nw3-acoes::-webkit-scrollbar { display:none; }
   body.nw3 .nw3-acoes .btn-sm { flex:none; height:32px; padding:0 10px; font-size:12px; white-space:nowrap; }
   body.nw3 .nw3-acoes #news-refresh-btn { width:32px; padding:0; }

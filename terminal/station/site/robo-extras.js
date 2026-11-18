@@ -787,8 +787,8 @@
     const w = document.createElement('span');
     w.className = 'rx-bts';
     const gem = () => window.MMAssistente && window.MMAssistente.gemini && window.MMAssistente.gemini();
-    w.innerHTML = '<span class="rx-bt" role="button" tabindex="0" data-rx="janela" title="Abrir o robô numa janela flutuante, por cima de outros programas"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><rect x="11" y="10" width="8" height="6" rx="1" fill="currentColor"/></svg></span>'
-      + '<span class="rx-bt" role="button" tabindex="0" data-rx="tela" title="Explicar esta tela com o Google Gemini (o texto da aba vai junto)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6V14"/><path d="M12 17.2v.1"/></svg></span>';
+    w.innerHTML = '<span class="rx-bt" aria-hidden="true" data-rx="janela" title="Abrir o robô numa janela flutuante, por cima de outros programas"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><rect x="11" y="10" width="8" height="6" rx="1" fill="currentColor"/></svg></span>'
+      + '<span class="rx-bt" aria-hidden="true" data-rx="tela" title="Explicar esta tela com o Google Gemini (o texto da aba vai junto)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6V14"/><path d="M12 17.2v.1"/></svg></span>';
     P.el.append(w);
     if (!gem()) setTimeout(() => { if (!gem()) w.querySelector('[data-rx="tela"]').style.display = 'none'; }, 3000);
     const acao = (e) => {

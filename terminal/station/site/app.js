@@ -5365,7 +5365,11 @@ function newsReadMins(n) {
     const cn = navigator.connection;
     if (cn && (cn.saveData || /(^|-)2g|3g/.test(cn.effectiveType || ''))) return;
     if (asked || document.hidden) return;
-    window.__indWarm = true;
+    // 18/11/2026: os dados (Banco Central, IBGE, FRED: umas 30 consultas) só vêm antes para quem abriu Indicadores
+    // nos últimos 14 dias; para os outros baixa só o código e os dados vêm ao abrir a aba
+    let usa = false;
+    try { const d = localStorage.getItem('mm_uso_indicators-panel'); usa = !!d && (Date.now() - Date.parse(d + 'T12:00:00Z')) < 14 * 864e5; } catch (e) { /* sem acesso: não pré-carrega dados */ }
+    window.__indWarm = usa;
     asked = true;
     const sc = document.createElement('script');
     sc.src = 'indicadores.js?v=36';

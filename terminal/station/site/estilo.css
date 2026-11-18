@@ -3507,7 +3507,7 @@ body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:bloc
 .ecal-sep { width:1px; align-self:stretch; margin:4px 3px; background:var(--line-2); }
 .ecal-view-btn { display:inline-flex; align-items:center; gap:6px; }
 .ecal-view-btn .ecal-flag { width:16px; height:11px; border-radius:2px; flex:0 0 16px; box-shadow:0 0 0 1px rgba(0,0,0,.08); }
-.ecal-view-btn.ecal-view-alt { font-weight:500; opacity:.8; }
+.ecal-view-btn.ecal-view-alt { font-weight:500; }
 .ecal-view-btn.ecal-view-alt:hover, .ecal-view-btn.ecal-view-alt.active { opacity:1; }
 .ecal-reload { white-space:nowrap; margin-left:auto; }
 .ecal-reload.spinning svg { animation:ecalGira .9s linear infinite; }
