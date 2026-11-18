@@ -3496,3 +3496,6 @@ body.light.has-side .side-brand .sb-logo.sb-claro { display:block !important; }
 body.has-side.side-collapsed .side-brand .sb-logo { display:none !important; }
 body.has-side.side-collapsed .side-brand .sb-marca.sb-escuro { display:block; }
 body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:block !important; }
+
+/* Calendário (17/11/2026): espaço livre no fim das listas, para o robô (que fica no canto de baixo) não cobrir as últimas linhas */
+#calendar-panel :is(.er-list, .ip-list, .bb-list, .pv-tbl, .ecal-list)::after { content:''; display:block; height:84px; }

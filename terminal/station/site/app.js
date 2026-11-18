@@ -3309,7 +3309,7 @@ function ecalSetView(view) {
   $('#focus-root')?.classList.toggle('hidden', view !== 'focus');
   $('#prov-root')?.classList.toggle('hidden', view !== 'prov');
   // no Focus a tabela é larga: o calendário do mês e os compromissos saem de lado
-  $('.calendar-layout')?.classList.toggle('wide', view === 'focus' || view === 'prov' || view === 'bbr');
+  $('.calendar-layout')?.classList.toggle('wide', view === 'focus' || view === 'prov' || view === 'bbr' || view === 'earn' || view === 'ipo');
   // os botões de agenda, .ics e avisos e o status só valem para a lista do calendário
   $('.ecal-actions')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
   $('#ecal-status')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
@@ -3324,8 +3324,8 @@ function ecalSetView(view) {
   if (view === 'earn') ecalEarn();
   if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=6', '__focusRender', 'o Boletim Focus');
   if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=3', '__bbrRender', 'a agenda de balanços do Brasil');
-  if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=2', '__provRender', 'a agenda de proventos');
-  if (view === 'ipo') ecalLazy('#ipo-root', 'ipos.js?v=1', '__ipoRender', 'o calendário de IPOs');
+  if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=3', '__provRender', 'a agenda de proventos');
+  if (view === 'ipo') ecalLazy('#ipo-root', 'ipos.js?v=2', '__ipoRender', 'o calendário de IPOs');
 }
 
 // carrega o arquivo da visão só na primeira vez que ela é aberta
@@ -3347,7 +3347,7 @@ function ecalEarn() {
   if (window.__earnRender) { window.__earnRender(el); return; }
   if (document.querySelector('script[data-earn]')) return;
   const sc = document.createElement('script');
-  sc.src = 'balancos.js?v=4'; sc.dataset.earn = '1';
+  sc.src = 'balancos.js?v=5'; sc.dataset.earn = '1';
   sc.onload = () => window.__earnRender && window.__earnRender(el);
   sc.onerror = () => { el.innerHTML = '<div class="er-msg" style="padding:40px;text-align:center">Não foi possível carregar os balanços.</div>'; sc.remove(); };
   document.head.appendChild(sc);
