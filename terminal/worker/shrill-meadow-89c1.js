@@ -808,6 +808,19 @@ const US_FINNHUB = {
       .map((e) => ({ p: e.period, ano: e.year ?? null, tri: e.quarter ?? null, real: e.actual, prev: typeof e.estimate === 'number' ? e.estimate : null, pct: typeof e.surprisePercent === 'number' ? e.surprisePercent : null })) : [];
     return { s, perfil: perfil || {}, m: (met && met.metric) || {}, anual, cot: cot && cot.c ? cot : null, recs, surpresas };
   },
+  // 18/11/2026: notícias da empresa (últimos 7 dias, plano gratuito); guardado 30 minutos
+  async news({ s }, key) {
+    const hoje = new Date(), de = new Date(hoje.getTime() - 7 * 864e5), d = (x) => x.toISOString().slice(0, 10);
+    const j = await finnhubGet(`company-news?symbol=${encodeURIComponent(s)}&from=${d(de)}&to=${d(hoje)}`, key, 1800);
+    if (!Array.isArray(j)) throw new Error('Finnhub: formato inesperado');
+    const vistos = new Set();
+    const lista = j.filter((e) => e && e.headline && /^https:\/\//i.test(e.url || '') && e.datetime)
+      .sort((a, b) => b.datetime - a.datetime)
+      .filter((e) => { const k = String(e.headline).toLowerCase().slice(0, 80); if (vistos.has(k)) return false; vistos.add(k); return true; })
+      .slice(0, 12)
+      .map((e) => ({ t: e.datetime * 1000, h: String(e.headline).slice(0, 300), f: String(e.source || '').slice(0, 40), u: String(e.url).slice(0, 600), r: String(e.summary || '').slice(0, 400) }));
+    return { s, lista };
+  },
   // 17/11/2026: calendário de IPOs dos EUA (plano gratuito); guardado 6 horas
   async ipo({ from, to }, key) {
     const j = await finnhubGet(`calendar/ipo?from=${from}&to=${to}`, key, 21600);
@@ -1286,8 +1299,9 @@ const rotas = async (request, env, ctx) => {
     // ENDPOINT: /finnhub/fund?s=AAPL
     // ENDPOINT: /finnhub/search?q=apple
     // ENDPOINT: /finnhub/ipo?from=AAAA-MM-DD&to=AAAA-MM-DD (calendário de IPOs, até 45 dias)
+    // ENDPOINT: /finnhub/news?s=NVDA (notícias da empresa, últimos 7 dias)
     // =========================================================
-    if (path === '/finnhub/earnings' || path === '/finnhub/fund' || path === '/finnhub/search' || path === '/finnhub/ipo') {
+    if (path === '/finnhub/earnings' || path === '/finnhub/fund' || path === '/finnhub/search' || path === '/finnhub/ipo' || path === '/finnhub/news') {
       if (!env.FINNHUB_API_KEY && !env.FMP_API_KEY) return json({ error: 'FINNHUB_API_KEY não configurada no Worker' }, 500, cors);
       let args;
       if (path === '/finnhub/earnings' || path === '/finnhub/ipo') {
@@ -1297,7 +1311,7 @@ const rotas = async (request, env, ctx) => {
           return json({ error: 'Período inválido (máximo 45 dias)' }, 400, cors);
         }
         args = { from, to };
-      } else if (path === '/finnhub/fund') {
+      } else if (path === '/finnhub/fund' || path === '/finnhub/news') {
         const s = (url.searchParams.get('s') || '').toUpperCase();
         if (!/^[A-Z][A-Z0-9.-]{0,9}$/.test(s)) return json({ error: 'Ticker inválido' }, 400, cors);
         args = { s };
