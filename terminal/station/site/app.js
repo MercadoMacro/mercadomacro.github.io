@@ -3322,7 +3322,6 @@ function ecalSetView(view) {
   // os botões de agenda, .ics e avisos e o status só valem para a lista do calendário
   $('.ecal-actions')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
   $('#ecal-status')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
-  $('.calendar-main > .calendar-footer')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
   $$('.ecal-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   if (view === 'iframe') {
     // o calendário do Investing só carrega quando esta visão é aberta
