@@ -119,7 +119,10 @@ globalThis.MMAssetHistory = (() => {
           if(opts?.aoMover)opts.aoMover(p&&typeof p.value==='number'&&shown.length?{data:rotulo(param.time),valor:p.value,desde:(p.value/shown[0].value-1)*100,ind:ind.join(' · ')}:null);
         });
         const render=days=>{
-          const subset=serie(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
+          // opts.desde (17/11/2026): começo exato do período (1º de janeiro no YTD; mesmo dia 1 ou 3 meses atrás), em segundos no
+          // fuso da bolsa. Sem isso, contar dias para trás a partir do último pregão pegava o fim de dezembro no YTD quando o
+          // histórico buscado era maior (indicadores ligados buscam 1 ano para aquecer as médias)
+          const subset=serie(all.filter(p=>opts?.desde?p.t+off>=opts.desde:p.t>=all.at(-1).t-days*86400),off);
           if(subset.length<2)throw Error('Sem dados suficientes para este período');
           shown=subset;line.setData(subset);
           if(Object.keys(ser).length){
