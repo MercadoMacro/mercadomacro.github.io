@@ -3509,7 +3509,7 @@ body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:bloc
 .ecal-view-btn .ecal-flag { width:16px; height:11px; border-radius:2px; flex:0 0 16px; box-shadow:0 0 0 1px rgba(0,0,0,.08); }
 .ecal-view-btn.ecal-view-alt { font-weight:500; opacity:.8; }
 .ecal-view-btn.ecal-view-alt:hover, .ecal-view-btn.ecal-view-alt.active { opacity:1; }
-.ecal-reload { white-space:nowrap; }
+.ecal-reload { white-space:nowrap; margin-left:auto; }
 .ecal-reload.spinning svg { animation:ecalGira .9s linear infinite; }
 @keyframes ecalGira { to { transform:rotate(360deg); } }
 @media (max-width:760px) { .ecal-sep { display:none; } }
@@ -3534,8 +3534,9 @@ body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:bloc
 .ecal-view-btn { padding:6px 10px; }
 /* cabeçalhos presos: cobrem a faixa de respiro do topo da página, para as linhas que passam por baixo não aparecerem */
 @media (min-width:901px) {
-  #calendar-panel :is(.ecal-table th, .er-day, .ip-day, .pv-dia th) { z-index:2; }
-  #calendar-panel :is(.ecal-table th, .er-day, .ip-day, .pv-dia th)::before { content:''; position:absolute; left:-1px; right:-1px; bottom:100%; height:30px; background:var(--bg); pointer-events:none; }
+  /* 18/11/2026: a faixa de cobertura (::before) tampava os filtros e aparecia cinza sobre o papel de parede.
+     Agora o cabeçalho prende na borda de cima da área que rola (o app.js mede o respiro do topo em --cal-topo) */
+  #calendar-panel :is(.ecal-table th, .er-day, .ip-day, .pv-dia th) { z-index:2; top:var(--cal-topo, 0px); }
 }
 /* o calendário do mês acompanha a rolagem da agenda */
 @media (min-width:901px) { .calendar-layout:not(.wide) > .calendar-side { position:sticky; top:0; align-self:flex-start; } }
