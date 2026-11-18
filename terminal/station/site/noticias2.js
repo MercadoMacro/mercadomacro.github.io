@@ -86,7 +86,8 @@
     if (!abriu && window.matchMedia('(min-width: 901px)').matches) { abriu = true; newsOpenCategory = 'br'; updateNewsCategoryUI(); }
     const tot = $('#nw2-total'); if (tot) tot.textContent = newsAll.length || '';
     const busca = $('#news-search');
-    if (busca && newsAll.length) busca.placeholder = `Buscar nas ${newsAll.length} notícias (ex.: BCE, Selic, Fed, Petrobras)`;
+    // 18/11/2026: no celular a busca é estreita; o texto longo ficava cortado
+    if (busca && newsAll.length) busca.placeholder = window.matchMedia('(max-width: 900px)').matches ? 'Buscar notícias' : `Buscar nas ${newsAll.length} notícias (ex.: BCE, Selic, Fed, Petrobras)`;
   }
   // horário da última busca, curto, para caber na barra
   const encurta = () => {

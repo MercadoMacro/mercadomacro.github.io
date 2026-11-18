@@ -161,7 +161,7 @@ export function pagina({ titulo, descricao, canonico, h1, data, corpo, ld, rodap
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
 <meta name="robots" content="index,follow"><meta name="theme-color" content="#070b14"><link rel="icon" href="/icone-192.png">
 <meta property="og:type" content="article"><meta property="og:title" content="${esc(titulo)}"><meta property="og:description" content="${esc(descricao)}">
-<meta property="og:url" content="${canonico}"><meta property="og:image" content="${SITE}/previa-link-mercado-macro.png?v=2"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:url" content="${canonico}"><meta property="og:image" content="${SITE}/previa-link-mercado-macro.png?v=3"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image">
 ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}
 <style>${CSS}</style></head><body><main>
 <div class="top"><a href="/" aria-label="Mercado Macro"><picture><source media="(prefers-color-scheme: light)" srcset="/logo-mercado-macro-claro.png"><img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="340" height="70"></picture></a><a class="cta" href="/entrar">Ver o painel ao vivo</a></div>
@@ -257,7 +257,7 @@ export async function paginaFechamentoPublico(req, env, ctx, p, dadosFechamento,
           dateModified: pub,
           inLanguage: 'pt-BR',
           mainEntityOfPage: `${SITE}${BASE}/${resto}`,
-          image: `${SITE}/previa-link-mercado-macro.png?v=2`,
+          image: `${SITE}/previa-link-mercado-macro.png?v=3`,
           author: { '@type': 'Organization', name: 'Mercado Macro', url: SITE },
           publisher: {
             '@type': 'Organization',
