@@ -199,12 +199,15 @@ globalThis.MMMesa2 = (() => {
       <div class="m2-ind-linha"><span class="m2-ind" role="group" aria-label="Indicadores técnicos">${INDS.map(([k, r, c, t]) => `<button type="button" data-m2-ind="${k}" aria-pressed="${inds.includes(k)}" title="${esc(t)}"><i style="background:${c}"></i>${r}</button>`).join('')}</span><span class="m2-indv num" data-m2-indv aria-live="off"></span></div>
       <div class="m2-graf-slot"></div>`;
   }
+  let ultPer = null;
+  function mostraPer(box, p) { const el = box?.querySelector('[data-m2-pervar]'); if (el) { el.className = 'm2-pervar ' + lado(p.variacao); el.textContent = `${api.pct(p.variacao)} ${NOME_PER[per]}`; } }
   function montarGrafico(box) {
     const slot = box.querySelector('.m2-graf-slot'); if (!slot) return;
     if (!grafNo) { grafNo = document.createElement('div'); grafNo.className = 'm2-graf mv-graf'; }
     slot.replaceWith(grafNo);
     const chave = sel.s + '|' + per + '|' + inds.join(',');
-    if (grafSym === chave && grafNo.querySelector('.wlh, .wlh-error')) return;
+    // o quadro foi redesenhado (cotação nova, troca de aba) com o mesmo gráfico: repõe a variação do período, que sumia
+    if (grafSym === chave && grafNo.querySelector('.wlh, .wlh-error')) { if (ultPer) mostraPer(box, ultPer); return; }
     grafSym = chave;
     const [, r0, intraday, dias] = PERIODOS.find((p) => p[0] === per);
     // com indicador ligado em 1M, 3M e no ano, busca 1 ano de pregões para as médias já começarem prontas no período
@@ -216,9 +219,12 @@ globalThis.MMMesa2 = (() => {
     const claro = document.documentElement.dataset.theme === 'light' || document.body.classList.contains('light');
     const box2 = () => root?.querySelector('[data-m2="grafico"]');
     // variação do período ao lado do preço; ao passar o mouse, a data e o valor do ponto (e quanto mudou desde o começo)
-    const aoPeriodo = (p) => { const el = box2()?.querySelector('[data-m2-pervar]'); if (el) { el.className = 'm2-pervar ' + lado(p.variacao); el.textContent = `${api.pct(p.variacao)} ${NOME_PER[per]}`; } };
+    const aoPeriodo = (p) => { ultPer = p; mostraPer(box2(), p); };
     const aoMover = (p) => { const el = box2()?.querySelector('[data-m2-hover]'); if (el) el.textContent = p ? `${p.data} · ${api.nf(p.valor, Math.abs(p.valor) >= 10000 ? 0 : api.dec(p.valor))} · ${api.pct(p.desde)} desde o início` : ''; const iv = box2()?.querySelector('[data-m2-indv]'); if (iv) iv.textContent = p?.ind || ''; };
-    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), aoPeriodo, aoMover, indicadores: inds }).catch(() => {});
+    // começo exato do período nos três que dependem do calendário (com ou sem indicador, o mesmo primeiro dia)
+    const hoje = new Date(), y = hoje.getUTCFullYear(), m = hoje.getUTCMonth(), d = hoje.getUTCDate();
+    const desde = r0 === 'ytd' ? Date.UTC(y, 0, 1) / 1000 : r0 === '1mo' ? Date.UTC(y, m - 1, d) / 1000 : r0 === '3mo' ? Date.UTC(y, m - 3, d) / 1000 : null;
+    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), desde, aoPeriodo, aoMover, indicadores: inds }).catch(() => {});
   }
 
 
