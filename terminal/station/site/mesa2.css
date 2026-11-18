@@ -196,3 +196,14 @@ body.light .m2-vidro::before{display:none}
 .m2-tb thead th .m2-ord:focus-visible{outline:2px solid var(--m2-ouro);outline-offset:2px}
 .m2-tb thead th .m2-seta{font-size:9px;opacity:.45}
 .m2-tb thead th .m2-ord.on .m2-seta{opacity:1;color:var(--m2-ouro)}
+
+/* indicadores técnicos do gráfico (17/11/2026) */
+.m2-ind-linha{display:flex;align-items:center;gap:10px;padding:8px 14px 0;flex-wrap:wrap}
+.m2-ind{display:inline-flex;gap:5px;flex-wrap:wrap}
+.m2-ind button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:none;color:var(--text-3);font:600 11px Inter,sans-serif;padding:3px 9px;border-radius:999px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.m2-ind button i{width:7px;height:7px;border-radius:50%;opacity:.45}
+.m2-ind button:hover{color:var(--text);border-color:var(--line-2)}
+.m2-ind button[aria-pressed="true"]{color:var(--text);border-color:var(--line-2);background:var(--surface-2)}
+.m2-ind button[aria-pressed="true"] i{opacity:1}
+.m2-indv{margin-left:auto;font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media (max-width:700px){.m2-indv{margin-left:0;flex-basis:100%}}
