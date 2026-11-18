@@ -3445,6 +3445,12 @@ async function refreshEcal(force = false) {
 }
 
 $$('.ecal-view-btn').forEach(b => b.addEventListener('click', () => ecalSetView(b.dataset.view)));
+// cabeçalhos presos do Calendário: grudam na borda de cima da área que rola, descontando o respiro (padding) do topo
+function calTopo() {
+  const p = $('#calendar-panel'), w = p?.querySelector(':scope > .generic-wrap');
+  if (w) p.style.setProperty('--cal-topo', -(parseFloat(getComputedStyle(w).paddingTop) || 0) + 'px');
+}
+calTopo(); window.addEventListener('resize', calTopo);
 // 17/11/2026: o Recarregar fica na linha dos botões e vale para a visão aberta
 $('#calendar-refresh-btn')?.addEventListener('click', () => {
   const v = ecalPrefs.view, btn = $('#calendar-refresh-btn');
