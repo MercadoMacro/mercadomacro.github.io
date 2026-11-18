@@ -181,6 +181,12 @@ globalThis.MMMesa2 = (() => {
     ['1A', '1y', false, 366], ['3A', '5y', false, 1096], ['5A', '5y', false, 1827], ['Máx', 'max', false, 100000]];
   const NOME_PER = { '1D': 'hoje', '5D': 'em 5 dias', '1M': 'em 1 mês', '3M': 'em 3 meses', YTD: 'no ano', '1A': 'em 1 ano', '3A': 'em 3 anos', '5A': 'em 5 anos', 'Máx': 'em todo o histórico' };
   const PER_KEY = 'mm_m2_per_v1';
+  // indicadores técnicos no gráfico (17/11/2026): médias móveis, Bollinger, IFR e MACD, ligados e desligados aqui
+  const INDS = [['mm20', 'MM20', '#f59e0b', 'Média móvel de 20 pontos do gráfico: pregões até 1 ano, semanas em 3A e 5A, meses no Máx'], ['mm50', 'MM50', '#a855f7', 'Média móvel de 50 pontos'],
+    ['mm200', 'MM200', '#3b82f6', 'Média móvel de 200 pontos: a tendência longa'], ['boll', 'Bollinger', '#94a3b8', 'Bandas de Bollinger (20 pontos, 2 desvios): o preço costuma andar dentro delas'],
+    ['rsi', 'IFR', '#a855f7', 'Índice de Força Relativa (14): acima de 70 esticado para cima, abaixo de 30 esticado para baixo'], ['macd', 'MACD', '#3b82f6', 'MACD (12, 26, 9): a linha azul cruzando a laranja para cima indica força compradora']];
+  const IND_KEY = 'mm_m2_ind_v1';
+  let inds = ler(IND_KEY, []); if (!Array.isArray(inds)) inds = []; inds = inds.filter((k) => INDS.some((x) => x[0] === k));
   let per = ler(PER_KEY, '5D'); if (!PERIODOS.some((p) => p[0] === per)) per = '5D';
   const viewers = {};
   let grafNo = null, grafSym = null;
@@ -190,16 +196,20 @@ globalThis.MMMesa2 = (() => {
       <div class="m2-preco"><b class="num" data-m2-px="${esc(sel.s)}">${preco(sel.s, q).replace(/^(R\$|US\$) /, '')}</b><span class="m2-var ${lado(q?.c)}" data-m2-ch="${esc(sel.s)}">${seta(q?.c)} ${api.pct(q?.c)}</span><small>${esc(unidade(sel.s, sel.n))}</small>
         <span class="m2-pervar" data-m2-pervar></span></div>
       <div class="m2-per-linha"><span class="m2-per" role="group" aria-label="Período do gráfico">${PERIODOS.map(([r]) => `<button type="button" data-m2-per="${r}" aria-pressed="${r === per}">${r}</button>`).join('')}</span><span class="m2-hover num" data-m2-hover aria-live="off"></span></div>
+      <div class="m2-ind-linha"><span class="m2-ind" role="group" aria-label="Indicadores técnicos">${INDS.map(([k, r, c, t]) => `<button type="button" data-m2-ind="${k}" aria-pressed="${inds.includes(k)}" title="${esc(t)}"><i style="background:${c}"></i>${r}</button>`).join('')}</span><span class="m2-indv num" data-m2-indv aria-live="off"></span></div>
       <div class="m2-graf-slot"></div>`;
   }
   function montarGrafico(box) {
     const slot = box.querySelector('.m2-graf-slot'); if (!slot) return;
     if (!grafNo) { grafNo = document.createElement('div'); grafNo.className = 'm2-graf mv-graf'; }
     slot.replaceWith(grafNo);
-    const chave = sel.s + '|' + per;
+    const chave = sel.s + '|' + per + '|' + inds.join(',');
     if (grafSym === chave && grafNo.querySelector('.wlh, .wlh-error')) return;
     grafSym = chave;
-    const [, r, intraday, dias] = PERIODOS.find((p) => p[0] === per);
+    const [, r0, intraday, dias] = PERIODOS.find((p) => p[0] === per);
+    // com indicador ligado em 1M, 3M e no ano, busca 1 ano de pregões para as médias já começarem prontas no período
+    // (o servidor de dados devolve semanas em 3A/5A e meses no Máx: aí as médias contam semanas e meses)
+    const r = inds.length && ['1mo', '3mo', 'ytd'].includes(r0) ? '1y' : r0;
     if (!viewers[r] && window.MMAssetHistory) viewers[r] = new window.MMAssetHistory.Viewer((s) => api.getJSON(`${api.PROXY}/history?symbols=${encodeURIComponent(s)}&r=${r}`, 20000));
     if (!viewers[r]) return;
     Object.entries(viewers).forEach(([k, v]) => { if (k !== r) v.destroy(); });
@@ -207,8 +217,8 @@ globalThis.MMMesa2 = (() => {
     const box2 = () => root?.querySelector('[data-m2="grafico"]');
     // variação do período ao lado do preço; ao passar o mouse, a data e o valor do ponto (e quanto mudou desde o começo)
     const aoPeriodo = (p) => { const el = box2()?.querySelector('[data-m2-pervar]'); if (el) { el.className = 'm2-pervar ' + lado(p.variacao); el.textContent = `${api.pct(p.variacao)} ${NOME_PER[per]}`; } };
-    const aoMover = (p) => { const el = box2()?.querySelector('[data-m2-hover]'); if (el) el.textContent = p ? `${p.data} · ${api.nf(p.valor, Math.abs(p.valor) >= 10000 ? 0 : api.dec(p.valor))} · ${api.pct(p.desde)} desde o início` : ''; };
-    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), aoPeriodo, aoMover }).catch(() => {});
+    const aoMover = (p) => { const el = box2()?.querySelector('[data-m2-hover]'); if (el) el.textContent = p ? `${p.data} · ${api.nf(p.valor, Math.abs(p.valor) >= 10000 ? 0 : api.dec(p.valor))} · ${api.pct(p.desde)} desde o início` : ''; const iv = box2()?.querySelector('[data-m2-indv]'); if (iv) iv.textContent = p?.ind || ''; };
+    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), aoPeriodo, aoMover, indicadores: inds }).catch(() => {});
   }
 
 
@@ -450,6 +460,8 @@ globalThis.MMMesa2 = (() => {
   }
   document.addEventListener('click', (e) => {
     if (!root || !root.contains(e.target)) return;
+    const ib = e.target.closest('[data-m2-ind]');
+    if (ib) { const k = ib.dataset.m2Ind; inds = inds.includes(k) ? inds.filter((x) => x !== k) : [...inds, k]; gravar(IND_KEY, inds); ib.setAttribute('aria-pressed', String(inds.includes(k))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
     const pb = e.target.closest('[data-m2-per]');
     if (pb) { per = pb.dataset.m2Per; gravar(PER_KEY, per); root.querySelectorAll('[data-m2-per]').forEach((b) => b.setAttribute('aria-pressed', String(b === pb))); const g = root.querySelector('[data-m2="grafico"]'); if (g) { g.querySelector('.m2-graf')?.replaceWith(Object.assign(document.createElement('div'), { className: 'm2-graf-slot' })); montarGrafico(g); } return; }
     const t = e.target.closest('[data-m2-aba]');

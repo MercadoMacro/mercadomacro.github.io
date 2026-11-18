@@ -17,6 +17,17 @@ globalThis.MMAssetHistory = (() => {
     return [...days.values()].sort((a,b)=>a.time.localeCompare(b.time));
   }
   const displayDay=time=>typeof time==='string'?time.split('-').reverse().join('/'):time&&typeof time==='object'?[time.day,time.month,time.year].map((n,i)=>i<2?String(n).padStart(2,'0'):n).join('/'):'';
+  /* Indicadores técnicos (17/11/2026, pedido do Dante; cálculos adaptados do OpenTerminal, licença MIT,
+     github.com/ErTasselli/OpenTerminal, web/lib/indicators.ts). Entram só os fechamentos (é o que o histórico traz),
+     por isso não há VWAP (precisa de volume). Cada função recebe [{time,value}] e devolve [{time,value}]. */
+  const IND={
+    sma(d,n){const o=[];let s=0;for(let i=0;i<d.length;i++){s+=d[i].value;if(i>=n)s-=d[i-n].value;if(i>=n-1)o.push({time:d[i].time,value:s/n});}return o;},
+    ema(d,n){const o=[],k=2/(n+1);let p=null;d.forEach((x,i)=>{p=p===null?x.value:x.value*k+p*(1-k);if(i>=n-1)o.push({time:x.time,value:p});});return o;},
+    boll(d,n=20,m=2){const sup=[],inf=[];for(let i=n-1;i<d.length;i++){let s=0,q=0;for(let j=i-n+1;j<=i;j++){s+=d[j].value;q+=d[j].value*d[j].value;}const md=s/n,dp=Math.sqrt(Math.max(0,q/n-md*md));sup.push({time:d[i].time,value:md+m*dp});inf.push({time:d[i].time,value:md-m*dp});}return{sup,inf};},
+    rsi(d,n=14){const o=[];let g=0,l=0;for(let i=1;i<d.length;i++){const v=d[i].value-d[i-1].value,ga=Math.max(v,0),pe=Math.max(-v,0);if(i<=n){g+=ga/n;l+=pe/n;if(i===n)o.push({time:d[i].time,value:l===0?100:100-100/(1+g/l)});}else{g=(g*(n-1)+ga)/n;l=(l*(n-1)+pe)/n;o.push({time:d[i].time,value:l===0?100:100-100/(1+g/l)});}}return o;},
+    macd(d,r=12,l=26,si=9){const er=IND.ema(d,r),el=IND.ema(d,l),mr=new Map(er.map(x=>[x.time,x.value]));const linha=el.filter(x=>mr.has(x.time)).map(x=>({time:x.time,value:mr.get(x.time)-x.value}));const sinal=IND.ema(linha,si),ms=new Map(sinal.map(x=>[x.time,x.value]));const hist=linha.filter(x=>ms.has(x.time)).map(x=>({time:x.time,value:x.value-ms.get(x.time)}));return{linha,sinal,hist};}
+  };
+  const IND_COR={mm20:'#f59e0b',mm50:'#a855f7',mm200:'#3b82f6',boll:'#94a3b8',rsi:'#a855f7',macd:'#3b82f6',sinal:'#f59e0b'};
   let libraryLoading=null;
   function loadLibrary() {
     if(globalThis.LightweightCharts?.createChart)return Promise.resolve(globalThis.LightweightCharts);
@@ -67,7 +78,7 @@ globalThis.MMAssetHistory = (() => {
         const tracejado=light?'rgba(15,23,42,.09)':'rgba(255,255,255,.08)';
         this.chart=L.createChart(host,{
           autoSize:true,
-          layout:{background:{type:'solid',color:background},textColor:text,attributionLogo:true},
+          layout:{background:{type:'solid',color:background},textColor:text,attributionLogo:true,panes:{separatorColor:light?'rgba(15,23,42,.10)':'rgba(255,255,255,.08)',separatorHoverColor:light?'rgba(15,23,42,.18)':'rgba(255,255,255,.16)'}},
           grid:sutil?{vertLines:{visible:false},horzLines:{color:tracejado,style:L.LineStyle.Dashed}}:{vertLines:{color:grid},horzLines:{color:grid}},
           rightPriceScale:{borderColor:grid,...(sutil?{visible:false}:{})},
           ...(sutil?{leftPriceScale:{visible:true,borderVisible:false,scaleMargins:{top:.14,bottom:.06}}}:{}),
@@ -84,6 +95,15 @@ globalThis.MMAssetHistory = (() => {
           lineWidth:2,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)},
           ...(sutil?{priceScaleId:'left',lastValueVisible:false,priceLineVisible:false,crosshairMarkerRadius:4}:{})
         });
+        // indicadores escolhidos (opts.indicadores: mm20, mm50, mm200, boll, rsi, macd); IFR e MACD ganham painel próprio embaixo
+        const escolhidos=new Set(opts?.indicadores||[]),ser={},num=(v,c=2)=>v.toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
+        const linhaInd=(cor,painel=0,extra={})=>this.chart.addSeries(L.LineSeries,{color:cor,lineWidth:1.5,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false,...(painel===0&&sutil?{priceScaleId:'left'}:{}),...extra},painel);
+        for(const k of ['mm20','mm50','mm200'])if(escolhidos.has(k))ser[k]=linhaInd(IND_COR[k]);
+        if(escolhidos.has('boll')){ser.bsup=linhaInd(IND_COR.boll,0,{lineStyle:L.LineStyle.Dashed,lineWidth:1});ser.binf=linhaInd(IND_COR.boll,0,{lineStyle:L.LineStyle.Dashed,lineWidth:1});}
+        let painel=0;
+        if(escolhidos.has('rsi')){painel++;ser.rsi=linhaInd(IND_COR.rsi,painel,{priceFormat:{type:'price',precision:0,minMove:1}});ser.rsi.createPriceLine({price:70,color:'rgba(239,68,68,.55)',lineStyle:L.LineStyle.Dashed,lineWidth:1,axisLabelVisible:false});ser.rsi.createPriceLine({price:30,color:'rgba(34,197,94,.55)',lineStyle:L.LineStyle.Dashed,lineWidth:1,axisLabelVisible:false});}
+        if(escolhidos.has('macd')){painel++;ser.mhist=this.chart.addSeries(L.HistogramSeries,{lastValueVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)}},painel);ser.macd=linhaInd(IND_COR.macd,painel);ser.msinal=linhaInd(IND_COR.sinal,painel);}
+        if(painel){const ps=this.chart.panes();ps[0].setStretchFactor(painel===1?3:2.4);for(let i=1;i<ps.length;i++)ps[i].setStretchFactor(1);}
         let shown=[];
         const describe=p=>{legend.textContent=p?name+' · '+displayDay(p.time)+' · '+p.value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:precision}):name;};
         // opts.aoMover(ponto | null): o ponto sob o mouse (data e valor) e a variação desde o começo do período
@@ -91,12 +111,25 @@ globalThis.MMAssetHistory = (() => {
         this.chart.subscribeCrosshairMove(param=>{
           const p=param.time&&param.seriesData?.get(line);
           describe(p&&typeof p.value==='number'?{time:param.time,value:p.value}:shown.at(-1));
-          if(opts?.aoMover)opts.aoMover(p&&typeof p.value==='number'&&shown.length?{data:rotulo(param.time),valor:p.value,desde:(p.value/shown[0].value-1)*100}:null);
+          const v=k=>{const x=ser[k]&&param.seriesData?.get(ser[k]);return x&&typeof x.value==='number'?x.value:null;},pr=x=>x.toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(x)>=1000?0:Math.abs(x)>=10?2:4});
+          const ind=[['mm20','MM20'],['mm50','MM50'],['mm200','MM200']].filter(([k])=>v(k)!==null).map(([k,r])=>r+' '+pr(v(k)));
+          if(v('bsup')!==null)ind.push('Bollinger '+pr(v('binf'))+' a '+pr(v('bsup')));
+          if(v('rsi')!==null)ind.push('IFR '+num(v('rsi'),0));
+          if(v('macd')!==null&&v('msinal')!==null)ind.push('MACD '+(v('macd')>=v('msinal')?'acima':'abaixo')+' do sinal');
+          if(opts?.aoMover)opts.aoMover(p&&typeof p.value==='number'&&shown.length?{data:rotulo(param.time),valor:p.value,desde:(p.value/shown[0].value-1)*100,ind:ind.join(' · ')}:null);
         });
         const render=days=>{
           const subset=serie(all.filter(p=>p.t>=all.at(-1).t-days*86400),off);
           if(subset.length<2)throw Error('Sem dados suficientes para este período');
-          shown=subset;line.setData(subset);this.chart.timeScale().fitContent();describe(shown.at(-1));
+          shown=subset;line.setData(subset);
+          if(Object.keys(ser).length){
+            const full=serie(all,off),ini=subset[0].time,corta=a=>a.filter(x=>x.time>=ini);
+            if(ser.mm20)ser.mm20.setData(corta(IND.sma(full,20)));if(ser.mm50)ser.mm50.setData(corta(IND.sma(full,50)));if(ser.mm200)ser.mm200.setData(corta(IND.sma(full,200)));
+            if(ser.bsup){const b=IND.boll(full);ser.bsup.setData(corta(b.sup));ser.binf.setData(corta(b.inf));}
+            if(ser.rsi)ser.rsi.setData(corta(IND.rsi(full)));
+            if(ser.macd){const m=IND.macd(full);ser.macd.setData(corta(m.linha));ser.msinal.setData(corta(m.sinal));ser.mhist.setData(corta(m.hist).map(x=>({...x,color:x.value>=0?'rgba(34,197,94,.55)':'rgba(239,68,68,.55)'})));}
+          }
+          this.chart.timeScale().fitContent();describe(shown.at(-1));
           if(opts?.aoPeriodo)opts.aoPeriodo({inicio:subset[0].value,fim:subset.at(-1).value,variacao:(subset.at(-1).value/subset[0].value-1)*100});
           if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#22c55e':'#ef4444';line.applyOptions({lineColor:c,topColor:sobe?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',bottomColor:'rgba(0,0,0,0)'});}
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
@@ -112,5 +145,5 @@ globalThis.MMAssetHistory = (() => {
       }
     }
   }
-  return {canEmbed,defaultMode,points,date,dayKey,seriesData,Viewer};
+  return {canEmbed,defaultMode,points,date,dayKey,seriesData,Viewer,IND};
 })();
