@@ -813,8 +813,18 @@ const US_FINNHUB = {
     const hoje = new Date(), de = new Date(hoje.getTime() - 7 * 864e5), d = (x) => x.toISOString().slice(0, 10);
     const j = await finnhubGet(`company-news?symbol=${encodeURIComponent(s)}&from=${d(de)}&to=${d(hoje)}`, key, 1800);
     if (!Array.isArray(j)) throw new Error('Finnhub: formato inesperado');
+    // o Finnhub mistura notícias de outras empresas do setor; fica só o que cita a empresa (ticker ou nome) no título ou no resumo
+    let nome = '';
+    try { nome = String((await finnhubGet(`stock/profile2?symbol=${encodeURIComponent(s)}`, key, 86400))?.name || ''); } catch { /* sem nome, usa só o ticker */ }
+    const PARE = /^(inc|corp|corporation|co|company|ltd|limited|plc|sa|nv|ag|holding|holdings|group|platforms|class|the|and|international|general|american|united|global|technologies|industries|brands|financial|energy|systems)$/i;
+    const tok = nome.replace(/[.,()]/g, ' ').split(/\s+/).filter((w) => w.length >= 3 && !PARE.test(w));
+    const nomes = [...new Set([tok[0], ...tok.slice(1).filter((w) => w.length >= 7)].filter(Boolean))];
+    const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const reNome = nomes.length ? new RegExp(`\\b(${nomes.map(esc).join('|')})\\b`, 'i') : null;
+    const reTk = s.length <= 2 ? new RegExp(`[(:]${esc(s)}\\b`) : new RegExp(`\\b${esc(s)}\\b`);
+    const cita = (t) => reTk.test(t) || (reNome && reNome.test(t));
     const vistos = new Set();
-    const lista = j.filter((e) => e && e.headline && /^https:\/\//i.test(e.url || '') && e.datetime)
+    const lista = j.filter((e) => e && e.headline && /^https:\/\//i.test(e.url || '') && e.datetime && cita(`${e.headline} ${e.summary || ''}`))
       .sort((a, b) => b.datetime - a.datetime)
       .filter((e) => { const k = String(e.headline).toLowerCase().slice(0, 80); if (vistos.has(k)) return false; vistos.add(k); return true; })
       .slice(0, 12)
