@@ -1,0 +1,59 @@
+# Limpeza de ramificações antigas (18/11/2026, auditoria do GitHub).
+# Apaga só a ramificação cuja proposta (PR) já foi juntada ou fechada, ou que não tem nada fora da main,
+# e que está parada há mais de 3 dias. Ramificação com PR aberta ou com trabalho fora da main fica.
+# Rodado à mão: sem marcar "apagar", só lista o que sairia. Ramificação apagada de PR volta pelo botão "Restore branch" da PR.
+name: Limpar ramificações antigas
+
+on:
+  workflow_dispatch:
+    inputs:
+      apagar:
+        description: 'Apagar de verdade (desmarcado = só listar)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: limpar-ramificacoes
+  cancel-in-progress: false
+
+jobs:
+  limpar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Listar e apagar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APAGAR: ${{ inputs.apagar && '1' || '0' }}
+        run: |
+          set -uo pipefail
+          R="$GITHUB_REPOSITORY"
+          LIMITE=$(date -u -d '-3 days' +%s)
+          gh api "repos/$R/pulls?state=all&per_page=100" --paginate --jq '.[] | [.head.ref, .state] | @tsv' > prs.tsv
+          gh api "repos/$R/branches?per_page=100" --paginate --jq '.[].name' > ramos.txt
+          sai=0; fica=0
+          while read -r b; do
+            [ "$b" = "main" ] && continue
+            if awk -F'\t' -v b="$b" '$1==b && $2=="open"{f=1} END{exit !f}' prs.tsv; then fica=$((fica+1)); continue; fi
+            quando=$(gh api "repos/$R/commits/heads/$b" --jq '.commit.committer.date' 2>/dev/null) || { fica=$((fica+1)); continue; }
+            [ "$(date -u -d "$quando" +%s)" -lt "$LIMITE" ] || { fica=$((fica+1)); continue; }
+            motivo=""
+            if awk -F'\t' -v b="$b" '$1==b{f=1} END{exit !f}' prs.tsv; then motivo="PR fechada"
+            else
+              st=$(gh api "repos/$R/compare/main...$b" --jq '.ahead_by' 2>/dev/null || echo x)
+              [ "$st" = "0" ] && motivo="nada fora da main"
+            fi
+            if [ -z "$motivo" ]; then fica=$((fica+1)); continue; fi
+            sai=$((sai+1))
+            if [ "$APAGAR" = "1" ]; then
+              gh api -X DELETE "repos/$R/git/refs/heads/$b" >/dev/null && echo "apagada: $b ($motivo)" || echo "::warning::não apagou $b"
+            else
+              echo "sairia: $b ($motivo)"
+            fi
+          done < ramos.txt
+          echo "### Ramificações: $sai $( [ "$APAGAR" = "1" ] && echo apagadas || echo sairiam ), $fica ficam" >> "$GITHUB_STEP_SUMMARY"
+          echo "Total: $sai saem, $fica ficam"
