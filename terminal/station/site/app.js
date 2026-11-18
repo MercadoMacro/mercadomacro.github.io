@@ -3304,15 +3304,16 @@ function ecalSetView(view) {
   $('#ecal')?.classList.toggle('hidden', view !== 'list');
   $('.calendar-iframe-wrap')?.classList.toggle('hidden', view !== 'iframe');
   $('#earn-root')?.classList.toggle('hidden', view !== 'earn');
+  $('#ipo-root')?.classList.toggle('hidden', view !== 'ipo');
   $('#bbr-root')?.classList.toggle('hidden', view !== 'bbr');
   $('#focus-root')?.classList.toggle('hidden', view !== 'focus');
   $('#prov-root')?.classList.toggle('hidden', view !== 'prov');
   // no Focus a tabela é larga: o calendário do mês e os compromissos saem de lado
   $('.calendar-layout')?.classList.toggle('wide', view === 'focus' || view === 'prov' || view === 'bbr');
   // os botões de agenda, .ics e avisos e o status só valem para a lista do calendário
-  $('.ecal-actions')?.classList.toggle('hidden', view === 'earn' || view === 'bbr' || view === 'focus' || view === 'prov');
-  $('#ecal-status')?.classList.toggle('hidden', view === 'earn' || view === 'bbr' || view === 'focus' || view === 'prov');
-  $('.calendar-main > .calendar-footer')?.classList.toggle('hidden', view === 'earn' || view === 'bbr' || view === 'focus' || view === 'prov');
+  $('.ecal-actions')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
+  $('#ecal-status')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
+  $('.calendar-main > .calendar-footer')?.classList.toggle('hidden', view === 'earn' || view === 'ipo' || view === 'bbr' || view === 'focus' || view === 'prov');
   $$('.ecal-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   if (view === 'iframe') {
     // o calendário do Investing só carrega quando esta visão é aberta
@@ -3324,6 +3325,7 @@ function ecalSetView(view) {
   if (view === 'focus') ecalLazy('#focus-root', 'focus.js?v=6', '__focusRender', 'o Boletim Focus');
   if (view === 'bbr') ecalLazy('#bbr-root', 'balancos-br.js?v=3', '__bbrRender', 'a agenda de balanços do Brasil');
   if (view === 'prov') ecalLazy('#prov-root', 'proventos.js?v=2', '__provRender', 'a agenda de proventos');
+  if (view === 'ipo') ecalLazy('#ipo-root', 'ipos.js?v=1', '__ipoRender', 'o calendário de IPOs');
 }
 
 // carrega o arquivo da visão só na primeira vez que ela é aberta
