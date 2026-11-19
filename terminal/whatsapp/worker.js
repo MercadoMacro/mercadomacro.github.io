@@ -11,6 +11,11 @@
 // - botões tocáveis (Ver demo, Planos, Falar com a equipe...): toque no botão chega como o texto equivalente;
 // - áudio, foto, vídeo, figurinha e documento recebem uma resposta (antes, silêncio);
 // - mensagem que a Jade não entende: na 1ª, "não entendi" com botões; na 2ª seguida, oferece a equipe.
+// Mudanças de 19/11/2026 (auditoria, pedido do Dante):
+// - o que as regras não entendem vai para a IA do site (env.JADE.perguntar, Gemini com os dados do terminal);
+// - bitcoin, ethereum, ouro, petróleo, euro, Nasdaq, Dow Jones e ~30 empresas da B3 pelo nome;
+// - responde "OK" à Meta na hora e processa em segundo plano; mensagem repetida pela Meta é ignorada (jade_vista);
+// - o código da conversa no D1 passa a ser HMAC com chave secreta (antes, SHA-256 puro do número).
 // Ligações: HANDOFF_DB (D1 mercadomacro-atendimento), JADE (station, entrypoint JadeWatchlist) e os segredos
 // META_APP_SECRET, WEBHOOK_VERIFY_TOKEN, WHATSAPP_PRODUCTION_ACCESS_TOKEN, WHATSAPP_ACCESS_TOKEN (só no painel).
 
@@ -112,6 +117,15 @@ export default {
       }
     }
 
+    // 19/11/2026: responde "OK" à Meta na hora e trabalha em segundo plano (cotação e IA podem levar alguns
+    // segundos; com a Meta esperando, ela reenviava a mensagem e a Jade respondia duas vezes)
+    if (ctx?.waitUntil) { ctx.waitUntil(processar(event, env, ctx).catch((e) => console.warn('Jade: falha ao processar', e.name, e.message))); return new Response("OK"); }
+    await processar(event, env, ctx);
+    return new Response("OK");
+  }
+};
+
+async function processar(event, env, ctx) {
     for (const entry of event?.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const value = change.value;
@@ -134,8 +148,12 @@ export default {
             .replace(/[̀-ͯ]/g, '').toLowerCase();
           if ((!text && !midia) || text === 'sair') continue;
 
-          const key = await hashHex(phoneId + ':' + message.from);
+          // 19/11/2026: código da conversa feito com chave secreta (HMAC). O SHA-256 puro do número dava para desfazer
+          // testando os números de celular possíveis; a política de privacidade diz que não dá
+          const key = await chaveConversa(env, phoneId + ':' + message.from);
           const db = env.HANDOFF_DB;
+          // a Meta às vezes entrega a mesma mensagem de novo: a repetida é ignorada (código da mensagem, guardado 2 dias)
+          if (message.id && await jaVista(db, message.id).catch(() => false)) continue;
 
           // limite por número: a 21ª mensagem da hora recebe um aviso; dali em diante, silêncio até a próxima hora
           const limite = await contarMensagem(db, key).catch(error => { console.warn('Jade: limite indisponível', error.name, error.message); return 1; });
@@ -266,6 +284,10 @@ export default {
             reply = { texto: BOAS_VINDAS, botoes: ['demo', 'planos', 'humano'] };
           } else if (/^(obrigad[oa]|valeu)[!.\s]*$/.test(text)) {
             reply = 'Por nada! Se precisar, estou por aqui.';
+          } else if ((reply = await perguntarIA(env, original)) !== null) {
+            // 19/11/2026: o que as regras não entendem vai para a IA do site (Gemini, com os dados do terminal);
+            // na primeira mensagem da hora, a resposta vem com os botões de começo de conversa
+            if (limite === 1) reply = { texto: reply, botoes: ['demo', 'planos', 'humano'] };
           } else {
             naoEntendeu = true;
             const n = await duvida(db, key, true).catch(() => 1);
@@ -282,14 +304,17 @@ export default {
         }
       }
     }
+}
 
-    return new Response("OK");
-  }
-};
-
-async function hashHex(texto) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
-  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+async function chaveConversa(env, texto) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode('jade-conversa:' + env.META_APP_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const s = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(s), b => b.toString(16).padStart(2, '0')).join('');
+}
+async function jaVista(db, id) {
+  await prepararTabelas(db);
+  const r = await db.prepare('INSERT OR IGNORE INTO jade_vista (id, ts) VALUES (?, ?)').bind(String(id).slice(0, 200), Date.now()).run();
+  return !r?.meta?.changes;
 }
 
 async function enviar(phoneId, accessToken, to, reply) {
@@ -329,6 +354,7 @@ async function prepararTabelas(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS jade_contexto (conversation_key TEXT PRIMARY KEY, tickers TEXT NOT NULL, expires_at INTEGER NOT NULL)'),
     // de onde veio a conversa (Radar), por 30 dias, para contar o caminho até o atendimento e os planos
     db.prepare('CREATE TABLE IF NOT EXISTS jade_origem (conversation_key TEXT PRIMARY KEY, origem TEXT NOT NULL, expires_at INTEGER NOT NULL, planos INTEGER NOT NULL DEFAULT 0)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS jade_vista (id TEXT PRIMARY KEY, ts INTEGER NOT NULL)'),
   ]);
   tabelasProntas.add(db);
 }
@@ -344,6 +370,7 @@ export async function contarMensagem(db, key, agora = Date.now()) {
       db.prepare('DELETE FROM jade_contexto WHERE expires_at < ?').bind(agora),
       db.prepare('DELETE FROM jade_handoff WHERE expires_at < ?').bind(agora),
       db.prepare('DELETE FROM jade_origem WHERE expires_at < ?').bind(agora),
+      db.prepare('DELETE FROM jade_vista WHERE ts < ?').bind(agora - 2 * 86400000),
     ]).catch(() => {});
   }
   return Number(r?.n) || 1;
@@ -386,7 +413,15 @@ function jadeAsset(text) {
     [/\b(ibov|ibovespa)\b/, 'Ibovespa', '^BVSP', /ibovespa|b3|bolsa brasileira/],
     [/\b(dolar|usd\s?brl|usd)\b/, 'Dólar comercial', 'BRL=X', /d[oó]lar|c[aâ]mbio|dxy|real brasileiro/],
     [/\b(s\s*&\s*p\s*500|sp\s*500|spx)\b/, 'S&P 500', '^GSPC', /s\s*&\s*p|wall street|bolsas? american/],
-    [/\b(juros? futuros?|curva de juros|di1\w*|di futuro)\b/, 'Juros futuros', null, /juros futuros|curva de juros|\bDI1\b/i]
+    [/\b(juros? futuros?|curva de juros|di1\w*|di futuro)\b/, 'Juros futuros', null, /juros futuros|curva de juros|\bDI1\b/i],
+    // 19/11/2026: cripto, ouro, petróleo, euro e bolsas americanas (antes caíam em "não entendi")
+    [/\b(bitcoin|btc)\b/, 'Bitcoin', 'BTC-USD', /bitcoin|\bbtc\b|cripto/, 'US$ '],
+    [/\b(ethereum|ether|eth)\b/, 'Ethereum', 'ETH-USD', /ethereum|\beth\b|cripto/, 'US$ '],
+    [/\b(ouro|gold)\b/, 'Ouro (onça-troy, futuro)', 'GC=F', /\bouro\b/, 'US$ '],
+    [/\b(petroleo|brent)\b/, 'Petróleo Brent (barril)', 'BZ=F', /petr[oó]leo|brent|opep/, 'US$ '],
+    [/\b(euro|eur\s?brl)\b/, 'Euro', 'EURBRL=X', /\beuro\b|zona do euro|bce/, 'R$ '],
+    [/\b(nasdaq)\b/, 'Nasdaq', '^IXIC', /nasdaq|big techs?|tecnologia/],
+    [/\b(dow jones|dow)\b/, 'Dow Jones', '^DJI', /dow jones|wall street/],
   ];
   return assets.find(([pattern]) => pattern.test(text));
 }
@@ -398,7 +433,7 @@ async function jadeJson(url, timeout) {
 }
 
 /** @returns {Promise<any>} */
-async function jadeQuote(symbol, forWatchlist = false) {
+async function jadeQuote(symbol, forWatchlist = false, moeda = '') {
   if (!symbol) return null;
   const chart = '/v8/finance/chart/' + encodeURIComponent(symbol);
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' };
@@ -440,7 +475,7 @@ async function jadeQuote(symbol, forWatchlist = false) {
   const date = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(meta.regularMarketTime * 1000);
   const change = percent === null ? '' : ' (' + Intl.NumberFormat('pt-BR', { signDisplay: 'exceptZero', maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(percent) + '% ante o fechamento anterior)';
   if (forWatchlist) return percent !== null && Number.isFinite(percent) ? { change: percent, time: meta.regularMarketTime } : null;
-  return (symbol === 'BRL=X' ? 'R$ ' : '') + price + change + '\nÚltima cotação em ' + date + ' (Brasília). Fonte: Yahoo Finance. Os dados podem ter atraso.\nhttps://finance.yahoo.com/quote/' + encodeURIComponent(symbol) + '/';
+  return (symbol === 'BRL=X' ? 'R$ ' : moeda) + price + change + '\nÚltima cotação em ' + date + ' (Brasília). Fonte: Yahoo Finance. Os dados podem ter atraso.\nhttps://finance.yahoo.com/quote/' + encodeURIComponent(symbol) + '/';
 }
 
 // preços do site (src/assinatura.js, PLANOS), lidos pelo JADE e guardados por 10 minutos nesta instância
@@ -522,6 +557,15 @@ async function tickersDaConversa(db, key) {
   return Array.isArray(l) ? l.filter(t => typeof t === 'string' && /^[A-Z]{4}\d{1,2}F?$/.test(t)).slice(0, 5) : [];
 }
 
+const NOMES_B3 = [
+  [/\bITAU(?: UNIBANCO)?\b(?!SA)/, 'ITUB4'], [/\bITAUSA\b/, 'ITSA4'], [/\bBRADESCO\b/, 'BBDC4'], [/\bSANTANDER\b/, 'SANB11'],
+  [/\bBTG(?: PACTUAL)?\b/, 'BPAC11'], [/\bAMBEV\b/, 'ABEV3'], [/\bWEG\b/, 'WEGE3'], [/\bMAGAZINE LUIZA\b|\bMAGALU\b/, 'MGLU3'],
+  [/\bELETROBRAS\b/, 'ELET3'], [/\bSUZANO\b/, 'SUZB3'], [/\bGERDAU\b/, 'GGBR4'], [/\bEMBRAER\b/, 'EMBR3'],
+  [/\bLOCALIZA\b/, 'RENT3'], [/\bSABESP\b/, 'SBSP3'], [/\bJBS\b/, 'JBSS3'], [/\bDROGASIL\b|\bRAIA DROGASIL\b/, 'RADL3'],
+  [/\bRUMO S\.?A\b|\bRUMO LOGISTICA\b/, 'RAIL3'], [/\bTAESA\b/, 'TAEE11'], [/\bCEMIG\b/, 'CMIG4'], [/\bCOSAN\b/, 'CSAN3'],
+  [/\bPRIO\b|\bPETRORIO\b/, 'PRIO3'], [/\bTIM BRASIL\b|\bACOES DA TIM\b/, 'TIMS3'], [/\bTELEFONICA\b|\bACOES DA VIVO\b/, 'VIVT3'], [/\bB3 ?SA\b|\bACOES DA B3\b/, 'B3SA3'],
+  [/\bCSN\b/, 'CSNA3'], [/\bUSIMINAS\b/, 'USIM5'], [/\bKLABIN\b/, 'KLBN11'], [/\bHAPVIDA\b/, 'HAPV3'], [/\bNATURA\b/, 'NTCO3'], [/\bCOPEL\b/, 'CPLE6'],
+];
 async function jadeAssetCommand(text, key, db, env) {
   const tickers = [...new Set(text.toUpperCase().match(/\b[A-Z]{4}(?:11|3|4|5|6|7|8|9|10)F?\b/g) || [])];
   if (tickers.length > 5) return 'Envie até cinco tickers por comparação.';
@@ -530,12 +574,16 @@ async function jadeAssetCommand(text, key, db, env) {
     const name = text.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase();
     const matches = [
       /\bBANCO DO BRASIL\b/.test(name) && ['BBAS3'],
+      // 19/11/2026: as empresas mais procuradas da B3 pelo nome (antes só BB, Petrobras e Vale)
+      ...NOMES_B3.filter(([re]) => re.test(name)).map(([, t]) => [t]),
       /\bPETROBRAS\b/.test(name) && ['PETR3', 'PETR4'],
       /\bVALE\b(?!\s+(?:A PENA|MAIS|MENOS|QUANTO|ISSO|ESTE|ESS[EA]|UM[ A]?\b))/.test(name) &&
         /\b(COTACAO|ACOES?|PRECO|SUBIU|CAIU|VARIOU|VARIACAO|PREGAO|NOTICIAS?)\b/.test(name.replace(/\bVALE\b/g, '')) && ['VALE3']
     ].filter(Boolean);
     if (matches.length) {
-      if (matches.length > 1) return 'Qual ativo você quer consultar? ' + matches.flat().join(', ') + '.';
+      // várias empresas citadas ("itaú e bradesco"): compara; só pergunta quando um nome tem mais de um ticker (Petrobras)
+      if (matches.length > 1 && matches.every((m) => m.length === 1)) tickers.push(...new Set(matches.flat().slice(0, 5)));
+      else if (matches.length > 1) return 'Qual ativo você quer consultar? ' + matches.flat().join(', ') + '.';
       const [options] = matches;
       if (options.length > 1) return 'Você quer consultar PETR3 ou PETR4? Responda com o ticker.';
       [ticker] = options;
@@ -594,7 +642,9 @@ async function jadeAssetCommand(text, key, db, env) {
     const seen = new Set();
     const headlines = [];
     for (const {titulo, link, fonte} of items) {
-      if (seen.has(link) || !(tickerInTitle.test(titulo) || company?.test(titulo))) continue;
+      const nomeRe = NOMES_B3.find(([, t]) => t === base)?.[0];
+      const tituloN = titulo.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase();
+      if (seen.has(link) || !(tickerInTitle.test(titulo) || company?.test(titulo) || nomeRe?.test(tituloN))) continue;
       seen.add(link);
       headlines.push('• ' + titulo.slice(0, 250) + (fonte ? ' (' + fonte + ')' : '') + '\n' + link);
       if (headlines.length >= (rows.length === 1 ? 2 : 1)) break;
@@ -609,9 +659,9 @@ async function jadeAssetCommand(text, key, db, env) {
 }
 
 
-async function jadeMarketReply([, name, symbol, matcher], env) {
+async function jadeMarketReply([, name, symbol, matcher, moeda = ''], env) {
   const [quote, news] = await Promise.allSettled([
-    jadeQuote(symbol),
+    jadeQuote(symbol, false, moeda),
     noticiasPt(env)
   ]);
   const parts = ['*' + name + ' | Jade*'];
@@ -703,6 +753,15 @@ export async function noticiasPt(env) {
     const l = await jadeJson('https://news.cota-cotacao10.workers.dev/', 10000);
     return (Array.isArray(l) ? l : []).filter((n) => FONTES_PT.has(n?.fonte));
   } catch (error) { return []; }
+}
+
+// resposta da IA do site (env.JADE.perguntar): até 25 s; sem resposta, null e o robô segue com o "não entendi"
+async function perguntarIA(env, texto) {
+  if (!env?.JADE?.perguntar || !/\p{L}{2}/u.test(texto)) return null;
+  try {
+    const r = await Promise.race([env.JADE.perguntar(texto), new Promise((ok) => setTimeout(() => ok(null), 25000))]);
+    return typeof r === 'string' && r.trim() ? r.trim().slice(0, 1500) : null;
+  } catch (error) { console.warn('Jade: IA indisponível', error.name); return null; }
 }
 
 // mensagens seguidas que a Jade não entendeu (30 minutos); zera quando ela entende

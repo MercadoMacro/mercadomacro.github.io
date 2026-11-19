@@ -46,3 +46,8 @@ test('Jade vincula uma vez, isola contas e revoga o acesso', async () => {
   assert.equal((await call('POST', 'a', 'gratis')).status, 403);
   sql.close();
 });
+
+test('resposta da IA vira o formato do WhatsApp (negrito com um asterisco, sem títulos)', async () => {
+  const { paraWhatsApp } = await import('../src/assistente.js');
+  assert.equal(paraWhatsApp('## Selic\n**13,75%** ao ano\n- sobe\n\n\n\nfim'), 'Selic\n*13,75%* ao ano\n• sobe\n\nfim');
+});

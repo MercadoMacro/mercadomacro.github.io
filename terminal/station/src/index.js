@@ -11,7 +11,7 @@ import { respostaSelic } from './selic-publica.js';
 import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.js';
 import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
-import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA } from './assistente.js';
+import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA, perguntaWhatsApp } from './assistente.js';
 import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
@@ -4286,7 +4286,11 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
 ligarStripe({ json, mesmaOrigem, config, salvarConfig, avisar, limparCacheSessao, dentroDoLimite });
-ligarJade({ avisar });
+// 19/11/2026: perguntar = mensagem que o robô do WhatsApp não entendeu, respondida pelo Gemini com os dados do site
+ligarJade({ avisar, perguntar: (env, texto, ctx) => perguntaWhatsApp(env, texto, {
+  api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx || { waitUntil() {} }, { rapida: true, env })).lista, fluxo: fluxoEstrangeiro,
+  busca: (pergunta, onde) => buscaConteudo(env, pergunta, onde), arquivo: (desde, termo) => arquivoParaJade(env, desde, termo),
+}) });
 ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
 ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });
