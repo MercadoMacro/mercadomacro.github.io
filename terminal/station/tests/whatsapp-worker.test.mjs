@@ -297,3 +297,47 @@ test('perfil comercial: gravado pela API uma vez por versão, na produção', as
     assert.deepEqual(perfis[0].websites, ['https://mercadomacro.com.br/', 'https://mercadomacro.com.br/radar']);
   } finally { globalThis.fetch = antes; }
 });
+
+// 19/11/2026 (auditoria da Jade no WhatsApp)
+test('mensagem repetida pela Meta (mesmo id) recebe uma resposta só', async () => {
+  const { env, enviadas } = ambiente();
+  const m = { type: 'text', id: 'wamid.ABC', text: { body: 'Quanto custa?' } };
+  await mensagem(env, '', '5511999990009', m);
+  await mensagem(env, '', '5511999990009', m);
+  assert.equal(enviadas.length, 1);
+});
+
+test('código da conversa no banco usa chave secreta (não é o SHA-256 do número)', async () => {
+  const { env } = ambiente();
+  await mensagem(env, 'Quanto custa?', '5511999990010');
+  const chaves = env.HANDOFF_DB.sql.prepare('SELECT conversation_key k FROM jade_limite').all().map((r) => r.k);
+  const puro = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('1342951915577900:5511999990010'))), (b) => b.toString(16).padStart(2, '0')).join('');
+  assert.equal(chaves.length, 1);
+  assert.notEqual(chaves[0], puro);
+});
+
+test('o que as regras não entendem vai para a IA do site; sem IA, volta ao "não entendi"', async () => {
+  const { env, enviadas } = ambiente();
+  const perguntas = [];
+  env.JADE.perguntar = async (t) => { perguntas.push(t); return 'A Selic está em *13,75%* ao ano.'; };
+  await mensagem(env, 'qual a selic hoje?', '5511999990011');
+  assert.deepEqual(perguntas, ['qual a selic hoje?']);
+  assert.match(enviadas[0], /13,75%/);
+  env.JADE.perguntar = async () => null;
+  await mensagem(env, 'blablabla xyz', '5511999990011');
+  assert.match(enviadas[1], /entend/i);
+});
+
+test('bitcoin, ouro e empresas da B3 pelo nome são entendidos sem a IA', async () => {
+  const { env, enviadas } = ambiente();
+  env.JADE.perguntar = async () => { throw new Error('não devia chamar a IA'); };
+  await mensagem(env, 'bitcoin', '5511999990012');
+  assert.match(enviadas[0], /Bitcoin \| Jade/);
+  assert.match(enviadas[0], /US\$ /);
+  await mensagem(env, 'cotação do ouro', '5511999990012');
+  assert.match(enviadas[1], /Ouro/);
+  await mensagem(env, 'como está o itaú?', '5511999990012');
+  assert.match(enviadas[2], /ITUB4/);
+  await mensagem(env, 'itau e bradesco', '5511999990012');
+  assert.match(enviadas[3], /ITUB4/); assert.match(enviadas[3], /BBDC4/);
+});

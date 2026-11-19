@@ -83,10 +83,10 @@ async function gemini(chave, contents, stream = false, preferido = '', instrucoe
 // pergunta com as ferramentas do terminal: o Gemini pede dados (functionCall), o servidor busca e devolve,
 // até ele responder em texto. No máximo RODADAS idas e voltas; depois disso, responde com o que tiver.
 const RODADAS = 3;
-async function responderComDados(chave, contents, preferido) {
+async function responderComDados(chave, contents, preferido, instrucoes = INSTRUCOES) {
   let modelo = preferido;
   for (let i = 0; i < RODADAS; i++) {
-    const r = await gemini(chave, contents, false, modelo, INSTRUCOES, { tools: FERRAMENTAS });
+    const r = await gemini(chave, contents, false, modelo, instrucoes, { tools: FERRAMENTAS });
     if (!r.ok) return r;
     modelo = r.modelo;
     const cont = r.j.candidates[0].content;
@@ -100,7 +100,39 @@ async function responderComDados(chave, contents, preferido) {
     contents.push({ role: 'user', parts: respostas });
   }
   contents.push({ role: 'user', parts: [{ text: 'Responda agora com os dados que já recebeu.' }] });
-  return gemini(chave, contents, false, modelo);
+  return gemini(chave, contents, false, modelo, instrucoes);
+}
+
+/* Jade no WhatsApp (19/11/2026, pedido do Dante): a mensagem que o robô não entende (bitcoin, selic, "como está o
+   mercado hoje?", AAPL...) vem para cá e o Gemini responde com os mesmos dados e ferramentas do assistente do site.
+   Sem nome, número ou conta: só o texto. Limite de WA_DIA respostas por dia no total (custo do Google); acima disso
+   o robô volta ao "não entendi" com os botões. Não guarda a pergunta (a política de privacidade do WhatsApp diz isso). */
+const WA_DIA = 300;
+const INSTRUCOES_WA = INSTRUCOES + `
+Você está respondendo no WhatsApp, para alguém que talvez ainda não conheça o Mercado Macro:
+- Seja bem curta: no máximo 700 caracteres, em 1 a 3 parágrafos curtos ou uma lista curta. Sem títulos com #, sem tabelas.
+- Para destacar, use *negrito* com um asterisco de cada lado (é como o WhatsApp mostra). Não use ** nem _.
+- Pode usar no máximo um emoji, só se combinar com a conversa.
+- Quando fizer sentido, termine lembrando que no terminal (mercadomacro.com.br) dá para acompanhar isso ao vivo. Não repita esse convite em toda resposta.
+- Conversa fora do mercado financeiro: responda com gentileza em uma frase e diga com o que você pode ajudar (ativos, notícias, agenda, planos).
+- Perguntas sobre preço dos planos, pagamento, conta ou senha: diga que é só escrever "planos" ou "falar com a equipe" nesta conversa.`;
+export async function perguntaWhatsApp(env, pergunta, fontes) {
+  const c = await config(env);
+  if (!c.gemini_key) return null;
+  const p = String(pergunta || '').trim().slice(0, 600);
+  if (p.length < 2) return null;
+  if (!(await dentroDoLimite(env, 'ia-wa', WA_DIA, 86400))) return null;
+  if (fontes) ligarDados({ ...fontes, perfil: null, resumo: async () => c.resumo_semanal || null, temAula: false });
+  const agora = await retrato().catch(() => '');
+  const texto = (agora ? `Dados do terminal agora (fonte: servidor de dados do Mercado Macro):\n"""\n${agora}\n"""\n\n` : '') + p;
+  const r = await responderComDados(c.gemini_key, [{ role: 'user', parts: [{ text: texto }] }], c.gemini_modelo, INSTRUCOES_WA);
+  if (!r.ok || !r.texto) return null;
+  return paraWhatsApp(r.texto);
+}
+// markdown do Gemini para o formato do WhatsApp
+export function paraWhatsApp(t) {
+  return String(t).replace(/\*\*(.+?)\*\*/g, '*$1*').replace(/__(.+?)__/g, '*$1*').replace(/^#{1,6}\s*/gm, '')
+    .replace(/^\s*[-•]\s+/gm, '• ').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1500);
 }
 
 // converte o SSE do Google ("data: {...}") em texto puro, pedaço a pedaço

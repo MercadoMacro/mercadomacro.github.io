@@ -10,8 +10,8 @@ import { registrarFunil } from './radar-whatsapp.js';
 import { carregarInsiders, acharEmpresa, periodoDoTexto, resumoInsiders, textoInsiders } from './insiders-resumo.js';
 
 // aviso no Telegram da equipe: index.js liga a função avisar (que lê o token guardado no cofre)
-let avisarFn = null;
-export function ligarJade(u) { avisarFn = u.avisar; }
+let avisarFn = null, perguntarFn = null;
+export function ligarJade(u) { avisarFn = u.avisar; perguntarFn = u.perguntar || null; }
 
 const table = `CREATE TABLE IF NOT EXISTS jade_whatsapp (
   usuario_id TEXT PRIMARY KEY, telefone_hash TEXT UNIQUE, codigo_hash TEXT UNIQUE, expira INTEGER
@@ -77,6 +77,13 @@ export class JadeWatchlist extends WorkerEntrypoint {
         .bind(Date.now() - 36 * 3600000, ...FONTES_PT).all();
       return (r.results || []).map((x) => ({ titulo: x.titulo, link: x.link, fonte: x.fonte === 'Google News' && x.veiculo ? x.veiculo : x.fonte, data: x.data, nivel: x.nivel || 'NORMAL' }));
     } catch (e) { return []; }
+  }
+
+  // 19/11/2026: mensagem que o robô não entendeu (bitcoin, selic, "como está o mercado?"): resposta do Gemini com os
+  // dados do site, em texto pronto para o WhatsApp. null = sem resposta (IA desligada, limite do dia ou erro)
+  async perguntar(texto) {
+    if (!perguntarFn || typeof texto !== 'string') return null;
+    try { const r = await perguntarFn(this.env, texto.slice(0, 600), this.ctx); return typeof r === 'string' && r.trim() ? r : null; } catch (e) { return null; }
   }
 
   // caminho de quem vem do canal Radar (origem 'radar'; eventos inicio, atendimento, planos)
