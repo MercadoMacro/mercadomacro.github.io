@@ -3540,3 +3540,7 @@ body.light.has-side.side-collapsed .side-brand .sb-marca.sb-claro { display:bloc
 }
 /* o calendário do mês acompanha a rolagem da agenda */
 @media (min-width:901px) { .calendar-layout:not(.wide) > .calendar-side { position:sticky; top:0; align-self:flex-start; } }
+
+/* 19/11/2026: no tema claro, o nome da fonte com cor muito clara (WSJ Markets em cinza-claro) sumia no fundo branco,
+   principalmente no leitor de notícias; escurece só no claro (no Terminal claro já havia a mesma correção) */
+body.light :is(.nc-source, .nw4-fonte) { filter: brightness(.55) saturate(1.4); }

@@ -1307,7 +1307,12 @@ function newsPrepara(list) {
     if (n.imagem) n.imagem = String(n.imagem).replace('//s2-valorinveste.glbimg.com/', '//s2-valor.glbimg.com/');
     // tradução feita no servidor pela IA da Cloudflare (16/11/2026): entra como se já estivesse guardada aqui; o que
     // ainda não veio traduzido o aparelho traduz como antes
-    if (!n._br && n.tituloPt && !newsTr[n.link]) newsTr[n.link] = [n.tituloPt, n.trechoPt || ''];
+    // 19/11/2026: a fonte às vezes troca a manchete mantendo o mesmo link (o WSJ fez isso com o ouro) e a tradução
+    // guardada ficava a da manchete velha. Agora cada tradução guarda a manchete em inglês de onde veio (3º item);
+    // se a manchete mudou, a tradução é jogada fora. A do servidor vale sempre que vier
+    const guardada = newsTr[n.link];
+    if (guardada && guardada[2] && guardada[2] !== n.titulo) delete newsTr[n.link];
+    if (!n._br && n.tituloPt && (!newsTr[n.link] || newsTr[n.link][0] !== n.tituloPt)) newsTr[n.link] = [n.tituloPt, n.trechoPt || '', n.titulo];
     newsAplicaTraducao(n);
   });
   newsBruto = out;
@@ -1381,7 +1386,7 @@ async function newsTraduzir() {
     for (const lote of newsLotes(sel, 'titulo').slice(0, 20)) {
       try {
         const tr = await newsTraduzSeguro(lote.map(n => n.titulo.replace(/\n+/g, ' ')));
-        lote.forEach((n, i) => { if (tr[i]) newsTr[n.link] = [tr[i], (newsTr[n.link] || [])[1] || '']; });
+        lote.forEach((n, i) => { if (tr[i]) newsTr[n.link] = [tr[i], (newsTr[n.link] || [])[1] || '', n.titulo]; });
         if (++feitos === 1) aplica(); // o primeiro lote (as mais novas) aparece na hora
       } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
     }
@@ -1394,7 +1399,7 @@ async function newsTraduzir() {
       for (const lote of lotesT.slice(0, 12)) {
         try {
           const tr = await newsTraduzSeguro(lote.map(x => x.trecho));
-          lote.forEach((x, i) => { if (tr[i]) newsTr[x.n.link] = [(newsTr[x.n.link] || [])[0] || '', tr[i]]; else newsTrPulados.add(x.n.link); });
+          lote.forEach((x, i) => { const v = newsTr[x.n.link] || []; if (tr[i]) newsTr[x.n.link] = [v[0] || '', tr[i], v[2] || x.n.tituloOriginal || x.n.titulo]; else newsTrPulados.add(x.n.link); });
         } catch (e) { console.warn('[News] tradução:', e.message); falhou = true; break; }
       }
     }
