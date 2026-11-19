@@ -20,7 +20,11 @@ export async function tabelas(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS traducao_ia (id TEXT PRIMARY KEY, titulo TEXT, trecho TEXT, modelo TEXT, ts INTEGER NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS ia_uso (dia TEXT PRIMARY KEY, neuronios INTEGER NOT NULL DEFAULT 0, itens INTEGER NOT NULL DEFAULT 0)'),
   ]);
+  // 19/11/2026: a manchete em inglês de onde a tradução veio (a fonte às vezes troca a manchete mantendo o mesmo link)
+  if (!colunaOrig) { await env.DB.prepare('ALTER TABLE traducao_ia ADD COLUMN orig TEXT').run().catch(() => {}); colunaOrig = true; }
 }
+let colunaOrig = false;
+const chaveOrig = (t) => String(t || '').replace(/^FinancialJuice:\s*/i, '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 200);
 export async function usoHoje(env) {
   const r = await env.DB.prepare('SELECT neuronios, itens FROM ia_uso WHERE dia = ?').bind(hojeUTC()).first().catch(() => null);
   return { neuronios: r ? r.neuronios : 0, itens: r ? r.itens : 0, limite: LIMITE_DIA };
@@ -64,7 +68,7 @@ export async function traduzir(env, textos, modelo = MODELO_PADRAO) {
     + 'use a colocação do Brasil ("o ouro se consolida", não "o ouro consolida-se"; "em um" em vez de "num"); '
     + '"public debt" ou "government debt" = dívida pública; "two more rate hikes" = mais duas altas de juros; o Fed é masculino (o Fed, do Fed). '
     + 'Escreva sempre em português do Brasil, nunca de Portugal (varejo e não retalho; ações e não acções; Irã e não Irão; econômico e não económico; fato e não facto). '
-    + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim. '
+    + 'Estilo de manchete: direto, sem acrescentar palavras, sem ponto final no fim; em português só a primeira palavra e os nomes próprios começam com maiúscula (não copie as maiúsculas do inglês). '
     + 'Responda só com as traduções, uma por linha, com o mesmo número na frente, sem comentários.';
   const r = await env.AI.run(M.id, { messages: [{ role: 'system', content: sistema }, { role: 'user', content: linhas }], max_tokens: Math.min(4000, 60 + pedacos(linhas) * 2), temperature: 0.1 });
   const resp = String(r && (r.response ?? r.result?.response) || '');
@@ -101,13 +105,41 @@ const PT_BR = [
   ['projecto', 'projeto'], ['projectos', 'projetos'], ['objectivo', 'objetivo'], ['objectivos', 'objetivos'], ['director', 'diretor'],
   ['sector', 'setor'], ['sectores', 'setores'], ['actual', 'atual'], ['actuais', 'atuais'], ['telemóvel', 'celular'], ['ecrã', 'tela'],
   ['a Fed', 'o Fed'], ['da Fed', 'do Fed'], ['na Fed', 'no Fed'], ['pela Fed', 'pelo Fed'], ['à Fed', 'ao Fed'],
+  // 19/11/2026: palavras do inglês que a IA às vezes deixa sem traduzir ("acima de Lows de mais de um ano")
+  ['lows', 'mínimas'], ['highs', 'máximas'],
 ];
 const PT_BR_RE = PT_BR.map(([de, para]) => [new RegExp(`(?<![\\p{L}])${de}(?![\\p{L}])`, 'giu'), para]);
 const igualCaixa = (orig, novo) => (orig[0] === orig[0].toUpperCase() && orig[0] !== orig[0].toLowerCase() ? novo[0].toUpperCase() + novo.slice(1) : novo);
-export function paraBrasil(pt, original = '') {
+/* 19/11/2026: manchete em inglês vem com Todas As Palavras Maiúsculas e a IA às vezes copia ("O Ouro Pega Fôlego, Mas
+   Fica Acima..."). Em português só a primeira letra e os nomes próprios. Quando a tradução está nesse formato, a palavra
+   com maiúscula que não aparece na manchete em inglês (Ouro, Fôlego, Mas, Fica) vai para minúscula; as que aparecem
+   iguais lá (Nvidia, Fed, China, Trump) e as siglas ficam como estão. */
+// nomes próprios em português que não aparecem iguais no inglês (Estados Unidos vem de "United States")
+const NOMES_PT = new Set(('estados unidos reino casa branca banco central europeu tesouro congresso senado câmara suprema corte '
+  + 'japão alemanha frança índia rússia irã coreia arábia saudita europa união europeia ásia américa brasil méxico canadá suíça itália '
+  + 'espanha turquia ucrânia holanda bélgica suécia noruega dinamarca polônia grécia argentina chile colômbia peru venezuela áfrica sul '
+  + 'oriente médio pequim xangai londres tóquio nova york cingapura hong kong taiwan síria líbano egito catar emirados árabes '
+  + 'opep otan onu fmi bce pib ibovespa natal páscoa ação de graças').split(' '));
+function semCaixaAlta(t, original) {
+  const pal = t.match(/[\p{L}][\p{L}'’-]*/gu) || [];
+  const grandes = pal.filter((w) => w.length >= 3);
+  if (grandes.length < 3 || grandes.filter((w) => /^\p{Lu}/u.test(w)).length / grandes.length < 0.6) return t;
+  const doIngles = new Set((String(original).match(/[\p{L}][\p{L}'’-]*/gu) || []).map((w) => w.toLowerCase()));
+  let primeira = true;
+  return t.replace(/(^|[^\p{L}'’-])([\p{L}][\p{L}'’-]*)/gu, (m, antes, w) => {
+    const depoisDeDoisPontos = /[:;?!]\s*$/.test(antes) || /^\s*[-–—]\s*$/.test(antes);
+    if (primeira) { primeira = false; return m; }
+    if (depoisDeDoisPontos) return m;
+    if (!/^\p{Lu}\p{Ll}/u.test(w)) return m; // sigla (EUA, PIB) ou já minúscula
+    if (doIngles.has(w.toLowerCase()) || NOMES_PT.has(w.toLowerCase())) return m; // nome próprio (igual no inglês ou da lista)
+    return antes + w[0].toLowerCase() + w.slice(1);
+  });
+}
+export function paraBrasil(pt, original = '', titulo = false) {
   let t = String(pt || '');
   if (!t) return t;
   for (const [re, para] of PT_BR_RE) t = t.replace(re, (m) => igualCaixa(m, para));
+  if (titulo) t = semCaixaAlta(t, original);
   t = t.replace(/(?<![\p{L}])económic/giu, (m) => igualCaixa(m, 'econômic'));
   if (/west bank/i.test(original) && !/gaza/i.test(original)) t = t.replace(/Faixa de Gaza/g, 'Cisjordânia');
   return t;
@@ -128,13 +160,16 @@ export async function aplicarTraducoes(env, ctx, lista) {
     const ids = [...new Set(en.map((n) => n.id))], achou = new Map();
     for (let i = 0; i < ids.length; i += 90) {
       const parte = ids.slice(i, i + 90);
-      const r = await env.DB.prepare(`SELECT id, titulo, trecho FROM traducao_ia WHERE id IN (${parte.map(() => '?').join(',')})`).bind(...parte).all();
+      const r = await env.DB.prepare(`SELECT id, titulo, trecho, orig FROM traducao_ia WHERE id IN (${parte.map(() => '?').join(',')})`).bind(...parte).all();
       (r.results || []).forEach((x) => achou.set(x.id, x));
     }
     const faltam = [];
     for (const n of en) {
       const t = achou.get(n.id);
-      if (t && t.titulo) { n.tituloPt = paraBrasil(t.titulo, n.titulo); if (t.trecho) n.trechoPt = paraBrasil(t.trecho, n.trecho); } else faltam.push(n);
+      // tradução de uma manchete que já mudou (ou antiga, sem a manchete guardada) é refeita
+      const atual = t && t.titulo && t.orig === chaveOrig(n.titulo);
+      if (t && t.titulo && (atual || !t.orig)) { n.tituloPt = paraBrasil(t.titulo, n.titulo, true); if (t.trecho) n.trechoPt = paraBrasil(t.trecho, n.trecho); }
+      if (!atual) faltam.push(n);
     }
     if (faltam.length && env.AI && !traduzindo) {
       traduzindo = true;
@@ -155,7 +190,7 @@ async function traduzirPendentes(env, itens) {
     const agora = Date.now(), st = [];
     lote.forEach((n, k) => {
       const tit = r.textos[k * 2], tre = r.textos[k * 2 + 1];
-      if (tit) st.push(env.DB.prepare('INSERT OR REPLACE INTO traducao_ia (id, titulo, trecho, modelo, ts) VALUES (?, ?, ?, ?, ?)').bind(n.id, tit.slice(0, 400), (tre || '').slice(0, 600), MODELO_PADRAO, agora));
+      if (tit) st.push(env.DB.prepare('INSERT OR REPLACE INTO traducao_ia (id, titulo, trecho, modelo, ts, orig) VALUES (?, ?, ?, ?, ?, ?)').bind(n.id, tit.slice(0, 400), (tre || '').slice(0, 600), MODELO_PADRAO, agora, chaveOrig(n.titulo)));
     });
     if (st.length) await env.DB.batch(st);
     await somarUso(env, r.neuronios, st.length);
