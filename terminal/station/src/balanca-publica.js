@@ -20,7 +20,7 @@ const mesExt = (m) => `${MESES[+m.slice(5) - 1]} de ${m.slice(0, 4)}`;
 const mesCurto = (m) => `${MESES[+m.slice(5) - 1].slice(0, 3)}/${m.slice(0, 4)}`;
 const vol = (kg) => (!ok(kg) ? '—' : kg >= 1e9 ? `${brn(kg / 1e9, 1)} mi t` : `${brn(Math.round(kg / 1e6), 0)} mil t`);
 
-const CSS_EXTRA = `<style>.t td{font-variant-numeric:tabular-nums}.t th:not(:first-child),.t td:not(:first-child){text-align:right}.rola{overflow-x:auto}.rola .t td,.rola .t th{white-space:nowrap}.barra{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px}</style>`;
+const CSS_EXTRA = `<style>.t td{font-variant-numeric:tabular-nums}.t th:not(:first-child),.t td:not(:first-child){text-align:right}.rola{overflow-x:auto}.rola .t td,.rola .t th{white-space:nowrap}.barra{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px}.rola-dica{display:none}@media(max-width:640px){.rola-dica{display:block;margin:0 0 6px;font-size:12px;color:var(--text-3,#8b97ab)}.rola.larga{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}}</style>`;
 
 function corpo(d) {
   const ms = d.meses.map((x) => ({ ...x, s: ok(x.exp) && ok(x.imp) ? x.exp - x.imp : null }));
@@ -50,7 +50,7 @@ function corpo(d) {
       return { nome: p.nome, fob: u?.fob, kg: u?.kg, v: varr(u?.fob, h?.fob), ytd: soma(ano), vy: varr(soma(ano), soma(ano - 1)) };
     }).sort((a, b) => (b.fob || 0) - (a.fob || 0));
     prod = `<h2>Principais commodities exportadas em ${esc(mesExt(ult.m))}</h2>
-<div class="rola"><table class="t"><tr><th>Produto</th><th>US$ bi</th><th>Em 12 meses</th><th>Volume</th><th>No ano (US$ bi)</th><th>vs ${ano - 1}</th></tr>
+<p class="rola-dica">Deslize a tabela para o lado para ver volume e acumulado do ano →</p><div class="rola larga"><table class="t"><tr><th>Produto</th><th>US$ bi</th><th>Em 12 meses</th><th>Volume</th><th>No ano (US$ bi)</th><th>vs ${ano - 1}</th></tr>
 ${linhas.map((r) => `<tr><td>${esc(r.nome)}</td><td>${bi(r.fob)}</td><td class="c ${cls(r.v)}">${pct(r.v)}</td><td>${vol(r.kg)}</td><td>${bi(r.ytd, 1)}</td><td class="c ${cls(r.vy)}">${pct(r.vy)}</td></tr>`).join('')}</table></div>
 <p class="data">Petróleo bruto, minério de ferro, soja e as demais commodities por posição do Sistema Harmonizado (SH4). Volume em toneladas líquidas.</p>`;
   }
