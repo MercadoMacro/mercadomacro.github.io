@@ -238,11 +238,12 @@ main { width: 100%; }
   .vt-foot p { line-height: 1.9; }
   .vt-foot a { display: inline-block; padding: 4px 0; }
   .vt-sec-head p { font-size: 15px; }
-  /* quem já tem conta vê o formulário logo depois do título; o texto e as cotações vêm em seguida */
+  /* 19/11/2026 (auditoria da vitrine): quem chega pela primeira vez vê antes o que é o site e o botão do teste grátis;
+     o formulário vem logo depois (quem já tem conta usa o "Entrar" do topo, que rola até ele), e as cotações em seguida */
   .vt-hero { row-gap: 0; }
   .vt-hero-txt { display: contents; }
-  .vt-hero .vt-eyebrow, .vt-hero h1 { order: -2; }
-  .vt-auth { order: -1; margin: 4px 0 28px; }
+  .vt-hero .vt-eyebrow, .vt-hero h1, .vt-hero .vt-lead, .vt-hero .vt-hero-cta, .vt-hero .vt-hero-nota { order: -2; }
+  .vt-auth { order: -1; margin: 6px 0 28px; }
 }
 @media (max-width: 380px) {
   .vt-feats { grid-template-columns: 1fr; }

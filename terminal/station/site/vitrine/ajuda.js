@@ -14,6 +14,7 @@
   const botao = (texto, classe) => { const b = criar('button', classe, texto); b.type = 'button'; return b; };
   const gatilho = botao('?  Ajuda', 'mmh-launch');
   gatilho.id = 'mm-ajuda-abrir';
+  gatilho.setAttribute('aria-label', 'Ajuda');
   gatilho.setAttribute('aria-haspopup', 'dialog');
   gatilho.setAttribute('aria-controls', 'mm-ajuda');
   gatilho.setAttribute('aria-expanded', 'false');

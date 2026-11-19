@@ -529,7 +529,10 @@ export function planosVitrine(cartao = false, curto = false) {
   // plano só no cartão: aparece só com o Stripe ligado, com o preço do cartão no lugar do Pix
   const soCartao = (p) => ({ ...p, valor: p.valorCartao });
   // degustação saiu da página de assinatura (04/11/2026), então também não aparece nas páginas públicas (07/11/2026)
-  return Object.entries(PLANOS).filter(([id, p]) => !p.oculto && id !== 'degustacao' && !(p.soCartao && !cartao)).map(([id, p]) => p.soCartao
+  // 19/11/2026 (auditoria da vitrine): em /planos, com o cartão ligado, o preço grande é o do cartão (o mais barato, como na
+  // página de assinatura) e o Pix vem embaixo; antes era o contrário e o plano parecia mais caro do que é
+  const cartaoPrimeiro = (id, p) => `<li class="vt-pl"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>No cartão, com renovação automática</span>${porMes(soCartao(p))}<small class="vt-pl-cartao">No Pix: <b>${reais(p.valor)}</b>, pagamento único</small><em>${nota[id] || ''}</em></li>`;
+  return Object.entries(PLANOS).filter(([id, p]) => !p.oculto && id !== 'degustacao' && !(p.soCartao && !cartao)).map(([id, p]) => (!curto && cartao && p.valorCartao && !p.soCartao && !p.gratis) ? cartaoPrimeiro(id, p) : p.soCartao
     ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>${curto ? 'No cartão' : 'Só no cartão, com renovação automática'}</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
     : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.gratis ? (curto ? 'Sem cartão' : p.periodo + ' de acesso') : curto ? (cartao ? 'Pix ou cartão' : 'No Pix') : p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
 }

@@ -45,6 +45,7 @@ const darPasse = (ctx) => ctx.route('**/api/passe', async (rota) => {
   return rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ passe: p, exp: Math.floor(passeAte / 1000) + 120 }) });
 });
 // tela com erro de dados não vira foto: fica a foto anterior
+const MAX_VAZIOS = 6; // mais que isso de "—" na parte visível da aba = cotações não carregaram
 const ERRO_DADOS = /Não foi possível atualizar|HTTP 4\d\d|HTTP 5\d\d|Gráfico indisponível agora/;
 
 const prep = () => {
@@ -73,6 +74,13 @@ for (const [nome, aba, espera, rolar] of ABAS) {
     await pg.evaluate(() => document.querySelectorAll('.toast, #cookie-consent').forEach((e) => e.remove()));
     const erro = await pg.evaluate((re) => { const m = document.body.innerText.match(new RegExp(re)); return m ? m[0] : ''; }, ERRO_DADOS.source);
     if (erro) { console.log('pulou', nome, '(tela com erro de dados: ' + erro + ')'); continue; }
+    // 19/11/2026: a foto da Mesa de 18/11 saiu com traços (—) no lugar das cotações, que ainda não tinham chegado.
+    // Espera até 40 s pelas cotações; se continuarem faltando, não tira a foto (fica a anterior)
+    const vazios = () => pg.evaluate((a) => [...document.getElementById(a).querySelectorAll('*')]
+      .filter((e) => !e.children.length && /^[—–-]$/.test(e.textContent.trim()) && e.getBoundingClientRect().top < innerHeight).length, aba);
+    let v = await vazios();
+    for (let t = 0; v > MAX_VAZIOS && t < 10; t++) { await pg.waitForTimeout(4000); v = await vazios(); }
+    if (v > MAX_VAZIOS) { console.log('pulou', nome, `(${v} cotações sem valor na tela)`); continue; }
     await pg.screenshot({ path: `${OUT}/${nome}.jpg`, type: 'jpeg', quality: 78 });
     console.log('ok', nome);
   } catch (e) { console.log('falhou', nome, e.message); }
