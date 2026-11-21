@@ -104,9 +104,36 @@ export async function apiCartao(req, env, conta, acao) {
       subscription_data: { metadata: { usuario_id: String(u.id), plano: b.plano } },
       success_url: SITE + '/assinar?cartao=ok', cancel_url: SITE + '/assinar',
     });
-    return json({ url: s.url });
+    return json({ url: s.url, sessao: s.id });
   } catch (e) {
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
+  }
+}
+
+// Consulta somente leitura. O recibo só existe depois do crédito pelo webhook assinado.
+export async function reciboAds(req, env, conta) {
+  const { sessao } = await req.json().catch(() => ({})) || {};
+  if (typeof sessao !== 'string' || !/^cs_live_[A-Za-z0-9]{1,200}$/.test(sessao) || conta.admin) return json({ recibo: null });
+  if (!(await dentroDoLimite(env, 'recibo-ads:' + conta.id, 40, 3600))) return json({}, 429);
+  await preparar(env);
+  const pagamento = await env.DB.prepare(`SELECT ref, valor FROM pagamentos
+    WHERE usuario_id = ? AND status = 'aprovado' AND valor > 0
+    ORDER BY decidido, id LIMIT 1`).bind(conta.id).first();
+  if (!pagamento) return json({ pendente: true });
+  if (!pagamento.ref?.startsWith('stripe:')) return json({ recibo: null });
+  const c = await config(env);
+  if (!c.stripe_key || modoDaChave(c.stripe_key) !== 'real') return json({ recibo: null });
+  try {
+    const checkout = await stripe(c.stripe_key, 'GET', 'checkout/sessions/' + sessao + '?expand[]=invoice');
+    const f = checkout.invoice;
+    if (!checkout.livemode || checkout.mode !== 'subscription' || checkout.client_reference_id !== String(conta.id)) return json({ recibo: null });
+    if (checkout.status === 'open') return json({ pendente: true });
+    if (checkout.payment_status !== 'paid' || !f || f.status !== 'paid' || f.currency !== 'brl' ||
+        f.billing_reason !== 'subscription_create' || pagamento.ref !== 'stripe:' + f.id ||
+        f.amount_paid !== pagamento.valor) return json({ recibo: null });
+    return json({ recibo: { transaction_id: f.id, currency: 'BRL', value: pagamento.valor / 100 } });
+  } catch (e) {
+    return e.status === 404 ? json({ recibo: null }) : json({ pendente: true }, 503);
   }
 }
 

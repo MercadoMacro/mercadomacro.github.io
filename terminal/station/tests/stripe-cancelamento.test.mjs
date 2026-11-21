@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ligarStripe, webhookStripe, situacaoCartao, apiAdminStripe } from '../src/stripe.js';
+import { reciboAds, ligarStripe, webhookStripe, situacaoCartao, apiAdminStripe } from '../src/stripe.js';
 
 // D1 de mentira em cima do SQLite do Node
 function d1() {
@@ -144,4 +144,48 @@ test('se o Stripe recusar a marcação da conta, o admin é avisado', async () =
   const r = await adm({ acao: 'ligar', id, email: 'b@x.com' });
   assert.equal(r.ok, true); assert.equal(r.stripeFalhou, true);
   assert.equal(db.prepare('SELECT status FROM usuarios WHERE id = 9').get().status, 'ativo');
+});
+
+test('recibo do Ads exige a primeira fatura paga da própria conta em modo real', async (t) => {
+  db.exec("INSERT INTO usuarios (id, nome, email, status) VALUES (21, 'Simulada', 'simulada@example.test', 'pendente')");
+  db.exec("UPDATE config SET valor = 'sk_live_simulada' WHERE chave = 'stripe_key'");
+  t.after(() => db.exec("UPDATE config SET valor = 'sk_test_x' WHERE chave = 'stripe_key'"));
+  const fatura = {
+    id: 'in_ads_simulada', customer: 'cus_simulado', amount_paid: 1990, currency: 'brl',
+    status: 'paid', billing_reason: 'subscription_create', subscription: 'sub_simulada',
+    subscription_details: { metadata: { usuario_id: '21', plano: 'mensal' } }
+  };
+  const checkout = { id: 'cs_live_simulada', livemode: true, mode: 'subscription', status: 'complete',
+    client_reference_id: '21', payment_status: 'paid', invoice: fatura };
+  const chamadas = [];
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    chamadas.push(String(url));
+    return Response.json(checkout);
+  });
+  const consultar = async (sessao = checkout.id) => {
+    const req = new Request('https://example.test', { method: 'POST', body: JSON.stringify({ sessao }) });
+    return (await reciboAds(req, env, { id: 21 })).json();
+  };
+  await evento('checkout.session.completed', { ...checkout, metadata: { usuario_id: '21' } });
+  await evento('invoice.payment_failed', fatura);
+  assert.deepEqual(await consultar(), { pendente: true });
+  assert.equal(chamadas.length, 0);
+  await evento('invoice.paid', fatura);
+  await evento('invoice.paid', fatura);
+  const esperado = { recibo: { transaction_id: fatura.id, currency: 'BRL', value: 19.9 } };
+  assert.deepEqual(await consultar(), esperado);
+  assert.deepEqual(await consultar(), esperado);
+  checkout.invoice = { ...fatura, id: 'in_renovacao', billing_reason: 'subscription_cycle' };
+  await evento('invoice.paid', checkout.invoice);
+  assert.deepEqual(await consultar(), { recibo: null });
+  checkout.invoice = { ...fatura, id: 'in_reassinatura' };
+  await evento('invoice.paid', checkout.invoice);
+  assert.deepEqual(await consultar(), { recibo: null });
+  checkout.invoice = fatura;
+  checkout.client_reference_id = '99';
+  assert.deepEqual(await consultar(), { recibo: null });
+  assert.deepEqual(await consultar('cs_test_simulada'), { recibo: null });
+  checkout.client_reference_id = '21';
+  db.exec("INSERT INTO pagamentos(usuario_id, plano, status, valor, criado, decidido) VALUES(21, 'mensal', 'aprovado', 2490, '2025', '2025')");
+  assert.deepEqual(await consultar(), { recibo: null });
 });
