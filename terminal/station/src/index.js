@@ -12,7 +12,7 @@ import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.
 import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA, perguntaWhatsApp } from './assistente.js';
-import { apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
+import { reciboAds, apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
@@ -165,6 +165,7 @@ export default {
       }
       if (p === '/jade-whatsapp-account.js' && conta) return await env.ASSETS.fetch(req);
       if (conta) {
+        if (p === '/api/assinatura/recibo-ads' && req.method === 'POST' && mesmaOrigem(req)) return await reciboAds(req, env, conta);
         if (p === '/assinar') return paginaAssinar();
         if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
         if ((p === '/api/assinatura/cartao' || p === '/api/assinatura/cartao-gerenciar') && req.method === 'POST' && mesmaOrigem(req)) return await apiCartao(req, env, conta, p.slice(16));

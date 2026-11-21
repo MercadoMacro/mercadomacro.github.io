@@ -632,6 +632,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
 <header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
 </main>
+<script src="/vitrine/assinatura-ads.js"></script>
 <script>
 (function(){
   var MARCAS = ${JSON.stringify(MARCAS)};
@@ -819,7 +820,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
   // cartão: o servidor cria a página de pagamento (ou do portal) no Stripe e o navegador vai para lá
   function irStripe(url, corpo, b, m){
     b.disabled = true; if (m) { m.className = 'msg'; m.textContent = 'Abrindo o Stripe…'; }
-    api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(j){ location.href = j.url; })
+    api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(j){
+      if (j.sessao && window.mmAdsCheckout) window.mmAdsCheckout(j.sessao);
+      location.href = j.url;
+    })
       .catch(function(j){ b.disabled = false; var t = (j && j.erro) || 'Não foi possível abrir o pagamento agora. Tente de novo.'; if (m) { m.className = 'msg erro'; m.textContent = t; } else alert(t); });
   }
   // fotos grandes viram JPEG de até 1600 px antes de enviar
