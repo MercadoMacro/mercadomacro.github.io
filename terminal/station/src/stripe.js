@@ -119,7 +119,7 @@ export async function apiCartao(req, env, conta, acao) {
         }, VERSAO_PIX_AUTOMATICO);
         return json({ url: s.url, sessao: s.id });
       } catch (e) {
-        erroPix = 'pix automático: ' + e.message;
+        erroPix = 'pix automático: ' + e.message; guardarErroPix(env, erroPix);
         if (e.status === 400) { recorrenteDesligadoAte = Date.now() + 3600000; return json({ semRecorrente: true }); }
         throw e;
       }
@@ -139,6 +139,7 @@ export async function apiCartao(req, env, conta, acao) {
       .catch((e) => { if (e.status !== 400) throw e; const { excluded_payment_method_types, ...resto } = pedido; return stripe(c.stripe_key, 'POST', 'checkout/sessions', resto); });
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
+    guardarErroPix(env, 'assinatura (cartão ou Pix Automático): ' + (e && e.message));
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
   }
 }
@@ -150,6 +151,11 @@ export async function apiCartao(req, env, conta, acao) {
 const pixAvulso = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto && !PLANOS[id].soCartao);
 let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '', erroPix = '';
 const VERSAO_PIX_AUTOMATICO = '2026-04-22.dahlia';
+// 22/11/2026: o último motivo de recusa do Pix pelo Stripe fica no banco (config stripe_pix_erro), para dar para ver sem o /admin
+function guardarErroPix(env, msg) {
+  return env.DB.prepare("INSERT INTO config (chave, valor) VALUES ('stripe_pix_erro', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor")
+    .bind(JSON.stringify({ quando: new Date().toISOString(), msg: String(msg).slice(0, 800) })).run().catch(() => {});
+}
 // 22/11/2026: o Stripe não aceita mais escolher as formas de pagamento na criação do Checkout (payment_method_types);
 // elas vêm do painel. Para a página só do Pix, tiramos as outras formas ligadas no painel (cartão, que inclui Apple Pay
 // e Google Pay e leva junto o Link, e boleto). No cartão, tiramos o Pix.
@@ -193,7 +199,7 @@ export async function apiPix(req, env, conta) {
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
     // Pix ainda não ligado no Stripe (ou recusado para a conta): volta ao Pix manual
-    erroPix = 'pix avulso: ' + e.message;
+    erroPix = 'pix avulso: ' + e.message; guardarErroPix(env, erroPix);
     if (e.status === 400 && /pix|payment method/i.test(e.message)) { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
   }
