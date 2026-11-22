@@ -64,3 +64,12 @@ body { margin: 0; background: #04070d; color: #e6ecf5; font-family: Inter, syste
 .rod b { font: 700 13px Inter, sans-serif; color: #f0b90b; }
 .rod span { font-size: 9.5px; color: #8591a8; text-align: right; line-height: 1.4; }
 .robo .ferr, .robo .abas { display: none; } .robo .palco { padding: 0; } .robo .card { border-radius: 0; border: 0; }
+
+/* 22/11/2026: visual terminal vem de /abertura/abertura.css (.term); aqui só o que é do fechamento */
+.nota-b3 { text-align: left !important; font: 400 10px Inter, sans-serif !important; color: #8591a8 !important; }
+.term .nota-b3 { color: #6f7c91 !important; font-family: 'JetBrains Mono', monospace !important; }
+.term .lista li { border-top-color: #18202c; }
+.term .tab td { border-top-color: #18202c; color: #d7dee9; }
+.term .tab td:last-child { color: #f2f5f9; }
+.term .h-up { color: #4ade80 !important; } .term .h-dn { color: #f87171 !important; }
+.term .aviso { background: #1a1305; border-color: #f5a52455; color: #f6d77a; font-family: 'JetBrains Mono', monospace; border-radius: 6px; }

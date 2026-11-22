@@ -33,12 +33,15 @@
       : '<p class="vazio">—</p>');
     const j = d.juros || {};
     const f = d.fluxo;
+    // 22/11/2026 (pedido do Dante): mesmo visual da abertura (estilo terminal, de /abertura/abertura.css), com o
+    // cabeçalho compacto (título e data numa linha) e o logo no rodapé
+    const dd = String(dt.getUTCDate()).padStart(2, '0'), mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    $('card').className = 'card term';
     $('card').innerHTML = `
-      <div class="cab">
-        <div class="cab-l"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous">
+      <div class="cab tcab">
+        <div class="tbar"><i></i><i></i><i></i><span>fechamento ▸ brasil e mundo</span><em>${dd}/${mm}/${dt.getUTCFullYear()}</em></div>
+        <div class="tlin"><h1>Fechamento <em>do mercado</em><u>▌</u></h1>
           <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
-        <h1>Fechamento <em>do mercado</em></h1>
-        <small>Brasil e mundo · ${dt.getUTCFullYear()}</small>
       </div>
       ${!d.pregao ? `<div class="aviso">Sem pregão na B3 hoje. Números do último pregão${d.pregaoDia ? ' (' + ddmm(d.pregaoDia) + ')' : ''}.</div>` : ''}
       <div class="grade">${cards}</div>
@@ -54,14 +57,14 @@
           <tr><td>Selic</td><td>${ok(j.selic) ? br(j.selic, 2) + '%' : '—'}</td></tr>
           <tr><td>${esc(j.pre ? j.pre.nome.replace(/^Tesouro /, '') : 'Prefixado')}</td><td>${j.pre ? br(j.pre.taxa, 2) + '%' : '—'}</td></tr>
           <tr><td>${esc(j.ipca ? j.ipca.nome.replace(/^Tesouro /, '') : 'IPCA+')}</td><td>${j.ipca ? 'IPCA+' + br(j.ipca.taxa, 2) + '%' : '—'}</td></tr>
-          <tr><td>Treasury 10 anos</td><td>${ok(c.tnx && c.tnx.v) ? br(c.tnx.v, 2) + '%' : '—'}</td></tr></table></div>
+          <tr><td>Treasury 10a</td><td>${ok(c.tnx && c.tnx.v) ? br(c.tnx.v, 2) + '%' : '—'}</td></tr></table></div>
         <div class="bloco"><h2>Estrangeiro na B3</h2><table class="tab">
           <tr><td>${f ? 'Dia ' + ddmm(f.data) : 'No dia'}</td><td class="${f && ok(f.dia) ? (f.dia >= 0 ? 'h-up' : 'h-dn') : ''}">${f ? bi(f.dia) : '—'}</td></tr>
           <tr><td>No mês</td><td>${f ? bi(f.mes) : '—'}</td></tr>
           <tr><td>No ano</td><td>${f ? bi(f.ano) : '—'}</td></tr>
-          <tr><td colspan="2" style="text-align:left;font:400 10px Inter,sans-serif;color:#8591a8">A B3 divulga com cerca de 2 pregões de atraso</td></tr></table></div>
+          <tr><td colspan="2" class="nota-b3">A B3 divulga com cerca de 2 pregões de atraso</td></tr></table></div>
       </div>
-      <div class="rod"><b>mercadomacro.com.br</b><span>Altas e baixas entre as 45 maiores ações do Ibovespa.<br>Fontes: Yahoo Finance, Banco Central, Tesouro Direto, B3 e os veículos citados.</span></div>`;
+      <div class="rod"><div class="rod-m"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous"><b>mercadomacro.com.br</b></div><span>Altas e baixas entre as 45 maiores ações do Ibovespa.<br>Fontes: Yahoo Finance, Banco Central, Tesouro Direto, B3 e os veículos citados.</span></div>`;
   }
 
   async function carrega() {
