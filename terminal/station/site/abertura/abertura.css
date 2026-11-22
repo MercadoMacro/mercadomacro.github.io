@@ -161,3 +161,16 @@
 
 .estilos { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: 13px; }
 .estilos .fb[aria-pressed="true"] { outline: 2px solid #f5a524; }
+
+/* 22/11/2026: cabeçalho compacto no estilo terminal (título e data na mesma linha; logo no rodapé) */
+.term .cab.tcab { padding-bottom: 14px; }
+.term .tbar { margin-bottom: 12px; }
+.term .tlin { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.term .tlin h1 { margin: 0; line-height: 1; }
+.pg.term .cab h1, .term .pg .cab h1 { font-size: 28px; }
+.term .tlin .cab-d { text-align: right; flex-shrink: 0; }
+.term .tlin .cab-d b { font-size: 22px; line-height: 1; }
+.term .rod-m { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex-shrink: 0; }
+.term .rod-m img { height: 24px; width: auto; display: block; }
+.pg.term .rod-m b { font-size: 12.5px; }
+.pg.term .rod { padding-top: 10px; padding-bottom: 12px; }

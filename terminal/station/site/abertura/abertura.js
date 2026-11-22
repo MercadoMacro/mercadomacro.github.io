@@ -60,13 +60,13 @@
         </svg>`;
     // cabeçalho das duas páginas; n = número da página (1 de 2, 2 de 2)
     const dd = String(dt.getUTCDate()).padStart(2, '0'), mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    // 22/11/2026 (pedido do Dante): cabeçalho compacto, para sobrar espaço no conteúdo. Uma linha com o título e a
+    // data; o subtítulo foi para a barra de cima e o logo para o rodapé, ao lado do endereço do site
     const cabTerm = (n) => `
       <div class="cab tcab">
-        <div class="tbar"><i></i><i></i><i></i><span>mercadomacro ▸ abertura ▸ ${dd}/${mm}/${dt.getUTCFullYear()}</span><em>${n}/2</em></div>
-        <div class="cab-l"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous">
+        <div class="tbar"><i></i><i></i><i></i><span>abertura ▸ ${n === 1 ? 'o que mexe com a bolsa hoje' : 'panorama, agenda e notícias'}</span><em>${dd}/${mm} · ${n}/2</em></div>
+        <div class="tlin"><h1>Abertura <em>do mercado</em><u>▌</u></h1>
           <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
-        <h1>Abertura <em>do mercado</em><u>▌</u></h1>
-        <small>&gt; ${n === 1 ? 'o que mexe com a bolsa hoje' : 'panorama, agenda e notícias do dia'}</small>
       </div>`;
     const cab = (n) => term() ? cabTerm(n) : `
       <div class="cab manha">${sol}
@@ -75,7 +75,7 @@
         <h1>Abertura <em>do mercado</em></h1>
         <small>${n === 1 ? 'O que mexe com a bolsa hoje' : 'Agenda e notícias do dia'} · ${n} de 2</small>
       </div>`;
-    const rod = (txt) => `<div class="rod"><b>mercadomacro.com.br</b><span>${txt}</span></div>`;
+    const rod = (txt) => `<div class="rod">${term() ? '<div class="rod-m"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous"><b>mercadomacro.com.br</b></div>' : '<b>mercadomacro.com.br</b>'}<span>${txt}</span></div>`;
     // as duas páginas têm o formato do status do WhatsApp (9:16): 540 x 960, viram 1080 x 1920 na imagem
     $('card').innerHTML = `
       <div class="card ${tema} pg" id="pg1">${cab(1)}
