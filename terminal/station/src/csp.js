@@ -12,8 +12,7 @@ const LISTA = {
   'script-src': ["'self'", "'report-sample'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://s3.tradingview.com', 'https://challenges.cloudflare.com',
     // estatística de visitas da Cloudflare (Web Analytics) e WebAssembly (avisos de 14 a 22/11)
     'https://static.cloudflareinsights.com', "'wasm-unsafe-eval'",
-    // TV da Schwab Network na aba Notícias, em teste até 04/12/2026 (schwab-tv.js)
-    'https://www.youtube.com',
+
     // tag do Google Ads na vitrine e no /assinar (22/11/2026)
     'https://www.googletagmanager.com'],
   // estilos escritos dentro das páginas são muitos (e de baixo risco): ficam liberados
@@ -31,7 +30,7 @@ const LISTA = {
     'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://www.googleadservices.com', 'https://www.google.com', 'https://googleads.g.doubleclick.net', 'https://*.doubleclick.net', 'https://pagead2.googlesyndication.com',
     'https://cloudflareinsights.com'],
   'frame-src': ["'self'", 'https://s.tradingview.com', 'https://www.tradingview-widget.com', 'https://sslecal2.investing.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com',
-    'https://td.doubleclick.net', 'https://www.googletagmanager.com', 'https://www.youtube.com'],
+    'https://td.doubleclick.net', 'https://www.googletagmanager.com'],
   'worker-src': ["'self'"],
   'manifest-src': ["'self'"],
   'object-src': ["'none'"],
