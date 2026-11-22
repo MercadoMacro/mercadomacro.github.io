@@ -88,6 +88,41 @@ test('pedir Pix cria a página de pagamento do Stripe só com Pix, no preço do 
   } finally { globalThis.fetch = fetchAntes; }
 });
 
+test('Pix Automático: assinatura no Pix, preço do cartão, com autorização no banco e versão nova da API', async () => {
+  const { apiCartao } = await import('../src/stripe.js');
+  const fetchAntes = globalThis.fetch;
+  let corpo = '', versao = '';
+  globalThis.fetch = async (u, o) => {
+    if (String(u).endsWith('/account')) return new Response(JSON.stringify({ country: 'BR' }), { status: 200 });
+    if (String(u).includes('checkout/sessions')) { corpo = String(o.body); versao = o.headers['Stripe-Version'] || ''; }
+    return new Response(JSON.stringify({ id: 'cs_auto', url: 'https://checkout.stripe.com/c/pay/cs_auto' }), { status: 200 });
+  };
+  try {
+    db.exec(`UPDATE usuarios SET stripe_assinatura = NULL WHERE id = 7`);
+    const r = await (await apiCartao(new Request('https://x/api/assinatura/cartao', { method: 'POST', body: JSON.stringify({ plano: 'semestral', forma: 'pix' }) }), env, { id: 7 }, 'cartao')).json();
+    assert.equal(r.sessao, 'cs_auto');
+    const f = new URLSearchParams(corpo);
+    assert.equal(versao, '2026-04-22.dahlia');
+    assert.equal(f.get('mode'), 'subscription');
+    assert.equal(f.get('payment_method_types[0]'), 'pix');
+    assert.equal(f.get('line_items[0][price_data][unit_amount]'), '9990');
+    assert.equal(f.get('payment_method_options[pix][mandate_options][payment_schedule]'), 'halfyearly');
+    assert.equal(f.get('payment_method_options[pix][mandate_options][amount]'), '9990');
+    assert.equal(f.get('subscription_data[metadata][forma]'), 'pix');
+    // cartão continua só cartão
+    await apiCartao(new Request('https://x/api/assinatura/cartao', { method: 'POST', body: JSON.stringify({ plano: 'mensal' }) }), env, { id: 7 }, 'cartao');
+    assert.equal(new URLSearchParams(corpo).get('payment_method_types[0]'), 'card');
+  } finally { globalThis.fetch = fetchAntes; }
+});
+
+test('renovação paga no Pix Automático credita e avisa como Pix Automático', async () => {
+  await evento('invoice.paid', { id: 'in_auto_1', amount_paid: 1990, customer: 'cus_auto', billing_reason: 'subscription_create',
+    parent: { subscription_details: { subscription: 'sub_auto', metadata: { usuario_id: '7', plano: 'mensal', forma: 'pix' } } },
+    lines: { data: [{ period: { start: 1795000000, end: 1797600000 } }] } });
+  assert.ok(db.prepare(`SELECT 1 FROM pagamentos WHERE ref = 'stripe:in_auto_1'`).get());
+  assert.ok(avisos.some((t) => t === 'Nova assinatura no Pix Automático'));
+});
+
 test('Pix não ligado no Stripe: a página volta para o Pix manual', async () => {
   const fetchAntes = globalThis.fetch;
   let chamadas = 0;

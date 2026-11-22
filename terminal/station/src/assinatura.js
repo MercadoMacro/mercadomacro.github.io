@@ -269,6 +269,8 @@ export async function apiAssinatura(req, env, conta, acao) {
       pix: !!(await pixConfig(env)) || pixStripe,
       pixStripe,
       ...sit,
+      pixRecorrente: !!sit.pixRecorrente && pixStripe,
+      formaAssinatura: sit.formaAssinatura || 'cartao',
       planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && !(p.soCartao && !sit.cartao) && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, valorCartao: p.valorCartao || null, meses: p.meses || 0, unico: !!p.unico, soCartao: !!p.soCartao })),
       pagamentos: pags,
     });
@@ -599,6 +601,7 @@ export const SCRIPT_ASSINAR = `(function(){
   }
   // Pix pelo Stripe creditado depois de voltar da página de pagamento (pagamento aprovado nos últimos minutos)
   function pixCreditado(j){ return (j.pagamentos || []).some(function(p){ return p.status === 'aprovado' && p.decidido && new Date(p.decidido).getTime() > inicioPix - 15 * 60000; }); }
+  function menorPorMesPixAuto(){ return Math.min.apply(null, planosDe('pix').filter(function(p){ return p.valorCartao; }).map(function(p){ return Math.round(p.valorCartao / p.meses); })); }
   function temGratis(){ return dados.planos.some(function(p){ return p.id === 'gratis'; }); }
   // o que dá para pagar agora em cada forma
   function podeCartao(){ return !!dados.cartao && !dados.renovaCartao; }
@@ -620,10 +623,12 @@ export const SCRIPT_ASSINAR = `(function(){
     var j = dados;
     document.getElementById('volta').innerHTML = j.liberado ? '<a href="/">Voltar ao site</a>' : '';
     var h = situacao(j);
-    if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento no cartão recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
+    if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
+    // 22/11/2026: a assinatura pode ser no cartão ou no Pix Automático
+    var ondeAss = j.formaAssinatura === 'pix' ? 'no Pix Automático' : 'no cartão';
     if (voltouPix) h += pixCreditado(j) ? '<div class="sit">Pix confirmado. Obrigado! Seu acesso já está liberado.</div>' : '<div class="sit alerta">Pix recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
-    if (j.renovaCartao && j.cancelaEm) h += '<div class="sit">Renovação automática no cartão <b>cancelada</b>: não haverá nova cobrança e o acesso continua até o fim do período já pago. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Reativar ou ver faturas</button></div>';
-    else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e o acesso é renovado automaticamente. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
+    if (j.renovaCartao && j.cancelaEm) h += '<div class="sit">Renovação automática ' + ondeAss + ' <b>cancelada</b>: não haverá nova cobrança e o acesso continua até o fim do período já pago. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Reativar ou ver faturas</button></div>';
+    else if (j.renovaCartao) h += '<div class="sit">Renovação automática ' + ondeAss + ' <b>ligada</b>: ' + (j.formaAssinatura === 'pix' ? 'o banco avisa 3 dias antes de cada cobrança e o acesso é renovado automaticamente.' : 'o Stripe cobra no fim de cada período e o acesso é renovado automaticamente.') + ' <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">' + (j.formaAssinatura === 'pix' ? 'Cancelar ou ver faturas' : 'Trocar cartão ou cancelar') + '</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
     if (enviado) h += '<div class="sit">Recebemos seu comprovante do plano <b>' + esc(nomePlano(enviado.plano)) + '</b> (' + reais(enviado.valor) + '). Você recebe um e-mail quando o pagamento for conferido.</div>';
     if (temGratis()) h += '<div class="sit alerta"><b>Ainda não conhece?</b> Comece com 48 horas grátis, sem pagar nada e sem cadastrar cartão. <button type="button" class="bt2" id="gratis-abrir" style="margin-left:6px">Começar grátis</button><div id="gratis-box"></div></div>';
@@ -637,17 +642,19 @@ export const SCRIPT_ASSINAR = `(function(){
     } else {
       if (formas.length > 1) {
         h += '<h2>1. Como você quer pagar</h2><div class="forma">'
-          + '<button type="button" class="fm" data-f="cartao" aria-pressed="' + (forma === 'cartao') + '"><span class="t">Cartão de crédito <span class="selo">Mais barato</span></span>'
+          + '<button type="button" class="fm" data-f="cartao" aria-pressed="' + (forma === 'cartao') + '"><span class="t">Cartão de crédito' + (j.pixRecorrente ? '' : ' <span class="selo">Mais barato</span>') + '</span>'
           + '<span class="marcas">' + marca('visa') + marca('mastercard') + marca('applepay') + '</span>'
           + '<span class="s">Renovação automática. Cancele quando quiser.</span><span class="a">a partir de ' + reais(menorPorMes('cartao')) + ' por mês</span></button>'
           + '<button type="button" class="fm" data-f="pix" aria-pressed="' + (forma === 'pix') + '"><span class="t"><span class="px">' + MARCAS.pix + '</span>Pix</span>'
-          + '<span class="s">Pagamento único, sem renovação automática. Quando acabar, você renova se quiser.</span><span class="a">a partir de ' + reais(menorPorMes('pix')) + ' por mês</span></button>'
+          + (j.pixRecorrente
+            ? '<span class="s">Pix Automático (renova sozinho, mesmo preço do cartão) ou pagamento único.</span><span class="a">a partir de ' + reais(menorPorMesPixAuto()) + ' por mês</span></button>'
+            : '<span class="s">Pagamento único, sem renovação automática. Quando acabar, você renova se quiser.</span><span class="a">a partir de ' + reais(menorPorMes('pix')) + ' por mês</span></button>')
           + '</div>';
       }
       h += '<h2>' + (formas.length > 1 ? '2. Escolha o plano' : 'Escolha o plano') + (formas.length === 1 ? (forma === 'pix' ? ' no Pix' : ' no cartão') : '') + '</h2><div id="planos"></div><div id="acao"></div>';
     }
     h += '<h2>Dúvidas frequentes</h2><div class="faq">'
-      + '<details><summary>O que acontece no fim do período?</summary><p><b>No cartão</b>, o Stripe cobra o mesmo valor e o acesso é renovado automaticamente, até você cancelar. <b>No Pix</b>, o acesso termina na data marcada; avisamos por e-mail 3 dias antes e você renova só se quiser.</p></details>'
+      + '<details><summary>O que acontece no fim do período?</summary><p><b>No cartão</b>, o Stripe cobra o mesmo valor e o acesso é renovado automaticamente, até você cancelar. <b>No Pix</b>' + (j.pixRecorrente ? ' Automático, o banco avisa 3 dias antes e cobra o mesmo valor, até você cancelar. <b>No Pix de pagamento único</b>' : '') + ', o acesso termina na data marcada; avisamos por e-mail 3 dias antes e você renova só se quiser.</p></details>'
       + '<details><summary>Como cancelo a assinatura no cartão?</summary><p>Aqui nesta página, no botão "Trocar cartão ou cancelar". Não tem multa, e o acesso continua até o fim do período já pago.</p></details>'
       + '<details><summary>Tem reembolso?</summary><p>Na primeira assinatura, você pode pedir o reembolso integral em até 7 dias depois do pagamento. Depois desse prazo, e nas renovações, não há reembolso do período em curso, mas você pode cancelar para não ser cobrado de novo. Detalhes em <a href="/planos" style="color:var(--accent-text)">Planos e termos</a>.</p></details>'
       + '<details><summary>Quais cartões são aceitos?</summary><p>Visa, Mastercard e os demais cartões de crédito aceitos pelo Stripe. No iPhone e no Mac, o Apple Pay também aparece na hora de pagar. Os dados do cartão ficam com o Stripe; o Mercado Macro não vê nem guarda o número do cartão.</p></details>'
@@ -685,7 +692,7 @@ export const SCRIPT_ASSINAR = `(function(){
           : esc(p.periodo) + ' de acesso, sem renovação automática. Ao fim do período, você renova se quiser.') + '</span></button>';
     }).join('') + '</div>';
     // no Pix, lembra que no cartão sai mais barato
-    if (forma === 'pix' && podeCartao()) {
+    if (forma === 'pix' && podeCartao() && !dados.pixRecorrente) {
       var m = planosDe('cartao').filter(function(p){ return p.meses === 1; })[0];
       if (m) h += '<p class="dica">No cartão o plano mensal sai por <b>' + reais(m.valorCartao) + ' por mês</b> (no Pix, ' + reais(m.valor) + '). <button type="button" id="ver-cartao">Ver planos no cartão</button></p>';
     }
@@ -738,14 +745,35 @@ export const SCRIPT_ASSINAR = `(function(){
     }
     // 22/11/2026: Pix pelo Stripe (acesso liberado sozinho, sem comprovante); sem o Pix do Stripe, segue o Pix manual
     if (dados.pixStripe) {
-      box.innerHTML = '<div class="caixa"><h3>' + esc(pl.nome) + ' no Pix: ' + reais(pl.valor) + '</h3>'
+      var auto = dados.pixRecorrente && pl.valorCartao && !dados.renovaCartao;
+      var nomeAuto = NOME_CARTAO[pl.meses] || pl.nome, cadaAuto = CADA[pl.meses] || '';
+      box.innerHTML = (auto ? '<div class="caixa"><h3>' + esc(nomeAuto) + ' no Pix Automático: ' + reais(pl.valorCartao) + ' ' + cadaAuto + '</h3>'
+        + '<p class="sub">Mesmo preço do cartão. Renova sozinho até você cancelar.</p>'
+        + '<ul class="lista"><li>' + CHECK + 'Você autoriza uma vez no app do seu banco e já paga o primeiro período. Acesso liberado na hora.</li>'
+        + '<li>' + CHECK + 'Nas renovações, o banco avisa 3 dias antes de cobrar.</li>'
+        + '<li>' + CHECK + 'Cancele quando quiser, aqui ou no app do banco. O acesso continua até o fim do período pago.</li></ul>'
+        + '<div class="pagar"><button type="button" class="bt" id="pagar-pix-auto">Assinar com Pix Automático</button>'
+        + '<span class="seg">' + CADEADO + 'Pagamento seguro pelo Stripe</span></div>'
+        + '<p class="msg" id="msg-pix-auto" role="status" aria-live="polite"></p></div>'
+        + '<p class="nota" style="margin:12px 0 8px">Prefere pagar só este período, sem renovação?</p>' : '')
+        + '<div class="caixa"><h3>' + esc(pl.nome) + ' no Pix: ' + reais(pl.valor) + '</h3>'
         + '<p class="sub">Pagamento único, sem renovação automática.</p>'
         + '<ul class="lista"><li>' + CHECK + 'Acesso liberado na hora, assim que o Pix é pago. Não precisa mandar comprovante.</li>'
         + '<li>' + CHECK + 'Você paga pelo QR Code ou pelo Pix copia e cola, na página segura do Stripe.</li>'
         + '<li>' + CHECK + 'O QR Code vale por 1 hora.</li></ul>'
-        + '<div class="pagar"><button type="button" class="bt" id="pagar-pix">Pagar ' + reais(pl.valor) + ' com Pix</button>'
+        + '<div class="pagar"><button type="button" class="' + (auto ? 'bt2' : 'bt') + '" id="pagar-pix">Pagar ' + reais(pl.valor) + ' com Pix</button>'
         + '<span class="seg">' + CADEADO + 'Pagamento seguro pelo Stripe</span></div>'
         + '<p class="msg" id="msg-pix" role="status" aria-live="polite"></p></div>';
+      var ba = document.getElementById('pagar-pix-auto');
+      if (ba) ba.onclick = function(){
+        var m = document.getElementById('msg-pix-auto');
+        ba.disabled = true; m.className = 'msg'; m.textContent = 'Abrindo o Pix…';
+        api('/api/assinatura/cartao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano, forma: 'pix' }) }).then(function(j){
+          if (j.semRecorrente) { dados.pixRecorrente = false; pedir(plano); return; }
+          if (j.sessao && window.mmAdsCheckout) window.mmAdsCheckout(j.sessao);
+          location.href = j.url;
+        }).catch(function(j){ ba.disabled = false; m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível abrir o Pix agora. Tente de novo.'; });
+      };
       document.getElementById('pagar-pix').onclick = function(){
         var b = this, m = document.getElementById('msg-pix');
         b.disabled = true; m.className = 'msg'; m.textContent = 'Abrindo o Pix…';
