@@ -14,6 +14,11 @@
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const ddmm = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
   let dados = null;
+  // 20/11/2026: estilo "terminal" (escuro, letras de terminal), o padrão; o claro (manhã com sol) continua como opção
+  let estilo = 'terminal';
+  try { estilo = localStorage.getItem('abertura_estilo') || 'terminal'; } catch (e) { /* sem armazenamento */ }
+  if (window.__ABERTURA && window.__ABERTURA.estilo) estilo = window.__ABERTURA.estilo;
+  const term = () => estilo === 'terminal';
 
   const n0 = (v) => br(v, 0), n2 = (v) => br(v, 2);
   const FMT = {
@@ -35,6 +40,17 @@
     // na imagem cabem até 6 itens da agenda; com agenda cheia, 3 notícias (o texto leva tudo)
     const ag = (d.agenda || []).slice(0, 6);
     const nots = (d.noticias || []).slice(0, ag.length > 3 ? 3 : 4);
+    // 20/11/2026: com o texto da manhã da IA (d.manha), a página 2 traz o panorama do dia e os destaques resumidos
+    // no lugar da lista de manchetes; sem ele, continua a lista de antes
+    const mh = d.manha && d.manha.visao ? d.manha : null;
+    const destaques = mh ? (mh.noticias || []).slice(0, ag.length > 3 ? 2 : 3) : [];
+    const fonteEm = (t) => { const m = String(t).match(/^(.*)\(([^()]{2,40})\)\s*\.?$/); return m ? [m[1].trim().replace(/[.;]$/, ''), m[2]] : [t, '']; };
+    const blocoNoticias = mh
+      ? `<div class="bloco dest pano"><h2>Panorama do dia</h2><p class="visao">${esc(mh.visao)}</p>${destaques.length ? `<ul class="nots">${destaques.map((t) => { const [x, f] = fonteEm(t); return `<li><p>${esc(x)}</p>${f ? `<span>${esc(f)}</span>` : ''}</li>`; }).join('')}</ul>` : ''}</div>`
+      : `<div class="bloco dest"><h2>Principais notícias</h2>${nots.length
+            ? `<ul class="nots">${nots.map((n) => `<li><p>${esc(n.t)}</p>${n.f ? `<span>${esc(n.f)}</span>` : ''}</li>`).join('')}</ul>`
+            : '<p class="vazio">Sem notícias disponíveis agora.</p>'}</div>`;
+    const tema = term() ? 'term' : 'claro';
     const sol = `<svg class="sol" viewBox="0 0 200 110" aria-hidden="true">
           <defs><radialGradient id="sg" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="#ffd76a"/><stop offset=".55" stop-color="#ffb627"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
           <radialGradient id="hg" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient></defs>
@@ -43,7 +59,16 @@
           <circle cx="100" cy="110" r="46" fill="url(#sg)"/>
         </svg>`;
     // cabeçalho das duas páginas; n = número da página (1 de 2, 2 de 2)
-    const cab = (n) => `
+    const dd = String(dt.getUTCDate()).padStart(2, '0'), mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const cabTerm = (n) => `
+      <div class="cab tcab">
+        <div class="tbar"><i></i><i></i><i></i><span>mercadomacro ▸ abertura ▸ ${dd}/${mm}/${dt.getUTCFullYear()}</span><em>${n}/2</em></div>
+        <div class="cab-l"><img src="/logo-mercado-macro.png" alt="Mercado Macro" crossorigin="anonymous">
+          <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
+        <h1>Abertura <em>do mercado</em><u>▌</u></h1>
+        <small>&gt; ${n === 1 ? 'o que mexe com a bolsa hoje' : 'panorama, agenda e notícias do dia'}</small>
+      </div>`;
+    const cab = (n) => term() ? cabTerm(n) : `
       <div class="cab manha">${sol}
         <div class="cab-l"><img src="/logo-mercado-macro-claro.png" alt="Mercado Macro" crossorigin="anonymous">
           <div class="cab-d"><span>${DIAS[dt.getUTCDay()]}</span><b>${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].toUpperCase()}</b></div></div>
@@ -53,7 +78,7 @@
     const rod = (txt) => `<div class="rod"><b>mercadomacro.com.br</b><span>${txt}</span></div>`;
     // as duas páginas têm o formato do status do WhatsApp (9:16): 540 x 960, viram 1080 x 1920 na imagem
     $('card').innerHTML = `
-      <div class="card claro pg" id="pg1">${cab(1)}
+      <div class="card ${tema} pg" id="pg1">${cab(1)}
         <div class="corpo">
           <section><div class="sub">Brasil</div>
           <div class="grade">${cd('ibov', ib.dia ? 'Fechamento de ' + ddmm(ib.dia) : '')}${cd('dolar', 'Agora')}${cd('ewz', 'Último fechamento em NY')}${cd('dxy', 'Dólar contra moedas fortes')}</div></section>
@@ -66,19 +91,25 @@
         </div>
         ${rod('Futuros e Europa no momento da imagem;<br>Ásia e Ibovespa no último fechamento. Fonte: Yahoo Finance.')}
       </div>
-      <div class="card claro pg${ag.length > 4 ? ' cheio' : ''}" id="pg2">${cab(2)}
+      <div class="card ${tema} pg${ag.length > 4 ? ' cheio' : ''}${mh ? ' com-pano' : ''}" id="pg2">${cab(2)}
         <div class="corpo">
           <section><div class="sub">Commodities, cripto e juros</div>
           <div class="grade">${cd('brent')}${cd('ouro')}${cd('btc')}${cd('tnx')}</div></section>
           <div class="bloco"><h2>Agenda de hoje (horário de Brasília)</h2>${ag.length
             ? `<table class="agenda">${ag.map((a) => `<tr><td class="h">${esc(a.hora)}</td><td class="p"><b class="${a.pais === 'EUA' ? 'eua' : ''}">${esc(a.pais)}</b></td><td class="t">${esc(a.titulo)}${a.proj || a.ant ? `<span>${a.proj ? 'Projeção ' + esc(a.proj) : ''}${a.proj && a.ant ? ' · ' : ''}${a.ant ? 'Anterior ' + esc(a.ant) : ''}</span>` : ''}</td></tr>`).join('')}</table>`
             : `<p class="vazio">${d.agendaOk ? 'Sem indicadores importantes do Brasil ou dos EUA hoje.' : '—'}</p>`}</div>
-          <div class="bloco dest"><h2>Principais notícias</h2>${nots.length
-            ? `<ul class="nots">${nots.map((n) => `<li><p>${esc(n.t)}</p>${n.f ? `<span>${esc(n.f)}</span>` : ''}</li>`).join('')}</ul>`
-            : '<p class="vazio">Sem notícias disponíveis agora.</p>'}</div>
+          ${blocoNoticias}
         </div>
-        ${rod('Fontes: Yahoo Finance, Investing/TradingView (agenda)<br>e os veículos citados.')}
+        ${rod(mh ? 'Panorama: IA do Mercado Macro com as manchetes da manhã.<br>Fontes: Yahoo Finance, Investing/TradingView e veículos citados.' : 'Fontes: Yahoo Finance, Investing/TradingView (agenda)<br>e os veículos citados.')}
       </div>`;
+    // o panorama tem tamanho variável: se a página 2 não couber, tira destaques do fim e, por último, diminui a letra
+    const corpo = document.querySelector('#pg2 .corpo');
+    const sobra = () => corpo.clientHeight - corpo.scrollHeight;
+    const lis = () => corpo.querySelectorAll('.pano .nots li');
+    while (corpo && sobra() < 0 && lis().length) lis()[lis().length - 1].remove();
+    const v = corpo && corpo.querySelector('.pano .visao');
+    for (let f = 14; v && sobra() < 0 && f >= 12; f -= 0.5) v.style.fontSize = f + 'px';
+    const ul = corpo && corpo.querySelector('.pano .nots'); if (ul && !ul.children.length) ul.remove();
   }
 
   function msg(t, erro) { const m = $('f-msg'); m.textContent = t || ''; m.className = erro ? 'erro' : ''; }
@@ -95,7 +126,7 @@
   }
   async function imagem(id) {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const cv = await window.html2canvas($(id), { scale: 2, backgroundColor: '#fffaf2', useCORS: true, logging: false });
+    const cv = await window.html2canvas($(id), { scale: 2, backgroundColor: term() ? '#05070a' : '#fffaf2', useCORS: true, logging: false });
     return new Promise((res) => cv.toBlob(res, 'image/png'));
   }
   const imagens = async () => [await imagem('pg1'), await imagem('pg2')];
@@ -107,6 +138,15 @@
   }
   function liga() {
     document.querySelectorAll('.abas button').forEach((b) => { b.onclick = () => ver(b.dataset.ver); });
+    document.querySelectorAll('[data-estilo]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.estilo === estilo));
+      b.onclick = () => {
+        estilo = b.dataset.estilo;
+        try { localStorage.setItem('abertura_estilo', estilo); } catch (e) { /* sem armazenamento */ }
+        document.querySelectorAll('[data-estilo]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        if (dados) desenha(dados);
+      };
+    });
     $('f-atualizar').onclick = carrega;
     $('f-telegram-txt').onclick = async function () {
       if (!dados) return;

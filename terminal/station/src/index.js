@@ -780,6 +780,9 @@ async function dadosAbertura(env) {
     api('/calendar').catch(() => null),
   ]);
   for (const [k, nome, s] of ABRE_CARDS) out.cards[k] = { nome, ...(meta(jc, s) || { v: null, ch: null, a: null, dia: null }) };
+  // 22/11/2026: o feed traz o mês em inglês no título ("Vendas de Veículos (Mensal) (Oct)")
+  const MES_PT = { Jan: 'Jan', Feb: 'Fev', Mar: 'Mar', Apr: 'Abr', May: 'Mai', Jun: 'Jun', Jul: 'Jul', Aug: 'Ago', Sep: 'Set', Oct: 'Out', Nov: 'Nov', Dec: 'Dez', Q1: '1º tri', Q2: '2º tri', Q3: '3º tri', Q4: '4º tri' };
+  const tituloPt = (t) => String(t || '').replace(/\((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Q[1-4])\)/g, (m, x) => `(${MES_PT[x]})`);
   // agenda de hoje (horário de Brasília): Brasil de média e alta importância, EUA só alta
   if (Array.isArray(cal)) {
     const PAIS = { BRL: 'BR', USD: 'EUA', BR: 'BR', US: 'EUA' };
@@ -790,7 +793,7 @@ async function dadosAbertura(env) {
       const b = new Date(t - 3 * 3600000);
       if (b.toISOString().slice(0, 10) !== hoje) return null;
       if (!(e.impact === 'High' || (p === 'BR' && e.impact === 'Medium'))) return null;
-      return { t, hora: b.toISOString().slice(11, 16), pais: p, titulo: String(e.title || '').slice(0, 90), proj: String(e.forecast || '').slice(0, 14), ant: String(e.previous || '').slice(0, 14) };
+      return { t, hora: b.toISOString().slice(11, 16), pais: p, titulo: tituloPt(e.title).slice(0, 90), proj: String(e.forecast || '').slice(0, 14), ant: String(e.previous || '').slice(0, 14) };
     }).filter(Boolean).sort((a, b) => a.t - b.t).slice(0, 8).map(({ t, ...x }) => x);
   }
   // para o texto do canal: hoje com as outras economias grandes (só alta importância; Brasil também média)
@@ -802,7 +805,7 @@ async function dadosAbertura(env) {
       if (!p || !isFinite(t) || !e.title) return null;
       if (!(e.impact === 'High' || (p === 'BR' && e.impact === 'Medium'))) return null;
       const b = new Date(t - 3 * 3600000);
-      return { t, dia: b.toISOString().slice(0, 10), hora: b.toISOString().slice(11, 16), pais: p, titulo: String(e.title).slice(0, 90), proj: String(e.forecast || '').slice(0, 14), alta: e.impact === 'High' };
+      return { t, dia: b.toISOString().slice(0, 10), hora: b.toISOString().slice(11, 16), pais: p, titulo: tituloPt(e.title).slice(0, 90), proj: String(e.forecast || '').slice(0, 14), alta: e.impact === 'High' };
     }).filter(Boolean).sort((a, b) => a.t - b.t);
     out.agendaCanal = evs.filter((e) => e.dia === hoje).slice(0, 10).map(({ t, dia, alta, ...x }) => x);
     const fimSemana = new Date(Date.parse(hoje + 'T12:00:00Z') + (6 - new Date(hoje + 'T12:00:00Z').getUTCDay()) * 86400000).toISOString().slice(0, 10);

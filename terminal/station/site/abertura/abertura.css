@@ -105,3 +105,59 @@
 .pg.cheio .nots li::before { top: 13px; }
 .pg.cheio .nots li:first-child::before { top: 8px; }
 .pg.cheio .nots p { font-size: 14px; }
+
+/* ===== 20/11/2026: estilo terminal (padrão), pedido do Dante. Escuro, letras de terminal nos títulos e números,
+   âmbar como cor de destaque, verde e vermelho só na variação ===== */
+.card.term { background: #05070a; border-color: #18202c; color: #d7dee9; }
+.term .cab.tcab { background: radial-gradient(120% 140% at 100% 0%, #2a1d05 0%, #0b0f15 45%, #070a0f 100%); border-bottom: 1px solid #1d2633; padding-top: 0; }
+.term .cab.tcab::after { background: linear-gradient(90deg, #f5a524, #f5a52400 75%); }
+.term .tbar { display: flex; align-items: center; gap: 6px; margin: 0 -24px 16px; padding: 9px 16px; background: #0d1219; border-bottom: 1px solid #1d2633; font: 500 10.5px 'JetBrains Mono', monospace; color: #6f7c91; }
+.term .tbar i { width: 9px; height: 9px; border-radius: 50%; background: #2a3342; display: inline-block; }
+.term .tbar i:nth-child(1) { background: #ef4444; } .term .tbar i:nth-child(2) { background: #f5a524; } .term .tbar i:nth-child(3) { background: #22c55e; }
+.term .tbar span { margin-left: 8px; } .term .tbar em { margin-left: auto; font-style: normal; color: #f5a524; }
+.term .cab img { height: 30px; }
+.term .cab-d span { color: #f5a524; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+.term .cab-d b { color: #f2f5f9; font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
+.term .cab h1 { color: #f2f5f9; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: -1.5px; }
+.term .cab h1 em { color: #f5a524; }
+.term .cab h1 u { text-decoration: none; color: #f5a524; margin-left: 4px; font-weight: 400; }
+.term .cab small { color: #8b97ab; font-family: 'JetBrains Mono', monospace; }
+.term .sub { color: #f5a524; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; justify-content: flex-start; }
+.term .sub::before { content: '▸'; color: #f5a52499; margin-right: -2px; }
+.term .sub small { color: #6f7c91; font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+.term .cd { background: #0b0f15; border: 1px solid #1a2230; border-left: 3px solid #273142; border-radius: 6px; box-shadow: none; }
+.term .cd.up { border-left-color: #22c55e; } .term .cd.dn { border-left-color: #ef4444; }
+.term .cd span { color: #8b97ab; font-family: 'JetBrains Mono', monospace; letter-spacing: .8px; }
+.term .cd b { color: #f2f5f9; }
+.term .cd em { color: #6f7c91; }
+.term .up i { color: #4ade80; background: #22c55e1f; } .term .dn i { color: #f87171; background: #ef44441f; } .term .zero i { color: #8b97ab; background: #8b97ab1a; }
+.term .bloco { background: #0b0f15; border: 1px solid #1a2230; border-radius: 6px; box-shadow: none; }
+.term .bloco h2 { color: #f5a524; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+.term .bloco h2::before { content: '▸ '; color: #f5a52499; }
+.term .dest { border-left: 3px solid #f5a524; }
+.term .nots li { border-top-color: #18202c; }
+.term .nots li::before { background: #f5a524; border-radius: 1px; }
+.term .nots p { color: #e6ecf5; }
+.term .nots span, .term .vazio { color: #6f7c91; font-family: 'JetBrains Mono', monospace; }
+.term .agenda td { border-top: 1px solid #18202c; color: #e6ecf5; }
+.term .agenda tr:first-child td { border-top: 0; }
+.term .agenda .h { color: #f5a524; }
+.term .agenda .p b { background: #22c55e1f; color: #4ade80; font-family: 'JetBrains Mono', monospace; }
+.term .agenda .p b.eua { background: #3b82f624; color: #93c5fd; }
+.term .agenda .t span { color: #6f7c91; }
+.term .rod { background: #0b0f15; border-top-color: #18202c; }
+.term .rod b { color: #f5a524; font-family: 'JetBrains Mono', monospace; }
+.term .rod span { color: #6f7c91; }
+
+/* panorama do dia (texto da IA) na página 2, nos dois estilos */
+.pano .visao { margin: 0 0 4px; font: 500 14.5px/1.5 Inter, sans-serif; }
+.term .pano .visao { color: #e6ecf5; }
+.claro .pano .visao { color: #1c2433; }
+.pano .nots { margin-top: 8px; }
+.pano .nots p { font-size: 13.5px !important; font-weight: 500; }
+.pg.com-pano .agenda td { padding: 6px 0; }
+.pg.com-pano.cheio .pano .visao { font-size: 13.5px; line-height: 1.45; }
+.pg.com-pano.cheio .pano .nots p { font-size: 12.5px !important; }
+
+.estilos { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: 13px; }
+.estilos .fb[aria-pressed="true"] { outline: 2px solid #f5a524; }
