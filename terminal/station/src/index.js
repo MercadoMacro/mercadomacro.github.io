@@ -13,12 +13,12 @@ import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA, perguntaWhatsApp } from './assistente.js';
 import { reciboAds, apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
-import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
+import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, SCRIPT_ASSINAR, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
-import { CSP_SO_AVISO, receberAvisoCsp } from './csp.js';
+import { CSP_SO_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -127,6 +127,7 @@ export default {
     if (url.hostname === 'www.mercadomacro.com.br') return Response.redirect('https://mercadomacro.com.br' + p + url.search, 301);
     try {
       if (p === '/entrar') return paginaEntrar(req, env);
+      if (p.startsWith('/js/pg/')) { const m = p.match(/^\/js\/pg\/([a-z-]+)\.js$/); return m ? await scriptDaPagina(req, env, m[1]) : new Response('', { status: 404 }); }
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/csp') return await receberAvisoCsp(req, env);
       if (p === '/api/robo/passe') return await passeDoRobo(req, env);
@@ -154,6 +155,15 @@ export default {
       if (p === '/nova-senha') return await paginaNovaSenha(req, env);
       if (PUBLICAS[p]) { if (navegacao(req)) contar(env, ctx, req, PUBLICAS[p][1]); return paginaFixa(req, env, PUBLICAS[p][0], 200); }
       if (p.startsWith('/api/auth/')) return await apiAuth(req, env, p.slice(10), ctx);
+      if (p === '/vitrine/na-caixa' || p === '/vitrine/na-caixa.html') {
+        // caixa das Notícias Agrícolas: só abre dentro do próprio site, com a regra de scripts própria (src/csp.js)
+        const r = await env.ASSETS.fetch(new Request(new URL('/vitrine/na-caixa', req.url), req));
+        const out = new Response(r.body, r);
+        out.headers.set('Content-Security-Policy', CSP_CAIXA_NA);
+        out.headers.set('X-Frame-Options', 'SAMEORIGIN');
+        out.headers.set('Cache-Control', 'public, max-age=3600');
+        return out;
+      }
       if (PUBLICO.test(p)) return env.ASSETS.fetch(req);
 
       const u = await usuarioDaSessao(req, env);
@@ -166,7 +176,7 @@ export default {
       if (p === '/jade-whatsapp-account.js' && conta) return await env.ASSETS.fetch(req);
       if (conta) {
         if (p === '/api/assinatura/recibo-ads' && req.method === 'POST' && mesmaOrigem(req)) return await reciboAds(req, env, conta);
-        if (p === '/assinar') return paginaAssinar();
+        if (p === '/assinar') return paginaAssinar(versaoJs);
         if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
         if ((p === '/api/assinatura/cartao' || p === '/api/assinatura/cartao-gerenciar') && req.method === 'POST' && mesmaOrigem(req)) return await apiCartao(req, env, conta, p.slice(16));
         if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
@@ -1874,6 +1884,28 @@ async function emailConfirmar(env, req, id, nome, email) {
   });
 }
 // página simples (mesmo visual de Minha conta) para os links do e-mail
+// scripts das páginas (ver JS_TEMA): [conteúdo, quem pode baixar]
+const SCRIPTS_PAGINA = () => ({
+  tema: [JS_TEMA, 'todos'], esqueci: [JS_ESQUECI, 'todos'], 'nova-senha': [JS_NOVA_SENHA, 'todos'],
+  conta: [JS_CONTA, 'conta'], assinar: [SCRIPT_ASSINAR, 'conta'], admin: [JS_ADMIN, 'admin'],
+});
+const versoesJs = new Map();
+function versaoJs(js) {
+  let v = versoesJs.get(js);
+  if (!v) { let h = 2166136261; for (let i = 0; i < js.length; i++) { h ^= js.charCodeAt(i); h = Math.imul(h, 16777619); } v = (h >>> 0).toString(36); versoesJs.set(js, v); }
+  return v;
+}
+async function scriptDaPagina(req, env, nome) {
+  const item = Object.hasOwn(SCRIPTS_PAGINA(), nome) ? SCRIPTS_PAGINA()[nome] : null;
+  if (!item) return new Response('', { status: 404 });
+  const [js, quem] = item;
+  if (quem !== 'todos') {
+    const u = await usuarioDaSessao(req, env);
+    const ok = quem === 'admin' ? !!(u && u.admin) : !!(u || (await contaDaSessao(req, env)));
+    if (!ok) return new Response('', { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  }
+  return new Response(js, { headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': (quem === 'todos' ? 'public' : 'private') + ', max-age=86400' } });
+}
 function paginaLink(titulo, corpo, script = '') {
   return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1898,7 +1930,7 @@ button:disabled{opacity:.6;cursor:default}
 </style></head><body><main>
 <header><h1>${escH(titulo)}</h1><a class="vol" href="/entrar">Ir para Entrar</a></header>
 ${corpo}
-</main>${script ? '<script>' + script + '</script>' : ''}</body></html>`);
+</main>${script ? '<script src="/js/pg/' + script + '.js?v=' + versaoJs(SCRIPTS_PAGINA()[script][0]) + '"></script>' : ''}</body></html>`);
 }
 async function paginaConfirmar(req, env, ctx) {
   const t = new URL(req.url).searchParams.get('t');
@@ -1913,19 +1945,30 @@ async function paginaConfirmar(req, env, ctx) {
     + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>'
     + '<a class="bt" href="/entrar?volta=%2Fassinar">Escolher meu plano</a></div>');
 }
-function paginaEsqueci() {
-  return paginaLink('Esqueci minha senha', `<form id="f" novalidate>
-  <label for="em">Seu e-mail</label><input id="em" type="email" autocomplete="email" required>
-  <button type="submit">Enviar link para criar senha nova</button>
-  <p class="msg" id="msg" role="status" aria-live="polite"></p>
-</form>`, `(function(){var f=document.getElementById('f'),m=document.getElementById('msg');
+const JS_ESQUECI = `(function(){var f=document.getElementById('f'),m=document.getElementById('msg');
 f.addEventListener('submit',function(e){e.preventDefault();var b=f.querySelector('button');b.disabled=true;m.className='msg';m.textContent='';
 fetch('/api/auth/esqueci',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('em').value})})
 .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j;});})
 .then(function(j){m.className='msg ok';m.textContent=j.msg;})
 .catch(function(j){m.className='msg erro';m.textContent=(j&&j.erro)||'Não foi possível. Tente de novo.';})
-.then(function(){b.disabled=false;});});})();`);
+.then(function(){b.disabled=false;});});})();`;
+function paginaEsqueci() {
+  return paginaLink('Esqueci minha senha', `<form id="f" novalidate>
+  <label for="em">Seu e-mail</label><input id="em" type="email" autocomplete="email" required>
+  <button type="submit">Enviar link para criar senha nova</button>
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+</form>`, 'esqueci');
 }
+const JS_NOVA_SENHA = `(function(){var f=document.getElementById('f'),m=document.getElementById('msg'),t=new URLSearchParams(location.search).get('t');
+function diz(ok,x){m.className='msg '+(ok?'ok':'erro');m.textContent=x;}
+f.addEventListener('submit',function(e){e.preventDefault();var n=f.nova.value;
+if(n.length<8)return diz(false,'A senha precisa ter pelo menos 8 caracteres.');
+if(n!==f.nova2.value)return diz(false,'As duas senhas não são iguais.');
+var b=f.querySelector('button');b.disabled=true;diz(true,'');
+fetch('/api/auth/nova-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:t,senha:n})})
+.then(function(r){return r.json().then(function(j){if(!r.ok)throw j;});})
+.then(function(){document.querySelector('main').innerHTML='<header><h1>Senha criada</h1></header><div class="caixa"><p>Sua senha nova está valendo.</p><a class="bt" href="/entrar">Entrar no Mercado Macro</a></div>';})
+.catch(function(j){diz(false,(j&&j.erro)||'Não foi possível. Tente de novo.');b.disabled=false;});});})();`;
 async function paginaNovaSenha(req, env) {
   const l = await lerLink(env, new URL(req.url).searchParams.get('t'), 'senha');
   if (!l) return paginaLink('Link vencido', '<div class="caixa"><p>Este link não vale mais. Ele vence em 1 hora e só pode ser usado uma vez.</p><a class="bt" href="/esqueci">Pedir outro link</a></div>');
@@ -1936,16 +1979,7 @@ async function paginaNovaSenha(req, env) {
   <button type="submit">Salvar senha nova</button>
   <p class="msg" id="msg" role="status" aria-live="polite"></p>
   <p class="nota">Ao salvar, os aparelhos onde você estava conectado saem da conta.</p>
-</form>`, `(function(){var f=document.getElementById('f'),m=document.getElementById('msg'),t=new URLSearchParams(location.search).get('t');
-function diz(ok,x){m.className='msg '+(ok?'ok':'erro');m.textContent=x;}
-f.addEventListener('submit',function(e){e.preventDefault();var n=f.nova.value;
-if(n.length<8)return diz(false,'A senha precisa ter pelo menos 8 caracteres.');
-if(n!==f.nova2.value)return diz(false,'As duas senhas não são iguais.');
-var b=f.querySelector('button');b.disabled=true;diz(true,'');
-fetch('/api/auth/nova-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:t,senha:n})})
-.then(function(r){return r.json().then(function(j){if(!r.ok)throw j;});})
-.then(function(){document.querySelector('main').innerHTML='<header><h1>Senha criada</h1></header><div class="caixa"><p>Sua senha nova está valendo.</p><a class="bt" href="/entrar">Entrar no Mercado Macro</a></div>';})
-.catch(function(j){diz(false,(j&&j.erro)||'Não foi possível. Tente de novo.');b.disabled=false;});});})();`);
+</form>`, 'nova-senha');
 }
 
 /* ---------------- avisos pelo Telegram ----------------
@@ -2467,7 +2501,7 @@ function protegerResposta(r) {
   // regra de scripts no modo "só avisar" (src/csp.js): o navegador não bloqueia nada, só conta o que bloquearia
   // 16/11/2026: só em 1 de cada 10 páginas. Cada página gerava vários avisos e /api/csp virou ~1/4 dos chamados ao
   // servidor; uma amostra de 10% já mostra o que precisa ser corrigido (os números do admin passam a ser 1/10 do total)
-  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only') && Math.random() < CSP_AMOSTRA) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
+  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only') && !/script-src/.test(out.headers.get('Content-Security-Policy') || '') && Math.random() < CSP_AMOSTRA) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
   return out;
 }
 const CSP_AMOSTRA = 0.1;
@@ -2656,469 +2690,11 @@ button,input{font:inherit}
 .msg.erro{color:var(--neg)}.msg.ok{color:var(--pos)}
 `;
 
-const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Administração | Mercado Macro</title>
-<script>try{var t=localStorage.getItem('trader_theme');if(t==='dark'||t==='light')document.documentElement.dataset.tema=t;}catch(e){}</script>
-<meta name="robots" content="noindex">
-<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>${BASE_CSS}
-[data-segredo]{-webkit-text-security:disc;text-security:disc}
-main{max-width:1180px;margin:0 auto;padding:0 20px 56px}
-.top{display:flex;align-items:center;gap:14px;padding:18px 0 12px}
-.marca{flex:1;display:flex;align-items:baseline;gap:10px;min-width:0}
-.marca b{white-space:nowrap;font-size:13px;letter-spacing:.22em;font-weight:700;color:var(--text)}
-.marca span{font-size:13px;color:var(--text-3)}
-a.vol{color:var(--accent-text);font-size:13px;white-space:nowrap}
-.abas{position:sticky;top:0;z-index:5;display:flex;gap:2px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 18px;padding:0 20px;scrollbar-width:none}
-.abas::-webkit-scrollbar{display:none}
-@media (max-width:760px){.abas{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}}
-.abas button{background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:12px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
-.abas button[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent)}
-.abas button:hover{color:var(--text)}
-.cnt{background:var(--accent);color:var(--on-accent);border-radius:10px;font-size:11px;font-weight:700;padding:1px 7px;line-height:1.5}
-.cnt:empty{display:none}
-#msg{position:sticky;top:48px;z-index:4;margin:0 0 10px}
-#msg:empty{display:none}
-#msg.ok,#msg.erro{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
-h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
-h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-left:6px;letter-spacing:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit}
-.kpi:hover{border-color:var(--line-2)}
-.kpi.alerta{border-color:var(--accent)}
-.kpi small{display:block;color:var(--text-3);font-size:12px;margin-bottom:6px}
-.kpi strong{font-size:26px;font-weight:700;letter-spacing:-.01em}
-.kpi em{display:block;font-style:normal;color:var(--text-3);font-size:12px;margin-top:4px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
-.lista{display:grid;gap:8px}
-.u{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-.u .q{flex:1;min-width:180px}
-.u .n{font-weight:600}.u .e{color:var(--text-2);font-size:13px;word-break:break-all}.u .d{color:var(--text-3);font-size:12px}
-.u .bts{display:flex;gap:6px;flex-wrap:wrap}
-button.b{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:6px 11px;cursor:pointer;font-weight:600;font-size:13px;min-height:34px;white-space:nowrap}
-.u button,.caixa button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
-button.lib,.u button.lib{background:var(--accent);color:var(--on-accent);border-color:transparent}
-button.del,.u button.del{color:var(--neg)}
-.ferr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
-.ferr input{flex:1;min-width:220px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 12px;min-height:40px}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chips button{white-space:nowrap;flex:none;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
-.chips button[aria-pressed=true]{background:var(--surface-2);color:var(--text);border-color:var(--accent)}
-.chips i{font-style:normal;color:var(--text-3);margin-left:5px;font-weight:500}
-table.t{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
-.t th:first-child{border-top-left-radius:11px}.t th:last-child{border-top-right-radius:11px}
-.t th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
-.t th .ord{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit}.t th .ord:hover,.t th .ord.on{color:var(--text)}.t th .ord i{font-style:normal;font-size:9px;opacity:.45}.t th .ord.on i{opacity:1;color:var(--accent,var(--text))}.t th .ord:focus-visible{outline:2px solid var(--accent,#888);outline-offset:2px;border-radius:3px}
-.t td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
-.t tr:last-child td{border-bottom:0}
-.t td.p b{display:block;font-size:14px}.t td.p span{color:var(--text-2);word-break:break-all}
-.t td.c{color:var(--text-2);white-space:nowrap}
-.t td.ac{text-align:right;white-space:nowrap}
-.t td.ac .bx{display:inline-flex;gap:6px;align-items:center}
-.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid currentColor;white-space:nowrap}
-.pill.pendente{color:var(--accent-text)}.pill.ativo{color:var(--pos)}.pill.expirado,.pill.bloqueado,.pill.recusado{color:var(--neg)}.pill.confirmar,.pill.admin{color:var(--text-3)}
-.venc{color:var(--accent-text);font-weight:600}
-details.mais{position:relative;display:inline-block}
-details.mais summary{list-style:none;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);border-radius:7px;padding:6px 10px;font-weight:700;min-height:34px;display:flex;align-items:center}
-details.mais summary::-webkit-details-marker{display:none}
-details.mais[open] .menu{display:flex}
-.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:6;flex-direction:column;min-width:170px;background:var(--surface);border:1px solid var(--line-2);border-radius:9px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.menu button{background:none;border:0;color:var(--text);text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px}
-.menu button:hover{background:var(--surface-2)}
-.menu button.del{color:var(--neg)}
-.tag{font-size:11px;border:1px solid var(--line-2);border-radius:10px;padding:1px 8px;color:var(--text-2)}
-.vazio{color:var(--text-3);font-size:13px;margin:0}
-.caixa{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 8px}
-.caixa p{margin:0 0 8px;color:var(--text-2);font-size:13px}.caixa p:last-child{margin-bottom:0}
-.caixa b{color:var(--text)}
-.prov{border-color:var(--accent)}
-.cod{font:600 18px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:6px 10px;display:inline-block;word-break:break-all;user-select:all}
-.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-.cfg{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;align-items:start}
-.cfg>div>h2:first-child{margin-top:4px}
-ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
-[data-p][hidden]{display:none}
-button.nm{background:none;border:0;padding:0;color:var(--text);font:inherit;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:block}
-button.nm:hover{color:var(--accent-text);text-decoration:underline}
-.t td.p .cel{display:block;color:var(--text-3);font-size:12px}
-dialog#dlg-hist{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
-dialog#dlg-hist::backdrop{background:rgba(3,6,12,.6)}
-.hs-dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
-.hs-dados div{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-.hs-dados small{display:block;color:var(--text-3);font-size:11.5px}.hs-dados b{font-size:13px}
-.hs-bts{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
-.linha-t{list-style:none;margin:0;padding:0;border-left:2px solid var(--line-2)}
-.linha-t li{position:relative;padding:0 0 12px 16px;font-size:13px}
-.linha-t li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2)}
-.linha-t li.pg::before{border-color:var(--pos)}.linha-t li.adm::before{border-color:var(--accent)}
-.linha-t time{display:block;color:var(--text-3);font-size:11.5px}
-#hs .menu{left:0;right:auto}
-#hs .menu button[data-a=hist]{display:none}
-.fun{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
-.fun div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.fun small{display:block;color:var(--text-3);font-size:12px}.fun strong{font-size:22px}.fun em{display:block;font-style:normal;color:var(--text-3);font-size:12px}
-.mm{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:13px}
-.mm th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);text-align:right;padding:9px 12px;border-bottom:1px solid var(--line)}
-.mm th:first-child,.mm td:first-child{text-align:left}
-.mm td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-.mm tr:last-child td{border-bottom:0}
-.mm .bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px;min-width:2px}
-.mm td.rc{width:38%}
-.mmw{overflow-x:auto}
-@media (max-width:820px){.fun{grid-template-columns:1fr 1fr}.mm td.rc .bar{display:none}.mm td.rc{width:auto}.mm th,.mm td{padding:8px 6px}.mm th{letter-spacing:0;font-size:10px}.mm .x30{display:none}}
-dialog#dlg-acesso{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
-dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
-.dl{padding:20px}
-.dl-top{display:flex;gap:12px;align-items:flex-start}.dl-top>div{flex:1;min-width:0}
-.dl h3{margin:0;font-size:18px}.dl .e{margin:2px 0 0;color:var(--text-2);font-size:13px;word-break:break-all}
-.dl .x{background:none;border:0;color:var(--text-2);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
-.dl .hoje{margin:12px 0;font-size:13px;color:var(--text-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
-.op{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-2);color:var(--text);cursor:pointer;font:inherit}
-.op[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.op b{font-size:13px}.op strong{font-size:17px}.op span{font-size:11.5px;color:var(--text-3)}.op em{font-style:normal;font-size:12px;color:var(--accent-text);font-weight:600;margin-top:2px}
-.lin{margin:12px 0 0;font-size:13px;color:var(--text-2);border:0;padding:0;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-.lin legend{float:left;margin-right:4px;color:var(--text-3);padding:0}
-.lin input[type=date]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px;color-scheme:dark light}
-.lin.pg{display:block;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;line-height:1.45}
-.lin[hidden]{display:none}
-.am{color:var(--neg);font-size:13px;margin:10px 0 0}.am:empty{display:none}
-.dl-ac{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-@media (max-width:820px){
-  .grid2,.cfg{grid-template-columns:1fr}
-  table.t,.t tbody,.t tr,.t td{display:block;width:100%}
-  .t thead{display:none}
-  table.t{background:none;border:0;border-radius:0}
-  .t tr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
-  .t td{border:0;padding:3px 0}
-  .t td.ac{text-align:left;padding-top:8px}
-  .t td.c[data-r]::before{content:attr(data-r) ": ";color:var(--text-3)}
-  .menu{left:0;right:auto}
-  .marca span{display:none}
-  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
-  .ferr input{min-width:0;width:100%}
-}
-/* visual 2026-10-30: barra lateral no computador, cartões e tabela mais limpos */
-.app{max-width:1180px;margin:0 auto;padding:0 20px}
-.lado{display:contents}
-main{max-width:none;margin:0;padding:0 0 56px}
-.marca img{display:none;border-radius:8px}
-.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.abas .ic{display:none}
-a.vol{display:inline-flex;align-items:center;gap:4px;text-decoration:none}
-a.vol .ic{width:15px;height:15px}
-a.vol:hover{text-decoration:underline}
-.cab{margin:4px 0 16px}
-.cab h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
-.cab p{margin:2px 0 0;color:var(--text-3);font-size:13px}
-.kpi,.fun div,.u,.caixa,table.t,.mm{box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.kpi{border-radius:14px;padding:16px 18px;transition:border-color .15s,transform .15s,box-shadow .15s}
-.kpi:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.18)}
-.kpi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.kpi strong{font-size:clamp(22px,1.8vw,28px);white-space:nowrap;font-variant-numeric:tabular-nums}
-.kpi.alerta{border-color:var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
-.fun div{border-radius:14px;padding:14px 16px}.fun strong{font-variant-numeric:tabular-nums}
-.u,.caixa{border-radius:12px}
-.caixa{padding:16px 18px}
-h2{margin:26px 0 10px}
-button.b,.u button,.caixa button,details.mais summary{border-radius:8px;transition:border-color .15s,background .15s,filter .15s}
-button.b:hover,.u button:hover,.caixa button:hover,details.mais summary:hover{border-color:var(--text-3)}
-button.lib:hover,.u button.lib:hover{filter:brightness(1.07);border-color:transparent}
-button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.ferr input{border-radius:10px;min-height:42px}
-.ferr input:focus,.caixa input:focus,.caixa select:focus,.caixa textarea:focus{outline:0;border-color:var(--accent)}
-.chips button{transition:border-color .15s,color .15s}.chips button:hover{color:var(--text)}
-table.t{border-radius:14px}
-.t th:first-child{border-top-left-radius:13px}.t th:last-child{border-top-right-radius:13px}
-.t td{padding:11px 14px}
-.t tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 80%,transparent)}
-.t td.c{font-variant-numeric:tabular-nums}
-.av{position:relative}.av.on::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
-.onl{color:var(--pos);font-weight:600;white-space:nowrap}.onl::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pos);margin-right:6px;vertical-align:1px}
-.kpi em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kpi strong.lg{font-size:clamp(18px,1.45vw,26px)}
-.pp{display:flex;gap:11px;align-items:center;min-width:0}.pp>div{min-width:0}
-.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 15%,var(--surface-2));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
-.pill{border:0;background:color-mix(in srgb,currentColor 13%,transparent);padding:3px 10px 3px 8px}
-.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
-.menu{border-radius:11px;box-shadow:0 14px 34px rgba(0,0,0,.35)}
-dialog#dlg-hist,dialog#dlg-acesso{border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
-dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
-.lin input[type=number]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px}
-@media (max-width:820px){
-  .t td{padding:3px 0}
-  .t tbody tr:hover td{background:none}
-  .t td.p{padding-bottom:6px}
-}
-@media (min-width:1000px){
-  .app{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:none;padding:0;min-height:100vh;background:linear-gradient(90deg,var(--surface) 235px,var(--line) 235px 236px,transparent 236px)}
-  .lado{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 12px 16px}
-  .top{display:contents}
-  .marca{order:0;flex:none;display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;padding:0 8px 18px;border-bottom:1px solid var(--line)}
-  .marca img{display:block;grid-row:span 2}
-  .marca b{font-size:12px;letter-spacing:.2em}
-  .marca span{font-size:12px;line-height:1.2}
-  .abas{order:1;position:static;flex-direction:column;gap:2px;margin:14px 0 0;padding:0;border:0;background:none;overflow:visible}
-  .abas button{border:0;border-radius:9px;padding:9px 12px;font-size:14px;font-weight:500;gap:11px;width:100%;text-align:left;color:var(--text-2)}
-  .abas button:hover{background:var(--surface-2);color:var(--text)}
-  .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));color:var(--text);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
-  .abas button[aria-selected=true] .ic{color:var(--accent-text)}
-  .abas .ic{display:block}
-  .abas .cnt{margin-left:auto}
-  a.vol{order:2;margin-top:auto;padding:10px 12px;border-top:1px solid var(--line);color:var(--text-2);font-size:13px}
-  a.vol:hover{color:var(--text)}
-  main{padding:30px 40px 64px;max-width:1280px;width:100%}
-  .cab{margin:0 0 20px}
-  .cab h1{font-size:26px}
-  #msg{top:12px}
-}
-/* Ajustes 2026-11-14: automações, cartão do WhatsApp, selos de situação e grade sem buracos */
-.cfg-top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
-.cfg-top .painel{margin:0}
-.cfg-tit{margin:26px 0 0}
-.cfg2{columns:2 380px;column-gap:16px;margin-top:4px}
-.cfg2 .painel{break-inside:avoid;display:block;margin:12px 0 4px}
-.painel .caixa{background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 10px}
-.painel .caixa:last-child{margin-bottom:0}
-.selo{margin-left:auto;font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 10px 3px 8px;white-space:nowrap;background:color-mix(in srgb,currentColor 13%,transparent)}
-.selo:empty{display:none}
-.selo::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
-.selo.ok{color:var(--pos)}.selo.at{color:var(--accent-text)}.selo.off{color:var(--text-3)}
-.tgl-l{display:flex;flex-direction:column}
-.tgl{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
-.tgl:first-child{border-top:0;padding-top:2px}
-.tgl .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.tgl .tx b{font-size:13.5px;font-weight:600}
-.tgl .tx small{color:var(--text-3);font-size:12.5px;line-height:1.45}
-.tgl input{position:absolute;opacity:0;width:1px;height:1px}
-.tgl .sw{flex:none;width:38px;height:22px;border-radius:12px;background:var(--line-2);position:relative;transition:background .15s}
-.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-.tgl input:checked+.sw{background:var(--pos)}
-.tgl input:checked+.sw::after{transform:translateX(16px)}
-.tgl input:focus-visible+.sw{outline:2px solid var(--accent);outline-offset:2px}
-.tgl.bloq{opacity:.55;cursor:not-allowed}
-.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.kv div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
-.kv small{display:block;color:var(--text-3);font-size:11.5px}.kv b{font-size:15px;font-variant-numeric:tabular-nums}
-@media (max-width:900px){.cfg-top{grid-template-columns:1fr}}
-/* visual 2026-11-14 (pedido do Dante: "deixe profissional"): grupos no menu, cabeçalho com hora e Atualizar,
-   seções da Visão geral em cartões com título, subtítulo e "Como ler" recolhido no lugar dos textos longos */
-h2{font-size:15px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:600;margin:28px 0 12px}
-h2 b{font-size:12px;font-weight:700}
-.grp{display:none}
-.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.cab-ac{display:flex;align-items:center;gap:10px}
-.cab-ac .b{display:inline-flex;align-items:center;gap:6px}
-.cab-ac .ic{width:15px;height:15px}
-.agora{color:var(--text-3);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.painel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px 18px;margin:16px 0 0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.painel>header{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin:0 0 12px}
-.painel>header h2{margin:0}
-.painel .ph{color:var(--text-3);font-size:12.5px}
-.painel>header .info{margin-left:auto}
-.info summary{list-style:none;cursor:pointer;color:var(--text-3);font-size:12px;font-weight:600;border:1px solid var(--line-2);border-radius:20px;padding:2px 10px}
-.info summary::-webkit-details-marker{display:none}
-.info summary::before{content:"i";display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;border:1px solid currentColor;font:700 9px/1 Georgia,serif;margin-right:6px;vertical-align:-2px}
-.info summary:hover,.info[open] summary{color:var(--text);border-color:var(--text-3)}
-.info p{flex-basis:100%;margin:10px 0 0;color:var(--text-2);font-size:13px;line-height:1.55;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.painel>header .info[open]{flex-basis:100%;margin-left:0}
-.painel table.t,.painel .mm{box-shadow:none;background:transparent}
-.painel .mm{border-color:var(--line)}
-.painel .vazio{text-align:left}
-.painel h2:not(:first-child){margin:20px 0 10px;font-size:14px;color:var(--text-2)}
-.grid2.cards{gap:16px;margin-top:2px}
-.grid2.cards .painel{margin:16px 0 0}
-.nota-topo{text-align:left;margin:0 0 14px;font-size:13px;line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;color:var(--text-2)}
-.kpi small{text-transform:none;letter-spacing:0;font-weight:500}
-@media (min-width:1000px){
-  .grp{display:block;margin:16px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
-  .abas .grp:first-child{margin-top:4px}
-  .cab{margin:0 0 22px}
-}
-.kpi{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
-.kpi small{line-height:18px;min-height:36px;display:flex;align-items:flex-end}
-@media (max-width:820px){
-  .kpi small{min-height:0}
-  .painel .ferr .b{white-space:normal;text-align:left;flex:1 1 100%}
-  .painel{padding:14px;border-radius:12px}
-  .painel table.t .t tr{background:var(--surface-2)}
-  .cab-ac{width:100%;justify-content:space-between}
-}
-/* pop-up de novidades: formulário no admin e prévia (15/11/2026) */
-/* campanha no WhatsApp (16/11/2026) */
-.camp-top{margin:0 0 6px;font-size:13.5px;color:var(--text-2)}
-.camp-g{font-size:14px;margin:18px 0 8px}.camp-g span{font-weight:400;color:var(--text-3);font-size:12.5px}
-.camp-l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.camp-l li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
-.camp-l li.ok{opacity:.55}
-.camp-p{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}.camp-p span{font-size:12.5px;color:var(--text-3)}
-.camp-l .b{text-decoration:none;white-space:nowrap}
-.camp-env{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;min-height:36px;border-radius:8px;font-size:13px;border:1px solid transparent;background:#25d366!important;color:#0b2b17!important;border-color:transparent!important;font-weight:700}
-.camp-feito{font-size:12.5px;color:var(--ok,#22c55e);font-weight:600}
-.camp-sem{margin:14px 0 0}
-@media (max-width:600px){.camp-l .b{flex:1;text-align:center}}
-.pop-adm .pc{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-3);margin:0 0 10px;flex:1;min-width:0}
-.pop-adm .pc[hidden]{display:none}
-.pop-adm .pc input,.pop-adm .pc textarea,.pop-adm .pc select{font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;min-height:40px;width:100%;box-sizing:border-box;color-scheme:dark light}
-.pop-adm .pc textarea{resize:vertical;line-height:1.5}
-.pop-adm .pc2{display:flex;gap:12px;flex-wrap:wrap}.pop-adm .pc2 .pc{min-width:200px}
-.pop-adm .b.pri{background:var(--accent);color:var(--on-accent);border-color:transparent}
-.pop-status{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--line)}
-.pop-status .selo{margin-left:0}.pop-status .d{color:var(--text-3)}
-.pop-fundo{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.6);display:grid;place-items:center;padding:16px;backdrop-filter:blur(3px)}
-.pop-card{position:relative;width:100%;max-width:440px;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px 22px 0;box-shadow:0 24px 60px rgba(0,0,0,.45);color:var(--text)}
-.pop-x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-size:15px;cursor:pointer;z-index:2}
-.pop-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:20px;padding:4px 10px}
-.pop-card h3{font-size:19px;margin:12px 0 8px;line-height:1.3;padding-right:40px}
-.pop-tx{font-size:14.5px;line-height:1.55;color:var(--text-2)}.pop-tx p{margin:0 0 8px}.pop-tx ul{margin:0 0 8px;padding-left:20px}.pop-tx li{margin:3px 0}
-.pop-bts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding:12px 0 16px;border-top:1px solid var(--line)}
-.pop-bts button{font:inherit;font-weight:600;font-size:14px;border-radius:10px;padding:10px 16px;min-height:42px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text)}
-.pop-bts .pop-b1{background:var(--accent);color:var(--on-accent);border-color:transparent}
-.pop-nota{font-size:11.5px;color:var(--text-3);margin:0 0 14px;text-align:center}
-/* celular 14/11/2026: barra fixa com o menu de abas e o Atualizar, números compactos, tabelas em lista */
-.barra-cel,.menu-fundo{display:none}
-@media (max-width:999px){
-  .abas{display:none}
-  .barra-cel{display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -20px 16px;padding:8px 20px;border-bottom:1px solid var(--line)}
-  #menu-abas{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left}
-  #menu-abas #menu-rot{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #menu-abas .ic{width:18px;height:18px;flex:none}
-  #menu-abas .seta{transition:transform .15s}
-  .menu-on #menu-abas .seta{transform:rotate(180deg)}
-  #menu-cnt:empty{display:none}
-  #recarregar-cel{min-height:42px;min-width:44px;justify-content:center}
-  .menu-on .abas{display:flex;flex-direction:column;gap:2px;position:fixed;top:62px;left:12px;right:12px;margin:0;max-height:calc(100vh - 80px);overflow-y:auto;z-index:40;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:8px;box-shadow:0 18px 40px rgba(0,0,0,.45);-webkit-mask-image:none;mask-image:none}
-  .menu-on .abas .grp{display:block;margin:12px 10px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
-  .menu-on .abas .grp:first-child{margin-top:4px}
-  .menu-on .abas button{border:0;border-radius:9px;padding:12px;width:100%;gap:12px;font-weight:500}
-  .menu-on .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
-  .menu-on .abas .ic{display:block;width:18px;height:18px}
-  .menu-on .abas .cnt{margin-left:auto}
-  .menu-fundo:not([hidden]){display:block;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45)}
-  .cab-ac #recarregar{display:none}
-}
-@media (max-width:760px){
-  #kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-  #kpis .kpi{padding:10px;border-radius:11px}
-  #kpis .kpi small{font-size:11px;line-height:1.3;margin-bottom:4px;min-height:28px;align-items:flex-start}
-  #kpis .kpi strong{font-size:20px}
-  #kpis .kpi strong.lg{font-size:15px}
-  #kpis .kpi em{font-size:10.5px;line-height:1.3;white-space:normal}
-  /* 15/11/2026: o texto quebra linha em vez de vazar (antes, linha comprida empurrava o cartão para fora) */
-  .mmw:has(> table.lista-cel){overflow:visible}
-  table.lista-cel{min-width:0;border:0;background:transparent}
-  table.lista-cel,table.lista-cel tbody,table.lista-cel tr{display:block;width:100%;max-width:100%}
-  table.lista-cel thead{display:none}
-  table.lista-cel tr{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 8px;background:var(--surface-2)}
-  table.lista-cel td{border:0;padding:3px 0;display:flex;gap:12px;justify-content:space-between;align-items:baseline;width:100%;white-space:normal;text-align:right}
-  table.lista-cel td::before{content:attr(data-l);color:var(--text-3);font-size:12px;flex:none}
-  table.lista-cel td .v{min-width:0;overflow-wrap:anywhere;text-align:right}
-  table.lista-cel td:first-child{font-weight:600;text-align:left;font-size:14px}
-  table.lista-cel td:first-child .v{text-align:left}
-  table.lista-cel td:first-child::before{display:none}
-}
-</style></head><body><div class="app"><aside class="lado">
-<header class="top"><div class="marca"><img src="/icone-mercado-macro.png" alt="" width="30" height="30"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar ao site</a></header>
-<nav class="abas" role="tablist" aria-label="Seções">
-  <div class="grp" aria-hidden="true">Negócio</div>
-  <button type="button" role="tab" data-aba="geral" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="rot">Visão geral</span></button>
-  <button type="button" role="tab" data-aba="pessoas" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span class="rot">Pessoas</span> <span class="cnt" id="cnt-pessoas"></span></button>
-  <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
-  <div class="grp" aria-hidden="true">Comunicação</div>
-  <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">Novidades e e-mails</span></button>
-  <div class="grp" aria-hidden="true">Monitoramento</div>
-  <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
-  <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
-  <button type="button" role="tab" data-aba="atraso" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg><span class="rot">Atraso das notícias</span></button>
-  <div class="grp" aria-hidden="true">Sistema</div>
-  <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
-</nav>
-<div class="barra-cel"><button type="button" id="menu-abas" aria-expanded="false" aria-haspopup="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="menu-rot">Visão geral</span><span class="cnt" id="menu-cnt"></span><svg class="ic seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><button type="button" class="b" id="recarregar-cel" aria-label="Atualizar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
-<div class="menu-fundo" id="menu-fundo" hidden></div>
-</aside><main>
-<div class="cab"><div><h1 id="tit">Visão geral</h1><p id="sub"></p></div><div class="cab-ac"><span id="agora" class="agora"></span><button type="button" class="b" id="recarregar" title="Buscar os números de novo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Atualizar</button></div></div>
-<p class="msg" id="msg" role="status" aria-live="polite"></p>
-<div id="prov"></div>
-<section data-p="geral">
-  <div class="kpis" id="kpis"></div>
-  <div class="grid2 cards">
-    <section class="painel"><header><h2>Precisa de você</h2></header><div id="acao"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Vencem nos próximos 7 dias</h2></header><div id="venc"><p class="vazio">Carregando…</p></div></section>
-  </div>
-  <section class="painel"><header><h2>Mês a mês</h2><span class="ph">Cadastros, primeiros pagamentos e receita</span></header><div id="funil"><p class="vazio">Carregando…</p></div></section>
-  <section class="painel"><header><h2>De onde vêm os visitantes</h2><span class="ph">Visitas e pedidos de acesso por origem</span><details class="info"><summary>Como ler</summary><p>Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p></details></header><div id="origens"><p class="vazio">Carregando…</p></div></section>
-  <section class="painel"><header><h2>Radar no WhatsApp</h2><span class="ph">Quem veio do canal, por semana</span><details class="info"><summary>Como ler</summary><p>Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p></details></header>
-    <div id="radar-wa"><p class="vazio">Carregando…</p></div>
-    <div class="ferr" style="margin:12px 0 0"><button type="button" class="b" data-radar-teste="abertura">Mandar exemplo da abertura para o meu Telegram</button><button type="button" class="b" data-radar-teste="fechamento">Mandar exemplo do fechamento</button><span class="vazio" id="radar-teste-msg" style="font-size:12.5px"></span></div>
-  </section>
-  <section class="painel"><header><h2>Assinantes hoje</h2><span class="ph">Quem está no site, em qual aba e em que aparelho</span><details class="info"><summary>Como ler</summary><p>Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p></details></header><div id="uso-pessoas"><p class="vazio">Carregando…</p></div></section>
-  <section class="painel"><header><h2>Abas mais usadas</h2><span class="ph">Aberturas por aba: hoje, 7 e 30 dias</span></header><div id="uso"><p class="vazio">Carregando…</p></div></section>
-</section>
-<section data-p="pessoas" hidden>
-  <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore readonly aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
-  <div id="raiz"><p class="vazio">Carregando…</p></div>
-  <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
-</section>
-<section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
-<section data-p="comunicado" hidden><h2>Campanha no WhatsApp</h2><p class="d" style="margin:-4px 0 10px">Toque em Enviar: o WhatsApp abre com o nome e a mensagem prontos, e você só confirma o envio.</p><div id="camp"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
-<section data-p="jade" hidden>
-  <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
-  <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
-  <div class="ferr"><input id="jade-busca" type="search" placeholder="Filtrar perguntas" autocomplete="off" aria-label="Filtrar perguntas"></div>
-  <div id="jade-tab"><p class="vazio">Carregando…</p></div>
-</section>
-<section data-p="atraso" hidden>
-  <p class="vazio nota-topo">Quanto tempo cada fonte leva entre publicar (horário do feed) e aparecer no site, nos últimos 7 dias. Só conta o que o site viu ao vivo (com alguém conectado), porque fora disso a leitura é a cada 15 minutos. <b>Típico</b> é a mediana (metade chega mais rápido que isso); <b>Nas piores</b> é o tempo que 90% não passam.</p>
-  <div class="kpis" id="atraso-res" style="margin-bottom:14px"></div>
-  <div id="atraso-tab"><p class="vazio">Carregando…</p></div>
-</section>
-<section data-p="passe" hidden>
-  <h2>Pedidos ao servidor de dados sem o passe de login</h2>
-  <p class="vazio nota-topo">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
-  <div class="kpis" id="passe-res" style="margin-bottom:14px"></div>
-  <div id="passe-tab"><p class="vazio">Carregando…</p></div>
-</section>
-<section data-p="ajustes" hidden>
-  <div class="cfg-top">
-    <section class="painel"><header><h2>Automações</h2><span class="ph">O que o site faz sozinho</span></header><div id="automacoes"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>WhatsApp (Jade)</h2><span class="selo" data-selo="whatsapp"></span></header><div id="whatsapp-cfg"><p class="vazio">Carregando…</p></div></section>
-  </div>
-  <h2 class="cfg-tit">Integrações</h2>
-  <div class="cfg2">
-    <section class="painel"><header><h2>Pix para assinaturas</h2><span class="selo" data-selo="pix"></span></header><div id="pix"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Cartão (Stripe)</h2><span class="selo" data-selo="stripe"></span></header><div id="stripe"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Avisos no Telegram</h2><span class="selo" data-selo="avisos"></span></header><div id="avisos"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>IA da Cloudflare (tradução)</h2><span class="selo" data-selo="ia"></span></header><div id="ia-cf"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Cópia do banco (R2)</h2><span class="selo" data-selo="bk"></span></header><div id="bk-adm"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Proteção do cadastro (Turnstile)</h2><span class="selo" data-selo="ts"></span></header><div id="ts-adm"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
-  </div>
-</section>
-<dialog id="dlg-hist" aria-labelledby="hs-t"><div class="dl" id="hs"></div></dialog>
-<dialog id="dlg-acesso" aria-labelledby="ac-t">
-  <div class="dl">
-    <div class="dl-top"><div><h3 id="ac-t"></h3><p id="ac-e" class="e"></p></div><button type="button" class="x" data-fechar aria-label="Fechar">&times;</button></div>
-    <p id="ac-hoje" class="hoje"></p>
-    <div class="ops" id="ac-opc"></div>
-    <div id="ac-dt" class="lin" hidden><label>Vale até <input type="date" id="ac-data"></label></div>
-    <div id="ac-cd" class="lin" hidden><label>Dias de cortesia <input type="number" id="ac-dias" min="1" max="30" step="1" value="1" inputmode="numeric" style="width:84px"></label></div>
-    <fieldset id="ac-ini" class="lin"><legend>Começa</legend>
-      <label><input type="radio" name="ac-ini" value="hoje" checked> hoje</label>
-      <label><input type="radio" name="ac-ini" value="somar"> depois de <span id="ac-somar-d"></span> (soma ao que já tem)</label>
-    </fieldset>
-    <label id="ac-pg" class="lin pg" hidden><input type="checkbox" id="ac-pago"> Recebi <span id="ac-pg-v"></span> por fora: contar em "Recebido no mês" e mandar o e-mail de pagamento confirmado</label>
-    <p id="ac-msg" class="am" role="alert"></p>
-    <div class="dl-ac"><button type="button" class="b" data-fechar>Cancelar</button><button type="button" class="b lib" id="ac-salvar">Salvar</button></div>
-  </div>
-</dialog>
-</main></div>
-<script>
-(function(){
+/* Scripts das páginas montadas aqui (22/11/2026, regra de scripts/CSP etapa 2): saíram de dentro do HTML para
+   arquivos servidos em /js/pg/<nome>.js (scriptDaPagina), porque a regra passa a bloquear script escrito dentro da
+   página. O conteúdo é o mesmo de antes. */
+const JS_TEMA = "try{var t=localStorage.getItem('trader_theme');if(t==='dark'||t==='light')document.documentElement.dataset.tema=t;}catch(e){}";
+const JS_ADMIN = `(function(){
   var raiz = document.getElementById('raiz'), msg = document.getElementById('msg'), eu = 0;
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function data(s){ if (!s) return '—'; var d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
@@ -4185,13 +3761,513 @@ h2 b{font-size:12px;font-weight:700}
       pessoas(); geral();
     }).catch(function(){});
   }, 60000);
-})();
-</script></body></html>`;
+})();`;
+const PAGINA_ADMIN = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administração | Mercado Macro</title>
+<script src="/js/pg/tema.js?v=${versaoJs(JS_TEMA)}"></script>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${BASE_CSS}
+[data-segredo]{-webkit-text-security:disc;text-security:disc}
+main{max-width:1180px;margin:0 auto;padding:0 20px 56px}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 12px}
+.marca{flex:1;display:flex;align-items:baseline;gap:10px;min-width:0}
+.marca b{white-space:nowrap;font-size:13px;letter-spacing:.22em;font-weight:700;color:var(--text)}
+.marca span{font-size:13px;color:var(--text-3)}
+a.vol{color:var(--accent-text);font-size:13px;white-space:nowrap}
+.abas{position:sticky;top:0;z-index:5;display:flex;gap:2px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 18px;padding:0 20px;scrollbar-width:none}
+.abas::-webkit-scrollbar{display:none}
+@media (max-width:760px){.abas{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}}
+.abas button{background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:12px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.abas button[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent)}
+.abas button:hover{color:var(--text)}
+.cnt{background:var(--accent);color:var(--on-accent);border-radius:10px;font-size:11px;font-weight:700;padding:1px 7px;line-height:1.5}
+.cnt:empty{display:none}
+#msg{position:sticky;top:48px;z-index:4;margin:0 0 10px}
+#msg:empty{display:none}
+#msg.ok,#msg.erro{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:22px 0 10px;font-weight:700}
+h2 b{color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-left:6px;letter-spacing:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit}
+.kpi:hover{border-color:var(--line-2)}
+.kpi.alerta{border-color:var(--accent)}
+.kpi small{display:block;color:var(--text-3);font-size:12px;margin-bottom:6px}
+.kpi strong{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.kpi em{display:block;font-style:normal;color:var(--text-3);font-size:12px;margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.lista{display:grid;gap:8px}
+.u{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.u .q{flex:1;min-width:180px}
+.u .n{font-weight:600}.u .e{color:var(--text-2);font-size:13px;word-break:break-all}.u .d{color:var(--text-3);font-size:12px}
+.u .bts{display:flex;gap:6px;flex-wrap:wrap}
+button.b{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:6px 11px;cursor:pointer;font-weight:600;font-size:13px;min-height:34px;white-space:nowrap}
+.u button,.caixa button{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px}
+button.lib,.u button.lib{background:var(--accent);color:var(--on-accent);border-color:transparent}
+button.del,.u button.del{color:var(--neg)}
+.ferr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.ferr input{flex:1;min-width:220px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 12px;min-height:40px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{white-space:nowrap;flex:none;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--surface-2);color:var(--text);border-color:var(--accent)}
+.chips i{font-style:normal;color:var(--text-3);margin-left:5px;font-weight:500}
+table.t{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.t th:first-child{border-top-left-radius:11px}.t th:last-child{border-top-right-radius:11px}
+.t th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.t th .ord{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit}.t th .ord:hover,.t th .ord.on{color:var(--text)}.t th .ord i{font-style:normal;font-size:9px;opacity:.45}.t th .ord.on i{opacity:1;color:var(--accent,var(--text))}.t th .ord:focus-visible{outline:2px solid var(--accent,#888);outline-offset:2px;border-radius:3px}
+.t td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t td.p b{display:block;font-size:14px}.t td.p span{color:var(--text-2);word-break:break-all}
+.t td.c{color:var(--text-2);white-space:nowrap}
+.t td.ac{text-align:right;white-space:nowrap}
+.t td.ac .bx{display:inline-flex;gap:6px;align-items:center}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid currentColor;white-space:nowrap}
+.pill.pendente{color:var(--accent-text)}.pill.ativo{color:var(--pos)}.pill.expirado,.pill.bloqueado,.pill.recusado{color:var(--neg)}.pill.confirmar,.pill.admin{color:var(--text-3)}
+.venc{color:var(--accent-text);font-weight:600}
+details.mais{position:relative;display:inline-block}
+details.mais summary{list-style:none;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);border-radius:7px;padding:6px 10px;font-weight:700;min-height:34px;display:flex;align-items:center}
+details.mais summary::-webkit-details-marker{display:none}
+details.mais[open] .menu{display:flex}
+.menu{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:6;flex-direction:column;min-width:170px;background:var(--surface);border:1px solid var(--line-2);border-radius:9px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.menu button{background:none;border:0;color:var(--text);text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px}
+.menu button:hover{background:var(--surface-2)}
+.menu button.del{color:var(--neg)}
+.tag{font-size:11px;border:1px solid var(--line-2);border-radius:10px;padding:1px 8px;color:var(--text-2)}
+.vazio{color:var(--text-3);font-size:13px;margin:0}
+.caixa{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 8px}
+.caixa p{margin:0 0 8px;color:var(--text-2);font-size:13px}.caixa p:last-child{margin-bottom:0}
+.caixa b{color:var(--text)}
+.prov{border-color:var(--accent)}
+.cod{font:600 18px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:6px 10px;display:inline-block;word-break:break-all;user-select:all}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.cfg{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;align-items:start}
+.cfg>div>h2:first-child{margin-top:4px}
+ol{margin:6px 0 0;padding-left:20px;color:var(--text-2);font-size:13px}
+[data-p][hidden]{display:none}
+button.nm{background:none;border:0;padding:0;color:var(--text);font:inherit;font-weight:600;font-size:14px;cursor:pointer;text-align:left;display:block}
+button.nm:hover{color:var(--accent-text);text-decoration:underline}
+.t td.p .cel{display:block;color:var(--text-3);font-size:12px}
+dialog#dlg-hist{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog#dlg-hist::backdrop{background:rgba(3,6,12,.6)}
+.hs-dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.hs-dados div{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.hs-dados small{display:block;color:var(--text-3);font-size:11.5px}.hs-dados b{font-size:13px}
+.hs-bts{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.linha-t{list-style:none;margin:0;padding:0;border-left:2px solid var(--line-2)}
+.linha-t li{position:relative;padding:0 0 12px 16px;font-size:13px}
+.linha-t li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2)}
+.linha-t li.pg::before{border-color:var(--pos)}.linha-t li.adm::before{border-color:var(--accent)}
+.linha-t time{display:block;color:var(--text-3);font-size:11.5px}
+#hs .menu{left:0;right:auto}
+#hs .menu button[data-a=hist]{display:none}
+.fun{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+.fun div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.fun small{display:block;color:var(--text-3);font-size:12px}.fun strong{font-size:22px}.fun em{display:block;font-style:normal;color:var(--text-3);font-size:12px}
+.mm{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:13px}
+.mm th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);text-align:right;padding:9px 12px;border-bottom:1px solid var(--line)}
+.mm th:first-child,.mm td:first-child{text-align:left}
+.mm td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.mm tr:last-child td{border-bottom:0}
+.mm .bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:8px;min-width:2px}
+.mm td.rc{width:38%}
+.mmw{overflow-x:auto}
+@media (max-width:820px){.fun{grid-template-columns:1fr 1fr}.mm td.rc .bar{display:none}.mm td.rc{width:auto}.mm th,.mm td{padding:8px 6px}.mm th{letter-spacing:0;font-size:10px}.mm .x30{display:none}}
+dialog#dlg-acesso{border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog#dlg-acesso::backdrop{background:rgba(3,6,12,.6)}
+.dl{padding:20px}
+.dl-top{display:flex;gap:12px;align-items:flex-start}.dl-top>div{flex:1;min-width:0}
+.dl h3{margin:0;font-size:18px}.dl .e{margin:2px 0 0;color:var(--text-2);font-size:13px;word-break:break-all}
+.dl .x{background:none;border:0;color:var(--text-2);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.dl .hoje{margin:12px 0;font-size:13px;color:var(--text-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.op{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface-2);color:var(--text);cursor:pointer;font:inherit}
+.op[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.op b{font-size:13px}.op strong{font-size:17px}.op span{font-size:11.5px;color:var(--text-3)}.op em{font-style:normal;font-size:12px;color:var(--accent-text);font-weight:600;margin-top:2px}
+.lin{margin:12px 0 0;font-size:13px;color:var(--text-2);border:0;padding:0;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.lin legend{float:left;margin-right:4px;color:var(--text-3);padding:0}
+.lin input[type=date]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px;color-scheme:dark light}
+.lin.pg{display:block;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;line-height:1.45}
+.lin[hidden]{display:none}
+.am{color:var(--neg);font-size:13px;margin:10px 0 0}.am:empty{display:none}
+.dl-ac{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media (max-width:820px){
+  .grid2,.cfg{grid-template-columns:1fr}
+  table.t,.t tbody,.t tr,.t td{display:block;width:100%}
+  .t thead{display:none}
+  table.t{background:none;border:0;border-radius:0}
+  .t tr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .t td{border:0;padding:3px 0}
+  .t td.ac{text-align:left;padding-top:8px}
+  .t td.c[data-r]::before{content:attr(data-r) ": ";color:var(--text-3)}
+  .menu{left:0;right:auto}
+  .marca span{display:none}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
+  .ferr input{min-width:0;width:100%}
+}
+/* visual 2026-10-30: barra lateral no computador, cartões e tabela mais limpos */
+.app{max-width:1180px;margin:0 auto;padding:0 20px}
+.lado{display:contents}
+main{max-width:none;margin:0;padding:0 0 56px}
+.marca img{display:none;border-radius:8px}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.abas .ic{display:none}
+a.vol{display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+a.vol .ic{width:15px;height:15px}
+a.vol:hover{text-decoration:underline}
+.cab{margin:4px 0 16px}
+.cab h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.cab p{margin:2px 0 0;color:var(--text-3);font-size:13px}
+.kpi,.fun div,.u,.caixa,table.t,.mm{box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.kpi{border-radius:14px;padding:16px 18px;transition:border-color .15s,transform .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.kpi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kpi strong{font-size:clamp(22px,1.8vw,28px);white-space:nowrap;font-variant-numeric:tabular-nums}
+.kpi.alerta{border-color:var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
+.fun div{border-radius:14px;padding:14px 16px}.fun strong{font-variant-numeric:tabular-nums}
+.u,.caixa{border-radius:12px}
+.caixa{padding:16px 18px}
+h2{margin:26px 0 10px}
+button.b,.u button,.caixa button,details.mais summary{border-radius:8px;transition:border-color .15s,background .15s,filter .15s}
+button.b:hover,.u button:hover,.caixa button:hover,details.mais summary:hover{border-color:var(--text-3)}
+button.lib:hover,.u button.lib:hover{filter:brightness(1.07);border-color:transparent}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ferr input{border-radius:10px;min-height:42px}
+.ferr input:focus,.caixa input:focus,.caixa select:focus,.caixa textarea:focus{outline:0;border-color:var(--accent)}
+.chips button{transition:border-color .15s,color .15s}.chips button:hover{color:var(--text)}
+table.t{border-radius:14px}
+.t th:first-child{border-top-left-radius:13px}.t th:last-child{border-top-right-radius:13px}
+.t td{padding:11px 14px}
+.t tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 80%,transparent)}
+.t td.c{font-variant-numeric:tabular-nums}
+.av{position:relative}.av.on::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
+.onl{color:var(--pos);font-weight:600;white-space:nowrap}.onl::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pos);margin-right:6px;vertical-align:1px}
+.kpi em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi strong.lg{font-size:clamp(18px,1.45vw,26px)}
+.pp{display:flex;gap:11px;align-items:center;min-width:0}.pp>div{min-width:0}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 15%,var(--surface-2));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.pill{border:0;background:color-mix(in srgb,currentColor 13%,transparent);padding:3px 10px 3px 8px}
+.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.menu{border-radius:11px;box-shadow:0 14px 34px rgba(0,0,0,.35)}
+dialog#dlg-hist,dialog#dlg-acesso{border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+dialog#dlg-hist::backdrop,dialog#dlg-acesso::backdrop{backdrop-filter:blur(2px)}
+.lin input[type=number]{background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:6px 8px;margin-left:6px}
+@media (max-width:820px){
+  .t td{padding:3px 0}
+  .t tbody tr:hover td{background:none}
+  .t td.p{padding-bottom:6px}
+}
+@media (min-width:1000px){
+  .app{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:none;padding:0;min-height:100vh;background:linear-gradient(90deg,var(--surface) 235px,var(--line) 235px 236px,transparent 236px)}
+  .lado{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 12px 16px}
+  .top{display:contents}
+  .marca{order:0;flex:none;display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;padding:0 8px 18px;border-bottom:1px solid var(--line)}
+  .marca img{display:block;grid-row:span 2}
+  .marca b{font-size:12px;letter-spacing:.2em}
+  .marca span{font-size:12px;line-height:1.2}
+  .abas{order:1;position:static;flex-direction:column;gap:2px;margin:14px 0 0;padding:0;border:0;background:none;overflow:visible}
+  .abas button{border:0;border-radius:9px;padding:9px 12px;font-size:14px;font-weight:500;gap:11px;width:100%;text-align:left;color:var(--text-2)}
+  .abas button:hover{background:var(--surface-2);color:var(--text)}
+  .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));color:var(--text);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+  .abas button[aria-selected=true] .ic{color:var(--accent-text)}
+  .abas .ic{display:block}
+  .abas .cnt{margin-left:auto}
+  a.vol{order:2;margin-top:auto;padding:10px 12px;border-top:1px solid var(--line);color:var(--text-2);font-size:13px}
+  a.vol:hover{color:var(--text)}
+  main{padding:30px 40px 64px;max-width:1280px;width:100%}
+  .cab{margin:0 0 20px}
+  .cab h1{font-size:26px}
+  #msg{top:12px}
+}
+/* Ajustes 2026-11-14: automações, cartão do WhatsApp, selos de situação e grade sem buracos */
+.cfg-top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.cfg-top .painel{margin:0}
+.cfg-tit{margin:26px 0 0}
+.cfg2{columns:2 380px;column-gap:16px;margin-top:4px}
+.cfg2 .painel{break-inside:avoid;display:block;margin:12px 0 4px}
+.painel .caixa{background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 10px}
+.painel .caixa:last-child{margin-bottom:0}
+.selo{margin-left:auto;font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 10px 3px 8px;white-space:nowrap;background:color-mix(in srgb,currentColor 13%,transparent)}
+.selo:empty{display:none}
+.selo::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.selo.ok{color:var(--pos)}.selo.at{color:var(--accent-text)}.selo.off{color:var(--text-3)}
+.tgl-l{display:flex;flex-direction:column}
+.tgl{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
+.tgl:first-child{border-top:0;padding-top:2px}
+.tgl .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tgl .tx b{font-size:13.5px;font-weight:600}
+.tgl .tx small{color:var(--text-3);font-size:12.5px;line-height:1.45}
+.tgl input{position:absolute;opacity:0;width:1px;height:1px}
+.tgl .sw{flex:none;width:38px;height:22px;border-radius:12px;background:var(--line-2);position:relative;transition:background .15s}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.tgl input:checked+.sw{background:var(--pos)}
+.tgl input:checked+.sw::after{transform:translateX(16px)}
+.tgl input:focus-visible+.sw{outline:2px solid var(--accent);outline-offset:2px}
+.tgl.bloq{opacity:.55;cursor:not-allowed}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.kv small{display:block;color:var(--text-3);font-size:11.5px}.kv b{font-size:15px;font-variant-numeric:tabular-nums}
+@media (max-width:900px){.cfg-top{grid-template-columns:1fr}}
+/* visual 2026-11-14 (pedido do Dante: "deixe profissional"): grupos no menu, cabeçalho com hora e Atualizar,
+   seções da Visão geral em cartões com título, subtítulo e "Como ler" recolhido no lugar dos textos longos */
+h2{font-size:15px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:600;margin:28px 0 12px}
+h2 b{font-size:12px;font-weight:700}
+.grp{display:none}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cab-ac{display:flex;align-items:center;gap:10px}
+.cab-ac .b{display:inline-flex;align-items:center;gap:6px}
+.cab-ac .ic{width:15px;height:15px}
+.agora{color:var(--text-3);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.painel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px 18px;margin:16px 0 0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.painel>header{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin:0 0 12px}
+.painel>header h2{margin:0}
+.painel .ph{color:var(--text-3);font-size:12.5px}
+.painel>header .info{margin-left:auto}
+.info summary{list-style:none;cursor:pointer;color:var(--text-3);font-size:12px;font-weight:600;border:1px solid var(--line-2);border-radius:20px;padding:2px 10px}
+.info summary::-webkit-details-marker{display:none}
+.info summary::before{content:"i";display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;border:1px solid currentColor;font:700 9px/1 Georgia,serif;margin-right:6px;vertical-align:-2px}
+.info summary:hover,.info[open] summary{color:var(--text);border-color:var(--text-3)}
+.info p{flex-basis:100%;margin:10px 0 0;color:var(--text-2);font-size:13px;line-height:1.55;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.painel>header .info[open]{flex-basis:100%;margin-left:0}
+.painel table.t,.painel .mm{box-shadow:none;background:transparent}
+.painel .mm{border-color:var(--line)}
+.painel .vazio{text-align:left}
+.painel h2:not(:first-child){margin:20px 0 10px;font-size:14px;color:var(--text-2)}
+.grid2.cards{gap:16px;margin-top:2px}
+.grid2.cards .painel{margin:16px 0 0}
+.nota-topo{text-align:left;margin:0 0 14px;font-size:13px;line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;color:var(--text-2)}
+.kpi small{text-transform:none;letter-spacing:0;font-weight:500}
+@media (min-width:1000px){
+  .grp{display:block;margin:16px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+  .abas .grp:first-child{margin-top:4px}
+  .cab{margin:0 0 22px}
+}
+.kpi{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
+.kpi small{line-height:18px;min-height:36px;display:flex;align-items:flex-end}
+@media (max-width:820px){
+  .kpi small{min-height:0}
+  .painel .ferr .b{white-space:normal;text-align:left;flex:1 1 100%}
+  .painel{padding:14px;border-radius:12px}
+  .painel table.t .t tr{background:var(--surface-2)}
+  .cab-ac{width:100%;justify-content:space-between}
+}
+/* pop-up de novidades: formulário no admin e prévia (15/11/2026) */
+/* campanha no WhatsApp (16/11/2026) */
+.camp-top{margin:0 0 6px;font-size:13.5px;color:var(--text-2)}
+.camp-g{font-size:14px;margin:18px 0 8px}.camp-g span{font-weight:400;color:var(--text-3);font-size:12.5px}
+.camp-l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.camp-l li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.camp-l li.ok{opacity:.55}
+.camp-p{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}.camp-p span{font-size:12.5px;color:var(--text-3)}
+.camp-l .b{text-decoration:none;white-space:nowrap}
+.camp-env{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;min-height:36px;border-radius:8px;font-size:13px;border:1px solid transparent;background:#25d366!important;color:#0b2b17!important;border-color:transparent!important;font-weight:700}
+.camp-feito{font-size:12.5px;color:var(--ok,#22c55e);font-weight:600}
+.camp-sem{margin:14px 0 0}
+@media (max-width:600px){.camp-l .b{flex:1;text-align:center}}
+.pop-adm .pc{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-3);margin:0 0 10px;flex:1;min-width:0}
+.pop-adm .pc[hidden]{display:none}
+.pop-adm .pc input,.pop-adm .pc textarea,.pop-adm .pc select{font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;min-height:40px;width:100%;box-sizing:border-box;color-scheme:dark light}
+.pop-adm .pc textarea{resize:vertical;line-height:1.5}
+.pop-adm .pc2{display:flex;gap:12px;flex-wrap:wrap}.pop-adm .pc2 .pc{min-width:200px}
+.pop-adm .b.pri{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.pop-status{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid var(--line)}
+.pop-status .selo{margin-left:0}.pop-status .d{color:var(--text-3)}
+.pop-fundo{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.6);display:grid;place-items:center;padding:16px;backdrop-filter:blur(3px)}
+.pop-card{position:relative;width:100%;max-width:440px;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px 22px 0;box-shadow:0 24px 60px rgba(0,0,0,.45);color:var(--text)}
+.pop-x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-size:15px;cursor:pointer;z-index:2}
+.pop-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:20px;padding:4px 10px}
+.pop-card h3{font-size:19px;margin:12px 0 8px;line-height:1.3;padding-right:40px}
+.pop-tx{font-size:14.5px;line-height:1.55;color:var(--text-2)}.pop-tx p{margin:0 0 8px}.pop-tx ul{margin:0 0 8px;padding-left:20px}.pop-tx li{margin:3px 0}
+.pop-bts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding:12px 0 16px;border-top:1px solid var(--line)}
+.pop-bts button{font:inherit;font-weight:600;font-size:14px;border-radius:10px;padding:10px 16px;min-height:42px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text)}
+.pop-bts .pop-b1{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.pop-nota{font-size:11.5px;color:var(--text-3);margin:0 0 14px;text-align:center}
+/* celular 14/11/2026: barra fixa com o menu de abas e o Atualizar, números compactos, tabelas em lista */
+.barra-cel,.menu-fundo{display:none}
+@media (max-width:999px){
+  .abas{display:none}
+  .barra-cel{display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -20px 16px;padding:8px 20px;border-bottom:1px solid var(--line)}
+  #menu-abas{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+  #menu-abas #menu-rot{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #menu-abas .ic{width:18px;height:18px;flex:none}
+  #menu-abas .seta{transition:transform .15s}
+  .menu-on #menu-abas .seta{transform:rotate(180deg)}
+  #menu-cnt:empty{display:none}
+  #recarregar-cel{min-height:42px;min-width:44px;justify-content:center}
+  .menu-on .abas{display:flex;flex-direction:column;gap:2px;position:fixed;top:62px;left:12px;right:12px;margin:0;max-height:calc(100vh - 80px);overflow-y:auto;z-index:40;background:var(--surface);border:1px solid var(--line-2);border-radius:14px;padding:8px;box-shadow:0 18px 40px rgba(0,0,0,.45);-webkit-mask-image:none;mask-image:none}
+  .menu-on .abas .grp{display:block;margin:12px 10px 4px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+  .menu-on .abas .grp:first-child{margin-top:4px}
+  .menu-on .abas button{border:0;border-radius:9px;padding:12px;width:100%;gap:12px;font-weight:500}
+  .menu-on .abas button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+  .menu-on .abas .ic{display:block;width:18px;height:18px}
+  .menu-on .abas .cnt{margin-left:auto}
+  .menu-fundo:not([hidden]){display:block;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45)}
+  .cab-ac #recarregar{display:none}
+}
+@media (max-width:760px){
+  #kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  #kpis .kpi{padding:10px;border-radius:11px}
+  #kpis .kpi small{font-size:11px;line-height:1.3;margin-bottom:4px;min-height:28px;align-items:flex-start}
+  #kpis .kpi strong{font-size:20px}
+  #kpis .kpi strong.lg{font-size:15px}
+  #kpis .kpi em{font-size:10.5px;line-height:1.3;white-space:normal}
+  /* 15/11/2026: o texto quebra linha em vez de vazar (antes, linha comprida empurrava o cartão para fora) */
+  .mmw:has(> table.lista-cel){overflow:visible}
+  table.lista-cel{min-width:0;border:0;background:transparent}
+  table.lista-cel,table.lista-cel tbody,table.lista-cel tr{display:block;width:100%;max-width:100%}
+  table.lista-cel thead{display:none}
+  table.lista-cel tr{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 8px;background:var(--surface-2)}
+  table.lista-cel td{border:0;padding:3px 0;display:flex;gap:12px;justify-content:space-between;align-items:baseline;width:100%;white-space:normal;text-align:right}
+  table.lista-cel td::before{content:attr(data-l);color:var(--text-3);font-size:12px;flex:none}
+  table.lista-cel td .v{min-width:0;overflow-wrap:anywhere;text-align:right}
+  table.lista-cel td:first-child{font-weight:600;text-align:left;font-size:14px}
+  table.lista-cel td:first-child .v{text-align:left}
+  table.lista-cel td:first-child::before{display:none}
+}
+</style></head><body><div class="app"><aside class="lado">
+<header class="top"><div class="marca"><img src="/icone-mercado-macro.png" alt="" width="30" height="30"><b>MERCADO MACRO</b><span>Administração</span></div><a class="vol" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar ao site</a></header>
+<nav class="abas" role="tablist" aria-label="Seções">
+  <div class="grp" aria-hidden="true">Negócio</div>
+  <button type="button" role="tab" data-aba="geral" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="rot">Visão geral</span></button>
+  <button type="button" role="tab" data-aba="pessoas" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span class="rot">Pessoas</span> <span class="cnt" id="cnt-pessoas"></span></button>
+  <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
+  <div class="grp" aria-hidden="true">Comunicação</div>
+  <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">Novidades e e-mails</span></button>
+  <div class="grp" aria-hidden="true">Monitoramento</div>
+  <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
+  <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
+  <button type="button" role="tab" data-aba="atraso" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg><span class="rot">Atraso das notícias</span></button>
+  <div class="grp" aria-hidden="true">Sistema</div>
+  <button type="button" role="tab" data-aba="ajustes" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="rot">Ajustes</span></button>
+</nav>
+<div class="barra-cel"><button type="button" id="menu-abas" aria-expanded="false" aria-haspopup="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="menu-rot">Visão geral</span><span class="cnt" id="menu-cnt"></span><svg class="ic seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><button type="button" class="b" id="recarregar-cel" aria-label="Atualizar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
+<div class="menu-fundo" id="menu-fundo" hidden></div>
+</aside><main>
+<div class="cab"><div><h1 id="tit">Visão geral</h1><p id="sub"></p></div><div class="cab-ac"><span id="agora" class="agora"></span><button type="button" class="b" id="recarregar" title="Buscar os números de novo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Atualizar</button></div></div>
+<p class="msg" id="msg" role="status" aria-live="polite"></p>
+<div id="prov"></div>
+<section data-p="geral">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2 cards">
+    <section class="painel"><header><h2>Precisa de você</h2></header><div id="acao"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Vencem nos próximos 7 dias</h2></header><div id="venc"><p class="vazio">Carregando…</p></div></section>
+  </div>
+  <section class="painel"><header><h2>Mês a mês</h2><span class="ph">Cadastros, primeiros pagamentos e receita</span></header><div id="funil"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>De onde vêm os visitantes</h2><span class="ph">Visitas e pedidos de acesso por origem</span><details class="info"><summary>Como ler</summary><p>Visitas à vitrine e às páginas públicas, e pedidos de acesso, pelo site que mandou a pessoa. Só o nome do site é guardado, sem IP e sem ligar a ninguém. <b>Direto ou app</b>: digitou o endereço, usou um favorito ou abriu o link num app que não informa a origem (o WhatsApp costuma cair aqui). Para saber de um link seu, acrescente <b>?origem=nome</b> ao endereço. Contando desde 26/10/2026.</p></details></header><div id="origens"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>Radar no WhatsApp</h2><span class="ph">Quem veio do canal, por semana</span><details class="info"><summary>Como ler</summary><p>Quem veio do canal Radar Mercado Macro, por semana. <b>Conversas</b>: mandaram "Vim do Radar" para a Jade. <b>Pediram atendimento</b>: digitaram SIM QUERO depois. <b>Links de planos</b>: a Jade mandou o link dos planos. <b>Visitas</b> e <b>pedidos de acesso</b>: chegaram ao site pelo link do post.</p></details></header>
+    <div id="radar-wa"><p class="vazio">Carregando…</p></div>
+    <div class="ferr" style="margin:12px 0 0"><button type="button" class="b" data-radar-teste="abertura">Mandar exemplo da abertura para o meu Telegram</button><button type="button" class="b" data-radar-teste="fechamento">Mandar exemplo do fechamento</button><span class="vazio" id="radar-teste-msg" style="font-size:12.5px"></span></div>
+  </section>
+  <section class="painel"><header><h2>Assinantes hoje</h2><span class="ph">Quem está no site, em qual aba e em que aparelho</span><details class="info"><summary>Como ler</summary><p>Cada vez que um assinante abre uma aba do terminal, soma 1. <b>Está em</b>: a última aba que a pessoa abriu, com o ponto verde quando ela está com o site aberto (atualiza a cada minuto). <b>Pessoas</b>: quantos aparelhos abriram a aba pelo menos uma vez no dia, somando os dias. Os seus cliques de administrador não contam. O detalhe por pessoa fica guardado 90 dias. Contando desde 04/11/2026.</p></details></header><div id="uso-pessoas"><p class="vazio">Carregando…</p></div></section>
+  <section class="painel"><header><h2>Abas mais usadas</h2><span class="ph">Aberturas por aba: hoje, 7 e 30 dias</span></header><div id="uso"><p class="vazio">Carregando…</p></div></section>
+</section>
+<section data-p="pessoas" hidden>
+  <div class="ferr"><input id="busca" type="search" name="filtro-pessoas" placeholder="Buscar por nome ou e-mail" autocomplete="off" data-lpignore="true" data-1p-ignore readonly aria-label="Buscar pessoa"><div class="chips" id="chips"></div><button type="button" class="b" id="csv-pessoas">Baixar planilha</button></div>
+  <div id="raiz"><p class="vazio">Carregando…</p></div>
+  <p class="vazio" id="nota-pessoas" style="margin-top:10px;font-size:12px"></p>
+</section>
+<section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
+<section data-p="comunicado" hidden><h2>Campanha no WhatsApp</h2><p class="d" style="margin:-4px 0 10px">Toque em Enviar: o WhatsApp abre com o nome e a mensagem prontos, e você só confirma o envio.</p><div id="camp"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="jade" hidden>
+  <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
+  <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
+  <div class="ferr"><input id="jade-busca" type="search" placeholder="Filtrar perguntas" autocomplete="off" aria-label="Filtrar perguntas"></div>
+  <div id="jade-tab"><p class="vazio">Carregando…</p></div>
+</section>
+<section data-p="atraso" hidden>
+  <p class="vazio nota-topo">Quanto tempo cada fonte leva entre publicar (horário do feed) e aparecer no site, nos últimos 7 dias. Só conta o que o site viu ao vivo (com alguém conectado), porque fora disso a leitura é a cada 15 minutos. <b>Típico</b> é a mediana (metade chega mais rápido que isso); <b>Nas piores</b> é o tempo que 90% não passam.</p>
+  <div class="kpis" id="atraso-res" style="margin-bottom:14px"></div>
+  <div id="atraso-tab"><p class="vazio">Carregando…</p></div>
+</section>
+<section data-p="passe" hidden>
+  <h2>Pedidos ao servidor de dados sem o passe de login</h2>
+  <p class="vazio nota-topo">Por enquanto o servidor só anota (não bloqueia). Mostra os últimos 14 dias, sem IP. <b>faltou</b>: chegou sem passe · <b>invalido</b>: passe falso · <b>vencido</b>: passe velho · <b>vitrine</b>: páginas públicas · <b>sem-chave</b>: o servidor não conseguiu conferir. Em "De onde", <b>navegador</b> é alguém num navegador, <b>script</b> é programa ou robô de fora e <b>robo:</b> são os nossos robôs do GitHub.</p>
+  <div class="kpis" id="passe-res" style="margin-bottom:14px"></div>
+  <div id="passe-tab"><p class="vazio">Carregando…</p></div>
+</section>
+<section data-p="ajustes" hidden>
+  <div class="cfg-top">
+    <section class="painel"><header><h2>Automações</h2><span class="ph">O que o site faz sozinho</span></header><div id="automacoes"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>WhatsApp (Jade)</h2><span class="selo" data-selo="whatsapp"></span></header><div id="whatsapp-cfg"><p class="vazio">Carregando…</p></div></section>
+  </div>
+  <h2 class="cfg-tit">Integrações</h2>
+  <div class="cfg2">
+    <section class="painel"><header><h2>Pix para assinaturas</h2><span class="selo" data-selo="pix"></span></header><div id="pix"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Cartão (Stripe)</h2><span class="selo" data-selo="stripe"></span></header><div id="stripe"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Avisos no Telegram</h2><span class="selo" data-selo="avisos"></span></header><div id="avisos"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>IA da Cloudflare (tradução)</h2><span class="selo" data-selo="ia"></span></header><div id="ia-cf"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Cópia do banco (R2)</h2><span class="selo" data-selo="bk"></span></header><div id="bk-adm"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Proteção do cadastro (Turnstile)</h2><span class="selo" data-selo="ts"></span></header><div id="ts-adm"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Capital.com (cotações ao vivo)</h2><span class="selo" data-selo="capital"></span></header><div id="capital"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Sua conta de administrador</h2><span class="selo" data-selo="aparelhos"></span></header><div id="aparelhos"><p class="vazio">Carregando…</p></div></section>
+  </div>
+</section>
+<dialog id="dlg-hist" aria-labelledby="hs-t"><div class="dl" id="hs"></div></dialog>
+<dialog id="dlg-acesso" aria-labelledby="ac-t">
+  <div class="dl">
+    <div class="dl-top"><div><h3 id="ac-t"></h3><p id="ac-e" class="e"></p></div><button type="button" class="x" data-fechar aria-label="Fechar">&times;</button></div>
+    <p id="ac-hoje" class="hoje"></p>
+    <div class="ops" id="ac-opc"></div>
+    <div id="ac-dt" class="lin" hidden><label>Vale até <input type="date" id="ac-data"></label></div>
+    <div id="ac-cd" class="lin" hidden><label>Dias de cortesia <input type="number" id="ac-dias" min="1" max="30" step="1" value="1" inputmode="numeric" style="width:84px"></label></div>
+    <fieldset id="ac-ini" class="lin"><legend>Começa</legend>
+      <label><input type="radio" name="ac-ini" value="hoje" checked> hoje</label>
+      <label><input type="radio" name="ac-ini" value="somar"> depois de <span id="ac-somar-d"></span> (soma ao que já tem)</label>
+    </fieldset>
+    <label id="ac-pg" class="lin pg" hidden><input type="checkbox" id="ac-pago"> Recebi <span id="ac-pg-v"></span> por fora: contar em "Recebido no mês" e mandar o e-mail de pagamento confirmado</label>
+    <p id="ac-msg" class="am" role="alert"></p>
+    <div class="dl-ac"><button type="button" class="b" data-fechar>Cancelar</button><button type="button" class="b lib" id="ac-salvar">Salvar</button></div>
+  </div>
+</dialog>
+</main></div>
+<script src="/js/pg/admin.js?v=${versaoJs(JS_ADMIN)}"></script></body></html>`;
 
+const JS_CONTA = `(function(){
+  var f = document.getElementById('f'), msg = document.getElementById('msg');
+  function diz(ok, t){ msg.className = 'msg ' + (ok ? 'ok' : 'erro'); msg.textContent = t; }
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var atual = f.atual.value, nova = f.nova.value;
+    if (!atual) return diz(false, 'Digite a senha atual.');
+    if (nova.length < 8) return diz(false, 'A senha nova precisa ter pelo menos 8 caracteres.');
+    if (nova !== f.nova2.value) return diz(false, 'As duas senhas novas não são iguais.');
+    var b = f.querySelector('button'); b.disabled = true; diz(true, '');
+    fetch('/api/auth/senha', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atual: atual, nova: nova }) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
+      .then(function(){ f.reset(); diz(true, 'Senha trocada. Use a nova senha da próxima vez que entrar.'); })
+      .catch(function(j){ diz(false, (j && j.erro) || 'Não foi possível. Tente de novo.'); })
+      .then(function(){ b.disabled = false; });
+  });
+  var fc = document.getElementById('fc'), mc = document.getElementById('msgc');
+  function cel(c){ var d = String(c || '').slice(2); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : ''; }
+  function pc(corpo){ return fetch('/api/auth/celular', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
+  pc({ ler: 1 }).then(function(j){ fc.cel.value = cel(j.celular); }).catch(function(){});
+  fc.addEventListener('submit', function(e){
+    e.preventDefault();
+    var b = fc.querySelector('button'); b.disabled = true; mc.textContent = '';
+    pc({ celular: fc.cel.value }).then(function(j){ fc.cel.value = cel(j.celular); mc.className = 'msg ok'; mc.textContent = j.celular ? 'Celular salvo.' : 'Celular apagado.'; })
+      .catch(function(j){ mc.className = 'msg erro'; mc.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
+  });
+  var fx = document.getElementById('fx'), mx = document.getElementById('msgx');
+  fx.addEventListener('submit', function(e){
+    e.preventDefault();
+    var s = fx.sx.value;
+    if (!s) { mx.className = 'msg erro'; mx.textContent = 'Digite sua senha.'; return; }
+    if (!confirm('Excluir sua conta de vez? Não dá para desfazer.')) return;
+    var b = fx.querySelector('button'); b.disabled = true; mx.textContent = '';
+    fetch('/api/auth/excluir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: s }) })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
+      .then(function(){ document.querySelector('main').innerHTML = '<h1>Conta excluída</h1><p class="nota">Seus dados foram apagados. Obrigado por ter usado o Mercado Macro.</p><p class="nota"><a href="/">Ir para o início</a></p>'; })
+      .catch(function(j){ mx.className = 'msg erro'; mx.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
+  });
+})();`;
 const PAGINA_CONTA = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Minha conta | Mercado Macro</title>
-<script>try{var t=localStorage.getItem('trader_theme');if(t==='dark'||t==='light')document.documentElement.dataset.tema=t;}catch(e){}</script>
+<script src="/js/pg/tema.js?v=${versaoJs(JS_TEMA)}"></script>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/icone-mercado-macro.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -4245,47 +4321,7 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
   <p class="msg" id="msgx" role="status" aria-live="polite"></p>
 </form>
 </main>
-<script>
-(function(){
-  var f = document.getElementById('f'), msg = document.getElementById('msg');
-  function diz(ok, t){ msg.className = 'msg ' + (ok ? 'ok' : 'erro'); msg.textContent = t; }
-  f.addEventListener('submit', function(e){
-    e.preventDefault();
-    var atual = f.atual.value, nova = f.nova.value;
-    if (!atual) return diz(false, 'Digite a senha atual.');
-    if (nova.length < 8) return diz(false, 'A senha nova precisa ter pelo menos 8 caracteres.');
-    if (nova !== f.nova2.value) return diz(false, 'As duas senhas novas não são iguais.');
-    var b = f.querySelector('button'); b.disabled = true; diz(true, '');
-    fetch('/api/auth/senha', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atual: atual, nova: nova }) })
-      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
-      .then(function(){ f.reset(); diz(true, 'Senha trocada. Use a nova senha da próxima vez que entrar.'); })
-      .catch(function(j){ diz(false, (j && j.erro) || 'Não foi possível. Tente de novo.'); })
-      .then(function(){ b.disabled = false; });
-  });
-  var fc = document.getElementById('fc'), mc = document.getElementById('msgc');
-  function cel(c){ var d = String(c || '').slice(2); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : ''; }
-  function pc(corpo){ return fetch('/api/auth/celular', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; return j; }); }); }
-  pc({ ler: 1 }).then(function(j){ fc.cel.value = cel(j.celular); }).catch(function(){});
-  fc.addEventListener('submit', function(e){
-    e.preventDefault();
-    var b = fc.querySelector('button'); b.disabled = true; mc.textContent = '';
-    pc({ celular: fc.cel.value }).then(function(j){ fc.cel.value = cel(j.celular); mc.className = 'msg ok'; mc.textContent = j.celular ? 'Celular salvo.' : 'Celular apagado.'; })
-      .catch(function(j){ mc.className = 'msg erro'; mc.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; }).then(function(){ b.disabled = false; });
-  });
-  var fx = document.getElementById('fx'), mx = document.getElementById('msgx');
-  fx.addEventListener('submit', function(e){
-    e.preventDefault();
-    var s = fx.sx.value;
-    if (!s) { mx.className = 'msg erro'; mx.textContent = 'Digite sua senha.'; return; }
-    if (!confirm('Excluir sua conta de vez? Não dá para desfazer.')) return;
-    var b = fx.querySelector('button'); b.disabled = true; mx.textContent = '';
-    fetch('/api/auth/excluir', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: s }) })
-      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw j; }); })
-      .then(function(){ document.querySelector('main').innerHTML = '<h1>Conta excluída</h1><p class="nota">Seus dados foram apagados. Obrigado por ter usado o Mercado Macro.</p><p class="nota"><a href="/">Ir para o início</a></p>'; })
-      .catch(function(j){ mx.className = 'msg erro'; mx.textContent = (j && j.erro) || 'Não foi possível. Tente de novo.'; b.disabled = false; });
-  });
-})();
-</script></body></html>`;
+<script src="/js/pg/conta.js?v=${versaoJs(JS_CONTA)}"></script></body></html>`;
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
