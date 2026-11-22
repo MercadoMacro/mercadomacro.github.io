@@ -71,6 +71,9 @@
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.textContent = 'Schwab Network · assistir no canal oficial ↗';
+    // 22/11/2026: link discreto, na cor do site, e espaço antes dos temas
+    link.style.cssText = 'display:inline-block;margin-top:6px;font-size:12.5px;color:var(--text-2);text-decoration:none';
+    panel.style.cssText = 'margin:0 0 14px';
     panel.append(frame, link);
     count('schwab-open');
     let counted = false;

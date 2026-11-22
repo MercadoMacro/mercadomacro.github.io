@@ -26,20 +26,29 @@ function pagina(caminho, storage) {
   vm.runInNewContext(script, contexto);
   return { window, tags, botoes, chamadas, responder: r => { recibo = r; } };
 }
-test('visita direta e recusa dispensam a tag, inclusive ao voltar', () => {
+// 22/11/2026: a tag base carrega em toda visita, mas sem cookies (consentimento negado) e sem o clique do anúncio
+const liberou = (w) => w.dataLayer.some(e => e[0] === 'consent' && e[1] === 'update');
+test('visita direta e recusa: só a tag base, sem cookies e sem o clique', () => {
   const storage = new Map();
-  assert.equal(pagina('/assinar', storage).tags.length, 0);
+  const direta = pagina('/assinar', storage);
+  assert.equal(direta.tags.length, 1);
+  assert.equal(JSON.stringify([...direta.window.dataLayer[0]]), JSON.stringify(['consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' }]));
+  assert.equal(liberou(direta.window), false);
   const anuncio = pagina('/assinar?gclid=teste', storage);
-  assert.equal(anuncio.tags.length, 0);
+  assert.equal(anuncio.tags.length, 1);
+  assert.doesNotMatch(JSON.stringify(anuncio.window.dataLayer), /gclid/);
   anuncio.botoes.find(b => b.textContent === 'Agora não').onclick();
-  assert.equal(pagina('/assinar?gclid=teste', storage).tags.length, 0);
+  const volta = pagina('/assinar?gclid=teste', storage);
+  assert.equal(liberou(volta.window), false);
+  assert.doesNotMatch(JSON.stringify(volta.window.dataLayer), /gclid/);
 });
 test('login, checkout e retorno reportam somente o recibo confirmado', async () => {
   const storage = new Map();
   const entrada = pagina('/entrar?volta=%2Fassinar%3Fgclid%3Dteste', storage);
   entrada.botoes.find(b => b.textContent === 'Permitir').onclick();
   assert.equal(entrada.tags.length, 1);
-  assert.match(entrada.window.dataLayer[2][2].page_location, /gclid=teste$/);
+  assert.equal(liberou(entrada.window), true);
+  assert.match(entrada.window.dataLayer.at(-1)[2].page_location, /gclid=teste$/);
   const pagamento = pagina('/assinar', storage);
   pagamento.window.mmAdsCheckout('cs_live_exemplo');
   assert.equal(pagamento.window.dataLayer.some(e => e[0] === 'event'), false);

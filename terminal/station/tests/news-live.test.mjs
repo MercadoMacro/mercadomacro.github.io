@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-const source=readFileSync(new URL('../site/app.js',import.meta.url),'utf8');
+const source=readFileSync(new URL('../site/noticias.js',import.meta.url),'utf8');
 const code=source.slice(source.indexOf('// NEWS_LIVE_START'),source.indexOf('// NEWS_LIVE_END'));
 const worker='https://news.cota-cotacao10.workers.dev/';
 const item=(link='https://example.test/a',data=100000)=>({link,titulo:'Notícia de teste',data,nivel:'NORMAL',fonte:'Fonte'});

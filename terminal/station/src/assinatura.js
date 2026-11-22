@@ -556,85 +556,8 @@ export function perguntasVitrine(cartao = false) {
 }
 
 /* ---------------- página /assinar ---------------- */
-export function paginaAssinar() {
-  return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Assinatura | Mercado Macro</title>
-<meta name="robots" content="noindex">
-<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>${BASE_CSS}
-main{max-width:820px;margin:0 auto;padding:24px 16px 56px}
-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-header h1{font-size:20px;margin:0;flex:1}
-@media (max-width:480px){header h1{flex-basis:100%}}
-header a,header button{color:var(--accent-text);font-size:13px;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
-.sit{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 14px;color:var(--text-2);line-height:1.5}
-.sit b{color:var(--text)}
-.sit.alerta{border-color:var(--accent)}
-h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:26px 0 10px;font-weight:700}
-.marcas{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}
-.mc{display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #d9dee7;border-radius:5px;height:24px;width:38px;padding:2px 5px}
-.mc svg{height:100%;width:100%;display:block}.mc.ap{padding:3px 4px}
-.forma{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fm{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:6px}
-.fm:hover{border-color:var(--line-2)}
-.fm[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.fm .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px}
-.fm .t .px{width:20px;height:20px;display:inline-flex}.fm .t .px svg{width:100%;height:100%}
-.fm .s{color:var(--text-2);font-size:13px;line-height:1.45}
-.fm .a{color:var(--text-3);font-size:12.5px}
-.selo{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;border-radius:999px;padding:2px 8px;background:var(--accent);color:var(--on-accent)}
-.selo.leve{background:transparent;color:var(--accent-text);border:1px solid var(--accent)}
-.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.pl{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:3px;font:inherit}
-.pl:hover{border-color:var(--line-2)}
-.pl[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.pl .n{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.pl .v{font-size:26px;font-weight:700;white-space:nowrap;margin-top:6px}
-.pl .u{color:var(--text-2);font-size:13px}
-.pl .e{color:var(--text-3);font-size:12.5px;min-height:18px}
-.pl .r{color:var(--text-2);font-size:12.5px;line-height:1.45;border-top:1px dashed var(--line-2);padding-top:8px;margin-top:8px}
-.dica{margin-top:10px;color:var(--text-2);font-size:13px;line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.dica button{background:none;border:0;color:var(--accent-text);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;padding:0}
-.caixa{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
-.caixa h3{margin:0 0 4px;font-size:17px}
-.caixa .sub{margin:0 0 12px;color:var(--text-2);font-size:14px;line-height:1.5}
-.lista{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:7px}
-.lista li{display:flex;gap:8px;align-items:flex-start;color:var(--text-2);font-size:13.5px;line-height:1.45}
-.lista svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--pos)}
-.pagar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.seg{color:var(--text-3);font-size:12px;display:flex;align-items:center;gap:6px}
-.seg svg{width:14px;height:14px}
-.pix{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
-.qr{background:#fff;border-radius:10px;padding:8px;width:220px}.qr svg{display:block;width:100%;height:auto}
-.pix h3{margin:0 0 6px;font-size:16px}
-.pix p{margin:0 0 10px;color:var(--text-2);font-size:13.5px;line-height:1.5}
-.cc{display:flex;gap:6px}.cc input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 10px;font:12px ui-monospace,Menlo,Consolas,monospace}
-.bt{background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;min-height:46px;font-size:15px}
-.bt2{background:var(--surface-2);color:var(--text);border:1px solid var(--line-2);border-radius:8px;padding:9px 12px;font-weight:600;cursor:pointer;min-height:40px}
-.bt:disabled,.bt2:disabled{opacity:.6;cursor:default}
-.arq{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
-.arq label{display:block;font-size:13px;color:var(--text-2);margin-bottom:6px}
-.arq input[type=file]{color:var(--text-2);font-size:13px;max-width:100%;margin-bottom:10px;display:block}
-.faq details{border-top:1px solid var(--line);padding:12px 2px}
-.faq details:last-child{border-bottom:1px solid var(--line)}
-.faq summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:10px}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';color:var(--text-3);font-weight:400;font-size:18px;line-height:1}
-.faq details[open] summary::after{content:'−'}
-.faq p{margin:8px 0 0;color:var(--text-2);font-size:13.5px;line-height:1.55}
-table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}th{color:var(--text-3);font-weight:600;border-top:0}
-.nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
-.msg{font-size:13px;color:var(--text-2);margin:8px 0 0}.msg.erro{color:var(--neg)}.msg:empty{display:none}
-@media (max-width:600px){.forma{grid-template-columns:1fr}.pix{grid-template-columns:1fr}.qr{margin:0 auto}.pagar .bt{width:100%}}
-</style></head><body><main>
-<header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
-<div id="raiz"><p class="nota">Carregando…</p></div>
-</main>
-<script src="/vitrine/assinatura-ads.js"></script>
-<script>
-(function(){
+// script da página /assinar: servido em /js/pg/assinar.js (index.js, scriptDaPagina) desde 22/11/2026 (regra de scripts)
+export const SCRIPT_ASSINAR = `(function(){
   var MARCAS = ${JSON.stringify(MARCAS)};
   var CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l3 3 7-7"/></svg>';
   var CADEADO = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 7V5a3 3 0 0 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13.5v-5A1.5 1.5 0 0 1 4.5 7H5zm1.5 0h3V5a1.5 1.5 0 0 0-3 0v2z"/></svg>';
@@ -849,6 +772,84 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
       .catch(function(j){ m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível enviar. Tente de novo.'; b.disabled = false; });
   }
   carregar();
-})();
-</script></body></html>`);
+})();`;
+export function paginaAssinar(versao) {
+  const versaoJsAssinar = versao(SCRIPT_ASSINAR);
+  return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assinatura | Mercado Macro</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${BASE_CSS}
+main{max-width:820px;margin:0 auto;padding:24px 16px 56px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+header h1{font-size:20px;margin:0;flex:1}
+@media (max-width:480px){header h1{flex-basis:100%}}
+header a,header button{color:var(--accent-text);font-size:13px;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
+.sit{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 14px;color:var(--text-2);line-height:1.5}
+.sit b{color:var(--text)}
+.sit.alerta{border-color:var(--accent)}
+h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:26px 0 10px;font-weight:700}
+.marcas{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}
+.mc{display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #d9dee7;border-radius:5px;height:24px;width:38px;padding:2px 5px}
+.mc svg{height:100%;width:100%;display:block}.mc.ap{padding:3px 4px}
+.forma{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fm{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;color:var(--text);cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:6px}
+.fm:hover{border-color:var(--line-2)}
+.fm[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.fm .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px}
+.fm .t .px{width:20px;height:20px;display:inline-flex}.fm .t .px svg{width:100%;height:100%}
+.fm .s{color:var(--text-2);font-size:13px;line-height:1.45}
+.fm .a{color:var(--text-3);font-size:12.5px}
+.selo{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;border-radius:999px;padding:2px 8px;background:var(--accent);color:var(--on-accent)}
+.selo.leve{background:transparent;color:var(--accent-text);border:1px solid var(--accent)}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.pl{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px;text-align:left;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:3px;font:inherit}
+.pl:hover{border-color:var(--line-2)}
+.pl[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.pl .n{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pl .v{font-size:26px;font-weight:700;white-space:nowrap;margin-top:6px}
+.pl .u{color:var(--text-2);font-size:13px}
+.pl .e{color:var(--text-3);font-size:12.5px;min-height:18px}
+.pl .r{color:var(--text-2);font-size:12.5px;line-height:1.45;border-top:1px dashed var(--line-2);padding-top:8px;margin-top:8px}
+.dica{margin-top:10px;color:var(--text-2);font-size:13px;line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.dica button{background:none;border:0;color:var(--accent-text);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;padding:0}
+.caixa{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
+.caixa h3{margin:0 0 4px;font-size:17px}
+.caixa .sub{margin:0 0 12px;color:var(--text-2);font-size:14px;line-height:1.5}
+.lista{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:7px}
+.lista li{display:flex;gap:8px;align-items:flex-start;color:var(--text-2);font-size:13.5px;line-height:1.45}
+.lista svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--pos)}
+.pagar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{color:var(--text-3);font-size:12px;display:flex;align-items:center;gap:6px}
+.seg svg{width:14px;height:14px}
+.pix{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
+.qr{background:#fff;border-radius:10px;padding:8px;width:220px}.qr svg{display:block;width:100%;height:auto}
+.pix h3{margin:0 0 6px;font-size:16px}
+.pix p{margin:0 0 10px;color:var(--text-2);font-size:13.5px;line-height:1.5}
+.cc{display:flex;gap:6px}.cc input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);padding:9px 10px;font:12px ui-monospace,Menlo,Consolas,monospace}
+.bt{background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;min-height:46px;font-size:15px}
+.bt2{background:var(--surface-2);color:var(--text);border:1px solid var(--line-2);border-radius:8px;padding:9px 12px;font-weight:600;cursor:pointer;min-height:40px}
+.bt:disabled,.bt2:disabled{opacity:.6;cursor:default}
+.arq{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.arq label{display:block;font-size:13px;color:var(--text-2);margin-bottom:6px}
+.arq input[type=file]{color:var(--text-2);font-size:13px;max-width:100%;margin-bottom:10px;display:block}
+.faq details{border-top:1px solid var(--line);padding:12px 2px}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:10px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';color:var(--text-3);font-weight:400;font-size:18px;line-height:1}
+.faq details[open] summary::after{content:'−'}
+.faq p{margin:8px 0 0;color:var(--text-2);font-size:13.5px;line-height:1.55}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}th{color:var(--text-3);font-weight:600;border-top:0}
+.nota{color:var(--text-3);font-size:12.5px;line-height:1.5}
+.msg{font-size:13px;color:var(--text-2);margin:8px 0 0}.msg.erro{color:var(--neg)}.msg:empty{display:none}
+@media (max-width:600px){.forma{grid-template-columns:1fr}.pix{grid-template-columns:1fr}.qr{margin:0 auto}.pagar .bt{width:100%}}
+</style></head><body><main>
+<header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
+<div id="raiz"><p class="nota">Carregando…</p></div>
+</main>
+<script src="/vitrine/assinatura-ads.js?v=2"></script>
+<script src="/js/pg/assinar.js?v=${versaoJsAssinar}"></script></body></html>`);
 }

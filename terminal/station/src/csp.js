@@ -3,10 +3,19 @@
    o que a regra abaixo TERIA bloqueado. Os avisos ficam somados por dia na tabela csp_avisos (tipo de recurso,
    endereço de origem e página), sem nada da pessoa. Depois de uma semana de uso real, a lista é completada e a
    regra passa a valer de verdade (etapa 2: trocar o cabeçalho para Content-Security-Policy).
-   Para consultar: SELECT diretiva, bloqueado, SUM(n) FROM csp_avisos GROUP BY 1, 2 ORDER BY 3 DESC. */
+   Para consultar: SELECT diretiva, bloqueado, SUM(n) FROM csp_avisos GROUP BY 1, 2 ORDER BY 3 DESC.
+   Etapa 2, preparação (22/11/2026): os scripts e ações escritos dentro das páginas foram para arquivos (boot.js,
+   noticias.js, letras.js, /js/pg/<nome>.js...) e a lista abaixo foi completada com a estatística da Cloudflare,
+   o Google Ads e o WebAssembly. Ainda só avisando por alguns dias; depois o cabeçalho passa a bloquear. */
 const LISTA = {
   'default-src': ["'self'"],
-  'script-src': ['https://www.youtube.com', "'self'", "'report-sample'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://s3.tradingview.com', 'https://challenges.cloudflare.com'],
+  'script-src': ["'self'", "'report-sample'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://s3.tradingview.com', 'https://challenges.cloudflare.com',
+    // estatística de visitas da Cloudflare (Web Analytics) e WebAssembly (avisos de 14 a 22/11)
+    'https://static.cloudflareinsights.com', "'wasm-unsafe-eval'",
+    // TV da Schwab Network na aba Notícias, em teste até 04/12/2026 (schwab-tv.js)
+    'https://www.youtube.com',
+    // tag do Google Ads na vitrine e no /assinar (22/11/2026)
+    'https://www.googletagmanager.com'],
   // estilos escritos dentro das páginas são muitos (e de baixo risco): ficam liberados
   'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
   'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
@@ -17,8 +26,12 @@ const LISTA = {
     'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com',
     // achados na prévia local de 12/11 (todas as abas abertas uma vez)
     'https://mercadomacro-vitrine.cota-cotacao10.workers.dev', 'https://fred-proxy.cota-cotacao10.workers.dev', 'https://apisidra.ibge.gov.br',
-    'https://economia.awesomeapi.com.br', 'https://latest.currency-api.pages.dev', 'wss://data-stream.binance.vision', 'wss://api.derivws.com'],
-  'frame-src': ['https://www.youtube.com', "'self'", 'https://s.tradingview.com', 'https://www.tradingview-widget.com', 'https://sslecal2.investing.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com'],
+    'https://economia.awesomeapi.com.br', 'https://latest.currency-api.pages.dev', 'wss://data-stream.binance.vision', 'wss://api.derivws.com',
+    // tag do Google Ads (22/11/2026)
+    'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://www.googleadservices.com', 'https://www.google.com', 'https://googleads.g.doubleclick.net', 'https://*.doubleclick.net', 'https://pagead2.googlesyndication.com',
+    'https://cloudflareinsights.com'],
+  'frame-src': ["'self'", 'https://s.tradingview.com', 'https://www.tradingview-widget.com', 'https://sslecal2.investing.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com',
+    'https://td.doubleclick.net', 'https://www.googletagmanager.com', 'https://www.youtube.com'],
   'worker-src': ["'self'"],
   'manifest-src': ["'self'"],
   'object-src': ["'none'"],
@@ -26,6 +39,9 @@ const LISTA = {
   'form-action': ["'self'"],
   'report-uri': ['/api/csp'],
 };
+// caixa fechada das Notícias Agrícolas (/vitrine/na-caixa, aberta pela aba Notícias num quadro com sandbox):
+// regra própria e já valendo, só com o widget deles e o na-ponte.js
+export const CSP_CAIXA_NA = "default-src 'none'; script-src 'self' https://www.noticiasagricolas.com.br; style-src 'unsafe-inline'; img-src https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
 export const CSP_SO_AVISO = Object.entries(LISTA).map(([k, v]) => k + ' ' + v.join(' ')).join('; ');
 
 const MAX_LINHAS = 3000; // teto de linhas por segurança (um site hostil poderia mandar avisos sem parar)

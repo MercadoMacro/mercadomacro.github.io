@@ -1,4 +1,8 @@
 // Medição opcional dos acessos vindos da campanha de assinatura.
+// 22/11/2026 (pedido do Dante): a tag do Google carrega em toda visita em "modo de consentimento" restrito, SEM cookies
+// (ad_storage e ad_user_data negados), para o Google Ads enxergar a tag no site (o erro "Seu site não tem uma tag do
+// Google" deixava a campanha como "configuração incorreta"). Cookies e a conversão da assinatura continuam só depois do
+// "Permitir" de quem chega pelo anúncio, como antes.
 (function () {
   if (location.origin !== 'https://mercadomacro.com.br') return;
   const tag = 'AW-18587395504';
@@ -24,6 +28,21 @@
     }
   }
   if (!(estado.ate > agora)) estado = {};
+
+  // base da tag, sempre: consentimento negado (sem cookies) e endereço sem parâmetros
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { window.dataLayer.push(arguments); }
+  gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' });
+  gtag('js', new Date());
+  gtag('config', tag, { page_location: location.origin + location.pathname, page_referrer: '', allow_ad_personalization_signals: false });
+  const script = document.createElement('script');
+  script.async = true;
+  script.referrerPolicy = 'origin';
+  script.src = 'https://www.googletagmanager.com/gtag/js?id=' + tag;
+  let aoCarregar = null;
+  script.onload = () => aoCarregar && aoCarregar();
+  document.head.append(script);
+
   if (estado.recusado) return;
   if (!parametros.size && !estado.ate) return;
 
@@ -35,15 +54,9 @@
       url.searchParams.set(nome, valor);
     }
     if (parametros.size) history.replaceState(history.state, '', url);
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { window.dataLayer.push(arguments); }
-    gtag('consent', 'default', { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'denied', analytics_storage: 'denied' });
-    gtag('js', new Date());
+    // com o "Permitir": libera os cookies de anúncio (personalização segue negada) e registra a página com o clique
+    gtag('consent', 'update', { ad_storage: 'granted', ad_user_data: 'granted' });
     gtag('config', tag, { page_location: pagina.href, page_referrer: '', allow_ad_personalization_signals: false });
-    const script = document.createElement('script');
-    script.async = true;
-    script.referrerPolicy = 'origin';
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + tag;
     window.mmAdsCheckout = function (sessao) {
       if (!/^cs_live_[A-Za-z0-9]+$/.test(sessao)) return;
       estado.sessao = sessao;
@@ -77,8 +90,8 @@
       } catch {}
       if (tentativa < 4) setTimeout(() => conferir(tentativa + 1), 2500 * (tentativa + 1));
     }
-    script.onload = () => conferir(0);
-    document.head.append(script);
+    aoCarregar = () => conferir(0);
+    if (window.google_tag_manager) conferir(0);
   }
   if (estado.ate) { iniciar(); return; }
   const aviso = document.createElement('aside');
