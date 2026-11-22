@@ -31,10 +31,11 @@ function form(obj, pre = '', out = new URLSearchParams()) {
   }
   return out;
 }
-async function stripe(chave, metodo, caminho, corpo) {
+// versao: só para chamadas que precisam de uma versão nova da API (Pix Automático: 2026-04-22.dahlia)
+async function stripe(chave, metodo, caminho, corpo, versao) {
   const r = await fetch(API + caminho, {
     method: metodo,
-    headers: { Authorization: 'Bearer ' + chave, ...(corpo ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
+    headers: { Authorization: 'Bearer ' + chave, ...(corpo ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...(versao ? { 'Stripe-Version': versao } : {}) },
     body: corpo ? form(corpo) : undefined,
     signal: AbortSignal.timeout(15000),
   });
@@ -59,15 +60,19 @@ export async function stripeLigado(env) { const c = await config(env); return !!
 export async function situacaoCartao(env, uid) {
   await preparar(env);
   const u = await env.DB.prepare('SELECT stripe_cliente, stripe_assinatura, stripe_cancela FROM usuarios WHERE id = ?').bind(uid).first();
-  let cancela = (u && u.stripe_cancela) || null;
+  let cancela = (u && u.stripe_cancela) || null, formaAssinatura = 'cartao';
   // confere no Stripe se a pessoa cancelou (cancelar no portal só marca o fim do período; o aviso do webhook pode não ter chegado)
   if (u && u.stripe_assinatura) {
     const c = await config(env);
     if (c.stripe_key) {
-      try { cancela = await gravarCancela(env, uid, await stripe(c.stripe_key, 'GET', 'subscriptions/' + encodeURIComponent(u.stripe_assinatura))); } catch (e) {}
+      try {
+        const sub = await stripe(c.stripe_key, 'GET', 'subscriptions/' + encodeURIComponent(u.stripe_assinatura));
+        cancela = await gravarCancela(env, uid, sub);
+        if (sub.metadata && sub.metadata.forma === 'pix') formaAssinatura = 'pix';
+      } catch (e) {}
     }
   }
-  return { cartao: await stripeLigado(env), renovaCartao: !!(u && u.stripe_assinatura), cancelaEm: u && u.stripe_assinatura ? cancela : null, temCliente: !!(u && u.stripe_cliente) };
+  return { cartao: await stripeLigado(env), renovaCartao: !!(u && u.stripe_assinatura), formaAssinatura, pixRecorrente: await pixRecorrenteDisponivel(env), cancelaEm: u && u.stripe_assinatura ? cancela : null, temCliente: !!(u && u.stripe_cliente) };
 }
 // data em que a renovação para (cancelou no portal, vale até o fim do período pago) ou null se continua renovando
 function fimDaAssinatura(sub) {
@@ -96,8 +101,28 @@ export async function apiCartao(req, env, conta, acao) {
     }
     const b = await req.json().catch(() => ({}));
     if (!recorrente(b.plano)) return json({ erro: 'Escolha o plano mensal, semestral ou anual.' }, 400);
-    if (u.stripe_assinatura) return json({ erro: 'Você já tem a renovação automática no cartão. Use "Gerenciar cartão" para trocar de plano ou cancelar.' }, 400);
+    if (u.stripe_assinatura) return json({ erro: 'Você já tem a renovação automática. Use "Gerenciar assinatura" para trocar de plano ou cancelar.' }, 400);
     const p = PLANOS[b.plano];
+    // 22/11/2026: Pix Automático (renova sozinho no Pix), mesmo preço do cartão. A pessoa autoriza uma vez no app do banco.
+    if (b.forma === 'pix') {
+      if (!(await pixRecorrenteDisponivel(env)) || !(await contaNoBrasil(c))) return json({ semRecorrente: true });
+      const meta = { usuario_id: String(u.id), plano: b.plano, forma: 'pix' };
+      try {
+        const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
+          mode: 'subscription', locale: 'pt-BR', payment_method_types: ['pix'],
+          ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
+          client_reference_id: String(u.id),
+          line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: assinatura ${({ 1: 'mensal', 6: 'semestral', 12: 'anual' })[p.meses] || p.nome} (Pix Automático)` } } }],
+          payment_method_options: { pix: { mandate_options: { amount: p.valorCartao || p.valor, amount_type: 'maximum', payment_schedule: ({ 1: 'monthly', 6: 'halfyearly', 12: 'yearly' })[p.meses], reference: 'Mercado Macro' } } },
+          metadata: meta, subscription_data: { metadata: meta },
+          success_url: SITE + '/assinar?cartao=ok', cancel_url: SITE + '/assinar',
+        }, VERSAO_PIX_AUTOMATICO);
+        return json({ url: s.url, sessao: s.id });
+      } catch (e) {
+        if (e.status === 400) { recorrenteDesligadoAte = Date.now() + 3600000; return json({ semRecorrente: true }); }
+        throw e;
+      }
+    }
     const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
       // 22/11/2026: só cartão aqui (o Pix recorrente, quando ligado no Stripe, terá caminho próprio)
       mode: 'subscription', locale: 'pt-BR', payment_method_types: ['card'],
@@ -119,7 +144,17 @@ export async function apiCartao(req, env, conta, acao) {
    página do Stripe com o QR Code; { manual: true } quando o Pix do Stripe não está disponível (a página usa o Pix manual).
    Se o Stripe recusar o Pix (não ligado no painel), não tenta de novo por 1 hora. */
 const pixAvulso = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto && !PLANOS[id].soCartao);
-let pixDesligadoAte = 0, paisDaConta = '';
+let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '';
+const VERSAO_PIX_AUTOMATICO = '2026-04-22.dahlia';
+// só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
+async function contaNoBrasil(c) {
+  if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { return false; } }
+  return paisDaConta === 'BR';
+}
+export async function pixRecorrenteDisponivel(env) {
+  if (Date.now() < recorrenteDesligadoAte) return false;
+  return pixStripeDisponivel(env);
+}
 export async function pixStripeDisponivel(env) {
   if (Date.now() < pixDesligadoAte) return false;
   const c = await config(env);
@@ -132,9 +167,7 @@ export async function apiPix(req, env, conta) {
   if (!(await dentroDoLimite(env, 'pixstripe:' + conta.id, 10, 3600))) return json({ erro: 'Muitas tentativas. Tente de novo mais tarde.' }, 429);
   const b = await req.json().catch(() => ({}));
   if (!pixAvulso(b.plano)) return json({ erro: 'Escolha o plano de 1 mês ou de 6 meses.' }, 400);
-  // só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
-  if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502); } }
-  if (paisDaConta !== 'BR') { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
+  if (!(await contaNoBrasil(c))) { if (paisDaConta) pixDesligadoAte = Date.now() + 3600000; return json(paisDaConta ? { manual: true } : { erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, paisDaConta ? 200 : 502); }
   const u = await env.DB.prepare('SELECT id, email, stripe_cliente FROM usuarios WHERE id = ?').bind(conta.id).first();
   const p = PLANOS[b.plano];
   try {
@@ -241,6 +274,7 @@ function dadosDaFatura(o, meta) {
     // nunca deixa vencer antes do fim do período pago no Stripe (mais 1 dia de folga para a próxima cobrança)
     fimStripe: per ? new Date((per.end + 86400) * 1000).toISOString() : null,
     primeira: o.billing_reason === 'subscription_create',
+    forma: meta.forma === 'pix' ? 'pix-auto' : 'cartao',
   };
 }
 // grava o pagamento e libera o acesso juntos (batch do D1 = transação). Duas faturas ao mesmo tempo: a validade é
@@ -271,9 +305,9 @@ async function creditar(env, u, f, agora) {
   // não conseguiu gravar (a conta mudou em todas as tentativas): o Stripe reenvia depois
   if (!gravou) return { erro: 'Conta mudou durante a gravação; tente de novo.' };
   limparCacheSessao();
-  const noPix = f.forma === 'pix';
-  await registrar(env, u.id, noPix ? `Pagou no Pix (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}` : `${f.primeira ? 'Assinou' : 'Renovou'} no cartão (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}`);
-  await avisar(env, noPix ? 'Pix pago (Stripe)' : f.primeira ? 'Nova assinatura no cartão' : 'Renovação no cartão', `${u.nome} (${u.email})\nPlano ${plano.nome}: ${reais(f.valor)}\nAcesso até ${dataBR(validade)}`).catch(() => {});
+  const noPix = f.forma === 'pix', onde = f.forma === 'pix-auto' ? 'no Pix Automático' : 'no cartão';
+  await registrar(env, u.id, noPix ? `Pagou no Pix (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}` : `${f.primeira ? 'Assinou' : 'Renovou'} ${onde} (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}`);
+  await avisar(env, noPix ? 'Pix pago (Stripe)' : f.primeira ? 'Nova assinatura ' + onde : 'Renovação ' + onde, `${u.nome} (${u.email})\nPlano ${plano.nome}: ${reais(f.valor)}\nAcesso até ${dataBR(validade)}`).catch(() => {});
   if (f.primeira) await emailAprovado(env, new Request(SITE + '/'), u, { ...plano, valor: f.valor }, validade).catch(() => null);
   return { ok: true, validade };
 }
@@ -324,32 +358,35 @@ export async function webhookStripe(req, env) {
   if (ev.type === 'invoice.payment_failed') {
     const u = await usuarioDoStripe(env, metaDaFatura(o), o.customer);
     if (u) {
-      await registrar(env, u.id, `Cobrança no cartão recusada (${reais(o.amount_due || 0)}); o Stripe tenta de novo nos próximos dias`);
-      await avisar(env, 'Cartão recusado', `${u.nome} (${u.email}): a renovação de ${reais(o.amount_due || 0)} falhou. O Stripe tenta de novo.`).catch(() => {});
+      const ondeF = metaDaFatura(o).forma === 'pix' ? 'no Pix Automático' : 'no cartão';
+      await registrar(env, u.id, `Cobrança ${ondeF} recusada (${reais(o.amount_due || 0)}); o Stripe tenta de novo nos próximos dias`);
+      await avisar(env, 'Cobrança recusada ' + ondeF, `${u.nome} (${u.email}): a renovação de ${reais(o.amount_due || 0)} falhou. O Stripe tenta de novo.`).catch(() => {});
     }
     return json({ ok: true });
   }
 
   if (ev.type === 'customer.subscription.updated') {
     const u = await usuarioDoStripe(env, o.metadata, o.customer);
+    const ondeS = o.metadata && o.metadata.forma === 'pix' ? 'no Pix Automático' : 'no cartão';
     if (u) {
       const antes = (await env.DB.prepare('SELECT stripe_cancela FROM usuarios WHERE id = ?').bind(u.id).first() || {}).stripe_cancela || null;
       const cancela = await gravarCancela(env, u.id, o);
       if (!antes && cancela) {
-        await registrar(env, u.id, `Cancelou a renovação no cartão; o acesso vale até ${dataBR(u.expira)}`);
-        await avisar(env, 'Cancelou a renovação no cartão', `${u.nome} (${u.email}) cancelou. Não haverá nova cobrança; o acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
-      } else if (antes && !cancela) await registrar(env, u.id, 'Reativou a renovação automática no cartão');
+        await registrar(env, u.id, `Cancelou a renovação ${ondeS}; o acesso vale até ${dataBR(u.expira)}`);
+        await avisar(env, 'Cancelou a renovação ' + ondeS, `${u.nome} (${u.email}) cancelou. Não haverá nova cobrança; o acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
+      } else if (antes && !cancela) await registrar(env, u.id, 'Reativou a renovação automática ' + ondeS);
     }
     return json({ ok: true });
   }
 
   if (ev.type === 'customer.subscription.deleted') {
     const u = await usuarioDoStripe(env, o.metadata, o.customer);
+    const ondeS = o.metadata && o.metadata.forma === 'pix' ? 'no Pix Automático' : 'no cartão';
     if (u) {
       // o acesso continua até a validade que já foi paga; só deixa de renovar
       await env.DB.prepare('UPDATE usuarios SET stripe_assinatura = NULL, stripe_cancela = NULL WHERE id = ? AND (stripe_assinatura = ? OR stripe_assinatura IS NULL)').bind(u.id, o.id || '').run();
-      await registrar(env, u.id, 'Renovação automática no cartão encerrada');
-      await avisar(env, 'Assinatura no cartão encerrada', `${u.nome} (${u.email}) não renova mais no cartão. O acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
+      await registrar(env, u.id, 'Renovação automática ' + ondeS + ' encerrada');
+      await avisar(env, 'Assinatura ' + ondeS + ' encerrada', `${u.nome} (${u.email}) não renova mais ${ondeS}. O acesso vale até ${dataBR(u.expira)}.`).catch(() => {});
     }
     return json({ ok: true });
   }
