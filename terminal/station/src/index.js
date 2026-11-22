@@ -15,6 +15,7 @@ import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, 
 import { reciboAds, apiCartao, apiPix, pixStripeDisponivel, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, SCRIPT_ASSINAR, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
+import { ligarJornal, paginaJornal, apiAdminJornal, rodadaJornal, slugsParaSitemap } from './jornal.js';
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
@@ -86,6 +87,8 @@ export default {
       if (diaUtil && mUtc === 30 && hUtc === 11) ctx.waitUntil(conferirPostagem(env, 'abertura').catch((e) => console.error('conferir abertura:', e.message)));
       if (diaUtil && mUtc === 30 && hUtc === 21) ctx.waitUntil(conferirPostagem(env, 'fechamento').catch((e) => console.error('conferir fechamento:', e.message)));
       if (mUtc === 30 && hUtc === 22) ctx.waitUntil(conferirRobos(env).catch((e) => console.error('conferir robôs:', e.message)));
+      // Jornal Mercado Macro: 8h15, 12h30, 15h30 e 18h45 (Brasília) em dia útil, só com o jornal ligado no /admin
+      ctx.waitUntil(rodadaJornal(env, quando, diaUtil).catch((e) => console.error('jornal:', e.message)));
       if (quando.getUTCMinutes() !== 15) return;
       ctx.waitUntil(dispararRobo(env, 'vigia.yml', {}));
       ctx.waitUntil(cifrarPendentes(env).catch((e) => console.error('cofre:', e.message))); // chaves ainda em texto puro no D1
@@ -143,6 +146,8 @@ export default {
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
       if (p === '/api/publico/passe-chave') return json(await chavePublicaPasse(env), 200, { 'Cache-Control': 'public, max-age=3600' });
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
+      // Jornal Mercado Macro (src/jornal.js): matérias aprovadas no /admin, públicas
+      if (p === '/jornal' || p.startsWith('/jornal/')) { if (navegacao(req) && p !== '/jornal/rss.xml') contar(env, ctx, req, 'jornal'); return await naBorda(req, ctx, () => paginaJornal(req, env, p)); }
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/planos' || p === '/termos') return await paginaPlanos(req, env);
@@ -1469,6 +1474,7 @@ async function apiAdmin(req, env, acao, eu) {
   if (acao === 'feeds-diag' && req.method === 'GET') { const { diagnosticoFeeds } = await import('./noticias.js'); return json({ colo: req.cf?.colo || '', feeds: await diagnosticoFeeds() }, 200, { 'Cache-Control': 'no-store' }); }
   if (acao === 'backup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiBackupAdmin } = await import('./backup.js'); return apiBackupAdmin(req, env, json); }
   if (acao === 'campanha') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); const { apiCampanhaAdmin } = await import('./campanha.js'); return apiCampanhaAdmin(req, env, json); }
+  if (acao === 'jornal') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiAdminJornal(req, env, json); }
   if (acao === 'popup') { if (req.method === 'POST' && !mesmaOrigem(req)) return json({ erro: 'Origem não permitida.' }, 403); return apiPopupAdmin(req, env, eu, json); }
   if (acao === 'boasvindas') return apiBoasVindas(req, env, eu);
   const ass = await apiAdminAssinatura(req, env, acao);
@@ -2676,7 +2682,9 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
 // sitemap com uma página por fechamento guardado
 async function sitemap(env) {
   const dias = await diasParaSitemap(env);
-  return SITEMAP.replace('</urlset>', dias.map((d) => `  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado/${d}</loc><lastmod>${d}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>\n`).join('') + '</urlset>');
+  const jor = await slugsParaSitemap(env);
+  // o jornal entra no sitemap quando tiver a primeira matéria publicada
+  return SITEMAP.replace('</urlset>', (jor.length ? '  <url><loc>https://mercadomacro.com.br/jornal</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>\n' : '') + jor.map((m) => `  <url><loc>https://mercadomacro.com.br/jornal/${m.slug}</loc><lastmod>${new Date(m.publicado).toISOString().slice(0, 10)}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>\n`).join('') + dias.map((d) => `  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado/${d}</loc><lastmod>${d}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>\n`).join('') + '</urlset>');
 }
 
 /* ---------------- páginas ---------------- */
@@ -2986,7 +2994,7 @@ const JS_ADMIN = `(function(){
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', jornal: 'Matérias do Jornal Mercado Macro: só vão ao ar depois do seu Aprovar.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -3000,6 +3008,7 @@ const JS_ADMIN = `(function(){
     if (f) { filtro = f; pessoas(); }
     if (n === 'passe') passe();
     if (n === 'jade') jade();
+    if (n === 'jornal') jornalAdm();
     if (n === 'atraso') atraso();
     if (n === 'ajustes') estado();
     if (location.hash.slice(1) !== n) history.replaceState(null, '', '#' + n);
@@ -3578,6 +3587,64 @@ const JS_ADMIN = `(function(){
       var rv = document.getElementById('pp-rever'); if (rv) rv.onclick = function(){ post('/api/admin/popup', { acao: 'rever' }).then(function(){ diz(true, 'Pronto. Abra o terminal (ou recarregue) para ver o aviso.'); }, function(){ diz(false, 'Não foi possível.'); }); };
     }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
+  /* Jornal Mercado Macro (22/11/2026): rascunhos da IA, editar, aprovar, recusar, tirar do ar; chave liga/desliga */
+  function jornalAdm(){
+    var raiz = document.getElementById('jor');
+    var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
+    var pri = bt + ';background:var(--accent);color:var(--on-accent);border-color:transparent';
+    var inp = 'width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;font:inherit';
+    fetch('/api/admin/jornal', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var rasc = j.materias.filter(function(m){ return m.status === 'rascunho'; });
+      var pub = j.materias.filter(function(m){ return m.status === 'publicada'; });
+      var c = document.getElementById('cnt-jor'); if (c) c.textContent = rasc.length ? String(rasc.length) : '';
+      function cartao(m){
+        var st = { rascunho: 'para aprovar', publicada: 'publicada', recusada: 'recusada', vencida: 'perdeu a hora' }[m.status] || m.status;
+        return '<div class="caixa" data-id="' + m.id + '" style="margin-bottom:12px">'
+          + '<p class="d" style="margin:0 0 4px">' + esc(m.tipoNome) + ' · ' + esc(m.secao) + ' · ' + st + ' · ' + data(new Date(m.publicado || m.criado).toISOString()) + '</p>'
+          + '<p style="margin:0 0 4px;font-weight:700;font-size:16px">' + esc(m.titulo) + '</p><p class="d" style="margin:0 0 10px">' + esc(m.linha_fina) + '</p>'
+          + '<div class="linha" style="flex-wrap:wrap;gap:8px">'
+          + (m.status === 'publicada' ? '<a href="/jornal/' + esc(m.slug) + '" target="_blank" rel="noopener" style="' + bt + ';text-decoration:none">Ver no ar</a>' : '<a href="/api/admin/jornal?previa=' + m.id + '" target="_blank" rel="noopener" style="' + bt + ';text-decoration:none">Ver prévia</a>')
+          + '<button type="button" data-ed style="' + bt + '">Editar</button>'
+          + (m.status === 'rascunho' ? '<button type="button" data-ap style="' + pri + '">Aprovar e publicar</button><button type="button" data-rc style="' + bt + '">Recusar</button>' : '')
+          + (m.status === 'publicada' ? '<button type="button" data-tira style="' + bt + '">Tirar do ar</button>' : '')
+          + '</div><div data-form hidden style="margin-top:10px"></div></div>';
+      }
+      raiz.innerHTML = '<div class="caixa" style="margin-bottom:16px"><p style="margin:0 0 8px">Jornal <b>' + (j.ligado ? 'ligado' : 'desligado') + '</b>. ' + (j.ligado ? 'Nos dias úteis a IA escreve às 8h15 (abertura), 12h30 e 15h30 (assunto do dia) e 18h45 (fechamento). Cada matéria espera o seu Aprovar e você recebe um aviso no Telegram.' : 'Nada é gerado sozinho. As matérias já publicadas continuam no ar.') + ' Publicadas: <b>' + j.publicadas + '</b> · <a href="/jornal" target="_blank" rel="noopener" style="color:var(--accent-text)">abrir o jornal</a></p>'
+        + '<div class="linha" style="flex-wrap:wrap;gap:8px"><button type="button" id="jor-lig" style="' + (j.ligado ? bt : pri) + '">' + (j.ligado ? 'Desligar o jornal' : 'Ligar o jornal') + '</button>'
+        + '<span class="d" style="align-self:center">Gerar agora:</span><button type="button" data-gera="abertura" style="' + bt + '">Abertura</button><button type="button" data-gera="tema" style="' + bt + '">Assunto do dia</button><button type="button" data-gera="fechamento" style="' + bt + '">Fechamento</button></div>'
+        + '<p class="msg" id="jor-msg" role="status"></p></div>'
+        + '<h2>Para aprovar<b>' + rasc.length + '</b></h2>' + (rasc.length ? rasc.map(cartao).join('') : '<p class="vazio">Nenhuma matéria esperando.</p>')
+        + '<h2 style="margin-top:22px">Publicadas</h2>' + (pub.length ? pub.map(cartao).join('') : '<p class="vazio">Nenhuma ainda.</p>');
+      var msg = document.getElementById('jor-msg');
+      function diz(ok, t){ msg.className = 'msg ' + (ok ? 'ok' : 'erro'); msg.textContent = t; }
+      function erro(e){ diz(false, (e && e.erro) || 'Não foi possível.'); }
+      document.getElementById('jor-lig').onclick = function(){ post('/api/admin/jornal', { acao: 'ligar', ligado: !j.ligado }).then(jornalAdm, erro); };
+      raiz.querySelectorAll('[data-gera]').forEach(function(b){ b.onclick = function(){
+        b.disabled = true; diz(true, 'A IA está escrevendo… leva até 1 minuto.');
+        post('/api/admin/jornal', { acao: 'gerar', tipo: b.dataset.gera }).then(function(){ jornalAdm(); }, function(e){ b.disabled = false; erro(e); });
+      }; });
+      raiz.querySelectorAll('[data-id]').forEach(function(cx){
+        var id = Number(cx.dataset.id), m = j.materias.filter(function(x){ return x.id === id; })[0];
+        var ap = cx.querySelector('[data-ap]'), rc = cx.querySelector('[data-rc]'), ti = cx.querySelector('[data-tira]'), ed = cx.querySelector('[data-ed]'), fm = cx.querySelector('[data-form]');
+        if (ap) ap.onclick = function(){ ap.disabled = true; post('/api/admin/jornal', { acao: 'aprovar', id: id }).then(function(r){ jornalAdm(); setTimeout(function(){ var mm = document.getElementById('jor-msg'); if (mm) { mm.className = 'msg ok'; mm.textContent = 'Publicada: ' + r.link; } }, 300); }, erro); };
+        if (rc) rc.onclick = function(){ post('/api/admin/jornal', { acao: 'recusar', id: id }).then(jornalAdm, erro); };
+        if (ti) ti.onclick = function(){ if (confirm('Tirar esta matéria do ar?')) post('/api/admin/jornal', { acao: 'despublicar', id: id }).then(jornalAdm, erro); };
+        ed.onclick = function(){
+          if (!fm.hidden) { fm.hidden = true; return; }
+          fm.hidden = false;
+          fm.innerHTML = '<label class="d">Seção</label><select data-f="secao" style="' + inp + ';margin:4px 0 8px">' + j.secoes.map(function(x){ return '<option' + (x === m.secao ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>'
+            + '<label class="d">Título</label><input data-f="titulo" maxlength="120" style="' + inp + ';margin:4px 0 8px" value="' + esc(m.titulo) + '">'
+            + '<label class="d">Linha fina</label><textarea data-f="linha_fina" rows="2" maxlength="260" style="' + inp + ';margin:4px 0 8px">' + esc(m.linha_fina) + '</textarea>'
+            + '<label class="d">Texto (um parágrafo por bloco, com uma linha em branco entre eles)</label><textarea data-f="corpo" rows="14" style="' + inp + ';margin:4px 0 8px;line-height:1.5">' + esc(m.corpo.join('\\n\\n')) + '</textarea>'
+            + '<button type="button" data-salva style="' + pri + '">Salvar alterações</button>';
+          fm.querySelector('[data-salva]').onclick = function(){
+            var v = function(k){ return fm.querySelector('[data-f="' + k + '"]').value; };
+            post('/api/admin/jornal', { acao: 'editar', id: id, secao: v('secao'), titulo: v('titulo'), linha_fina: v('linha_fina'), corpo: v('corpo') }).then(function(){ jornalAdm(); }, erro);
+          };
+        };
+      });
+    }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar o jornal.</p>'; });
+  }
   function comunicado(){
     fetch('/api/admin/comunicado', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
@@ -4136,6 +4203,7 @@ h2 b{font-size:12px;font-weight:700}
   <button type="button" role="tab" data-aba="pagamentos" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span class="rot">Pagamentos</span> <span class="cnt" id="cnt-pag"></span></button>
   <div class="grp" aria-hidden="true">Comunicação</div>
   <button type="button" role="tab" data-aba="comunicado" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="rot">Novidades e e-mails</span></button>
+  <button type="button" role="tab" data-aba="jornal" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="15" height="16" rx="1.5"/><path d="M18 8h3v10a2 2 0 0 1-2 2H6M7 8h7M7 12h7M7 16h4"/></svg><span class="rot">Jornal</span> <span class="cnt" id="cnt-jor"></span></button>
   <div class="grp" aria-hidden="true">Monitoramento</div>
   <button type="button" role="tab" data-aba="passe" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="M12 9v4M12 16h.01"/></svg><span class="rot">Acessos sem passe</span></button>
   <button type="button" role="tab" data-aba="jade" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="rot">Perguntas à Jade</span></button>
@@ -4171,6 +4239,7 @@ h2 b{font-size:12px;font-weight:700}
 </section>
 <section data-p="pagamentos" hidden><div class="ferr" style="justify-content:flex-end"><button type="button" class="b" id="csv-pags">Baixar planilha de pagamentos</button></div><div id="pags"><p class="vazio">Carregando…</p></div></section>
 <section data-p="comunicado" hidden><h2>Campanha no WhatsApp</h2><p class="d" style="margin:-4px 0 10px">Toque em Enviar: o WhatsApp abre com o nome e a mensagem prontos, e você só confirma o envio.</p><div id="camp"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">Pop-up de novidades no site</h2><p class="d" style="margin:-4px 0 10px">Um aviso que aparece uma vez para cada pessoa ao entrar no terminal, em qualquer aparelho.</p><div id="pop"><p class="vazio">Carregando…</p></div><h2 style="margin-top:26px">E-mail de boas-vindas para quem assinou</h2><div id="bv"><p class="vazio">Carregando…</p></div><h2>Comunicado de novidades</h2><div id="com"><p class="vazio">Carregando…</p></div></section>
+<section data-p="jornal" hidden><div id="jor"><p class="vazio">Carregando…</p></div></section>
 <section data-p="jade" hidden>
   <p class="vazio nota-topo">Mostra os últimos 30 dias. E-mails e números longos (CPF, telefone, conta) já chegam trocados por [e-mail] e [número]. Suas próprias perguntas não entram. Cada pergunta fica 90 dias e depois é apagada.</p>
   <div class="kpis" id="jade-res" style="margin-bottom:14px"></div>
@@ -4327,6 +4396,7 @@ button.del{background:transparent;color:var(--neg);border:1px solid var(--neg)}
 
 // o módulo da assinatura usa estas utilidades (o arquivo principal do worker só pode exportar o handler)
 ligarAssistente({ json, mesmaOrigem, config, salvarConfig, dentroDoLimite });
+ligarJornal({ listaNoticias, dadosAbertura, dadosFechamento, avisar });
 ligarStripe({ json, mesmaOrigem, config, salvarConfig, avisar, limparCacheSessao, dentroDoLimite });
 // 19/11/2026: perguntar = mensagem que o robô do WhatsApp não entendeu, respondida pelo Gemini com os dados do site
 ligarJade({ avisar, perguntar: (env, texto, ctx) => perguntaWhatsApp(env, texto, {

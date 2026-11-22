@@ -392,6 +392,16 @@ export function dadosParaManha(d) {
   L.push('', 'Agenda de hoje (horário de Brasília):', ...(ag.length ? ag.map((a) => `- ${a.hora} ${a.pais}: ${a.titulo}${a.proj ? ` (projeção ${a.proj})` : ''}`) : ['- sem eventos importantes na agenda']));
   return L.join('\n');
 }
+// Jornal Mercado Macro (22/11/2026, src/jornal.js): texto livre pelo Gemini com instruções próprias e tempo máximo
+export async function escreverIA(env, pedido, instrucoes, ms = 45000) {
+  const c = await config(env);
+  if (!c.gemini_key) return { ok: false, erro: 'o assistente de IA não está ligado (falta a chave do Gemini)' };
+  let tempo;
+  return Promise.race([
+    gemini(c.gemini_key, [{ role: 'user', parts: [{ text: pedido }] }], false, c.gemini_modelo, instrucoes),
+    new Promise((ok) => { tempo = setTimeout(() => ok({ ok: false, erro: 'a IA demorou demais' }), ms); }),
+  ]).finally(() => clearTimeout(tempo));
+}
 // lê a resposta no formato VISAO / NOTICIAS; null se não vier certo
 export function lerManha(texto) {
   const t = String(texto || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\r/g, '');
