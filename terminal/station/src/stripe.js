@@ -109,7 +109,7 @@ export async function apiCartao(req, env, conta, acao) {
       const meta = { usuario_id: String(u.id), plano: b.plano, forma: 'pix' };
       try {
         const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
-          mode: 'subscription', locale: 'pt-BR', payment_method_types: ['pix'],
+          mode: 'subscription', locale: 'pt-BR', excluded_payment_method_types: SO_PIX,
           ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
           client_reference_id: String(u.id),
           line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: assinatura ${({ 1: 'mensal', 6: 'semestral', 12: 'anual' })[p.meses] || p.nome} (Pix Automático)` } } }],
@@ -124,16 +124,19 @@ export async function apiCartao(req, env, conta, acao) {
         throw e;
       }
     }
-    const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
-      // 22/11/2026: só cartão aqui (o Pix recorrente, quando ligado no Stripe, terá caminho próprio)
-      mode: 'subscription', locale: 'pt-BR', payment_method_types: ['card'],
+    const pedido = {
+      // 22/11/2026: só cartão aqui (o Pix tem caminho próprio)
+      mode: 'subscription', locale: 'pt-BR', excluded_payment_method_types: ['pix'],
       ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
       client_reference_id: String(u.id),
       line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: assinatura ${({ 1: 'mensal', 6: 'semestral', 12: 'anual' })[p.meses] || p.nome}` } } }],
       metadata: { usuario_id: String(u.id), plano: b.plano },
       subscription_data: { metadata: { usuario_id: String(u.id), plano: b.plano } },
       success_url: SITE + '/assinar?cartao=ok', cancel_url: SITE + '/assinar',
-    });
+    };
+    // se o Stripe recusar a exclusão do Pix, cria sem ela (o cartão nunca pode parar)
+    const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', pedido)
+      .catch((e) => { if (e.status !== 400) throw e; const { excluded_payment_method_types, ...resto } = pedido; return stripe(c.stripe_key, 'POST', 'checkout/sessions', resto); });
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
@@ -147,6 +150,10 @@ export async function apiCartao(req, env, conta, acao) {
 const pixAvulso = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto && !PLANOS[id].soCartao);
 let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '', erroPix = '';
 const VERSAO_PIX_AUTOMATICO = '2026-04-22.dahlia';
+// 22/11/2026: o Stripe não aceita mais escolher as formas de pagamento na criação do Checkout (payment_method_types);
+// elas vêm do painel. Para a página só do Pix, tiramos as outras formas ligadas no painel (cartão, que inclui Apple Pay
+// e Google Pay, Link e boleto). No cartão, tiramos o Pix.
+const SO_PIX = ['card', 'link', 'boleto'];
 // só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
 async function contaNoBrasil(c) {
   if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { erroPix = 'conta: ' + e.message; return false; } }
@@ -173,7 +180,7 @@ export async function apiPix(req, env, conta) {
   const p = PLANOS[b.plano];
   try {
     const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
-      mode: 'payment', locale: 'pt-BR', payment_method_types: ['pix'],
+      mode: 'payment', locale: 'pt-BR', excluded_payment_method_types: SO_PIX,
       ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
       client_reference_id: String(u.id),
       line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valor, product_data: { name: `Mercado Macro: ${p.nome} de acesso (Pix)` } } }],
