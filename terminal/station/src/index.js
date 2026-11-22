@@ -352,7 +352,7 @@ function origemDe(ref, utm) {
   return nome(h) || h.slice(0, 60);
 }
 // abas do terminal contadas no /admin (nome mostrado na tabela)
-const ABAS_USO = { 'market-panel': 'Mercado', 'mesa-panel': 'Mesa', 'watch-panel': 'Watchlist', 'heatmap-panel': 'Mapa de Calor', 'news-panel': 'Notícias', 'schwab-open': 'TV Schwab · abriu', 'schwab-play': 'TV Schwab · assistiu',
+const ABAS_USO = { 'market-panel': 'Mercado', 'mesa-panel': 'Mesa', 'watch-panel': 'Watchlist', 'heatmap-panel': 'Mapa de Calor', 'news-panel': 'Notícias',
   'weekly-panel': 'Resumo semanal', 'calendar-panel': 'Calendário', 'analysis-panel': 'Macro e Fluxo', 'fund-panel': 'Fundamentos', 'indicators-panel': 'Indicadores',
   'calculator-panel': 'Calculadora', 'options-panel': 'Opções', 'edu-panel': 'Educação' };
 // tipo de aparelho pelo navegador: celular, tablet ou computador (nada além disso é guardado)
