@@ -150,7 +150,7 @@ function emailVencendo(env, u, dias) {
   return enviarEmail(env, reqSite(), {
     para: u.email, nome: u.nome, assunto: dias <= 1 ? 'Seu acesso ao Mercado Macro termina amanhã' : `Seu acesso ao Mercado Macro termina em ${dias} dias`,
     paragrafos: [`Seu acesso ao Mercado Macro vale até ${dataBR(u.expira)}. Depois disso a conta é desativada (seus dados e listas ficam guardados).`,
-      'Para continuar, escolha um plano e pague pelo Pix. Assim que o pagamento for conferido, a validade é renovada.'],
+      'Para continuar, escolha um plano no cartão ou no Pix. No cartão e no Pix Automático a renovação é automática, sem você precisar lembrar; no Pix de pagamento único, o acesso é renovado assim que o pagamento é confirmado.'],
     botao: 'Ver planos', link: SITE + '/assinar',
   });
 }
@@ -535,7 +535,7 @@ export function planosVitrine(cartao = false, curto = false) {
   // degustação saiu da página de assinatura (04/11/2026), então também não aparece nas páginas públicas (07/11/2026)
   // 19/11/2026 (auditoria da vitrine): em /planos, com o cartão ligado, o preço grande é o do cartão (o mais barato, como na
   // página de assinatura) e o Pix vem embaixo; antes era o contrário e o plano parecia mais caro do que é
-  const cartaoPrimeiro = (id, p) => `<li class="vt-pl"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>No cartão, com renovação automática</span>${porMes(soCartao(p))}<small class="vt-pl-cartao">No Pix: <b>${reais(p.valor)}</b>, pagamento único</small><em>${nota[id] || ''}</em></li>`;
+  const cartaoPrimeiro = (id, p) => `<li class="vt-pl"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>No cartão ou no Pix Automático, com renovação automática</span>${porMes(soCartao(p))}<small class="vt-pl-cartao">No Pix sem renovação: <b>${reais(p.valor)}</b>, pagamento único</small><em>${nota[id] || ''}</em></li>`;
   return Object.entries(PLANOS).filter(([id, p]) => !p.oculto && id !== 'degustacao' && !(p.soCartao && !cartao)).map(([id, p]) => (!curto && cartao && p.valorCartao && !p.soCartao && !p.gratis) ? cartaoPrimeiro(id, p) : p.soCartao
     ? `<li class="vt-pl destaque"><b>${p.nome}</b><strong>${reais(p.valorCartao)}</strong><span>${curto ? 'No cartão' : 'Só no cartão, com renovação automática'}</span>${porMes(soCartao(p))}<em>${nota[id] || ''}</em></li>`
     : `<li class="vt-pl"><b>${p.nome}</b><strong>${p.gratis ? 'R$ 0' : reais(p.valor)}</strong><span>${p.gratis ? (curto ? 'Sem cartão' : p.periodo + ' de acesso') : curto ? (cartao ? 'Pix ou cartão' : 'No Pix') : p.meses && !p.unico ? 'Pagamento único no Pix' : p.periodo + ' de acesso'}</span>${porMes(p)}${noCartao(p)}<em>${nota[id] || ''}</em></li>`).join('');
@@ -552,7 +552,7 @@ export function perguntasVitrine(cartao = false) {
   return [
     ['O Mercado Macro é gratuito?', 'Você pode testar grátis por 48 horas, sem cartão, com a Mesa, as Notícias e a Educação. Para usar todas as abas (Mercado, Indicadores, Fundamentos, Calendário, Opções e as outras) e o assistente de IA, é preciso assinar. O fechamento do mercado, os indicadores de hoje e as calculadoras desta página são abertos para todos, sem cadastro.'],
     ['Preciso de cartão de crédito para testar?', 'Não. Basta criar a conta com nome, e-mail e senha. As 48 horas grátis valem uma vez por pessoa.'],
-    ['Como cancelo?', 'No cartão, você cancela quando quiser na página de assinatura, sem multa, e o acesso continua até o fim do período pago. No Pix não há renovação: o acesso termina na data de validade. Na primeira assinatura, dá para pedir o reembolso integral em até 7 dias.'],
+    ['Como cancelo?', 'No cartão ou no Pix Automático, você cancela quando quiser na página de assinatura (no Pix Automático, também pelo app do banco), sem multa, e o acesso continua até o fim do período pago. No Pix de pagamento único não há renovação: o acesso termina na data de validade. Na primeira assinatura, dá para pedir o reembolso integral em até 7 dias.'],
     ['Funciona no celular?', 'Sim. O painel se ajusta à tela do celular e pode ser instalado como aplicativo, no celular e no computador. A conta pode ficar aberta em até 2 aparelhos ao mesmo tempo.'],
     ['O Mercado Macro recomenda investimentos?', 'Não. O conteúdo é informativo: o painel organiza dados, notícias e ferramentas para você acompanhar o mercado, mas não faz recomendação de compra ou venda de ativos.'],
     ['De onde vêm os dados?', 'De fontes oficiais e de mercado, como Banco Central, IBGE, B3, CVM, Tesouro Direto, FRED e Yahoo Finance. Algumas cotações podem ter atraso; quando uma fonte falha, o painel mostra o último dado conhecido e avisa.'],

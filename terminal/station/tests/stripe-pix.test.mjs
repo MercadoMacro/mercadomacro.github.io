@@ -122,6 +122,9 @@ test('renovação paga no Pix Automático credita e avisa como Pix Automático',
     lines: { data: [{ period: { start: 1795000000, end: 1797600000 } }] } });
   assert.ok(db.prepare(`SELECT 1 FROM pagamentos WHERE ref = 'stripe:in_auto_1'`).get());
   assert.ok(avisos.some((t) => t === 'Nova assinatura no Pix Automático'));
+  // o banco cobra 3 dias depois do fim do período (até 7): o acesso tem 8 dias de folga, para não cair antes da cobrança
+  const exp = db.prepare('SELECT expira FROM usuarios WHERE id = 7').get().expira;
+  assert.ok(exp >= new Date((1797600000 + 8 * 86400) * 1000).toISOString(), exp);
 });
 
 test('Pix não ligado no Stripe: a página volta para o Pix manual', async () => {

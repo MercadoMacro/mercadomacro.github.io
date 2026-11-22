@@ -281,7 +281,8 @@ function dadosDaFatura(o, meta) {
     fatura: o.id, valor: o.amount_paid, cliente: o.customer || null, assinatura: assinaturaDaFatura(o),
     plano: recorrente(meta.plano) ? meta.plano : 'mensal',
     // nunca deixa vencer antes do fim do período pago no Stripe (mais 1 dia de folga para a próxima cobrança)
-    fimStripe: per ? new Date((per.end + 86400) * 1000).toISOString() : null,
+    // 22/11/2026: no Pix Automático o banco cobra 3 dias depois do fim do período (até 7 com novas tentativas): folga de 8 dias
+    fimStripe: per ? new Date((per.end + (meta.forma === 'pix' ? 8 : 1) * 86400) * 1000).toISOString() : null,
     primeira: o.billing_reason === 'subscription_create',
     forma: meta.forma === 'pix' ? 'pix-auto' : 'cartao',
   };
