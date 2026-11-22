@@ -119,6 +119,7 @@ export async function apiCartao(req, env, conta, acao) {
         }, VERSAO_PIX_AUTOMATICO);
         return json({ url: s.url, sessao: s.id });
       } catch (e) {
+        erroPix = 'pix automático: ' + e.message;
         if (e.status === 400) { recorrenteDesligadoAte = Date.now() + 3600000; return json({ semRecorrente: true }); }
         throw e;
       }
@@ -144,11 +145,11 @@ export async function apiCartao(req, env, conta, acao) {
    página do Stripe com o QR Code; { manual: true } quando o Pix do Stripe não está disponível (a página usa o Pix manual).
    Se o Stripe recusar o Pix (não ligado no painel), não tenta de novo por 1 hora. */
 const pixAvulso = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto && !PLANOS[id].soCartao);
-let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '';
+let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '', erroPix = '';
 const VERSAO_PIX_AUTOMATICO = '2026-04-22.dahlia';
 // só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
 async function contaNoBrasil(c) {
-  if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { return false; } }
+  if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { erroPix = 'conta: ' + e.message; return false; } }
   return paisDaConta === 'BR';
 }
 export async function pixRecorrenteDisponivel(env) {
@@ -185,6 +186,7 @@ export async function apiPix(req, env, conta) {
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
     // Pix ainda não ligado no Stripe (ou recusado para a conta): volta ao Pix manual
+    erroPix = 'pix avulso: ' + e.message;
     if (e.status === 400 && /pix|payment method/i.test(e.message)) { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
   }
@@ -405,7 +407,9 @@ export async function apiAdminStripe(req, env) {
     }
     let orfas = [];
     try { orfas = (await env.DB.prepare(`SELECT id, fatura, email, valor, plano, criado FROM stripe_orfas WHERE status = 'aberta' ORDER BY id`).all()).results; } catch (e) {}
-    return json({ ligado: !!(c.stripe_key && c.stripe_whsec), modo: c.stripe_key ? modoDaChave(c.stripe_key) : null, desde: c.stripe_desde || null, assinantes,
+    // diagnóstico do Pix pelo Stripe (22/11/2026): país da conta e o último motivo de recusa
+    if (c.stripe_key && new URL(req.url).searchParams.get('pix') === '1') { paisDaConta = ''; await contaNoBrasil(c); }
+    return json({ pais: paisDaConta || null, erroPix: erroPix || null, ligado: !!(c.stripe_key && c.stripe_whsec), modo: c.stripe_key ? modoDaChave(c.stripe_key) : null, desde: c.stripe_desde || null, assinantes,
       orfas: orfas.map((x) => ({ ...x, nome_plano: (PLANOS[x.plano] || {}).nome || x.plano })) });
   }
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
