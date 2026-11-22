@@ -99,7 +99,8 @@ export async function apiCartao(req, env, conta, acao) {
     if (u.stripe_assinatura) return json({ erro: 'Você já tem a renovação automática no cartão. Use "Gerenciar cartão" para trocar de plano ou cancelar.' }, 400);
     const p = PLANOS[b.plano];
     const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
-      mode: 'subscription', locale: 'pt-BR',
+      // 22/11/2026: só cartão aqui (o Pix recorrente, quando ligado no Stripe, terá caminho próprio)
+      mode: 'subscription', locale: 'pt-BR', payment_method_types: ['card'],
       ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
       client_reference_id: String(u.id),
       line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: assinatura ${({ 1: 'mensal', 6: 'semestral', 12: 'anual' })[p.meses] || p.nome}` } } }],
