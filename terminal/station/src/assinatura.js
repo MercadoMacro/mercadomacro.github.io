@@ -7,9 +7,9 @@ import qrcode from './qrcode.js';
 import { boasVindasNoPagamento } from './boasvindas.js';
 import { MARCAS } from './marcas.js';
 // utilidades do src/index.js, entregues por ligarAssinatura() quando o worker carrega
-let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao;
+let json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao, pixStripeDisponivel;
 export function ligarAssinatura(u) {
-  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao } = u);
+  ({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao, pixStripeDisponivel } = u);
 }
 
 export const PLANOS = {
@@ -262,10 +262,12 @@ export async function apiAssinatura(req, env, conta, acao) {
     const deg = await jaUsouDegustacao(env, conta.id);
     const gratis = await podeGratis(env, conta);
     const sit = situacaoCartao ? await situacaoCartao(env, conta.id).catch(() => ({})) : {};
+    const pixStripe = pixStripeDisponivel ? await pixStripeDisponivel(env).catch(() => false) : false;
     return json({
       nome: conta.nome, status: conta.status, expira: conta.expira, admin: !!conta.admin,
       liberado: !!conta.admin || (conta.status === 'ativo' && (!conta.expira || conta.expira > new Date().toISOString())),
-      pix: !!(await pixConfig(env)),
+      pix: !!(await pixConfig(env)) || pixStripe,
+      pixStripe,
       ...sit,
       planos: Object.entries(PLANOS).filter(([k, p]) => !p.oculto && !(p.soCartao && !sit.cartao) && (p.gratis ? gratis : !(p.unico && deg))).map(([k, p]) => ({ id: k, nome: p.nome, periodo: p.periodo, valor: p.valor, valorCartao: p.valorCartao || null, meses: p.meses || 0, unico: !!p.unico, soCartao: !!p.soCartao })),
       pagamentos: pags,
@@ -459,7 +461,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'pagamentos' && req.method === 'GET') {
-    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, (p.arquivo IS NOT NULL OR p.no_r2 = 1) tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao,
+    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, (p.arquivo IS NOT NULL OR p.no_r2 = 1) tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao, COALESCE(p.ref, '') LIKE 'stripe:pi_%' pix_stripe,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
       WHERE p.status = 'enviado' OR (p.status IN ('aprovado', 'recusado') AND p.decidido > ?) ORDER BY p.status = 'enviado' DESC, p.id DESC LIMIT 60`)
       .bind(new Date(Date.now() - 60 * 864e5).toISOString()).all();
@@ -564,7 +566,9 @@ export const SCRIPT_ASSINAR = `(function(){
   var raiz = document.getElementById('raiz'), dados = null, escolhido = null, forma = null;
   // volta do Stripe (?cartao=ok): o aviso do pagamento chega em segundos; confere de novo algumas vezes
   var voltouCartao = new URLSearchParams(location.search).get('cartao') === 'ok', tentativas = 0;
-  if (voltouCartao) history.replaceState(null, '', '/assinar');
+  // 22/11/2026: volta do Pix pelo Stripe (?pix=ok): o aviso do pagamento chega em segundos
+  var voltouPix = new URLSearchParams(location.search).get('pix') === 'ok', inicioPix = Date.now();
+  if (voltouCartao || voltouPix) history.replaceState(null, '', '/assinar');
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function reais(c){ return 'R$ ' + (c / 100).toFixed(2).replace('.', ','); }
   function data(s){ return s ? new Date(s).toLocaleDateString('pt-BR') : '—'; }
@@ -584,6 +588,7 @@ export const SCRIPT_ASSINAR = `(function(){
       if (q) history.replaceState(null, '', '/assinar');
       desenhar();
       if (voltouCartao && !j.renovaCartao && tentativas++ < 8) setTimeout(carregar, 2500);
+      if (voltouPix && !pixCreditado(j) && tentativas++ < 10) setTimeout(carregar, 2500);
     }).catch(function(){ raiz.innerHTML = '<p class="nota">Não foi possível carregar. Atualize a página.</p>'; });
   }
   function situacao(j){
@@ -592,6 +597,8 @@ export const SCRIPT_ASSINAR = `(function(){
     if (!j.liberado) return '<div class="sit alerta">Seu acesso terminou' + (j.expira ? ' em <b>' + data(j.expira) + '</b>' : '') + '. Seus dados e listas continuam guardados. Escolha um plano para voltar.</div>';
     return '<div class="sit">Seu acesso vale ' + (j.expira ? 'até <b>' + data(j.expira) + '</b>. Se renovar antes, o novo período começa depois dessa data.' : '<b>sem data para terminar</b>.') + '</div>';
   }
+  // Pix pelo Stripe creditado depois de voltar da página de pagamento (pagamento aprovado nos últimos minutos)
+  function pixCreditado(j){ return (j.pagamentos || []).some(function(p){ return p.status === 'aprovado' && p.decidido && new Date(p.decidido).getTime() > inicioPix - 15 * 60000; }); }
   function temGratis(){ return dados.planos.some(function(p){ return p.id === 'gratis'; }); }
   // o que dá para pagar agora em cada forma
   function podeCartao(){ return !!dados.cartao && !dados.renovaCartao; }
@@ -614,6 +621,7 @@ export const SCRIPT_ASSINAR = `(function(){
     document.getElementById('volta').innerHTML = j.liberado ? '<a href="/">Voltar ao site</a>' : '';
     var h = situacao(j);
     if (voltouCartao && !j.renovaCartao) h += '<div class="sit alerta">Pagamento no cartão recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
+    if (voltouPix) h += pixCreditado(j) ? '<div class="sit">Pix confirmado. Obrigado! Seu acesso já está liberado.</div>' : '<div class="sit alerta">Pix recebido pelo Stripe. Estamos confirmando; o acesso é liberado em instantes.</div>';
     if (j.renovaCartao && j.cancelaEm) h += '<div class="sit">Renovação automática no cartão <b>cancelada</b>: não haverá nova cobrança e o acesso continua até o fim do período já pago. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Reativar ou ver faturas</button></div>';
     else if (j.renovaCartao) h += '<div class="sit">Renovação automática no cartão <b>ligada</b>: o Stripe cobra no fim de cada período e o acesso é renovado automaticamente. <button type="button" class="bt2" id="gerenciar" style="margin-left:6px">Trocar cartão ou cancelar</button></div>';
     var enviado = j.pagamentos.filter(function(p){ return p.status === 'enviado'; })[0];
@@ -650,7 +658,7 @@ export const SCRIPT_ASSINAR = `(function(){
     if (feitos.length) h += '<h2>Seus pagamentos</h2><table><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Situação</th></tr>' + feitos.map(function(p){
       return '<tr><td>' + data(p.criado) + '</td><td>' + esc(nomePlano(p.plano)) + '</td><td>' + reais(p.valor) + '</td><td>' + esc(ST[p.status] || p.status) + (p.status === 'aprovado' && p.validade ? ' (até ' + data(p.validade) + ')' : '') + '</td></tr>';
     }).join('') + '</table>';
-    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>. O comprovante do Pix é usado apenas para conferir o pagamento e é apagado após 30 dias. <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
+    h += '<p class="nota" style="margin-top:18px">Dúvidas: <a href="mailto:contato@mercadomacro.com.br" style="color:var(--text-2)">contato@mercadomacro.com.br</a>.' + (j.pixStripe ? '' : ' O comprovante do Pix é usado apenas para conferir o pagamento e é apagado após 30 dias.') + ' <a href="/planos" style="color:var(--text-2)">Planos e termos</a> (cancelamento e reembolso).</p>';
     raiz.innerHTML = h;
     var g = document.getElementById('gerenciar');
     if (g) g.onclick = function(){ irStripe('/api/assinatura/cartao-gerenciar', {}, g); };
@@ -726,6 +734,27 @@ export const SCRIPT_ASSINAR = `(function(){
         + '<span class="seg">' + CADEADO + 'Pagamento seguro pelo Stripe</span></div>'
         + '<p class="msg" id="msg-cartao" role="status" aria-live="polite"></p></div>';
       document.getElementById('pagar-cartao').onclick = function(){ irStripe('/api/assinatura/cartao', { plano: plano }, this, document.getElementById('msg-cartao')); };
+      return;
+    }
+    // 22/11/2026: Pix pelo Stripe (acesso liberado sozinho, sem comprovante); sem o Pix do Stripe, segue o Pix manual
+    if (dados.pixStripe) {
+      box.innerHTML = '<div class="caixa"><h3>' + esc(pl.nome) + ' no Pix: ' + reais(pl.valor) + '</h3>'
+        + '<p class="sub">Pagamento único, sem renovação automática.</p>'
+        + '<ul class="lista"><li>' + CHECK + 'Acesso liberado na hora, assim que o Pix é pago. Não precisa mandar comprovante.</li>'
+        + '<li>' + CHECK + 'Você paga pelo QR Code ou pelo Pix copia e cola, na página segura do Stripe.</li>'
+        + '<li>' + CHECK + 'O QR Code vale por 1 hora.</li></ul>'
+        + '<div class="pagar"><button type="button" class="bt" id="pagar-pix">Pagar ' + reais(pl.valor) + ' com Pix</button>'
+        + '<span class="seg">' + CADEADO + 'Pagamento seguro pelo Stripe</span></div>'
+        + '<p class="msg" id="msg-pix" role="status" aria-live="polite"></p></div>';
+      document.getElementById('pagar-pix').onclick = function(){
+        var b = this, m = document.getElementById('msg-pix');
+        b.disabled = true; m.className = 'msg'; m.textContent = 'Abrindo o Pix…';
+        api('/api/assinatura/pix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plano: plano }) }).then(function(j){
+          if (j.manual) { dados.pixStripe = false; pedir(plano); return; }
+          if (j.sessao && window.mmAdsCheckout) window.mmAdsCheckout(j.sessao);
+          location.href = j.url;
+        }).catch(function(j){ b.disabled = false; m.className = 'msg erro'; m.textContent = (j && j.erro) || 'Não foi possível abrir o Pix agora. Tente de novo.'; });
+      };
       return;
     }
     box.innerHTML = '<div class="caixa"><p class="nota">Gerando o Pix…</p></div>';

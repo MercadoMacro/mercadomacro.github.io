@@ -2,7 +2,10 @@
    A chave secreta do Stripe é colada em /admin e fica só no D1 (config stripe_key, cifrada pelo cofre: src/cofre.js); ao salvar, o site cria sozinho
    o webhook no Stripe e guarda o segredo dele (stripe_whsec). Os dados do cartão nunca passam pelo site:
    a pessoa paga na página do próprio Stripe (Checkout) e o Stripe avisa o site pelo webhook.
-   Cada fatura paga (invoice.paid) soma o período do plano na validade, igual a um Pix aprovado. */
+   Cada fatura paga (invoice.paid) soma o período do plano na validade, igual a um Pix aprovado.
+   22/11/2026 (pedido do Dante): o Pix também passa pelo Stripe (Checkout em modo pagamento, só Pix). O acesso é liberado
+   sozinho quando o Stripe confirma (checkout.session.completed / async_payment_succeeded), sem comprovante. Enquanto o
+   Pix não estiver ligado no painel do Stripe, o site segue com o Pix manual (QR Code + comprovante). */
 import { PLANOS, somarPeriodo, baseValidade, registrar, garantirAssinatura, emailAprovado } from './assinatura.js';
 let json, mesmaOrigem, config, salvarConfig, avisar, limparCacheSessao, dentroDoLimite;
 export function ligarStripe(u) {
@@ -11,7 +14,7 @@ export function ligarStripe(u) {
 
 const SITE = 'https://mercadomacro.com.br';
 const API = 'https://api.stripe.com/v1/';
-const EVENTOS = ['checkout.session.completed', 'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated', 'customer.subscription.deleted'];
+const EVENTOS = ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated', 'customer.subscription.deleted'];
 const reais = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
 const dataBR = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—');
 // planos que renovam no cartão: os de meses que estão à venda (mensal, semestral, anual)
@@ -110,6 +113,64 @@ export async function apiCartao(req, env, conta, acao) {
   }
 }
 
+/* ---------------- Pix pelo Stripe: /api/assinatura/pix ----------------
+   Planos de pagamento único no Pix (1 mês, 6 meses), mesmo preço do Pix manual. Resposta { url, sessao } leva para a
+   página do Stripe com o QR Code; { manual: true } quando o Pix do Stripe não está disponível (a página usa o Pix manual).
+   Se o Stripe recusar o Pix (não ligado no painel), não tenta de novo por 1 hora. */
+const pixAvulso = (id) => !!(PLANOS[id] && PLANOS[id].meses && !PLANOS[id].unico && !PLANOS[id].oculto && !PLANOS[id].soCartao);
+let pixDesligadoAte = 0, paisDaConta = '';
+export async function pixStripeDisponivel(env) {
+  if (Date.now() < pixDesligadoAte) return false;
+  const c = await config(env);
+  return !!(c.stripe_key && c.stripe_whsec && c.stripe_pix !== 'nao');
+}
+export async function apiPix(req, env, conta) {
+  await preparar(env);
+  const c = await config(env);
+  if (!(await pixStripeDisponivel(env))) return json({ manual: true });
+  if (!(await dentroDoLimite(env, 'pixstripe:' + conta.id, 10, 3600))) return json({ erro: 'Muitas tentativas. Tente de novo mais tarde.' }, 429);
+  const b = await req.json().catch(() => ({}));
+  if (!pixAvulso(b.plano)) return json({ erro: 'Escolha o plano de 1 mês ou de 6 meses.' }, 400);
+  // só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
+  if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502); } }
+  if (paisDaConta !== 'BR') { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
+  const u = await env.DB.prepare('SELECT id, email, stripe_cliente FROM usuarios WHERE id = ?').bind(conta.id).first();
+  const p = PLANOS[b.plano];
+  try {
+    const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
+      mode: 'payment', locale: 'pt-BR', payment_method_types: ['pix'],
+      ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
+      client_reference_id: String(u.id),
+      line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valor, product_data: { name: `Mercado Macro: ${p.nome} de acesso (Pix)` } } }],
+      metadata: { usuario_id: String(u.id), plano: b.plano, tipo: 'pix' },
+      payment_intent_data: { metadata: { usuario_id: String(u.id), plano: b.plano, tipo: 'pix' } },
+      // o QR Code vale 1 hora
+      payment_method_options: { pix: { expires_after_seconds: 3600 } },
+      success_url: SITE + '/assinar?pix=ok', cancel_url: SITE + '/assinar',
+    });
+    return json({ url: s.url, sessao: s.id });
+  } catch (e) {
+    // Pix ainda não ligado no Stripe (ou recusado para a conta): volta ao Pix manual
+    if (e.status === 400 && /pix|payment method/i.test(e.message)) { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
+    return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
+  }
+}
+// Pix pago numa sessão do Checkout: credita o período (uma vez só; o ref é o pagamento do Stripe)
+async function creditarPix(env, o, agora) {
+  if (!o || o.mode !== 'payment' || o.payment_status !== 'paid' || !o.metadata || o.metadata.tipo !== 'pix') return { ignorado: true };
+  if (!(o.amount_total > 0) || o.currency !== 'brl' || !pixAvulso(o.metadata.plano)) return { ignorado: true };
+  const u = await usuarioDoStripe(env, o.metadata, o.customer);
+  const pid = typeof o.payment_intent === 'string' ? o.payment_intent : (o.payment_intent && o.payment_intent.id) || o.id;
+  if (!u) {
+    const nova = await env.DB.prepare(`INSERT INTO stripe_orfas (fatura, cliente, assinatura, email, valor, plano, fim_stripe, primeira, criado, status)
+      SELECT ?, ?, NULL, ?, ?, ?, NULL, 1, ?, 'aberta' WHERE NOT EXISTS (SELECT 1 FROM stripe_orfas WHERE fatura = ?)`)
+      .bind(pid, o.customer || null, (o.customer_details && o.customer_details.email) || o.customer_email || null, o.amount_total, o.metadata.plano, agora, pid).run();
+    if (nova.meta.changes) await avisar(env, 'Stripe: Pix sem conta', `Pix ${pid} de ${reais(o.amount_total)} pago, mas não achei a conta. Ligue à conta certa em /admin > Pagamentos.`).catch(() => {});
+    return { semConta: true };
+  }
+  return creditar(env, u, { fatura: pid, valor: o.amount_total, cliente: o.customer || null, assinatura: null, plano: o.metadata.plano, fimStripe: null, primeira: true, forma: 'pix' }, agora);
+}
+
 // Consulta somente leitura. O recibo só existe depois do crédito pelo webhook assinado.
 export async function reciboAds(req, env, conta) {
   const { sessao } = await req.json().catch(() => ({})) || {};
@@ -125,6 +186,14 @@ export async function reciboAds(req, env, conta) {
   if (!c.stripe_key || modoDaChave(c.stripe_key) !== 'real') return json({ recibo: null });
   try {
     const checkout = await stripe(c.stripe_key, 'GET', 'checkout/sessions/' + sessao + '?expand[]=invoice');
+    // Pix pelo Stripe (22/11/2026): pagamento único, sem fatura; o ref é o pagamento (payment_intent)
+    if (checkout.mode === 'payment') {
+      const pid = typeof checkout.payment_intent === 'string' ? checkout.payment_intent : checkout.payment_intent && checkout.payment_intent.id;
+      if (!checkout.livemode || checkout.client_reference_id !== String(conta.id) || !checkout.metadata || checkout.metadata.tipo !== 'pix') return json({ recibo: null });
+      if (checkout.status === 'open' || checkout.payment_status === 'unpaid') return json({ pendente: true });
+      if (checkout.payment_status !== 'paid' || checkout.currency !== 'brl' || !pid || pagamento.ref !== 'stripe:' + pid || checkout.amount_total !== pagamento.valor) return json({ recibo: null });
+      return json({ recibo: { transaction_id: pid, currency: 'BRL', value: pagamento.valor / 100 } });
+    }
     const f = checkout.invoice;
     if (!checkout.livemode || checkout.mode !== 'subscription' || checkout.client_reference_id !== String(conta.id)) return json({ recibo: null });
     if (checkout.status === 'open') return json({ pendente: true });
@@ -201,8 +270,9 @@ async function creditar(env, u, f, agora) {
   // não conseguiu gravar (a conta mudou em todas as tentativas): o Stripe reenvia depois
   if (!gravou) return { erro: 'Conta mudou durante a gravação; tente de novo.' };
   limparCacheSessao();
-  await registrar(env, u.id, `${f.primeira ? 'Assinou' : 'Renovou'} no cartão (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}`);
-  await avisar(env, f.primeira ? 'Nova assinatura no cartão' : 'Renovação no cartão', `${u.nome} (${u.email})\nPlano ${plano.nome}: ${reais(f.valor)}\nAcesso até ${dataBR(validade)}`).catch(() => {});
+  const noPix = f.forma === 'pix';
+  await registrar(env, u.id, noPix ? `Pagou no Pix (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}` : `${f.primeira ? 'Assinou' : 'Renovou'} no cartão (Stripe): ${plano.nome} (${reais(f.valor)}), acesso até ${dataBR(validade)}`);
+  await avisar(env, noPix ? 'Pix pago (Stripe)' : f.primeira ? 'Nova assinatura no cartão' : 'Renovação no cartão', `${u.nome} (${u.email})\nPlano ${plano.nome}: ${reais(f.valor)}\nAcesso até ${dataBR(validade)}`).catch(() => {});
   if (f.primeira) await emailAprovado(env, new Request(SITE + '/'), u, { ...plano, valor: f.valor }, validade).catch(() => null);
   return { ok: true, validade };
 }
@@ -219,6 +289,12 @@ export async function webhookStripe(req, env) {
   const o = (ev.data && ev.data.object) || {};
   const agora = new Date().toISOString();
 
+  // Pix pelo Stripe: libera quando o pagamento está pago (na hora, ou depois pelo aviso de pagamento assíncrono)
+  if ((ev.type === 'checkout.session.completed' || ev.type === 'checkout.session.async_payment_succeeded') && o.mode === 'payment') {
+    const r = await creditarPix(env, o, agora);
+    if (r.erro) return json({ erro: r.erro }, 503);
+    return json({ ok: true, ...(r.ignorado ? { ignorado: 'não é Pix pago' } : {}) });
+  }
   if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
     const u = await usuarioDoStripe(env, o.metadata, o.customer);
     if (u) await env.DB.prepare('UPDATE usuarios SET stripe_cliente = ?, stripe_assinatura = ? WHERE id = ?').bind(o.customer || null, o.subscription || null, u.id).run();
