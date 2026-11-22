@@ -79,7 +79,7 @@ test('pedir Pix cria a página de pagamento do Stripe só com Pix, no preço do 
     assert.equal(r.sessao, 'cs_x');
     const f = new URLSearchParams(corpo);
     assert.equal(f.get('mode'), 'payment');
-    assert.equal(f.get('payment_method_types[0]'), 'pix');
+    assert.deepEqual(f.getAll('excluded_payment_method_types[0]').concat(f.getAll('excluded_payment_method_types[1]')), ['card', 'link']);
     assert.equal(f.get('line_items[0][price_data][unit_amount]'), '13900');
     assert.equal(f.get('metadata[tipo]'), 'pix');
     // plano só no cartão não sai no Pix
@@ -104,14 +104,15 @@ test('Pix Automático: assinatura no Pix, preço do cartão, com autorização n
     const f = new URLSearchParams(corpo);
     assert.equal(versao, '2026-04-22.dahlia');
     assert.equal(f.get('mode'), 'subscription');
-    assert.equal(f.get('payment_method_types[0]'), 'pix');
+    assert.deepEqual(f.getAll('excluded_payment_method_types[0]').concat(f.getAll('excluded_payment_method_types[1]')), ['card', 'link']);
     assert.equal(f.get('line_items[0][price_data][unit_amount]'), '9990');
     assert.equal(f.get('payment_method_options[pix][mandate_options][payment_schedule]'), 'halfyearly');
     assert.equal(f.get('payment_method_options[pix][mandate_options][amount]'), '9990');
     assert.equal(f.get('subscription_data[metadata][forma]'), 'pix');
     // cartão continua só cartão
     await apiCartao(new Request('https://x/api/assinatura/cartao', { method: 'POST', body: JSON.stringify({ plano: 'mensal' }) }), env, { id: 7 }, 'cartao');
-    assert.equal(new URLSearchParams(corpo).get('payment_method_types[0]'), 'card');
+    assert.equal(new URLSearchParams(corpo).get('excluded_payment_method_types[0]'), 'pix');
+    assert.equal(new URLSearchParams(corpo).get('payment_method_types[0]'), null);
   } finally { globalThis.fetch = fetchAntes; }
 });
 
