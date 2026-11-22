@@ -109,15 +109,26 @@ export async function apiCartao(req, env, conta, acao) {
       if (!(await contaNoBrasil(c))) { await guardarErroPix(env, 'pix automático: conta fora do Brasil ou sem resposta (' + (paisDaConta || erroPix) + ')'); return json({ semRecorrente: true }); }
       const meta = { usuario_id: String(u.id), plano: b.plano, forma: 'pix' };
       try {
-        const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
+        // 22/11/2026: em assinatura o Stripe recusa alguns campos do mandato (amount_type veio do próprio plano);
+        // se ele disser "can not pass ...[mandate_options][X] in subscription mode", tira X e tenta de novo
+        const mandato = { reference: 'Mercado Macro', amount: p.valorCartao || p.valor, payment_schedule: ({ 1: 'monthly', 6: 'halfyearly', 12: 'yearly' })[p.meses] };
+        const criar = () => stripe(c.stripe_key, 'POST', 'checkout/sessions', {
           mode: 'subscription', locale: 'pt-BR', excluded_payment_method_types: SO_PIX,
           ...(u.stripe_cliente ? { customer: u.stripe_cliente } : { customer_email: u.email }),
           client_reference_id: String(u.id),
           line_items: [{ quantity: 1, price_data: { currency: 'brl', unit_amount: p.valorCartao || p.valor, recurring: { interval: 'month', interval_count: p.meses }, product_data: { name: `Mercado Macro: assinatura ${({ 1: 'mensal', 6: 'semestral', 12: 'anual' })[p.meses] || p.nome} (Pix Automático)` } } }],
-          payment_method_options: { pix: { mandate_options: { amount: p.valorCartao || p.valor, amount_type: 'maximum', payment_schedule: ({ 1: 'monthly', 6: 'halfyearly', 12: 'yearly' })[p.meses], reference: 'Mercado Macro' } } },
+          payment_method_options: { pix: { mandate_options: mandato } },
           metadata: meta, subscription_data: { metadata: meta },
           success_url: SITE + '/assinar?cartao=ok', cancel_url: SITE + '/assinar',
         }, VERSAO_PIX_AUTOMATICO);
+        let s;
+        for (let i = 0; ; i++) {
+          try { s = await criar(); break; } catch (e) {
+            const campo = e.status === 400 && /mandate_options\]\[([a-z_]+)\]/.exec(e.message || '');
+            if (!campo || i >= 3 || campo[1] === 'reference' || !(campo[1] in mandato)) throw e;
+            delete mandato[campo[1]];
+          }
+        }
         return json({ url: s.url, sessao: s.id });
       } catch (e) {
         erroPix = 'pix automático: ' + e.message; await guardarErroPix(env, erroPix);
