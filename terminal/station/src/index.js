@@ -12,7 +12,7 @@ import { ligarComunicado, apiComunicado, paginaSairDaLista } from './comunicado.
 import { apiPopupUsuario, apiPopupAdmin } from './popup-novidades.js';
 import { ligarBoasVindas, apiBoasVindas } from './boasvindas.js';
 import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, manhaIA, perguntaWhatsApp } from './assistente.js';
-import { reciboAds, apiCartao, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
+import { reciboAds, apiCartao, apiPix, pixStripeDisponivel, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, SCRIPT_ASSINAR, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { paginaBalanca } from './balanca-publica.js';
@@ -179,6 +179,7 @@ export default {
         if (p === '/assinar') return paginaAssinar(versaoJs);
         if (p === '/conta') return html(PAGINA_CONTA); // trocar senha e excluir a conta valem mesmo com o acesso vencido
         if ((p === '/api/assinatura/cartao' || p === '/api/assinatura/cartao-gerenciar') && req.method === 'POST' && mesmaOrigem(req)) return await apiCartao(req, env, conta, p.slice(16));
+        if (p === '/api/assinatura/pix' && req.method === 'POST' && mesmaOrigem(req)) return await apiPix(req, env, conta);
         if (p === '/api/assinatura' || p.startsWith('/api/assinatura/')) return await apiAssinatura(req, env, conta, p.slice(16).replace(/^\//, ''));
       }
       if (!u && conta) return navegacao(req) ? redirect('/assinar') : json({ erro: 'Seu acesso não está ativo.', assinar: true }, 403);
@@ -3450,7 +3451,7 @@ const JS_ADMIN = `(function(){
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
-          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.cartao ? ' · pago no cartão (Stripe)' : p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
+          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.pix_stripe ? ' · pago no Pix (Stripe)' : p.cartao ? ' · pago no cartão (Stripe)' : p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
           + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
           + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
       };
@@ -4331,6 +4332,6 @@ ligarJade({ avisar, perguntar: (env, texto, ctx) => perguntaWhatsApp(env, texto,
   api: (rota) => servidorDados(env, rota), noticias: async () => (await noticiasCache(ctx || { waitUntil() {} }, { rapida: true, env })).lista, fluxo: fluxoEstrangeiro,
   busca: (pergunta, onde) => buscaConteudo(env, pergunta, onde), arquivo: (desde, termo) => arquivoParaJade(env, desde, termo),
 }) });
-ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao });
+ligarAssinatura({ json, html, mesmaOrigem, config, salvarConfig, enviarEmail, avisar, escH, BASE_CSS, lerCookie, sha256hex, limparCacheSessao, emailLiberado, dentroDoLimite, situacaoCartao, pixStripeDisponivel });
 ligarComunicado({ json, html, mesmaOrigem, config, sha256hex });
 ligarBoasVindas({ json, html, mesmaOrigem, config, salvarConfig });
