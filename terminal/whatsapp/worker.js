@@ -505,7 +505,7 @@ export async function jadeSalesReply(text, env, origem = null) {
   const horas = P?.gratisHoras || 48;
   const trial = 'Se você ainda não assinou, pode experimentar por *' + horas + ' horas grátis*, uma vez por pessoa. O teste inclui Mesa, Notícias e Educação. Veja como funciona em ' + plans;
   if (/\b(?:cancelar|cancelamento|reembolso|estorno)\b/.test(text)) {
-    return 'Para gerenciar a renovação no cartão, use “Trocar cartão ou cancelar” na página de assinatura. Para falar sobre reembolso, escreva para contato@mercadomacro.com.br.\n' + checkout;
+    return 'Para cancelar a renovação automática (no cartão ou no Pix Automático), use o botão de gerenciar a assinatura na página de assinatura. No Pix Automático, também dá para cancelar pelo app do banco. Para falar sobre reembolso, escreva para contato@mercadomacro.com.br.\n' + checkout;
   }
   if (/^(?:demo )?(?:agenda(?: economica)?|calendario(?: economico)?)[?.!]*$/.test(text)) {
     return '*Agenda econômica | Mercado Macro*\nNo terminal, abra *Calendário*, escolha o dia e filtre por país e impacto. Use os horários de Brasília para se planejar.\n\n*O que acompanhar*\n• Copom e Fed — decisões e comunicados ajudam a entender a perspectiva para os juros.\n• IPCA e CPI — compare a inflação divulgada com a expectativa.\n• Payroll — o emprego americano ajuda a acompanhar o cenário do Fed.\n\nConsulte os próximos eventos e horários no calendário do terminal: https://mercadomacro.com.br/\nO calendário faz parte dos planos pagos. Para comparar, escreva “Quanto custa?”.';
@@ -514,13 +514,13 @@ export async function jadeSalesReply(text, env, origem = null) {
     return 'Qual ativo você acompanha? Envie “Demo BBAS3” ou troque BBAS3 pelo ticker. Eu mostro a variação e procuro manchetes relacionadas.';
   }
   if (/^(?:meu )?orcamento[?.!]*$|\bacima do meu orcamento\b/.test(text)) {
-    return trial + '\n\n' + (P ? 'Se quiser acesso completo por um mês, são ' + reais(P.cartao.mensal) + ' no cartão com renovação automática ou ' + reais(P.pix.mensal) + ' no Pix em pagamento único. ' : semPreco + '. ') + checkout;
+    return trial + '\n\n' + (P ? 'Se quiser acesso completo por um mês, são ' + reais(P.cartao.mensal) + ' no cartão ou no Pix Automático (renova sozinho, cancele quando quiser) ou ' + reais(P.pix.mensal) + ' no Pix em pagamento único. ' : semPreco + '. ') + checkout;
   }
   if (/^(?:eu )?quero ver na pratica[?.!]*$|^demo[?.!]*$/.test(text)) {
     return { texto: 'Escolha uma amostra: *notícias*, *agenda* ou um *ativo* (como BBAS3). Você também pode enviar o ticker de outro ativo que acompanha.', botoes: ['noticias', 'agenda', 'ativo'] };
   }
   if (/\b(?:pix|sem renovacao|pagamento unico)\b/.test(text)) {
-    return 'Se você prefere pagar uma vez e decidir depois se quer continuar, o *Pix* é a opção.\n\n' + (P ? '• *1 mês: ' + reais(P.pix.mensal) + '*\n• *6 meses: ' + reais(P.pix.semestral) + '*\n\n' : semPreco + '.\n\n') + 'Inclui o terminal completo, a watchlist e a IA. O acesso é liberado após a conferência do comprovante. Escolha o período em ' + checkout;
+    return 'No Pix há dois jeitos de assinar.\n\n*Pix Automático* (renova sozinho, mesmo preço do cartão)' + (P ? '\n• Mensal: ' + reais(P.cartao.mensal) + ' por mês\n• Semestral: ' + reais(P.cartao.semestral) + ' a cada 6 meses' : '') + '\n\n*Pix de pagamento único* (sem renovação)' + (P ? '\n• 1 mês: ' + reais(P.pix.mensal) + '\n• 6 meses: ' + reais(P.pix.semestral) : '') + '\n\n' + (P ? '' : semPreco + '.\n\n') + 'Inclui o terminal completo, a watchlist e a IA. O acesso é liberado assim que o Pix é pago, sem precisar mandar comprovante. Escolha em ' + checkout;
   }
   if (/\b(?:economizar no cartao|menor custo mensal|menor valor por mes|pagar menos por mes|plano anual|anual|12 meses)\b/.test(text)) {
     if (!P) return 'Se você pretende usar o terminal ao longo do ano, o *anual* no cartão tem o menor custo mensal equivalente. ' + semPreco + '.\n\nCompare na assinatura: ' + checkout;
@@ -531,11 +531,11 @@ export async function jadeSalesReply(text, env, origem = null) {
   }
   if (/\b(?:teste gratis|testar gratis|experimentar|48 horas|quero testar|como testar)\b/.test(text)) return trial;
   if (/\b(?:quero assinar|como assinar|como faco para assinar|link (?:para|de) assinar|link (?:da|de) assinatura|assinar|assinatura)\b/.test(text)) {
-    return 'Abra a página de assinatura, informe seu e-mail e escolha o plano. No cartão, o acesso é liberado após a aprovação. No Pix, após a conferência do comprovante.\n\n' + checkout;
+    return 'Abra a página de assinatura, informe seu e-mail e escolha o plano, no cartão ou no Pix. O acesso é liberado assim que o pagamento é confirmado.\n\n' + checkout;
   }
   if (/\b(?:quanto (?:custa|vou pagar)|precos?|valores? dos planos|planos?|cartao)\b/.test(text) && !/\b[A-Z]{4}(?:11|3|4|5|6|7|8|9|10)F?\b/i.test(text)) {
-    if (!P) return { texto: '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA, no cartão (com renovação automática) ou no Pix (sem renovação). ' + semPreco + '.\n\nQual caminho combina com você?', botoes: ['teste', 'pix', 'anual'] };
-    const planos = '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA.\n\n*Cartão com renovação automática*\n• Mensal: ' + reais(P.cartao.mensal) + ' por mês\n• Semestral: ' + reais(P.cartao.semestral) + ' a cada 6 meses\n• Anual: ' + reais(P.cartao.anual) + ' por ano\n\n*Pix sem renovação automática*\n• 1 mês: ' + reais(P.pix.mensal) + '\n• 6 meses: ' + reais(P.pix.semestral) + '\n\nQual caminho combina com você?\nTermos: ' + plans;
+    if (!P) return { texto: '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA, no cartão ou no Pix Automático (com renovação automática) ou no Pix de pagamento único. ' + semPreco + '.\n\nQual caminho combina com você?', botoes: ['teste', 'pix', 'anual'] };
+    const planos = '*Planos do Mercado Macro*\nTodos os planos pagos incluem terminal completo, watchlist e assistente de IA.\n\n*Cartão ou Pix Automático, com renovação automática*\n• Mensal: ' + reais(P.cartao.mensal) + ' por mês\n• Semestral: ' + reais(P.cartao.semestral) + ' a cada 6 meses\n• Anual: ' + reais(P.cartao.anual) + ' por ano (só no cartão)\n\n*Pix de pagamento único, sem renovação*\n• 1 mês: ' + reais(P.pix.mensal) + '\n• 6 meses: ' + reais(P.pix.semestral) + '\n\nQual caminho combina com você?\nTermos: ' + plans;
     return { texto: planos, botoes: ['teste', 'pix', 'anual'] };
   }
   if (/\b(?:como funciona|o que e (?:o )?mercado macro|o que tem (?:no painel|no terminal)|conhecer (?:o )?mercado macro)\b/.test(text)) {

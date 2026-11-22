@@ -471,7 +471,8 @@ async function resumoSemanal(env) {
   const [P, PA] = await Promise.all([pags(isoDe, isoAte), pags(isoDeA, isoAteA)]);
   const soma = (l) => l.reduce((t, x) => t + (x.valor || 0), 0);
   const novas = P.filter((x) => !x.antes).length, renov = P.length - novas;
-  const noCartao = P.filter((x) => /^stripe:/.test(x.ref || '')).length;
+  // Pix pelo Stripe tem ref stripe:pi_ (pagamento único) e entra como Pix; o Pix Automático vem como fatura (stripe:in_) e conta junto com o cartão
+  const noCartao = P.filter((x) => /^stripe:/.test(x.ref || '') && !/^stripe:pi_/.test(x.ref || '')).length;
   const pagantes = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo' AND plano IN ('mensal', 'semestral', 'anual', 'trimestral', 'degustacao')`);
   const semRenovar = await um(`SELECT COUNT(*) n FROM usuarios WHERE status = 'ativo' AND stripe_assinatura IS NOT NULL AND stripe_cancela IS NOT NULL`);
   const testes = n('teste_gratis'), testesA = nA('teste_gratis');
@@ -508,7 +509,7 @@ async function resumoSemanal(env) {
     `📌 Em uma linha: terminal aberto ${mil(n('terminal'))} vezes${seta(n('terminal'), nA('terminal'))}, ${pessoas} pessoas usando${seta(pessoas, pessoasA, false)}, ${pedidos} pedidos de acesso${seta(pedidos, pedidosA, false)}, ${novas} ${novas === 1 ? 'assinatura nova' : 'assinaturas novas'} e ${reais(receita)} recebidos${seta(receita, receitaA)}.`,
     '',
     '💰 Negócio',
-    `- Recebido: ${reais(receita)} em ${P.length} ${P.length === 1 ? 'pagamento' : 'pagamentos'} (${noCartao} no cartão, ${P.length - noCartao} no Pix)${seta(receita, receitaA)}`,
+    `- Recebido: ${reais(receita)} em ${P.length} ${P.length === 1 ? 'pagamento' : 'pagamentos'} (${noCartao} no cartão ou Pix Automático, ${P.length - noCartao} no Pix de pagamento único)${seta(receita, receitaA)}`,
     `- Assinaturas novas: ${novas} · renovações: ${renov}`,
     `- Testes grátis começados: ${testes}${seta(testes, testesA, false)}`,
     `- Assinantes pagantes agora: ${pagantes}${semRenovar ? ` (${semRenovar} com a renovação do cartão desligada)` : ''}`,
@@ -1263,7 +1264,7 @@ async function apiAuth(req, env, acao, ctx) {
         env.DB.prepare('DELETE FROM links_email WHERE usuario_id = ?').bind(ins.meta.last_row_id),
       ]);
     }
-    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
+    ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${nome} pediu acesso ao Mercado Macro.\nA pessoa vai escolher um plano; o aviso do pagamento chega aqui.`).catch(() => {}));
     return json({ ok: true, msg: MSG_FILA });
   }
 
@@ -1941,7 +1942,7 @@ async function paginaConfirmar(req, env, ctx) {
     env.DB.prepare('DELETE FROM links_email WHERE token = ?').bind(l.token),
     env.DB.prepare(`UPDATE usuarios SET status = 'pendente' WHERE id = ? AND status = 'confirmar'`).bind(l.id),
   ]);
-  if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nA pessoa vai escolher um plano; o comprovante do Pix chega aqui.`).catch(() => {}));
+  if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nA pessoa vai escolher um plano; o aviso do pagamento chega aqui.`).catch(() => {}));
   return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado.</p><p>Agora é só entrar com seu e-mail e senha e escolher seu plano. Para conhecer, você pode começar com 48 horas grátis.</p>'
     + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>'
     + '<a class="bt" href="/entrar?volta=%2Fassinar">Escolher meu plano</a></div>');
