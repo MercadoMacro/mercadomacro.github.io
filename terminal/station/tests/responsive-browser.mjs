@@ -28,7 +28,9 @@ try{
   for(const theme of ['dark','light']){
    const ctx=await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1,locale:'pt-BR',timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
    await ctx.addInitScript(theme=>{try{localStorage.setItem('trader_theme',theme);localStorage.setItem('trader_prefs_v1',JSON.stringify({mode:'manual',motion:'off'}));}catch(e){/* quadro sem armazenamento */}},theme);
-   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>{if(!/Transition was aborted because of invalid state\. Viewport size changed/.test(e.message))errors.push(e.stack||e.message);});page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
+   const page=await ctx.newPage(),errors=[];// 22/11/2026: o bloqueio de service worker do próprio Playwright (serviceWorkers:'block') falha dentro do quadro com
+   // sandbox das Notícias Agrícolas (na-caixa); é do robô de teste, não do site, e fica fora da conta
+   page.on('pageerror',e=>{if(!/Transition was aborted because of invalid state\. Viewport size changed/.test(e.message)&&!/Service worker is disabled because the context is sandboxed/.test(e.message))errors.push(e.stack||e.message);});page.on('console',m=>{if(m.text().includes('[News]'))console.log(m.text());});
    await page.addInitScript(()=>{try{localStorage.setItem('market_pulse_cache_v9',JSON.stringify({timestamp:Date.now(),data:[
     {titulo:'Prévia: juros e câmbio no radar dos investidores',fonte:'Valor Econômico',data:Date.now()-900000,link:'https://example.test/noticia-1',resumo:'Texto demonstrativo para avaliar a leitura no celular. Título, fonte e horário recebem prioridade visual.',tags:['Juros'],nivel:'alto',trecho:'Texto demonstrativo para avaliar a hierarquia e a leitura dos cards no celular.',impactScore:8,finalScore:20},
     {titulo:'Prévia: bolsas globais acompanham os indicadores econômicos',fonte:'InfoMoney',data:Date.now()-1800000,link:'https://example.test/noticia-2',resumo:'Exemplo de cartão de notícia para a revisão de interface. Este conteúdo não representa uma notícia publicada.',tags:['Bolsa'],nivel:'medio',impactScore:5,finalScore:10}
