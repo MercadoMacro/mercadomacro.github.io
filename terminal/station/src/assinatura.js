@@ -632,7 +632,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
 <header><h1>Assinatura do Mercado Macro</h1><span id="volta"></span><a href="/conta" class="cta-conta">Minha conta</a><button type="button" id="sair">Sair</button></header>
 <div id="raiz"><p class="nota">Carregando…</p></div>
 </main>
-<script src="/vitrine/assinatura-ads.js"></script>
+<script src="/vitrine/assinatura-ads.js?v=2"></script>
 <script>
 (function(){
   var MARCAS = ${JSON.stringify(MARCAS)};
