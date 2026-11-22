@@ -105,7 +105,8 @@ export async function apiCartao(req, env, conta, acao) {
     const p = PLANOS[b.plano];
     // 22/11/2026: Pix Automático (renova sozinho no Pix), mesmo preço do cartão. A pessoa autoriza uma vez no app do banco.
     if (b.forma === 'pix') {
-      if (!(await pixRecorrenteDisponivel(env)) || !(await contaNoBrasil(c))) return json({ semRecorrente: true });
+      if (!(await pixRecorrenteDisponivel(env))) { await guardarErroPix(env, 'pix automático: desligado (stripe_pix ou chaves)'); return json({ semRecorrente: true }); }
+      if (!(await contaNoBrasil(c))) { await guardarErroPix(env, 'pix automático: conta fora do Brasil ou sem resposta (' + (paisDaConta || erroPix) + ')'); return json({ semRecorrente: true }); }
       const meta = { usuario_id: String(u.id), plano: b.plano, forma: 'pix' };
       try {
         const s = await stripe(c.stripe_key, 'POST', 'checkout/sessions', {
@@ -119,8 +120,9 @@ export async function apiCartao(req, env, conta, acao) {
         }, VERSAO_PIX_AUTOMATICO);
         return json({ url: s.url, sessao: s.id });
       } catch (e) {
-        erroPix = 'pix automático: ' + e.message; guardarErroPix(env, erroPix);
-        if (e.status === 400) { recorrenteDesligadoAte = Date.now() + 3600000; return json({ semRecorrente: true }); }
+        erroPix = 'pix automático: ' + e.message; await guardarErroPix(env, erroPix);
+        // 22/11/2026: sem bloquear por 1 hora (escondia o motivo); cada tentativa grava o motivo novo
+        if (e.status === 400) return json({ semRecorrente: true });
         throw e;
       }
     }
@@ -139,7 +141,7 @@ export async function apiCartao(req, env, conta, acao) {
       .catch((e) => { if (e.status !== 400) throw e; const { excluded_payment_method_types, ...resto } = pedido; return stripe(c.stripe_key, 'POST', 'checkout/sessions', resto); });
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
-    guardarErroPix(env, 'assinatura (cartão ou Pix Automático): ' + (e && e.message));
+    await guardarErroPix(env, 'assinatura (cartão ou Pix Automático): ' + (e && e.message));
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
   }
 }
@@ -199,7 +201,7 @@ export async function apiPix(req, env, conta) {
     return json({ url: s.url, sessao: s.id });
   } catch (e) {
     // Pix ainda não ligado no Stripe (ou recusado para a conta): volta ao Pix manual
-    erroPix = 'pix avulso: ' + e.message; guardarErroPix(env, erroPix);
+    erroPix = 'pix avulso: ' + e.message; await guardarErroPix(env, erroPix);
     if (e.status === 400 && /pix|payment method/i.test(e.message)) { pixDesligadoAte = Date.now() + 3600000; return json({ manual: true }); }
     return json({ erro: 'O Stripe não respondeu agora. Tente de novo em instantes.' }, 502);
   }
