@@ -152,8 +152,8 @@ let pixDesligadoAte = 0, recorrenteDesligadoAte = 0, paisDaConta = '', erroPix =
 const VERSAO_PIX_AUTOMATICO = '2026-04-22.dahlia';
 // 22/11/2026: o Stripe não aceita mais escolher as formas de pagamento na criação do Checkout (payment_method_types);
 // elas vêm do painel. Para a página só do Pix, tiramos as outras formas ligadas no painel (cartão, que inclui Apple Pay
-// e Google Pay, Link e boleto). No cartão, tiramos o Pix.
-const SO_PIX = ['card', 'link', 'boleto'];
+// e Google Pay e leva junto o Link, e boleto). No cartão, tiramos o Pix.
+const SO_PIX = ['card', 'boleto'];
 // só conta do Stripe no Brasil: fora daqui o Pix vira compra internacional e o cliente pagaria 3,5% de IOF a mais
 async function contaNoBrasil(c) {
   if (!paisDaConta) { try { paisDaConta = (await stripe(c.stripe_key, 'GET', 'account')).country || 'XX'; } catch (e) { erroPix = 'conta: ' + e.message; return false; } }
