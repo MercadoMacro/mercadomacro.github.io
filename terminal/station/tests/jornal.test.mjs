@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ligarJornal, gerarMateria, apiAdminJornal, paginaJornal, lerMateria, slugify, slotDoJornal, rodadaJornal } from '../src/jornal.js';
+import { ligarJornal, gerarMateria, apiAdminJornal, paginaJornal, lerMateria, slugify, slotDoJornal, rodadaJornal, corpoComLinks, quadroHtml, quadroDosDados, INSTRUCOES_JORNAL } from '../src/jornal.js';
 import { ligarAssistente } from '../src/assistente.js';
 
 function d1() {
@@ -113,4 +113,17 @@ test('rodada que falha tenta de novo 15 minutos depois e fica registrada', async
   assert.equal(await rodadaJornal(env, new Date(t + 45 * 60000), true), null);
   const log = JSON.parse(db.prepare("SELECT valor FROM config WHERE chave = 'jornal_rodadas'").get().valor);
   assert.ok(log[0].ok && !log[1].ok && log[1].erro);
+});
+
+test('links internos só na primeira vez e no máximo 3; quadro com os números do terminal', () => {
+  const h = corpoComLinks(['O dólar caiu e o Ibovespa subiu; o dólar fechou em R$ 5,40.', 'CDB e Tesouro Direto seguem atrativos, diz a balança comercial.', 'Juros compostos.']);
+  assert.equal((h.match(/href="\/indicadores-hoje"/g) || []).length, 1);
+  assert.equal((h.match(/class="int"/g) || []).length, 3);
+  assert.ok(!h.includes('/balanca-comercial'));
+  const q = quadroDosDados({ cards: { ibov: { nome: 'Ibovespa', v: 128500.5, ch: 1.234 }, dolar: { nome: 'Dólar', v: 5.4123, ch: -0.5 }, x: { nome: 'Sem dado', v: null } }, altas: [{ t: 'PETR4', ch: 3.1 }], baixas: [] }, 'Fechamento de 23/11');
+  assert.equal(q.itens.length, 2);
+  const t = quadroHtml(q);
+  assert.ok(t.includes('128.500,50') && t.includes('5,412') && t.includes('+1,23%') && t.includes('-0,50%') && t.includes('PETR4'));
+  assert.equal(quadroHtml(null), '');
+  assert.ok(INSTRUCOES_JORNAL.includes('Ibovespa hoje:'));
 });
