@@ -160,13 +160,35 @@ export function slotDoJornal(quando, diaUtil) {
   if (h === 21 && m === 45) return 'fechamento';
   return null;
 }
+// 23/11/2026: se a rodada do horário falhar (IA fora do formato, poucas manchetes, lentidão), tenta de novo nos
+// dois quartos de hora seguintes com a mesma chave; cada tentativa fica registrada (config jornal_rodadas) e aparece no /admin
 export async function rodadaJornal(env, quando, diaUtil) {
-  const tipo = slotDoJornal(quando, diaUtil);
+  let tipo = null, inicio = null;
+  for (const atras of [0, 15, 30]) {
+    const q = new Date(+quando - atras * 60000);
+    tipo = slotDoJornal(q, diaUtil);
+    if (tipo) { inicio = q; break; }
+  }
   if (!tipo || !(await ligado(env))) return null;
-  const chave = `${diaBR(+quando)}-${tipo}-${quando.getUTCHours()}`;
-  const r = await gerarMateria(env, tipo, { agora: +quando, chave });
-  if (r.erro && !r.ja) console.log('jornal:', tipo, r.erro);
+  const chave = `${diaBR(+inicio)}-${tipo}-${inicio.getUTCHours()}`;
+  let r;
+  try { r = await gerarMateria(env, tipo, { agora: +quando, chave }); } catch (e) { r = { erro: 'falha: ' + (e && e.message) }; }
+  if (r.ja) return r;
+  if (r.erro) console.log('jornal:', tipo, r.erro);
+  await registrarRodada(env, { quando: +quando, tipo, ok: !!r.ok, erro: r.erro || null, titulo: r.titulo || null });
   return r;
+}
+async function registrarRodada(env, item) {
+  try {
+    const atual = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'jornal_rodadas'").first();
+    let lista = []; try { lista = JSON.parse(atual?.valor || '[]'); } catch (e) {}
+    lista = [item, ...lista].slice(0, 12);
+    await env.DB.prepare("INSERT INTO config (chave, valor) VALUES ('jornal_rodadas', ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor").bind(JSON.stringify(lista)).run();
+  } catch (e) { console.error('jornal rodadas:', e.message); }
+}
+async function rodadas(env) {
+  const r = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'jornal_rodadas'").first().catch(() => null);
+  try { return JSON.parse(r?.valor || '[]'); } catch (e) { return []; }
 }
 
 /* ---------------- administrador: /api/admin/jornal ---------------- */
@@ -190,7 +212,7 @@ export async function apiAdminJornal(req, env, json) {
     const lista = (await env.DB.prepare(`SELECT * FROM jornal WHERE status IN ('rascunho', 'publicada') OR criado > ? ORDER BY CASE status WHEN 'rascunho' THEN 0 ELSE 1 END, COALESCE(publicado, criado) DESC LIMIT 60`)
       .bind(Date.now() - 3 * 86400000).all()).results.map(linha);
     const pub = await env.DB.prepare("SELECT COUNT(*) n FROM jornal WHERE status = 'publicada'").first();
-    return json({ ligado: await ligado(env), publicadas: pub.n, materias: lista, tipos: TIPOS, secoes: SECOES });
+    return json({ ligado: await ligado(env), publicadas: pub.n, materias: lista, tipos: TIPOS, secoes: SECOES, rodadas: await rodadas(env) });
   }
   const b = await req.json().catch(() => ({}));
   if (b.acao === 'ligar') {
