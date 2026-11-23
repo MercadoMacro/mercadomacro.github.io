@@ -36,6 +36,9 @@ async function tabela(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS jornal (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE, chave TEXT UNIQUE, tipo TEXT, secao TEXT,
     titulo TEXT, linha_fina TEXT, corpo TEXT, fontes TEXT, status TEXT, criado INTEGER, publicado INTEGER, modelo TEXT)`).run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS jornal_status ON jornal (status, publicado)').run();
+  // 23/11/2026: números do terminal guardados com a matéria (quadro "Números do terminal")
+  const cols = (await env.DB.prepare('PRAGMA table_info(jornal)').all()).results.map((c) => c.name);
+  if (!cols.includes('dados')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN dados TEXT').run();
   tabelaOk = true;
 }
 async function ligado(env) {
@@ -51,6 +54,7 @@ Responda SOMENTE com um objeto JSON, sem nada antes ou depois, neste formato:
 Regras:
 - secao: uma destas: Mercados, Economia, Juros, Câmbio, Empresas, Internacional, Cripto, Commodities.
 - titulo: até 90 caracteres, informativo, sem ponto final, sem pergunta, sem exagero nem sensacionalismo. Pode ter número.
+- O título precisa ser achado no Google: comece pelo termo que as pessoas pesquisam. No FECHAMENTO, comece com "Ibovespa hoje:" ou "Dólar hoje:" (o que mais se destacou no dia). Na ABERTURA, comece com "Mercado hoje:". No ASSUNTO DO DIA, comece pelo nome do assunto (a empresa, o indicador ou o tema, como "Petrobras", "Copom", "Inflação", "Bitcoin"). Escreva os nomes como as pessoas escrevem (Ibovespa, dólar, Selic, IPCA, Petrobras, Vale).
 - linha_fina: uma frase de 120 a 200 caracteres que completa o título.
 - paragrafos: de 4 a 6 parágrafos, de 2 a 4 frases cada, de 280 a 480 palavras no total. O primeiro diz o mais importante (o quê, quanto, por quê). Os outros dão contexto, números e o que vem pela frente na agenda.
 - Use SOMENTE os números, nomes, datas e fatos recebidos. Não invente nada, não arredonde de outro jeito e não calcule números novos. Se não tiver um dado, não fale dele.
@@ -104,6 +108,16 @@ export function dadosParaFechamento(d) {
   return L.join('\n');
 }
 
+// quadro "Números do terminal" guardado com a matéria (valores do momento em que ela foi escrita)
+const CASAS = { dolar: 3, tnx: 3, euro: 3, ibov: 0, btc: 0 };
+export function quadroDosDados(d, rotulo) {
+  const itens = Object.entries(d?.cards || {}).filter(([, c]) => c && c.v != null && isFinite(c.v))
+    .map(([k, c]) => ({ nome: String(c.nome || k), v: Number(c.v), ch: c.ch != null && isFinite(c.ch) ? Number(c.ch) : null, cas: CASAS[k] ?? 2 })).slice(0, 12);
+  const acoes = (l) => (Array.isArray(l) ? l : []).filter((a) => a && a.t && isFinite(a.ch)).slice(0, 5).map((a) => ({ t: String(a.t), ch: Number(a.ch) }));
+  if (!itens.length) return null;
+  return { rotulo, itens, altas: acoes(d.altas), baixas: acoes(d.baixas) };
+}
+
 /* ---------------- geração ---------------- */
 // gera uma matéria do tipo pedido e guarda como rascunho. chave evita duas do mesmo horário.
 export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null, avisar = true } = {}) {
@@ -116,12 +130,17 @@ export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null
   const janela = tipo === 'abertura' ? 16 : tipo === 'fechamento' ? 10 : 5;
   const ms = manchetesParaResumo(lista, agora, janela * 3600000, 60);
   if (ms.length < 6) return { erro: 'poucas manchetes agora' };
-  let dados = '';
-  if (tipo === 'abertura') dados = dadosParaManha(await deps.dadosAbertura(env));
+  let dados = '', quadro = null;
+  if (tipo === 'abertura' || tipo === 'tema') {
+    // 23/11/2026: o assunto do dia também recebe os números de agora (e guarda o quadro com a matéria)
+    const d = await deps.dadosAbertura(env).catch(() => null);
+    if (d) { if (tipo === 'abertura') dados = dadosParaManha(d); else dados = dadosParaFechamento({ ...d, pregaoDia: 'agora' }).replace(/^Fechamento do pregão de agora/, `Números do terminal às ${horaBR(agora)}`); quadro = quadroDosDados(d, tipo === 'abertura' ? 'Como os mercados chegam ao dia' : `Números do terminal às ${horaBR(agora)}`); }
+  }
   if (tipo === 'fechamento') {
     const d = await deps.dadosFechamento(env);
     if (!d || d.semDados || !d.pregao) return { erro: 'sem pregão hoje' };
     dados = dadosParaFechamento(d);
+    quadro = quadroDosDados(d, `Fechamento de ${d.pregaoDia || 'hoje'}`);
   }
   // o assunto do dia não repete o de mais cedo
   const hoje = (await env.DB.prepare("SELECT titulo FROM jornal WHERE criado >= ? AND status != 'recusada'").bind(agora - 14 * 3600000).all()).results.map((r) => r.titulo);
@@ -142,9 +161,9 @@ export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null
   if (!m) return { erro: 'a IA respondeu fora do formato' };
   let slug = `${dia}-${slugify(m.titulo)}`;
   if (await env.DB.prepare('SELECT 1 FROM jornal WHERE slug = ?').bind(slug).first()) slug += '-' + String(agora).slice(-4);
-  const ins = await env.DB.prepare(`INSERT OR IGNORE INTO jornal (slug, chave, tipo, secao, titulo, linha_fina, corpo, fontes, status, criado, modelo)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'rascunho', ?, ?)`)
-    .bind(slug, chave, tipo, m.secao, m.titulo, m.linha_fina, JSON.stringify(m.paragrafos), JSON.stringify(m.fontes), agora, r.modelo || null).run();
+  const ins = await env.DB.prepare(`INSERT OR IGNORE INTO jornal (slug, chave, tipo, secao, titulo, linha_fina, corpo, fontes, status, criado, modelo, dados)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'rascunho', ?, ?, ?)`)
+    .bind(slug, chave, tipo, m.secao, m.titulo, m.linha_fina, JSON.stringify(m.paragrafos), JSON.stringify(m.fontes), agora, r.modelo || null, quadro ? JSON.stringify(quadro) : null).run();
   if (!ins.meta.changes) return { erro: 'já gerada', ja: true };
   if (avisar && deps.avisar) await deps.avisar(env, 'Jornal: matéria para aprovar', `${TIPOS[tipo]} · ${m.titulo}\n\nVeja, edite e aprove em ${SITE}/admin#jornal`).catch(() => {});
   return { ok: true, id: ins.meta.last_row_id, slug, titulo: m.titulo };
@@ -193,7 +212,7 @@ async function rodadas(env) {
 
 /* ---------------- administrador: /api/admin/jornal ---------------- */
 const linha = (r) => ({ id: r.id, slug: r.slug, tipo: r.tipo, tipoNome: TIPOS[r.tipo] || r.tipo, secao: r.secao, titulo: r.titulo, linha_fina: r.linha_fina,
-  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado });
+  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
 async function limparCache(slug) {
   if (typeof caches === 'undefined') return;
   const ps = ['/jornal', '/jornal/rss.xml', '/sitemap.xml', ...(slug ? ['/jornal/' + slug] : [])];
@@ -290,6 +309,12 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 .assin b{color:var(--tinta)}
 .mat .corpo p{font-size:19px;line-height:1.7;margin:0 0 18px}
 .mat .corpo p:first-child::first-letter{font:700 3.3em/.8 'Playfair Display',Georgia,serif;float:left;margin:6px 8px 0 0}
+.corpo a.int{text-decoration:underline;text-decoration-color:var(--fio);text-underline-offset:3px}
+.quadro{border-top:2px solid var(--tinta);margin:26px 0;font:14px/1.45 Inter,system-ui,sans-serif}
+.quadro h2,.leia h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:10px 0 8px}
+.quadro table{width:100%;border-collapse:collapse}.quadro th,.quadro td{padding:6px 4px;border-bottom:1px solid var(--fio);text-align:right;font-variant-numeric:tabular-nums}
+.quadro th{text-align:left;font-weight:600}.quadro .qa{margin:10px 0 0}.quadro .qn{color:var(--cinza);font-size:12.5px;margin:10px 0 0}.quadro .qn a{text-decoration:underline}
+.leia{border-top:2px solid var(--tinta);margin:26px 0;font:15px/1.4 Inter,system-ui,sans-serif}.leia ul{margin:0;padding:0}.leia li{list-style:none;padding:8px 0;border-bottom:1px solid var(--fio)}.leia li a{font:700 17px/1.3 Georgia,serif}
 .fontes{font:14px/1.5 Inter,system-ui,sans-serif;border-top:2px solid var(--tinta);padding-top:12px;margin-top:26px}
 .fontes h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
 .fontes li{margin:0 0 6px}.fontes a{text-decoration:underline;text-underline-offset:2px}
@@ -336,7 +361,34 @@ async function faixaCotacoes(env) {
   } catch (e) { return ''; }
 }
 
-export function paginaMateria(m, previa = false) {
+// 23/11/2026: links para as páginas grátis do site, na primeira vez que o assunto aparece (no máximo 3 por matéria)
+const LINKS_INTERNOS = [
+  [/\b(d[óo]lar)\b/i, '/indicadores-hoje'],
+  [/\b(Ibovespa)\b/, '/fechamento-do-mercado'],
+  [/\b(renda fixa|Tesouro Direto|CDBs?)\b/i, '/calculadora-renda-fixa'],
+  [/\b(balan[çc]a comercial)\b/i, '/balanca-comercial'],
+  [/\b(juros compostos)\b/i, '/calculadora-juros-compostos'],
+];
+export function corpoComLinks(pars) {
+  const usados = new Set();
+  return pars.map((p) => {
+    let h = esc(p);
+    for (const [re, url] of LINKS_INTERNOS) {
+      if (usados.has(url) || usados.size >= 3) continue;
+      if (re.test(h)) { h = h.replace(re, `<a class="int" href="${url}">$1</a>`); usados.add(url); }
+    }
+    return `<p>${h}</p>`;
+  }).join('');
+}
+const num = (v, c) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
+const varp = (ch) => (ch == null ? '' : `<span class="${ch >= 0 ? 'up' : 'dn'}">${ch > 0 ? '+' : ''}${num(ch, 2)}%</span>`);
+export function quadroHtml(q) {
+  if (!q || !Array.isArray(q.itens) || !q.itens.length) return '';
+  const acoes = (t, l) => (l && l.length ? `<p class="qa"><b>${t}:</b> ${l.map((a) => `${esc(a.t)} ${varp(a.ch)}`).join(' · ')}</p>` : '');
+  return `<section class="quadro sans"><h2>${esc(q.rotulo || 'Números do terminal')}</h2><table><tbody>${q.itens.map((i) => `<tr><th scope="row">${esc(i.nome)}</th><td>${num(i.v, i.cas ?? 2)}</td><td>${varp(i.ch)}</td></tr>`).join('')}</tbody></table>${acoes('Maiores altas do Ibovespa', q.altas)}${acoes('Maiores baixas do Ibovespa', q.baixas)}<p class="qn">Dados do terminal Mercado Macro no momento da matéria. <a href="/indicadores-hoje">Ver indicadores de agora</a></p></section>`;
+}
+
+export function paginaMateria(m, previa = false, outras = []) {
   const url = `${SITE}/jornal/${m.slug}`;
   const quando = m.publicado || m.criado;
   const enc = encodeURIComponent;
@@ -346,10 +398,12 @@ export function paginaMateria(m, previa = false) {
   const corpo = `<article class="mat">${previa ? '<div class="previa">Prévia: esta matéria ainda não foi publicada.</div>' : ''}
 <p class="kick">${esc(m.secao)} · ${esc(TIPOS[m.tipo] || '')}</p><h1>${esc(m.titulo)}</h1><p class="lf">${esc(m.linha_fina)}</p>
 <p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar.</p>
-<div class="corpo">${m.corpo.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+<div class="corpo">${corpoComLinks(m.corpo)}</div>
+${quadroHtml(m.dados)}
 ${m.fontes.length ? `<section class="fontes"><h2>Fontes</h2><ul>${m.fontes.map((f) => `<li>${esc(f.f)}: <a href="${esc(f.link)}" rel="noopener nofollow" target="_blank">${esc(f.t)}</a></li>`).join('')}</ul></section>` : ''}
 <div class="part"><a href="https://wa.me/?text=${enc(m.titulo + ' ' + url)}" target="_blank" rel="noopener">Compartilhar no WhatsApp</a><a href="https://t.me/share/url?url=${enc(url)}&amp;text=${enc(m.titulo)}" target="_blank" rel="noopener">Telegram</a><a href="https://twitter.com/intent/tweet?url=${enc(url)}&amp;text=${enc(m.titulo)}" target="_blank" rel="noopener">X</a><a href="https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}" target="_blank" rel="noopener">LinkedIn</a></div>
 <div class="cta"><b>Acompanhe o mercado ao vivo</b>Cotações, notícias traduzidas na hora, agenda econômica e a Jade, assistente de IA, num só terminal. Teste grátis por 48 horas, sem cartão.<br><a href="/entrar?origem=jornal">Testar grátis</a></div>
+${outras.length ? `<section class="leia sans"><h2>Leia também</h2><ul>${outras.map((o) => `<li><a href="/jornal/${esc(o.slug)}">${esc(o.titulo)}</a><span class="hora">${esc(o.secao)} · ${esc(dataCurta(o.publicado))}</span></li>`).join('')}</ul></section>` : ''}
 <p class="aviso">Conteúdo informativo, sem recomendação de compra ou venda de ativos. Números de fontes públicas e de mercado, sujeitos a revisão.</p></article>`;
   return moldura({ titulo: `${m.titulo} | Jornal Mercado Macro`, descricao: m.linha_fina, canonico: url, ld, corpo, tipoOg: 'article' });
 }
@@ -375,7 +429,8 @@ ${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="
   const slug = p.slice('/jornal/'.length).replace(/\/$/, '');
   const r = /^[a-z0-9-]{5,90}$/.test(slug) ? await env.DB.prepare("SELECT * FROM jornal WHERE slug = ? AND status = 'publicada'").bind(slug).first() : null;
   if (!r) return html(moldura({ titulo: 'Matéria não encontrada | Jornal Mercado Macro', descricao: 'Matéria não encontrada.', canonico: `${SITE}/jornal`, corpo: '<p class="vazio">Matéria não encontrada. <a href="/jornal">Ver as últimas</a>.</p>' }), 404);
-  return html(paginaMateria(linha(r)));
+  const outras = (await env.DB.prepare("SELECT slug, titulo, secao, publicado FROM jornal WHERE status = 'publicada' AND id != ? ORDER BY publicado DESC LIMIT 3").bind(r.id).all()).results;
+  return html(paginaMateria(linha(r), false, outras));
 }
 
 async function rss(env) {
