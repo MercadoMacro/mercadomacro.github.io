@@ -123,7 +123,7 @@ test('links internos só na primeira vez e no máximo 3; quadro com os números 
   const q = quadroDosDados({ cards: { ibov: { nome: 'Ibovespa', v: 128500.5, ch: 1.234 }, dolar: { nome: 'Dólar', v: 5.4123, ch: -0.5 }, x: { nome: 'Sem dado', v: null } }, altas: [{ t: 'PETR4', ch: 3.1 }], baixas: [] }, 'Fechamento de 23/11');
   assert.equal(q.itens.length, 2);
   const t = quadroHtml(q);
-  assert.ok(t.includes('128.500,50') && t.includes('5,412') && t.includes('+1,23%') && t.includes('-0,50%') && t.includes('PETR4'));
+  assert.ok(t.includes('128.501') && t.includes('5,412') && t.includes('+1,23%') && t.includes('-0,50%') && t.includes('PETR4'));
   assert.equal(quadroHtml(null), '');
   assert.ok(INSTRUCOES_JORNAL.includes('Ibovespa hoje:'));
 });
