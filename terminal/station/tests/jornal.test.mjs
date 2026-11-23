@@ -99,3 +99,18 @@ test('resposta fora do formato não vira matéria', async () => {
   const r = await gerarMateria(env, 'tema', { agora: agora + 3600000, avisar: false });
   assert.match(r.erro, /fora do formato/);
 });
+
+test('rodada que falha tenta de novo 15 minutos depois e fica registrada', async () => {
+  db.exec("INSERT OR REPLACE INTO config VALUES ('jornal_ligado', '1')");
+  const t = Date.parse('2026-11-23T18:30:00Z');
+  gemini('texto solto');
+  const r1 = await rodadaJornal(env, new Date(t), true);
+  assert.ok(r1.erro);
+  gemini(resposta({ titulo: 'Ibovespa sobe com alívio nos juros futuros e dólar estável' }));
+  const r2 = await rodadaJornal(env, new Date(t + 15 * 60000), true);
+  assert.ok(r2.ok, JSON.stringify(r2));
+  assert.ok((await rodadaJornal(env, new Date(t + 30 * 60000), true)).ja);
+  assert.equal(await rodadaJornal(env, new Date(t + 45 * 60000), true), null);
+  const log = JSON.parse(db.prepare("SELECT valor FROM config WHERE chave = 'jornal_rodadas'").get().valor);
+  assert.ok(log[0].ok && !log[1].ok && log[1].erro);
+});
