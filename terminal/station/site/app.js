@@ -3203,7 +3203,9 @@ function newsReadMins(n) {
 
   // Ouvir a notícia (23/11/2026, pedido do Dante): voz do próprio aparelho, escolhendo a mais natural em português
   // que houver (Google / Microsoft "Natural" / Apple aprimorada). Lê título, "por que importa" e o texto em português.
-  const podeOuvir = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+  // 23/11/2026: só no celular/tablet (tela de toque); no computador as vozes do sistema soam robóticas
+  const podeOuvir = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function'
+    && !!(window.matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches);
   let ouvindo = null; // link da notícia que está sendo lida
   if (podeOuvir) { try { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => speechSynthesis.getVoices()); } catch (e) {} }
   function vozPt() {
