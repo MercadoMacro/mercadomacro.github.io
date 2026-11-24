@@ -200,7 +200,13 @@ globalThis.MMMesa2 = (() => {
       <div class="m2-graf-slot"></div>`;
   }
   let ultPer = null;
-  function mostraPer(box, p) { const el = box?.querySelector('[data-m2-pervar]'); if (el) { el.className = 'm2-pervar ' + lado(p.variacao); el.textContent = `${api.pct(p.variacao)} ${NOME_PER[per]}`; } }
+  // 23/11/2026: no 1D a variação "hoje" é contra o fechamento anterior (a mesma do preço grande), não contra o primeiro
+  // ponto do gráfico, que começa na abertura e esconde o salto da noite (NVDA abriu +31% e aparecia +3%)
+  function mostraPer(box, p) {
+    const el = box?.querySelector('[data-m2-pervar]'); if (!el) return;
+    const q = per === '1D' ? cot(sel.s) : null, v = q && ok(q.c) ? q.c : p.variacao;
+    el.className = 'm2-pervar ' + lado(v); el.textContent = `${api.pct(v)} ${NOME_PER[per]}`;
+  }
   function montarGrafico(box) {
     const slot = box.querySelector('.m2-graf-slot'); if (!slot) return;
     if (!grafNo) { grafNo = document.createElement('div'); grafNo.className = 'm2-graf mv-graf'; }

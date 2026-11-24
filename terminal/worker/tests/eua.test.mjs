@@ -23,3 +23,15 @@ test('cotações: recusa pedido vazio, grande demais ou com símbolo inválido s
     assert.equal(chamadas.length, 0);
   } finally { globalThis.fetch = orig; }
 });
+
+test('fechamento anterior pelo dia de Nova York: à noite no Brasil ainda vale o pregão anterior', async () => {
+  const { diaNovaYork, fechamentoAnterior } = await import('../eua.js');
+  // 23/11/2026 22h51 em Brasília = 24/11 01h51 UTC = 23/11 20h51 em Nova York
+  const agora = Date.parse('2026-11-24T01:51:00Z');
+  assert.equal(diaNovaYork(agora), '2026-11-23');
+  const bars = [{ Timestamp: Date.parse('2026-11-20T00:00:00Z'), Close: 125.82 }, { Timestamp: Date.parse('2026-11-23T00:00:00Z'), Close: 164.78 }];
+  assert.equal(fechamentoAnterior(bars, diaNovaYork(agora)).c, 125.82);
+  // na manhã seguinte, antes da abertura (sem a barra do dia 24), a referência é o pregão de 23/11
+  assert.equal(fechamentoAnterior(bars, diaNovaYork(Date.parse('2026-11-24T12:00:00Z'))).c, 164.78);
+  assert.equal(fechamentoAnterior([], '2026-11-23'), null);
+});
