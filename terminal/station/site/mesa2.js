@@ -218,7 +218,8 @@ globalThis.MMMesa2 = (() => {
     const [, r0, intraday, dias] = PERIODOS.find((p) => p[0] === per);
     // com indicador ligado em 1M, 3M e no ano, busca 1 ano de pregões para as médias já começarem prontas no período
     // (o servidor de dados devolve semanas em 3A/5A e meses no Máx: aí as médias contam semanas e meses)
-    const r = inds.length && ['1mo', '3mo', 'ytd'].includes(r0) ? '1y' : r0;
+    // YTD sempre com 1 ano (23/11/2026): precisa do último fechamento do ano anterior, base da variação no ano
+    const r = r0 === 'ytd' || (inds.length && ['1mo', '3mo'].includes(r0)) ? '1y' : r0;
     if (!viewers[r] && window.MMAssetHistory) viewers[r] = new window.MMAssetHistory.Viewer((s) => api.getJSON(`${api.PROXY}/history?symbols=${encodeURIComponent(s)}&r=${r}`, 20000));
     if (!viewers[r]) return;
     Object.entries(viewers).forEach(([k, v]) => { if (k !== r) v.destroy(); });
@@ -230,7 +231,8 @@ globalThis.MMMesa2 = (() => {
     // começo exato do período nos três que dependem do calendário (com ou sem indicador, o mesmo primeiro dia)
     const hoje = new Date(), y = hoje.getUTCFullYear(), m = hoje.getUTCMonth(), d = hoje.getUTCDate();
     const desde = r0 === 'ytd' ? Date.UTC(y, 0, 1) / 1000 : r0 === '1mo' ? Date.UTC(y, m - 1, d) / 1000 : r0 === '3mo' ? Date.UTC(y, m - 3, d) / 1000 : null;
-    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), desde, aoPeriodo, aoMover, indicadores: inds }).catch(() => {});
+    const qa = cot(sel.s), atual = qa && ok(qa.v) ? { v: qa.v, ts: Number.isFinite(qa.ts) ? qa.ts : null } : null;
+    viewers[r].show(grafNo, sel.s, sel.n, claro, { sutil: true, intraday, dias: dias || diasAno(), desde, aoPeriodo, aoMover, indicadores: inds, atual }).catch(() => {});
   }
 
 

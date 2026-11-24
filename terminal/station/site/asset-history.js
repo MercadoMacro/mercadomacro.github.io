@@ -63,6 +63,14 @@ globalThis.MMAssetHistory = (() => {
         }
         if(generation!==this.generation)return;
         const all=points(saved.raw),off=Number.isFinite(saved.raw.off)?saved.raw.off:0;
+        // opts.atual {v, ts} (Mesa 2, 23/11/2026): o preço de agora fecha a série diária. O histórico diário fica até 6 horas
+        // guardado; sem isso o último ponto era o pregão anterior (NVDA +31% no dia sumia do YTD)
+        const at=opts?.atual;
+        if(!intra&&at&&Number.isFinite(at.v)&&at.v>0&&all.length){
+          const dia=x=>Math.floor((x+off)/86400),ult=all.at(-1),agoraS=!Number.isFinite(at.ts)?null:at.ts>1e12?Math.floor(at.ts/1000):at.ts>1e9?at.ts:null;
+          if(agoraS&&dia(agoraS)>dia(ult.t))all.push({t:agoraS,c:at.v});
+          else if(agoraS&&dia(agoraS)===dia(ult.t))all[all.length-1]={t:ult.t,c:at.v};
+        }
         box.innerHTML='<div class="wlh"><div class="wlh-tools"><span class="wlh-caption"></span></div><div class="wlh-legend" role="status" aria-live="off"></div><div class="wlh-canvas" role="group"></div><div class="wlh-range" role="group" aria-label="Período do histórico"><button type="button" class="wlc-b" data-days="31">1M</button><button type="button" class="wlc-b" data-days="93">3M</button><button type="button" class="wlc-b" data-reset title="Restaurar zoom">Ajustar</button></div><div class="wlh-note"></div><small class="wlh-credit">TradingView Lightweight Charts™<br>Copyright (с) 2025 TradingView, Inc. <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></small></div>';
         const host=box.querySelector('.wlh-canvas'),legend=box.querySelector('.wlh-legend');
         host.setAttribute('aria-label','Histórico diário de '+name);
@@ -133,8 +141,11 @@ globalThis.MMAssetHistory = (() => {
             if(ser.macd){const m=IND.macd(full);ser.macd.setData(corta(m.linha));ser.msinal.setData(corta(m.sinal));ser.mhist.setData(corta(m.hist).map(x=>({...x,color:x.value>=0?'rgba(34,197,94,.55)':'rgba(239,68,68,.55)'})));}
           }
           this.chart.timeScale().fitContent();describe(shown.at(-1));
-          if(opts?.aoPeriodo)opts.aoPeriodo({inicio:subset[0].value,fim:subset.at(-1).value,variacao:(subset.at(-1).value/subset[0].value-1)*100});
-          if(sutil){const sobe=subset.at(-1).value>=subset[0].value,c=sobe?'#22c55e':'#ef4444';line.applyOptions({lineColor:c,topColor:sobe?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',bottomColor:'rgba(0,0,0,0)'});}
+          // base do período (23/11/2026): com opts.desde, o fechamento do último pregão ANTES do começo (31/12 no YTD), como
+          // TradingView, Yahoo e MSN; sem ele, o primeiro ponto do período
+          const antes=opts?.desde?all.filter(p=>p.t+off<opts.desde):[],base=antes.length?antes.at(-1).c:subset[0].value;
+          if(opts?.aoPeriodo)opts.aoPeriodo({inicio:base,fim:subset.at(-1).value,variacao:(subset.at(-1).value/base-1)*100});
+          if(sutil){const sobe=subset.at(-1).value>=base,c=sobe?'#22c55e':'#ef4444';line.applyOptions({lineColor:c,topColor:sobe?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)',bottomColor:'rgba(0,0,0,0)'});}
           box.querySelectorAll('[data-days]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.days===days)));
         };
         box.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{try{render(+b.dataset.days);}catch{box.querySelector('.wlh-note').textContent='Sem dados suficientes para este período.';}}));
