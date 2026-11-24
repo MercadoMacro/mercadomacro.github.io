@@ -3201,6 +3201,67 @@ function newsReadMins(n) {
     return div.innerHTML;
   }
 
+  // Ouvir a notícia (23/11/2026, pedido do Dante): voz do próprio aparelho, escolhendo a mais natural em português
+  // que houver (Google / Microsoft "Natural" / Apple aprimorada). Lê título, "por que importa" e o texto em português.
+  const podeOuvir = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+  let ouvindo = null; // link da notícia que está sendo lida
+  if (podeOuvir) { try { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => speechSynthesis.getVoices()); } catch (e) {} }
+  function vozPt() {
+    let vs = [];
+    try { vs = speechSynthesis.getVoices().filter(v => /^pt([-_]|$)/i.test(v.lang)); } catch (e) {}
+    const nota = v => (/natural|neural|online|premium|enhanced|aprimorad/i.test(v.name) ? 8 : 0) + (/google/i.test(v.name) ? 4 : 0)
+      + (/^pt[-_]BR/i.test(v.lang) ? 2 : 0) + (/francisca|thalita|antonio|luciana|felipe|fernanda/i.test(v.name) ? 1 : 0);
+    return vs.sort((a, b) => nota(b) - nota(a))[0] || null;
+  }
+  function textoParaOuvir(n, corpo, emPt) {
+    const partes = [n.titulo];
+    if (n.porque) partes.push('Por que importa. ' + n.porque);
+    if (emPt && corpo) partes.push(corpo);
+    else if (n.trechoPt && newsSoLetras(n.trechoPt) !== newsSoLetras(n.titulo)) partes.push(n.trechoPt);
+    return partes.join('. \n').replace(/https?:\/\/\S+/g, '').replace(/\s*\n\s*/g, '\n').replace(/[ \t]+/g, ' ').trim();
+  }
+  // o Chrome corta falas longas (~15 s): vai em pedaços de até ~220 letras, quebrando nas frases
+  function pedacosDaFala(t) {
+    const frases = t.split(/(?<=[.!?;:])\s+|\n+/).map(x => x.trim()).filter(Boolean);
+    const out = [];
+    for (const f of frases) {
+      if (out.length && (out[out.length - 1] + ' ' + f).length <= 220) out[out.length - 1] += ' ' + f;
+      else if (f.length <= 220) out.push(f);
+      else for (let i = 0; i < f.length; i += 200) { const k = f.lastIndexOf(' ', i + 200); out.push(f.slice(i, k > i ? k : i + 200)); if (k > i) i = k - 200 + 1; }
+    }
+    return out.map(x => x.trim()).filter(Boolean);
+  }
+  function botaoOuvir() {
+    const b = $('#nr-ouvir');
+    if (!b) return;
+    const on = !!cur && ouvindo === cur.link;
+    b.classList.toggle('on', on);
+    b.innerHTML = on ? '<i class="fas fa-stop"></i> Parar' : '<i class="fas fa-volume-up"></i> Ouvir';
+    b.title = on ? 'Parar a leitura em voz alta' : 'Ouvir a notícia em voz alta (voz do seu aparelho)';
+  }
+  function pararOuvir() {
+    if (!podeOuvir) return;
+    ouvindo = null;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    botaoOuvir();
+  }
+  function ouvir(n, texto) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+    const voz = vozPt(), partes = pedacosDaFala(texto), link = n.link;
+    if (!partes.length) return;
+    ouvindo = link;
+    partes.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p);
+      u.lang = voz ? voz.lang : 'pt-BR';
+      if (voz) u.voice = voz;
+      u.rate = 1.03;
+      if (i === partes.length - 1) u.onend = () => { if (ouvindo === link) { ouvindo = null; botaoOuvir(); } };
+      u.onerror = (e) => { if (e.error !== 'interrupted' && e.error !== 'canceled' && ouvindo === link) { ouvindo = null; botaoOuvir(); } };
+      speechSynthesis.speak(u);
+    });
+    botaoOuvir();
+  }
+
   function render() {
     const n = cur;
     const art = $('#nr-art');
@@ -3234,6 +3295,7 @@ function newsReadMins(n) {
       ${n.porque ? `<div class="nr-porque"><b><i class="fas fa-lightbulb" aria-hidden="true"></i> Por que importa</b><span>${escapeHTML(n.porque)}</span><small>Explicação curta feita por IA a partir de ${related.length + 1} manchetes sobre o mesmo fato.</small></div>` : ''}
       <div class="nr-actions">
         <a class="btn-sm" href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> Abrir no site</a>
+        ${podeOuvir ? '<button class="btn-sm" id="nr-ouvir" type="button"></button>' : ''}
         <button class="btn-sm${bionicOn ? ' on' : ''}" id="nr-bionic" title="Ativar/desativar Leitura Dinâmica (Bionic Reading)"><i class="fas fa-bolt"></i> Leitura Rápida</button>
         <button class="btn-sm${picked ? ' on' : ''}" id="nr-pick"><i class="fas fa-star"></i> ${picked ? 'Nas favoritas' : 'Favoritar'}</button>
         <button class="btn-sm" id="nr-copy"><i class="fab fa-whatsapp"></i> Copiar para WhatsApp</button>
@@ -3259,6 +3321,11 @@ function newsReadMins(n) {
       render();
     });
     $('#nr-pick').addEventListener('click', () => { toggleNewsPick(n.id); render(); });
+    botaoOuvir();
+    $('#nr-ouvir')?.addEventListener('click', () => {
+      if (ouvindo === n.link) { pararOuvir(); return; }
+      ouvir(n, textoParaOuvir(n, text, !intl || !!tr));
+    });
     $('#nr-copy').addEventListener('click', copyWa);
     $('#nr-tr')?.addEventListener('click', () => { if (trCache[n.link]) { trOriginal.delete(n.link); render(); } else translateFull(); });
     $('#nr-orig')?.addEventListener('click', () => { trOriginal.add(n.link); render(); });
@@ -3324,6 +3391,7 @@ function newsReadMins(n) {
     if (!n) return;
     if (!keepList) list = (window.__newsLeads || []).slice();
     idx = list.findIndex(x => x.id === id);
+    if (cur && cur.id !== n.id) pararOuvir();
     cur = n;
     AppState.addReadArticle(n.link);
     document.querySelectorAll(`.nc-card[data-id="${CSS.escape(id)}"]`).forEach(c => c.classList.add('read'));
@@ -3338,6 +3406,7 @@ function newsReadMins(n) {
     }
   }
   function close() {
+    pararOuvir();
     overlay.classList.remove('on');
     panel.classList.remove('on');
     panel.inert = true;
