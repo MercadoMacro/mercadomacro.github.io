@@ -118,6 +118,17 @@ export function quadroDosDados(d, rotulo) {
   return { rotulo, itens, altas: acoes(d.altas), baixas: acoes(d.baixas) };
 }
 
+export const MODELO_RESERVA = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+async function reservaCloudflare(env, pedido) {
+  let tempo;
+  const out = await Promise.race([
+    env.AI.run(MODELO_RESERVA, { messages: [{ role: 'system', content: INSTRUCOES_JORNAL }, { role: 'user', content: pedido }], max_tokens: 1800, temperature: 0.3 }),
+    new Promise((ok) => { tempo = setTimeout(() => ok(null), 60000); }),
+  ]).finally(() => clearTimeout(tempo));
+  const texto = String(out?.response ?? out?.result?.response ?? '').trim();
+  return texto ? { ok: true, texto, modelo: 'llama-3.3-70b (reserva)' } : { ok: false, erro: 'a IA de reserva não respondeu' };
+}
+
 /* ---------------- geração ---------------- */
 // gera uma matéria do tipo pedido e guarda como rascunho. chave evita duas do mesmo horário.
 export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null, avisar = true } = {}) {
@@ -155,7 +166,10 @@ export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null
     dados ? `\nDados do terminal:\n${dados}` : '',
     `\nManchetes (horário de Brasília):\n${manchetesNumeradas(ms)}`,
   ].filter(Boolean).join('\n');
-  const r = await escreverIA(env, pedido, INSTRUCOES_JORNAL, 60000);
+  let r = await escreverIA(env, pedido, INSTRUCOES_JORNAL, 60000);
+  // 24/11/2026: o Gemini ficou sobrecarregado ("high demand") das 12h30 às 13h e demorou demais às 18h45; quando ele falha,
+  // a matéria sai pela IA da Cloudflare (Llama 3.3 70B). Você aprova do mesmo jeito; o modelo fica anotado na matéria
+  if (!r.ok && env.AI) r = await reservaCloudflare(env, pedido).catch((e) => ({ ok: false, erro: r.erro + ' · reserva: ' + e.message }));
   if (!r.ok) return { erro: r.erro || 'a IA não respondeu' };
   const m = lerMateria(r.texto, ms);
   if (!m) return { erro: 'a IA respondeu fora do formato' };
@@ -180,10 +194,10 @@ export function slotDoJornal(quando, diaUtil) {
   return null;
 }
 // 23/11/2026: se a rodada do horário falhar (IA fora do formato, poucas manchetes, lentidão), tenta de novo nos
-// dois quartos de hora seguintes com a mesma chave; cada tentativa fica registrada (config jornal_rodadas) e aparece no /admin
+// quatro quartos de hora seguintes (até 1 hora depois; eram 30 minutos até 24/11) com a mesma chave; cada tentativa fica registrada (config jornal_rodadas) e aparece no /admin
 export async function rodadaJornal(env, quando, diaUtil) {
   let tipo = null, inicio = null;
-  for (const atras of [0, 15, 30]) {
+  for (const atras of [0, 15, 30, 45, 60]) {
     const q = new Date(+quando - atras * 60000);
     tipo = slotDoJornal(q, diaUtil);
     if (tipo) { inicio = q; break; }

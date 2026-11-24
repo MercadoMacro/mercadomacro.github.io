@@ -110,7 +110,8 @@ test('rodada que falha tenta de novo 15 minutos depois e fica registrada', async
   const r2 = await rodadaJornal(env, new Date(t + 15 * 60000), true);
   assert.ok(r2.ok, JSON.stringify(r2));
   assert.ok((await rodadaJornal(env, new Date(t + 30 * 60000), true)).ja);
-  assert.equal(await rodadaJornal(env, new Date(t + 45 * 60000), true), null);
+  assert.ok((await rodadaJornal(env, new Date(t + 60 * 60000), true)).ja);
+  assert.equal(await rodadaJornal(env, new Date(t + 75 * 60000), true), null);
   const log = JSON.parse(db.prepare("SELECT valor FROM config WHERE chave = 'jornal_rodadas'").get().valor);
   assert.ok(log[0].ok && !log[1].ok && log[1].erro);
 });
@@ -126,4 +127,16 @@ test('links internos só na primeira vez e no máximo 3; quadro com os números 
   assert.ok(t.includes('128.501') && t.includes('5,412') && t.includes('+1,23%') && t.includes('-0,50%') && t.includes('PETR4'));
   assert.equal(quadroHtml(null), '');
   assert.ok(INSTRUCOES_JORNAL.includes('Ibovespa hoje:'));
+});
+
+test('Gemini sobrecarregado: a matéria sai pela IA de reserva da Cloudflare', async () => {
+  db.exec("DELETE FROM jornal");
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: { message: 'This model is currently experiencing high demand.' } }), { status: 503 });
+  const pedidos = [];
+  env.AI = { run: async (m, o) => { pedidos.push(m); return { response: resposta({ titulo: 'Copom e dólar dominam a tarde no mercado brasileiro hoje' }) }; } };
+  const r = await gerarMateria(env, 'tema', { agora, chave: 'reserva-teste' });
+  delete env.AI;
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(pedidos.length, 1);
+  assert.match(db.prepare('SELECT modelo FROM jornal WHERE id = ?').get(r.id).modelo, /reserva/);
 });
