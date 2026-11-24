@@ -20,6 +20,7 @@ import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
 import { CSP_SO_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
+import { receberErroJs, errosRecentes } from './erros-js.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -137,6 +138,7 @@ export default {
       if (p.startsWith('/js/pg/')) { const m = p.match(/^\/js\/pg\/([a-z-]+)\.js$/); return m ? await scriptDaPagina(req, env, m[1]) : new Response('', { status: 404 }); }
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/csp') return await receberAvisoCsp(req, env);
+      if (p === '/api/erro-js') return await receberErroJs(req, env, avisar);
       if (p === '/api/robo/passe') return await passeDoRobo(req, env);
       if (p === '/api/stripe/webhook') return await webhookStripe(req, env);
       if (p === '/api/robo/fechamento') return await roboFechamento(req, env);
@@ -1582,6 +1584,7 @@ async function apiAdmin(req, env, acao, eu) {
       return json({ linhas: [] }); // a tabela nasce no primeiro pedido sem passe
     }
   }
+  if (acao === 'erros-js' && req.method === 'GET') return json({ erros: await errosRecentes(env) });
   if (acao === 'usuarios' && req.method === 'GET') {
     await garantirAssinatura(env);
     await garantirDerrubadas(env);
@@ -3797,6 +3800,16 @@ const JS_ADMIN = `(function(){
     }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   campanha();
+  // erros de JavaScript no navegador de quem usa o terminal (24/11/2026, src/erros-js.js)
+  function errosJs(){
+    var el = document.getElementById('errosjs'); if (!el) return;
+    fetch('/api/admin/erros-js', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      var l = j.erros || [];
+      el.innerHTML = l.length ? '<p class="d" style="margin:0 0 8px">Erros que aconteceram no navegador de quem usa o terminal. Sem nome nem conta. Se algo aparecer aqui, vale pedir a correção.</p><div class="lista">' + l.map(function(x){ return '<div class="u"><div class="q"><div class="n">' + esc(x.msg) + '</div><div class="d">' + esc(x.arquivo || 'sem arquivo') + (x.linha ? ':' + x.linha : '') + ' · ' + x.n + (x.n === 1 ? ' vez' : ' vezes') + ' em ' + x.dias + (x.dias === 1 ? ' dia' : ' dias') + ' · último ' + esc(String(x.ultimo).split('-').reverse().join('/')) + (x.aba ? ' · aba ' + esc(x.aba) : '') + (x.aparelho ? ' · ' + esc(x.aparelho) : '') + '</div></div></div>'; }).join('') + '</div>'
+        : '<p class="vazio">Nenhum erro nos últimos 7 dias.</p>';
+    }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
+  }
+  errosJs();
   // e-mail de boas-vindas (src/boasvindas.js): texto editável, envio sozinho no primeiro pagamento e para quem já pagou
   function boasVindas(){
     var raiz = document.getElementById('bv');
@@ -4254,6 +4267,7 @@ h2 b{font-size:12px;font-weight:700}
   <div class="kpis" id="kpis"></div>
   <div class="grid2 cards">
     <section class="painel"><header><h2>Precisa de você</h2></header><div id="acao"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Erros no site (7 dias)</h2></header><div id="errosjs"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Vencem nos próximos 7 dias</h2></header><div id="venc"><p class="vazio">Carregando…</p></div></section>
   </div>
   <section class="painel"><header><h2>Mês a mês</h2><span class="ph">Cadastros, primeiros pagamentos e receita</span></header><div id="funil"><p class="vazio">Carregando…</p></div></section>

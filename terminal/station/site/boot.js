@@ -1,5 +1,27 @@
 /* Início da página (22/11/2026): saiu de dentro do index.html para arquivo, por causa da regra de scripts (CSP).
    Roda no <head>, antes de a página aparecer. */
+/* Erros de JavaScript (24/11/2026): avisa o servidor (/api/erro-js) para aparecer no /admin. Só mensagem, arquivo, linha,
+   aba e tipo de aparelho; no máximo 5 por página aberta, sem repetir o mesmo erro. */
+(() => {
+  let n = 0; const vistos = new Set();
+  const ua = navigator.userAgent || '';
+  const ap = /iPad|Tablet|Android(?!.*Mobile)/i.test(ua) ? 'tablet' : /Mobi|iPhone|Android/i.test(ua) ? 'celular' : 'computador';
+  const manda = (m, a, l) => {
+    try {
+      if (!m || n >= 5) return;
+      const k = m + '|' + a + '|' + l; if (vistos.has(k)) return; vistos.add(k); n++;
+      const b = document.querySelector('.tab-btn.active');
+      const corpo = JSON.stringify({ itens: [{ m: String(m).slice(0, 300), a: String(a || '').slice(0, 300), l: +l || 0, aba: (b && b.dataset.tab) || location.pathname, ap }] });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/erro-js', new Blob([corpo], { type: 'application/json' }));
+      else fetch('/api/erro-js', { method: 'POST', body: corpo, keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+    } catch (e) { /* nunca atrapalha a página */ }
+  };
+  addEventListener('error', (e) => { if (e && e.message) manda(e.message, e.filename, e.lineno); });
+  addEventListener('unhandledrejection', (e) => {
+    const r = e && e.reason, st = String((r && r.stack) || ''), loc = st.match(/(https?:\/\/[^\s)]+?):(\d+):\d+/);
+    manda('(promessa) ' + ((r && r.message) || r), loc ? loc[1] : '', loc ? loc[2] : 0);
+  });
+})();
 /* Ajustes salvos: aplicados antes da página aparecer (sem piscar) */
 (() => {
   try {
