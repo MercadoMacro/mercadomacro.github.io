@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   // de onde a pessoa chegou (só o site de origem), guardado na primeira página da visita; vai junto no pedido de acesso
-  try { if (!sessionStorage.getItem('mm_origem')) { var qs = new URLSearchParams(location.search); sessionStorage.setItem('mm_origem', JSON.stringify({ ref: document.referrer, utm: qs.get('utm_source') || qs.get('origem') || '' })); } } catch (e) { /* sem armazenamento */ }
+  try { if (!sessionStorage.getItem('mm_origem')) { var qs = new URLSearchParams(location.search); sessionStorage.setItem('mm_origem', JSON.stringify({ ref: document.referrer, utm: qs.get('utm_source') || qs.get('origem') || (/[?&](gclid|gbraid|wbraid)=/.test(location.search + '&' + (qs.get('volta') || '')) ? 'google-anuncio' : '') })); } } catch (e) { /* sem armazenamento */ }
   var API = 'https://shrill-meadow-89c1.danilo-nillo.workers.dev';
   // visitantes sem login usam o worker da segunda conta da Cloudflare (terminal/vitrine-worker);
   // se ele falhar, cai no worker principal

@@ -319,10 +319,10 @@ async function creditar(env, u, f, agora) {
     validade = somarPeriodo(baseValidade(atual.status === 'ativo' ? atual.expira : null), plano);
     if (f.fimStripe && f.fimStripe > validade) validade = f.fimStripe;
     const [ins] = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref)
-        SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)
+      env.DB.prepare(`INSERT INTO pagamentos (usuario_id, plano, valor, status, criado, decidido, validade, ref, forma)
+        SELECT ?, ?, ?, 'aprovado', ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM pagamentos WHERE ref = ?)
         AND EXISTS (SELECT 1 FROM usuarios WHERE id = ? AND status IS ? AND expira IS ?)`)
-        .bind(u.id, id, f.valor, agora, agora, validade, ref, ref, u.id, atual.status, atual.expira),
+        .bind(u.id, id, f.valor, agora, agora, validade, ref, f.forma || null, ref, u.id, atual.status, atual.expira),
       env.DB.prepare(`UPDATE usuarios SET status = 'ativo', expira = ?, plano = ?, aviso_venc = NULL, stripe_cliente = COALESCE(?, stripe_cliente),
         stripe_assinatura = COALESCE(?, stripe_assinatura), decidido = CASE WHEN status = 'ativo' THEN decidido ELSE ? END
         WHERE id = ? AND EXISTS (SELECT 1 FROM pagamentos WHERE ref = ? AND criado = ? AND usuario_id = ?)`)
@@ -426,8 +426,15 @@ export async function webhookStripe(req, env) {
 export async function apiAdminStripe(req, env) {
   const c = await config(env);
   if (req.method === 'GET') {
-    let assinantes = 0;
-    try { await preparar(env); assinantes = (await env.DB.prepare('SELECT COUNT(*) n FROM usuarios WHERE stripe_assinatura IS NOT NULL AND stripe_cancela IS NULL').first()).n; } catch (e) {}
+    let assinantes = 0, pixAuto = 0, ultimoErro = null;
+    try {
+      await preparar(env);
+      assinantes = (await env.DB.prepare('SELECT COUNT(*) n FROM usuarios WHERE stripe_assinatura IS NOT NULL AND stripe_cancela IS NULL').first()).n;
+      // 23/11/2026: quantos renovam no Pix Automático (forma do último pagamento pelo Stripe)
+      pixAuto = (await env.DB.prepare(`SELECT COUNT(*) n FROM usuarios u WHERE u.stripe_assinatura IS NOT NULL AND u.stripe_cancela IS NULL
+        AND (SELECT p.forma FROM pagamentos p WHERE p.usuario_id = u.id AND p.ref LIKE 'stripe:in_%' ORDER BY p.id DESC LIMIT 1) = 'pix-auto'`).first()).n;
+    } catch (e) {}
+    try { const r = await env.DB.prepare("SELECT valor FROM config WHERE chave = 'stripe_pix_erro'").first(); if (r) ultimoErro = JSON.parse(r.valor); } catch (e) {}
     // webhook criado antes de um evento novo entrar na lista: atualiza a lista no Stripe uma vez
     if (c.stripe_key && c.stripe_webhook_id && c.stripe_eventos !== EVENTOS.join(',')) {
       try { await stripe(c.stripe_key, 'POST', 'webhook_endpoints/' + c.stripe_webhook_id, { enabled_events: EVENTOS }); await salvarConfig(env, { stripe_eventos: EVENTOS.join(',') }); } catch (e) {}
@@ -436,7 +443,7 @@ export async function apiAdminStripe(req, env) {
     try { orfas = (await env.DB.prepare(`SELECT id, fatura, email, valor, plano, criado FROM stripe_orfas WHERE status = 'aberta' ORDER BY id`).all()).results; } catch (e) {}
     // diagnóstico do Pix pelo Stripe (22/11/2026): país da conta e o último motivo de recusa
     if (c.stripe_key && new URL(req.url).searchParams.get('pix') === '1') { paisDaConta = ''; await contaNoBrasil(c); }
-    return json({ pais: paisDaConta || null, erroPix: erroPix || null, ligado: !!(c.stripe_key && c.stripe_whsec), modo: c.stripe_key ? modoDaChave(c.stripe_key) : null, desde: c.stripe_desde || null, assinantes,
+    return json({ pais: paisDaConta || null, erroPix: erroPix || null, ultimoErro, pixStripe: await pixStripeDisponivel(env), ligado: !!(c.stripe_key && c.stripe_whsec), modo: c.stripe_key ? modoDaChave(c.stripe_key) : null, desde: c.stripe_desde || null, assinantes, pixAuto,
       orfas: orfas.map((x) => ({ ...x, nome_plano: (PLANOS[x.plano] || {}).nome || x.plano })) });
   }
   if (req.method !== 'POST' || !mesmaOrigem(req)) return json({ erro: 'Método não permitido.' }, 405);
