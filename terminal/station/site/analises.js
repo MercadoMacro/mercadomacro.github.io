@@ -623,7 +623,11 @@ updateMarketPanel = async function (silent = false) {
   if (!mkt3m || mkt3m.day !== anaToday()) mkt3mEnsure().then(anaDecorateCards);   // virou o dia com a página aberta
   if (anaOpen) anaRender();
 };
+// 23/11/2026: encadeia com o gancho que já existia. Ao virar arquivo próprio (22/11) este passou a carregar depois do
+// app.js e apagava o gancho do menu lateral: a aba mudava, mas o amarelo ficava na anterior
+const __antesAnalises = window.__onTabSwitch;
 window.__onTabSwitch = (tabId) => {
+  if (__antesAnalises) __antesAnalises(tabId);
   if (tabId === 'market-panel' && liveMode && !document.hidden && Date.now() - marketPanelTs >= currentRefreshMs()) updateMarketPanel(true);
   if (tabId === 'analysis-panel') setTimeout(() => { if (anaOpen) anaRender(); else window.__anaAbrir(); }, 50);
 };
