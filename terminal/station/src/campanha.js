@@ -3,35 +3,45 @@
    no próprio WhatsApp). Os grupos saem do banco na hora: quem gerou Pix e não pagou, quem pagou a degustação,
    quem usou nas últimas 2 semanas e quem quase não usou. Fica marcado quem já recebeu (tabela campanha_envios). */
 
+// 23/11/2026: nova campanha (sem desconto): o Pix Automático a R$ 19,90 por mês para quem não está assinando.
+// A anterior ("Assine 1 mês, ganhe 2", até 22/11) saiu; passada a data de fim, a tela não oferece mais envio.
 export const CAMPANHA = {
-  id: 'assine1ganhe2-2026-11',
-  titulo: 'Assine 1 mês, ganhe 2',
-  ate: '22/11',
+  id: 'pix-automatico-2026-11',
+  titulo: 'Volte com o Pix Automático',
+  ate: '06/12',
+  fim: '2026-12-07T03:00:00Z', // fim do dia 06/12 em Brasília
 };
 const ASSINATURA = 'Oi, {nome}! Aqui é o Dante, do Mercado Macro.\n\n';
-const COMO = `É só entrar em mercadomacro.com.br/assinar com seu e-mail e escolher o plano de 1 mês. Vale até domingo (${CAMPANHA.ate}).`;
+const COMO = 'Para assinar: mercadomacro.com.br/assinar, entre com seu e-mail e escolha "Assinar com Pix Automático". Dá para cancelar quando quiser.';
+const PIXAUTO = 'agora dá para assinar no Pix Automático por R$ 19,90 por mês. Você autoriza uma vez no app do banco e ele renova sozinho, sem precisar gerar Pix todo mês.';
 export const GRUPOS = {
+  ex: {
+    nome: 'Já foram assinantes',
+    dica: 'Pagaram algum plano e o acesso venceu',
+    texto: ASSINATURA + 'Sentimos sua falta no terminal! Uma novidade que facilita: ' + PIXAUTO + '\n\n' + COMO + '\n\nQualquer dúvida, é só me chamar aqui.',
+  },
   quase: {
     nome: 'Quase assinaram',
     dica: 'Geraram o Pix e não pagaram',
-    texto: ASSINATURA + 'Vi que você chegou a gerar o Pix da assinatura e acabou não finalizando. Para facilitar, separei uma condição só para você: assinando 1 mês (R$ 24,90 no Pix), você ganha 2 meses de acesso.\n\n' + COMO + '\n\nQualquer dúvida, é só me chamar aqui.',
+    texto: ASSINATURA + 'Vi que você chegou a gerar o Pix da assinatura e acabou não finalizando. Ficou mais simples: ' + PIXAUTO + '\n\n' + COMO + '\n\nQualquer dúvida, é só me chamar aqui.',
   },
   degustacao: {
     nome: 'Pagaram a degustação',
     dica: 'Já pagaram R$ 4,99 uma vez',
-    texto: ASSINATURA + 'Obrigado por ter testado a degustação. Tenho uma condição especial para quem já conhece o terminal: assinando 1 mês (R$ 24,90 no Pix), você ganha 2 meses de acesso completo, com Mercado, Indicadores, Fundamentos, Calendário e a Jade.\n\n' + COMO,
+    texto: ASSINATURA + 'Obrigado por ter testado a degustação. Para continuar com o terminal completo (Mercado, Notícias traduzidas, Calendário, Fundamentos e a Jade), ' + PIXAUTO + '\n\n' + COMO,
   },
   recente: {
     nome: 'Usaram recentemente',
     dica: 'Entraram nas últimas 2 semanas',
-    texto: ASSINATURA + 'Vi que você aproveitou o terminal nos últimos dias. Para você continuar acompanhando o mercado com a gente, liberei uma condição: assinando 1 mês (R$ 24,90 no Pix), você ganha 2 meses de acesso.\n\n' + COMO + ' Qualquer dúvida, me chama aqui.',
+    texto: ASSINATURA + 'Vi que você aproveitou o terminal nos últimos dias. Para continuar acompanhando o mercado com a gente, ' + PIXAUTO + '\n\n' + COMO + '\n\nQualquer dúvida, me chama aqui.',
   },
   pouco: {
     nome: 'Quase não usaram',
     dica: 'Cortesias e testes que quase não entraram',
-    texto: ASSINATURA + 'O terminal mudou bastante desde o seu cadastro: notícias traduzidas na hora, a Jade no WhatsApp, a Mesa nova e muito mais.\n\nPara você voltar a conhecer, quem assina 1 mês (R$ 24,90 no Pix) ganha 2 meses de acesso. ' + COMO,
+    texto: ASSINATURA + 'O terminal mudou bastante desde o seu cadastro: notícias traduzidas na hora, a Jade no WhatsApp, o Jornal Mercado Macro e a Mesa nova. E ' + PIXAUTO + '\n\n' + COMO,
   },
 };
+export const campanhaEncerrada = (agora = Date.now()) => agora >= Date.parse(CAMPANHA.fim);
 // fora da campanha: a cortesia do Murilo Severino fica como está (pedido do Dante)
 const FORA = new Set([12]);
 const PAGOS = new Set(['mensal', 'trimestral', 'semestral', 'anual']);
@@ -66,10 +76,11 @@ export async function listaCampanha(env) {
     if (FORA.has(u.id) || u.sem_novidades) continue;
     // quem já é assinante pago (ou já pagou algum plano) não entra
     // (e quem mandou comprovante que ainda está para conferir)
-    if (u.pagou || u.conferir || (u.status === 'ativo' && PAGOS.has(u.plano))) continue;
+    // quem já pagou e está com acesso não entra (ex-assinantes com o acesso vencido entram no grupo "ex")
+    if (u.conferir || (u.status === 'ativo' && (u.pagou || PAGOS.has(u.plano)))) continue;
     // só quem está para vencer (até 7 dias) ou já venceu
     if (u.status === 'ativo' && u.expira && Date.parse(u.expira) > agora + 7 * 864e5) continue;
-    const grupo = u.pix_aberto ? 'quase' : u.degust ? 'degustacao' : (u.ultimo_acesso && u.ultimo_acesso >= duasSemanas) ? 'recente' : 'pouco';
+    const grupo = u.pagou ? 'ex' : u.pix_aberto ? 'quase' : u.degust ? 'degustacao' : (u.ultimo_acesso && u.ultimo_acesso >= duasSemanas) ? 'recente' : 'pouco';
     const nome = primeiroNome(u.nome);
     const numero = numeroWa(u.celular);
     pessoas.push({
@@ -79,7 +90,7 @@ export async function listaCampanha(env) {
       link: numero ? 'https://wa.me/' + numero + '?text=' + encodeURIComponent(GRUPOS[grupo].texto.replace('{nome}', nome)) : '',
     });
   }
-  const ordem = { quase: 0, degustacao: 1, recente: 2, pouco: 3 };
+  const ordem = { ex: 0, quase: 1, degustacao: 2, recente: 3, pouco: 4 };
   pessoas.sort((a, b) => ordem[a.grupo] - ordem[b.grupo] || (b.ultimo || '').localeCompare(a.ultimo || ''));
   return pessoas;
 }
@@ -87,6 +98,7 @@ export async function listaCampanha(env) {
 // GET: campanha + pessoas; POST {acao: 'enviado' | 'desmarcar', id}
 export async function apiCampanhaAdmin(req, env, json) {
   if (req.method === 'GET') {
+    if (campanhaEncerrada()) return json({ campanha: CAMPANHA, encerrada: true, grupos: {}, pessoas: [] }, 200, { 'Cache-Control': 'no-store' });
     const pessoas = await listaCampanha(env);
     const grupos = Object.fromEntries(Object.entries(GRUPOS).map(([k, g]) => [k, { nome: g.nome, dica: g.dica }]));
     return json({ campanha: CAMPANHA, grupos, pessoas }, 200, { 'Cache-Control': 'no-store' });
@@ -96,6 +108,7 @@ export async function apiCampanhaAdmin(req, env, json) {
   const id = Number(b.id);
   if (!Number.isInteger(id) || id <= 0) return json({ erro: 'Pessoa inválida.' }, 400);
   await tabela(env);
+  if (b.acao === 'enviado' && campanhaEncerrada()) return json({ erro: 'A campanha já terminou.' }, 400);
   if (b.acao === 'enviado') {
     await env.DB.prepare('INSERT INTO campanha_envios (campanha, usuario_id, ts) VALUES (?, ?, ?) ON CONFLICT(campanha, usuario_id) DO UPDATE SET ts = excluded.ts').bind(CAMPANHA.id, id, Date.now()).run();
     return json({ ok: true });

@@ -83,6 +83,8 @@ export async function garantirAssinatura(env) {
   if (!pcols.includes('ref')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN ref TEXT').run();
   // 16/11/2026: comprovante guardado no R2 (pix/<id>) em vez de dentro do banco; no_r2 = 1 quando está lá
   if (!pcols.includes('no_r2')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN no_r2 INTEGER NOT NULL DEFAULT 0').run();
+  // 23/11/2026: forma do pagamento pelo Stripe ('cartao', 'pix-auto', 'pix'); vazio nos antigos e no Pix manual
+  if (!pcols.includes('forma')) await env.DB.prepare('ALTER TABLE pagamentos ADD COLUMN forma TEXT').run();
   pronto = true;
 }
 
@@ -463,7 +465,7 @@ export async function apiAdminAssinatura(req, env, acao) {
     return json({ pagamentos: r.results.map((p) => ({ ...p, nome_plano: (PLANOS[p.plano] || {}).nome || p.plano })) });
   }
   if (acao === 'pagamentos' && req.method === 'GET') {
-    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, (p.arquivo IS NOT NULL OR p.no_r2 = 1) tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao, COALESCE(p.ref, '') LIKE 'stripe:pi_%' pix_stripe,
+    const r = await env.DB.prepare(`SELECT p.id, p.plano, p.valor, p.status, p.criado, p.enviado, p.decidido, p.validade, p.tipo_arq, (p.arquivo IS NOT NULL OR p.no_r2 = 1) tem_arq, COALESCE(p.ref, '') LIKE 'stripe:%' cartao, COALESCE(p.ref, '') LIKE 'stripe:pi_%' pix_stripe, COALESCE(p.forma, '') = 'pix-auto' pix_auto,
       u.id uid, u.nome, u.email FROM pagamentos p JOIN usuarios u ON u.id = p.usuario_id
       WHERE p.status = 'enviado' OR (p.status IN ('aprovado', 'recusado') AND p.decidido > ?) ORDER BY p.status = 'enviado' DESC, p.id DESC LIMIT 60`)
       .bind(new Date(Date.now() - 60 * 864e5).toISOString()).all();

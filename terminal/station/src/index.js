@@ -129,7 +129,11 @@ export default {
     if (antigo) return Response.redirect(antigo, 301);
     if (url.hostname === 'www.mercadomacro.com.br') return Response.redirect('https://mercadomacro.com.br' + p + url.search, 301);
     try {
-      if (p === '/entrar') return paginaEntrar(req, env);
+      if (p === '/entrar') {
+        // 23/11/2026: o anúncio leva a /assinar; sem login a pessoa cai aqui com o clique dentro do ?volta= (conta em De onde vêm)
+        if (navegacao(req) && /[?&](gclid|gbraid|wbraid)=/.test(url.search + '&' + (url.searchParams.get('volta') || ''))) contar(env, ctx, req, 'anuncio');
+        return paginaEntrar(req, env);
+      }
       if (p.startsWith('/js/pg/')) { const m = p.match(/^\/js\/pg\/([a-z-]+)\.js$/); return m ? await scriptDaPagina(req, env, m[1]) : new Response('', { status: 404 }); }
       if (p === '/api/vigia') return await avisoDoVigia(req, env);
       if (p === '/api/csp') return await receberAvisoCsp(req, env);
@@ -334,7 +338,9 @@ function contar(env, ctx, req, tipo) {
   // de onde veio a visita às páginas públicas (só o site de origem, nada da pessoa)
   if (tipo !== 'terminal') {
     const u = new URL(req.url);
-    contarOrigem(env, ctx, origemDe(req.headers.get('Referer'), u.searchParams.get('utm_source') || u.searchParams.get('origem')), 'visita');
+    // 23/11/2026: quem chega pelo anúncio do Google (gclid/gbraid/wbraid no endereço, inclusive dentro do ?volta= do login)
+    const anuncio = /[?&](gclid|gbraid|wbraid)=/.test(u.search + '&' + (u.searchParams.get('volta') || ''));
+    contarOrigem(env, ctx, origemDe(req.headers.get('Referer'), anuncio ? 'google-anuncio' : u.searchParams.get('utm_source') || u.searchParams.get('origem')), 'visita');
   }
 }
 /* ---------------- de onde vêm os visitantes (26/10/2026) ----------------
@@ -342,6 +348,7 @@ function contar(env, ctx, req, tipo) {
    Referer ou de ?utm_source= / ?origem= no link. Sem IP, sem endereço completo, sem ligar a ninguém.
    tipo 'visita' = abriu a vitrine ou uma página pública; 'cadastro' = pediu acesso (a vitrine manda a origem da sessão). */
 const ORIGENS = [
+  [/^google-anuncio$/, 'Google Anúncio'],
   [/^mail\.google\.|android\.gm$|outlook\.|(^|\.)mail\./, 'E-mail'], [/(^|\.)google\.|googlequicksearchbox/, 'Google'], [/(^|\.)bing\.com$/, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/(^|\.)yahoo\./, 'Yahoo'],
   [/(^|\.)t\.me$|telegram/, 'Telegram'], [/whatsapp|(^|\.)wa\.me$/, 'WhatsApp'], [/instagram/, 'Instagram'], [/facebook|(^|\.)fb\.(com|me)$|katana$/, 'Facebook'],
   [/(^|\.)t\.co$|twitter|(^|\.)x\.com$/, 'X (Twitter)'], [/youtube|youtu\.be/, 'YouTube'], [/linkedin|lnkd\.in/, 'LinkedIn'], [/reddit/, 'Reddit'],
@@ -1582,7 +1589,10 @@ async function apiAdmin(req, env, acao, eu) {
     const r = await env.DB.prepare(
       `SELECT u.id, u.nome, u.email, u.celular, u.status, u.admin, u.criado, u.decidido, u.ultimo_acesso, u.visto, u.aparelho, u.expira,
         COALESCE(u.plano, (SELECT p.plano FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' ORDER BY p.id DESC LIMIT 1)) plano,
-        (SELECT COUNT(*) FROM sessoes_derrubadas d WHERE d.usuario_id = u.id AND d.quando > ?) trocas
+        (SELECT COUNT(*) FROM sessoes_derrubadas d WHERE d.usuario_id = u.id AND d.quando > ?) trocas,
+        (u.stripe_assinatura IS NOT NULL AND u.stripe_cancela IS NULL) renova,
+        (SELECT p.forma FROM pagamentos p WHERE p.usuario_id = u.id AND p.ref LIKE 'stripe:in_%' ORDER BY p.id DESC LIMIT 1) forma_renova,
+        (SELECT COUNT(*) FROM pagamentos p WHERE p.usuario_id = u.id AND p.status = 'aprovado' AND p.valor > 0) pagos
         FROM usuarios u ORDER BY u.criado DESC`).bind(Date.now() - 7 * 864e5).all();
     return json({ eu: eu.id, usuarios: r.results, alertaTrocas: ALERTA_TROCAS });
   }
@@ -1897,6 +1907,8 @@ const SCRIPTS_PAGINA = () => ({
   tema: [JS_TEMA, 'todos'], esqueci: [JS_ESQUECI, 'todos'], 'nova-senha': [JS_NOVA_SENHA, 'todos'],
   conta: [JS_CONTA, 'conta'], assinar: [SCRIPT_ASSINAR, 'conta'], admin: [JS_ADMIN, 'admin'],
 });
+// testes: os scripts das páginas precisam ser JavaScript válido (um \n errado num texto quebra o /admin inteiro)
+export const scriptsDasPaginas = () => Object.fromEntries(Object.entries(SCRIPTS_PAGINA()).map(([k, v]) => [k, v[0]]));
 const versoesJs = new Map();
 function versaoJs(js) {
   let v = versoesJs.get(js);
@@ -2822,7 +2834,15 @@ const JS_ADMIN = `(function(){
       + dividem.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Possível senha dividida · ' + u.trocas + ' trocas de aparelho em 7 dias</div></div><div class="bts"><button type="button" class="lib" data-h="' + u.id + '">Ver histórico</button></div></div>'; }).join('')
       + '</div>'
       : '<p class="vazio">Nenhum Pix para conferir e nenhuma conta suspeita de senha dividida. Tudo em dia.</p>';
-    document.getElementById('venc').innerHTML = venc.length ? '<div class="lista">' + venc.map(function(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">Vence ' + dia(u.expira) + '</div></div><div class="bts">' + botoes(u, true) + '</div></div>'; }).join('') + '</div>' : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
+    // 23/11/2026: separados em teste grátis, assinantes que precisam renovar e quem renova sozinho (não precisa de mensagem)
+    function linhaV(u){ return '<div class="u"><div class="q"><button type="button" class="nm n" data-h="' + u.id + '">' + esc(u.nome) + '</button><div class="d">' + (u.renova ? 'Renova sozinho ' + (u.forma_renova === 'pix-auto' ? 'no Pix Automático' : 'no cartão') + ' em ' : 'Vence ') + dia(u.expira) + ' · ' + esc(NOMEP[u.plano] || u.plano || 'sem plano') + '</div></div><div class="bts">' + (u.renova ? '' : botoes(u, true)) + '</div></div>'; }
+    var vTeste = venc.filter(function(u){ return !u.renova && (u.plano === 'gratis' || u.plano === 'cortesia' || u.plano === 'degustacao'); });
+    var vAuto = venc.filter(function(u){ return u.renova; });
+    var vAss = venc.filter(function(u){ return !u.renova && vTeste.indexOf(u) < 0; });
+    function blocoV(t, l, dica){ return l.length ? '<h3 class="vg">' + t + ' <span>' + l.length + (dica ? ' · ' + dica : '') + '</span></h3><div class="lista">' + l.map(linhaV).join('') + '</div>' : ''; }
+    document.getElementById('venc').innerHTML = venc.length
+      ? blocoV('Teste grátis e cortesia', vTeste, 'o WhatsApp abre com convite para assinar') + blocoV('Assinantes que precisam renovar', vAss, 'o WhatsApp abre com lembrete de renovação') + blocoV('Renovam sozinhos', vAuto, 'não precisa mandar mensagem')
+      : '<p class="vazio">Ninguém vence nos próximos 7 dias.</p>';
     document.getElementById('cnt-pessoas').textContent = '';
     document.getElementById('cnt-pag').textContent = env.length || '';
   }
@@ -2994,7 +3014,7 @@ const JS_ADMIN = `(function(){
     }).catch(function(){ raiz.innerHTML = '<p class="vazio">Não foi possível carregar os cadastros.</p>'; });
   }
   // abas (lembradas no endereço: /admin#pessoas)
-  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Comprovantes de Pix para conferir e o que já foi decidido.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', jornal: 'Matérias do Jornal Mercado Macro: só vão ao ar depois do seu Aprovar.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
+  var SUBT = { geral: 'Resumo de cadastros, pagamentos e visitas.', pessoas: 'Todos os cadastros, com plano, validade e ações.', pagamentos: 'Cartão e Pix pelo Stripe entram sozinhos. Só o Pix manual (com comprovante) precisa da sua conferência.', comunicado: 'Pop-up de novidades no site, e-mail de boas-vindas e comunicados por e-mail.', jornal: 'Matérias do Jornal Mercado Macro: só vão ao ar depois do seu Aprovar.', passe: 'Pedidos ao servidor de dados sem o passe de login.', jade: 'O que os assinantes perguntam à Jade, sem nome nem conta.', atraso: 'Quanto tempo cada fonte de notícias leva para aparecer no site.', ajustes: 'Automações, WhatsApp e as integrações: Pix, cartão, Telegram, e-mail, assistente e Capital.com.' };
   function iniciais(n){ var p = String(n || '?').trim().split(/\\s+/); return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
   function aba(n, f){
     if (!document.querySelector('[data-p="' + n + '"]')) n = 'geral';
@@ -3196,8 +3216,15 @@ const JS_ADMIN = `(function(){
   function zap(id){
     var u = US.filter(function(x){ return x.id === id; })[0]; if (!u || !u.celular) return;
     var n = String(u.nome).split(' ')[0], site = 'https://mercadomacro.com.br/assinar', t;
-    if (u.status === 'expirado') t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Seu acesso terminou' + (u.expira ? ' em ' + dia(u.expira) : '') + '. Seus dados e listas continuam guardados. Para voltar, é só escolher um plano em ' + site;
-    else if (u.status === 'ativo' && u.expira) t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Seu acesso vai até ' + dia(u.expira) + '. Para continuar sem interrupção, é só escolher um plano em ' + site + ' (se renovar antes, o novo período começa depois dessa data).';
+    if (u.status === 'expirado') t = 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Seu acesso terminou' + (u.expira ? ' em ' + dia(u.expira) : '') + '. Seus dados e listas continuam guardados. Para voltar, é só escolher um plano em ' + site + ' (no Pix Automático sai por R$ 19,90 por mês e renova sozinho).';
+    else if (u.status === 'ativo' && u.expira && (u.plano === 'gratis' || u.plano === 'cortesia' || u.plano === 'degustacao')) {
+      // teste grátis/cortesia (23/11/2026): boas-vindas no começo, convite para assinar perto do fim
+      var falta = Date.parse(u.expira) - Date.now();
+      t = falta > 30 * 3600000
+        ? 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Vi que você começou o teste, seja bem-vindo!\\n\\nUma dica rápida: deixa a aba Notícias aberta durante o pregão. Ela traz as manchetes traduzidas na hora, e a Agenda mostra os dados econômicos do dia com horário. Se tiver qualquer dúvida ou sentir falta de algo, me chama por aqui mesmo.'
+        : 'Oi, ' + n + ', tudo bem? Aqui é o Dante, do Mercado Macro. Seu teste termina ' + (falta < 0 ? 'hoje' : 'em ' + dia(u.expira)) + '.\\n\\nSe quiser continuar, o plano mensal sai por R$ 19,90 no cartão ou no Pix Automático, e dá para cancelar quando quiser: ' + site + '\\n\\nE se algo não te agradou, me conta? Sua opinião ajuda muito a melhorar o terminal.';
+    }
+    else if (u.status === 'ativo' && u.expira) t = 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Seu acesso vai até ' + dia(u.expira) + '. Para continuar sem interrupção, é só renovar em ' + site + ' (se renovar antes, o novo período começa depois dessa data). Uma novidade: agora dá para assinar no Pix Automático, por R$ 19,90 por mês, e ele renova sozinho.';
     else if (u.status === 'pendente' || u.status === 'confirmar') t = 'Oi, ' + n + '! Aqui é do Mercado Macro. Recebemos seu pedido de acesso. Para entrar agora, é só escolher um plano em ' + site;
     else t = 'Oi, ' + n + '! Aqui é do Mercado Macro.';
     window.open('https://wa.me/' + u.celular + '?text=' + encodeURIComponent(t), '_blank', 'noopener');
@@ -3394,7 +3421,9 @@ const JS_ADMIN = `(function(){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
       st.innerHTML = (j.ligado
-        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar aparece o botão "Pagar com cartão" nos planos mensal, semestral e anual, com renovação automática. Assinantes no cartão agora: ' + j.assinantes + '.</p>'
+        ? '<div class="caixa"><p>Ligado' + (j.desde ? ' desde ' + data(j.desde) : '') + ', <b>' + (j.modo === 'real' ? 'modo real' : 'modo de teste (nenhum cartão é cobrado de verdade)') + '</b>. Em /assinar: cartão com renovação automática (mensal, semestral e anual)' + (j.pixStripe ? ', Pix Automático (renova sozinho, mesmo preço do cartão) e Pix de pagamento único (1 mês e 6 meses), tudo aprovado sozinho' : '; o Pix pelo Stripe está desligado, então o Pix usa o QR Code manual abaixo') + '.</p>'
+          + '<p>Renovação automática ativa: <b>' + j.assinantes + '</b> (' + (j.assinantes - (j.pixAuto || 0)) + ' no cartão, ' + (j.pixAuto || 0) + ' no Pix Automático).</p>'
+          + (j.ultimoErro && j.ultimoErro.msg ? '<p class="d">Último erro do Stripe no Pix (' + data(j.ultimoErro.quando) + '): ' + esc(j.ultimoErro.msg) + '</p>' : '')
           + '<div class="linha"><input id="st-chave" aria-label="Trocar a chave do Stripe" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="trocar a chave (sk_live_...)" style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Trocar</button><button type="button" id="st-off" style="' + bt + '">Desligar</button></div></div>'
         : '<div class="caixa"><p>Cole a chave secreta do Stripe (no painel do Stripe: Desenvolvedores, Chaves de API, "Chave secreta", começa com sk_live_ ou sk_test_ para testar). O site confere a chave e cria sozinho o aviso de pagamentos (webhook).</p>'
           + '<div class="linha"><input id="st-chave" aria-label="Chave secreta do Stripe" type="text" data-segredo autocomplete="off" spellcheck="false" placeholder="sk_live_..." style="' + inp + '"><button type="button" id="st-salvar" style="' + bt + '">Salvar e conferir</button></div>'
@@ -3461,7 +3490,7 @@ const JS_ADMIN = `(function(){
       var abertos = j.pagamentos.filter(function(p){ return p.status === 'enviado'; }), feitos = j.pagamentos.filter(function(p){ return p.status !== 'enviado'; });
       var linha = function(p){
         return '<div class="u"><div class="q"><div class="n">' + esc(p.nome) + ' · ' + esc(p.nome_plano) + ' ' + reais(p.valor) + '</div><div class="e">' + esc(p.email) + '</div>'
-          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.pix_stripe ? ' · pago no Pix (Stripe)' : p.cartao ? ' · pago no cartão (Stripe)' : p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
+          + '<div class="d">Pedido MM' + String(p.id).padStart(6, '0') + (p.pix_stripe ? ' · pago no Pix (Stripe)' : p.pix_auto ? ' · pago no Pix Automático (Stripe)' : p.cartao ? ' · pago no cartão (Stripe)' : p.enviado ? ' · comprovante enviado ' + data(p.enviado) : ' · registrado por você') + (p.status === 'aprovado' ? ' · aprovado, vale até ' + dia(p.validade) : p.status === 'recusado' ? ' · não confirmado' : '') + '</div></div>'
           + '<div class="bts">' + (p.tem_arq ? '<a href="/api/admin/comprovante?id=' + p.id + '" target="_blank" rel="noopener"><button type="button">Ver comprovante</button></a>' : '')
           + (p.status === 'enviado' ? '<button type="button" class="lib" data-pg="aprovar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Aprovar</button><button type="button" data-pg="recusar" data-id="' + p.id + '" data-n="' + esc(p.nome) + '">Recusar</button>' : '') + '</div></div>';
       };
@@ -3470,7 +3499,7 @@ const JS_ADMIN = `(function(){
         + ORF.map(function(x){ return '<div class="u"><div class="q"><div class="n">' + esc(x.nome_plano) + ' ' + reais(x.valor) + ' · ' + data(x.criado) + '</div><div class="e">E-mail no Stripe: ' + esc(x.email || '—') + '</div>'
           + '<div class="linha" style="margin-top:6px"><input data-orf-email="' + x.id + '" type="email" aria-label="E-mail da conta" placeholder="e-mail da conta no site" value="' + esc(x.email || '') + '" style="' + inpO + '"></div></div>'
           + '<div class="bts"><button type="button" class="lib" data-orf="ligar" data-id="' + x.id + '">Ligar e liberar</button><button type="button" data-orf="ignorar" data-id="' + x.id + '">Ignorar</button></div></div>'; }).join('') + '</div>' : '';
-      pg.innerHTML = orfasH + '<h2>Pagamentos para conferir<b>' + abertos.length + '</b></h2><div class="lista">' + (abertos.length ? abertos.map(linha).join('') : '<p class="vazio">Nenhum comprovante novo. Confira no extrato do banco antes de aprovar.</p>') + '</div>'
+      pg.innerHTML = orfasH + '<h2>Pagamentos para conferir<b>' + abertos.length + '</b></h2><div class="lista">' + (abertos.length ? abertos.map(linha).join('') : '<p class="vazio">Nenhum comprovante de Pix manual para conferir. Pagamentos pelo Stripe (cartão, Pix e Pix Automático) são aprovados sozinhos e aparecem na lista abaixo.</p>') + '</div>'
         + (feitos.length ? '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--text-3);font-size:12.5px">Decididos nos últimos 60 dias (' + feitos.length + ')</summary><div class="lista" style="margin-top:8px">' + feitos.map(linha).join('') + '</div></details>' : '');
     }).catch(function(){ pg.innerHTML = '<p class="vazio">Não foi possível carregar os pagamentos.</p>'; });
   }
@@ -3501,7 +3530,7 @@ const JS_ADMIN = `(function(){
     fetch('/api/admin/pix', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
       var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
       var inp = 'flex:1;min-width:200px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;color:var(--text);padding:8px 10px;min-height:36px';
-      var h = '<div class="caixa">' + (j.chave ? '<p>Ligado. A página <a href="/assinar" style="color:var(--accent-text)">/assinar</a> mostra o QR Code do Pix para a chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Planos: 48 horas grátis (sem Pix, só para quem nunca usou nem assinou), degustação 7 dias R$ 4,99 (só para quem nunca assinou), 1 mês R$ 24,90 e 6 meses R$ 139,00 (no cartão: R$ 19,90 e R$ 99,90; 12 meses só no cartão, R$ 179,90).</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
+      var h = '<div class="caixa">' + (j.chave ? '<p>Pix manual ligado, na chave <b>' + esc(j.chave) + '</b> (' + esc(j.nome) + ', ' + esc(j.cidade) + '). Com o Pix pelo Stripe ligado (quadro Cartão e Pix), quem assina paga pelo Stripe e o acesso libera sozinho; este QR Code na sua chave fica de reserva, para quando o Stripe não estiver disponível, e o comprovante cai em Pagamentos para você conferir.</p><p class="d">Preços: Pix único 1 mês R$ 24,90 e 6 meses R$ 139,00. Cartão e Pix Automático (renovam sozinhos): R$ 19,90 por mês, R$ 99,90 por 6 meses e R$ 179,90 por 12 meses. 48 horas grátis para quem nunca usou nem assinou; degustação de 7 dias por R$ 4,99 para quem nunca pagou.</p>' + (j.alterada ? '<p class="d">Última troca da chave: ' + data(j.alterada) + '. Toda troca avisa no seu Telegram.</p>' : '') + '<p>Para trocar, preencha de novo:</p>'
           : '<p>Para as pessoas pagarem a assinatura pelo Pix, preencha a chave que vai receber e o nome e a cidade como aparecem no seu banco. Celular: escreva com +55 ou com o DDD entre parênteses.</p>')
         + '<div class="linha"><input id="px-chave" aria-label="Chave Pix" autocomplete="off" spellcheck="false" placeholder="chave Pix" style="' + inp + '"></div>'
         + '<div class="linha"><input id="px-nome" aria-label="Nome de quem recebe" autocomplete="off" placeholder="nome de quem recebe" maxlength="25" style="' + inp + '"><input id="px-cidade" aria-label="Cidade de quem recebe" autocomplete="off" placeholder="cidade" maxlength="15" style="' + inp + ';flex:0 1 160px;min-width:120px"></div>'
@@ -3743,6 +3772,7 @@ const JS_ADMIN = `(function(){
   function campanha(){
     var el = document.getElementById('camp'); if (!el) return;
     fetch('/api/admin/campanha', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw r; return r.json(); }).then(function(j){
+      if (j.encerrada) { el.innerHTML = '<div class="caixa camp"><p class="camp-top"><b>' + esc(j.campanha.titulo) + '</b> terminou em ' + esc(j.campanha.ate) + '.</p><p class="d" style="margin:6px 0 0">Nenhuma campanha ativa agora. Para começar outra, é só pedir.</p></div>'; return; }
       var ps = j.pessoas || [], gs = j.grupos || {};
       var com = ps.filter(function(p){ return p.numero; }), feitos = com.filter(function(p){ return p.enviado; }).length;
       var semCel = ps.filter(function(p){ return !p.numero; });
@@ -4126,6 +4156,7 @@ h2 b{font-size:12px;font-weight:700}
 /* pop-up de novidades: formulário no admin e prévia (15/11/2026) */
 /* campanha no WhatsApp (16/11/2026) */
 .camp-top{margin:0 0 6px;font-size:13.5px;color:var(--text-2)}
+.vg{font-size:13.5px;margin:12px 0 6px}.vg:first-child{margin-top:0}.vg span{font-weight:400;color:var(--text-3);font-size:12px}
 .camp-g{font-size:14px;margin:18px 0 8px}.camp-g span{font-weight:400;color:var(--text-3);font-size:12.5px}
 .camp-l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .camp-l li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
@@ -4266,8 +4297,8 @@ h2 b{font-size:12px;font-weight:700}
   </div>
   <h2 class="cfg-tit">Integrações</h2>
   <div class="cfg2">
-    <section class="painel"><header><h2>Pix para assinaturas</h2><span class="selo" data-selo="pix"></span></header><div id="pix"><p class="vazio">Carregando…</p></div></section>
-    <section class="painel"><header><h2>Cartão (Stripe)</h2><span class="selo" data-selo="stripe"></span></header><div id="stripe"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Pix manual (reserva)</h2><span class="selo" data-selo="pix"></span></header><div id="pix"><p class="vazio">Carregando…</p></div></section>
+    <section class="painel"><header><h2>Cartão e Pix (Stripe)</h2><span class="selo" data-selo="stripe"></span></header><div id="stripe"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Avisos no Telegram</h2><span class="selo" data-selo="avisos"></span></header><div id="avisos"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>E-mail (Resend)</h2><span class="selo" data-selo="email"></span></header><div id="email"><p class="vazio">Carregando…</p></div></section>
     <section class="painel"><header><h2>Assistente (Google Gemini)</h2><span class="selo" data-selo="assistente"></span></header><div id="assistente"><p class="vazio">Carregando…</p></div></section>
