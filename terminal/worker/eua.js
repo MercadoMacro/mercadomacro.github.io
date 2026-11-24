@@ -48,17 +48,24 @@ export async function handleEuaCatalogo(cors) {
   }
 }
 
-// fechamento anterior pelo gráfico diário (barra de hoje, se existir, fica de fora); guardado por 6 horas
+// dia do pregão pelo relógio de Nova York (23/11/2026): as barras diárias da FXOpen são datadas 00:00 UTC do pregão;
+// com o dia em UTC, das 21h às 2h de Brasília a "variação do dia" virava só a do after-hours (NVDA +31% aparecia +1,2%)
+export const diaNovaYork = (ms = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+// fechamento do pregão anterior: barras em ordem, a do pregão de hoje (dia de Nova York), se existir, fica de fora
+export function fechamentoAnterior(bars, hoje) {
+  const b = (bars || []).filter((x) => x && Number.isFinite(x.Close)).sort((a, c) => a.Timestamp - c.Timestamp);
+  if (!b.length) return null;
+  const ult = b[b.length - 1], deHoje = new Date(ult.Timestamp).toISOString().slice(0, 10) >= hoje;
+  const ref = deHoje ? b[b.length - 2] : ult;
+  return ref ? { c: ref.Close } : null;
+}
+// guardado por 6 horas
 async function anterior(sym) {
-  const hoje = new Date().toISOString().slice(0, 10);
-  return doCache(`eua-ant-v1-${sym}-${hoje}`, 21600, async () => {
+  const hoje = diaNovaYork();
+  return doCache(`eua-ant-v2-${sym}-${hoje}`, 21600, async () => {
     const r = await fetch(`${FX}/quotehistory/${encodeURIComponent(sym)}/D1/bars/bid?timestamp=${Date.now()}&count=-3`, { headers: { Accept: 'application/json', 'User-Agent': UA } });
     if (!r.ok) return null;
-    const b = ((await r.json()).Bars || []).filter((x) => x && Number.isFinite(x.Close)).sort((a, c) => a.Timestamp - c.Timestamp);
-    if (!b.length) return null;
-    const ult = b[b.length - 1], deHoje = new Date(ult.Timestamp).toISOString().slice(0, 10) === hoje;
-    const ref = deHoje ? b[b.length - 2] : ult;
-    return ref ? { c: ref.Close } : null;
+    return fechamentoAnterior((await r.json()).Bars, hoje);
   });
 }
 
@@ -95,7 +102,7 @@ export async function handleEuaCotacoes(url, ctx, cors) {
   if (!syms.length) return resposta({ error: 'Parâmetro s ausente' }, cors, 0);
   if (syms.length > MAX_EUA) return resposta({ error: `Máximo de ${MAX_EUA} símbolos` }, cors, 0);
   if (!syms.every((s) => SIMBOLO.test(s))) return resposta({ error: 'Símbolo inválido' }, cors, 0);
-  const chave = new Request('https://cache.local/eua-cot-v1?s=' + syms.join(','));
+  const chave = new Request('https://cache.local/eua-cot-v2?s=' + syms.join(','));
   const hit = await caches.default.match(chave);
   if (hit) return new Response(hit.body, { headers: { ...Object.fromEntries(hit.headers), ...cors, 'X-Cache': 'HIT' } });
   let out = {};
