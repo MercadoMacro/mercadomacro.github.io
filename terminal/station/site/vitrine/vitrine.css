@@ -153,6 +153,11 @@ main { width: 100%; }
 
 /* ferramentas */
 .vt-feats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ft-grupo { grid-column: 1 / -1; margin: 14px 0 0; }
+.ft-grupo:first-child { margin-top: 0; }
+.ft-g-tit { margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.ft-g-tit b { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.ft-g-tit span { color: var(--text-2); font-size: 13.5px; }
 .ft { background: rgba(13,20,34,.85); border: 1px solid var(--line); border-radius: 14px; padding: 18px; transition: border-color .2s, transform .2s; }
 .ft:hover { border-color: var(--line-2); transform: translateY(-2px); }
 .ft-ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 16px; margin-bottom: 12px; }
