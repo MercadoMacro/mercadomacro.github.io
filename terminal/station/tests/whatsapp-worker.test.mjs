@@ -341,3 +341,21 @@ test('bitcoin, ouro e empresas da B3 pelo nome são entendidos sem a IA', async 
   await mensagem(env, 'itau e bradesco', '5511999990012');
   assert.match(enviadas[3], /ITUB4/); assert.match(enviadas[3], /BBDC4/);
 });
+
+test('mensagem da equipe pelo aplicativo (eco) silencia a Jade nessa conversa, sem aviso no Telegram', async () => {
+  const { env, enviadas, avisos } = ambiente();
+  const corpo = JSON.stringify({ entry: [{ changes: [{ field: 'smb_message_echoes', value: { metadata: { phone_number_id: '1342951915577900' }, message_echoes: [{ from: '5511971787986', to: '5511999990001', id: 'eco1', type: 'audio', audio: { id: 'a' } }] } }] }] });
+  const r = await worker.fetch(new Request('https://x.workers.dev/webhook', { method: 'POST', body: corpo, headers: { 'X-Hub-Signature-256': await assinar(corpo) } }), env);
+  assert.equal(r.status, 200);
+  assert.equal(enviadas.length, 0); // o eco em si não gera resposta
+  await mensagem(env, 'Oi, recebi seu áudio, quero saber mais');
+  await mensagem(env, '', '5511999990001', { type: 'audio', audio: { id: 'b' } });
+  assert.equal(enviadas.length, 0); // a Jade fica quieta
+  assert.equal(avisos.length, 0); // e não repete no Telegram
+  // outra conversa segue normal
+  await mensagem(env, 'oi', '5511999990002');
+  assert.equal(enviadas.length, 1);
+  // o cliente pode chamar a Jade de volta
+  await mensagem(env, 'voltar para a jade');
+  assert.match(enviadas[1], /Voltei/);
+});

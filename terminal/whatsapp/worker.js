@@ -130,6 +130,11 @@ async function processar(event, env, ctx) {
       for (const change of entry.changes ?? []) {
         const value = change.value;
         const phoneId = value?.metadata?.phone_number_id;
+        // 25/11/2026 (pedido do Dante): quando alguém da equipe escreve pelo aplicativo WhatsApp Business do mesmo número
+        // (a Meta manda uma cópia, o "eco", no campo smb_message_echoes), a Jade fica em silêncio nessa conversa por
+        // 24 horas a partir da última mensagem da equipe, como no atendimento manual. As mensagens que a própria Jade envia
+        // pela API não geram eco. Sem aviso no Telegram nesse caso: quem escreveu já está acompanhando a conversa.
+        if (change.field === 'smb_message_echoes') { await pausarPorEco(env, phoneId, value); continue; }
         if (change.field !== 'messages') continue;
         const accessToken = phoneId === PRODUCAO
           ? env.WHATSAPP_PRODUCTION_ACCESS_TOKEN
@@ -167,7 +172,7 @@ async function processar(event, env, ctx) {
             // durante o atendimento humano, a equipe fica sabendo; fora dele, a Jade explica que lê só texto
             let pausada = false;
             try { pausada = !!(await db.prepare('SELECT 1 AS p FROM jade_handoff WHERE conversation_key = ? AND expires_at > ?').bind(key, Date.now()).first()); } catch (error) { /* segue */ }
-            if (pausada) { await avisarEquipe(env, 'mensagem', phoneId, message.from, '[' + (NOME_MIDIA[message.type] || 'arquivo') + ']'); continue; }
+            if (pausada) { await avisarEquipe(env, 'mensagem', phoneId, message.from, '[' + (NOME_MIDIA[message.type] || 'arquivo') + ']', key); continue; }
             await enviar(phoneId, accessToken, message.from, { texto: 'Ainda não consigo ' + (message.type === 'audio' ? 'ouvir áudios' : 'abrir ' + (NOME_MIDIA[message.type] || 'arquivos') + 's') + ' 🙂 Me escreva, por exemplo: *PETR4*, *notícias* ou *planos*. Ou toque numa opção:', botoes: ['demo', 'planos', 'humano'] });
             continue;
           }
@@ -194,15 +199,15 @@ async function processar(event, env, ctx) {
             const now = Date.now();
             if (vimDoRadar && !wantsHuman) {
               // "Vim do Radar" é um começo de conversa: tira a pausa do atendimento e a Jade dá as boas-vindas
-              await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
+              await db.batch([db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key), db.prepare('DELETE FROM jade_manual WHERE conversation_key = ?').bind(key)]);
             } else if (wantsJade) {
-              await db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key).run();
+              await db.batch([db.prepare('DELETE FROM jade_handoff WHERE conversation_key = ?').bind(key), db.prepare('DELETE FROM jade_manual WHERE conversation_key = ?').bind(key)]);
               reply = { texto: 'Voltei! Sou a Jade. Posso ajudar com ativos, notícias, agenda econômica ou planos.', botoes: ['demo', 'noticias', 'planos'] };
             } else if (wantsHuman) {
               const result = await db.prepare('INSERT INTO jade_handoff (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = excluded.expires_at WHERE jade_handoff.expires_at <= ?').bind(key, now + 86400000, now).run();
               if (!result.meta.changes) {
                 // já estava com a equipe: repassa a mensagem e não responde
-                await avisarEquipe(env, 'mensagem', phoneId, message.from, original);
+                await avisarEquipe(env, 'mensagem', phoneId, message.from, original, key);
                 continue;
               }
               await avisarEquipe(env, 'pedido', phoneId, message.from, original + (origem === 'radar' ? ' (veio do Radar)' : ''));
@@ -212,7 +217,7 @@ async function processar(event, env, ctx) {
               const paused = await db.prepare('SELECT 1 AS paused FROM jade_handoff WHERE conversation_key = ? AND expires_at > ?').bind(key, now).first();
               if (paused) {
                 // a Jade fica quieta, mas a equipe fica sabendo do que a pessoa escreveu
-                await avisarEquipe(env, 'mensagem', phoneId, message.from, original);
+                await avisarEquipe(env, 'mensagem', phoneId, message.from, original, key);
                 continue;
               }
             }
@@ -355,6 +360,9 @@ async function prepararTabelas(db) {
     // de onde veio a conversa (Radar), por 30 dias, para contar o caminho até o atendimento e os planos
     db.prepare('CREATE TABLE IF NOT EXISTS jade_origem (conversation_key TEXT PRIMARY KEY, origem TEXT NOT NULL, expires_at INTEGER NOT NULL, planos INTEGER NOT NULL DEFAULT 0)'),
     db.prepare('CREATE TABLE IF NOT EXISTS jade_vista (id TEXT PRIMARY KEY, ts INTEGER NOT NULL)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS jade_handoff (conversation_key TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)'),
+    // atendimento manual iniciado pela equipe no aplicativo (eco): mesma pausa, sem aviso no Telegram (25/11/2026)
+    db.prepare('CREATE TABLE IF NOT EXISTS jade_manual (conversation_key TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)'),
   ]);
   tabelasProntas.add(db);
 }
@@ -382,8 +390,31 @@ async function funil(env, phoneId, origem, evento) {
   try { await env.JADE.funil(origem, evento); } catch (error) { console.warn('Jade: funil indisponível', error.name); }
 }
 
-async function avisarEquipe(env, tipo, phoneId, from, texto) {
+export async function pausarPorEco(env, phoneId, value) {
+  const db = env.HANDOFF_DB;
+  if (!db || (phoneId !== PRODUCAO && phoneId !== TESTE)) return 0;
+  await prepararTabelas(db);
+  const ate = Date.now() + 86400000;
+  let n = 0;
+  for (const eco of value?.message_echoes ?? []) {
+    const cliente = String(eco?.to ?? '');
+    if (!/^\d{8,15}$/.test(cliente)) continue;
+    const key = await chaveConversa(env, phoneId + ':' + cliente);
+    await db.batch([
+      db.prepare('INSERT INTO jade_handoff (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = MAX(jade_handoff.expires_at, excluded.expires_at)').bind(key, ate),
+      db.prepare('INSERT INTO jade_manual (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = excluded.expires_at').bind(key, ate),
+    ]);
+    n++;
+  }
+  return n;
+}
+
+async function avisarEquipe(env, tipo, phoneId, from, texto, key) {
   if (phoneId !== PRODUCAO) return;
+  // conversa em atendimento manual pelo aplicativo: a equipe já está vendo, não repete no Telegram
+  if (key && tipo === 'mensagem') {
+    try { if (await env.HANDOFF_DB.prepare('SELECT 1 FROM jade_manual WHERE conversation_key = ? AND expires_at > ?').bind(key, Date.now()).first()) return; } catch (e) { /* segue com o aviso */ }
+  }
   try {
     if (!env.JADE) return;
     await env.JADE.avisarEquipe(tipo, String(from).slice(-4), String(texto || '').slice(0, 500));
