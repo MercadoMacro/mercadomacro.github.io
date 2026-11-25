@@ -21,6 +21,7 @@ import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
 import { CSP_SO_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
 import { receberErroJs, errosRecentes } from './erros-js.js';
+import { apiAssessorTexto } from './assessor.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -220,6 +221,8 @@ export default {
         return await buscarAtivos(req);
       }
       if (p === '/api/conta/dados') return await apiDados(req, env, u);
+      // Relatório do Assessor (24/11/2026, src/assessor.js): comentário da IA a partir de percentuais por classe, sem dado do cliente
+      if (p === '/api/assessor/texto') return await apiAssessorTexto(req, env, u, { json, mesmaOrigem, dentroDoLimite });
       // alarmes de preço da Jade no servidor e avisos com o site fechado (11/11/2026, src/alarmes.js)
       if (p === '/api/alarmes' || p.startsWith('/api/push/')) { const r = await apiAlarmes(req, env, u, p, mesmaOrigem, json); if (r) return r; }
       // resumo semanal (07/11/2026): o texto que o administrador salva no site vale para todos; sem ele, o site usa o resumo-semanal.txt

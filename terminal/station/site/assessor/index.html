@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Relatório do Assessor | Mercado Macro</title>
+<link rel="icon" type="image/png" href="/icone-mercado-macro.png">
+<link rel="stylesheet" href="/assessor/assessor.css?v=1">
+</head>
+<body>
+<header class="barra no-print">
+  <a class="marca" href="/">Mercado Macro</a>
+  <span class="titulo">Relatório do Assessor <em>beta</em></span>
+  <a class="volta" href="/">Voltar ao terminal</a>
+</header>
+
+<main class="app">
+  <section class="painel no-print" aria-label="Montar o relatório">
+    <h1>Carteira do cliente frente ao cenário macro</h1>
+    <p class="d">Suba o XPerformance do cliente. O PDF é lido aqui no seu navegador e não é enviado ao servidor; para o comentário da IA vão só os percentuais por classe, sem nome, conta ou valores do cliente.</p>
+
+    <div class="passo">
+      <h2><span>1</span> XPerformance do cliente</h2>
+      <label class="arquivo" id="area-pdf">
+        <input type="file" id="pdf" accept="application/pdf,.pdf">
+        <b>Escolher o PDF</b> ou arrastar para cá
+        <small id="pdf-status">Relatório de Investimentos da XP (XPerformance), em PDF.</small>
+      </label>
+    </div>
+
+    <div class="passo">
+      <h2><span>2</span> Dados do relatório</h2>
+      <div class="campos">
+        <label>Nome do cliente<input id="f-cliente" maxlength="80" placeholder="Como vai aparecer no relatório"></label>
+        <label>Perfil do cliente<select id="f-perfil"><option value="conservador">Conservador</option><option value="moderado" selected>Moderado</option><option value="arrojado">Arrojado</option></select></label>
+        <label>Seu nome<input id="f-assessor" maxlength="80" placeholder="Nome do assessor"></label>
+        <label>Escritório<input id="f-escritorio" maxlength="80" placeholder="Ex.: Seu escritório"></label>
+        <label>Certificação ou contato (opcional)<input id="f-contato" maxlength="100" placeholder="Ex.: Assessor de investimentos · (11) 90000-0000"></label>
+        <label class="logo-campo">Logotipo (opcional)<input type="file" id="f-logo" accept="image/png,image/jpeg,image/svg+xml,image/webp"><small>Fica só neste navegador.</small></label>
+      </div>
+    </div>
+
+    <div class="passo">
+      <h2><span>3</span> Régua do cenário <small id="regua-nota"></small></h2>
+      <p class="d">Faixas de referência por classe, em % do patrimônio, para o perfil escolhido e o cenário de hoje. Ajuste como quiser: a régua é sua.</p>
+      <div id="regua" class="regua"></div>
+      <button type="button" class="b" id="regua-padrao">Voltar à régua sugerida</button>
+    </div>
+
+    <div class="acoes">
+      <button type="button" class="b pri" id="gerar" disabled>Gerar relatório</button>
+      <button type="button" class="b" id="imprimir" disabled>Baixar PDF</button>
+      <label class="ia"><input type="checkbox" id="f-ia" checked> Comentário escrito pela IA</label>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+  </section>
+
+  <section id="relatorio" class="relatorio" aria-label="Prévia do relatório" hidden></section>
+</main>
+
+<script src="/vitrine/ferramentas.js?v=4"></script>
+<script type="module" src="/assessor/assessor.js?v=1"></script>
+</body>
+</html>
