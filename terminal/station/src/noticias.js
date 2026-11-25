@@ -87,6 +87,22 @@ const DICT_RE = Object.fromEntries(Object.entries(DICIONARIO).map(([k, arr]) => 
 const has = (lista, txt) => lista.some((re) => re.test(txt));
 // matéria de serviço ou explicação (sempre atual, sem fato novo): nunca passa de "Mercado"
 const SERVICO_RE = /^(como |o que (é|são) |entenda|guia |dicas? |passo a passo|quanto rende|vale a pena|simulador|calculadora|aprenda|veja (como|quanto|onde|o que)|saiba (como|quanto))|mais buscad|para iniciantes|\b(how to|what is|explained|explainer|beginner'?s guide)\b/i;
+// 25/11/2026 (Dante): destaques com foco em quem investe no Brasil.
+// Sem fato de mercado: entrevista, perfil, "últimas notícias e análises de...", podcast. Nunca é destaque.
+export const ENCHIMENTO_RE = /^(últimas notícias|latest news|ao vivo|live:|watch:|vídeo:|video:|podcast)|\b(entrevista exclusiva|exclusive interview|in an interview|em entrevista|mentalidade|mindset|podcast|newsletter|horóscopo|celebridade)\b/i;
+// assunto de outro país (bancos centrais e moedas de fora): um nível abaixo, a não ser que fale também de Brasil ou EUA
+export const FORA_RE = /\b(coreia|corea|korea|korean|japão|japan|japanese|boj|bank of japan|banco do japão|boe|bank of england|banco da inglaterra|libra|pound|sterling|gbp|rba|reserve bank of australia|austrália|australia|nova zelândia|new zealand|rbnz|bank of canada|banco do canadá|canadá|canada|snb|suíça|swiss|rbi|índia|india|turquia|turkey|indonésia|indonesia|filipinas|philippines|tailândia|thailand|yen|iene|rupia|rupee|ringgit|zloty|lira)\b/i;
+export const BRASIL_RE = /\b(brasil|brazil|brazilian|brasileir[ao]s?|ibovespa|ibov|b3|selic|copom|haddad|galípolo|lula|petrobras|petr[34]|embraer|itaú|bradesco|banco do brasil|tesouro direto|ipca|real brasileiro|r\$|bovespa)\b/i;
+export const EUA_RE = /\b(fed|fomc|powell|treasury|treasuries|wall street|s&p|nasdaq|dow jones|eua|us |u\.s\.|trump|payroll|cpi|pce)\b/i;
+export function ajustarImpacto(titulo, impactScore, nivel) {
+  if (ENCHIMENTO_RE.test(titulo)) return { impactScore: 0, nivel: 'NORMAL', brasil: 0 };
+  const brasil = BRASIL_RE.test(titulo) || VALE_RE.test(titulo) ? 1 : 0;
+  if (!brasil && !EUA_RE.test(titulo) && FORA_RE.test(titulo)) {
+    if (nivel === 'CRITICO') return { impactScore: 7, nivel: 'ALTO', brasil };
+    if (nivel === 'ALTO') return { impactScore: 4, nivel: 'MEDIO', brasil };
+  }
+  return { impactScore, nivel, brasil };
+}
 // "Vale" empresa: com maiúscula e sem ser "vale a pena", "vale-refeição", "Vale do Silício"...
 const VALE_RE = /(?<![\p{L}])Vale(?![\p{L}-])(?! (a pena|do |dos |da |o |ressaltar|lembrar|destacar))/u;
 
@@ -290,8 +306,11 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
       else if (has(DICT_RE.ALTO, titulo) || VALE_RE.test(titulo)) { impactScore = 7; nivel = 'ALTO'; }
       else if (has(DICT_RE.MEDIO, titulo)) { impactScore = 4; nivel = 'MEDIO'; }
       if (impactScore > 4 && SERVICO_RE.test(titulo)) { impactScore = 4; nivel = 'MEDIO'; }
+      const aj = ajustarImpacto(titulo, impactScore, nivel);
+      impactScore = aj.impactScore; nivel = aj.nivel;
 
-      const finalScore = (impactScore * 10) + feed.weight;
+      // notícia sobre o Brasil sobe na ordem (equivale a 1,5 nível de impacto)
+      const finalScore = (impactScore * 10) + feed.weight + (aj.brasil ? 15 : 0);
 
       const tags = [];
       const tem = (...ts) => ts.some((t) => termRegex(t).test(titulo));
@@ -313,7 +332,7 @@ async function fetchOneFeed(feed, fresco, ttl = 90, info = null) {
         fonte: feed.source,
         veiculo,
         data: pubDate,
-        impactScore, finalScore, nivel,
+        impactScore, finalScore, nivel, brasil: aj.brasil,
         tags: [...new Set(tags)],
         imagem
       });

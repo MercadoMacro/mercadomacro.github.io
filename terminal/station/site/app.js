@@ -3274,8 +3274,10 @@ function newsReadMins(n) {
     const intl = isIntl(n);
     const verOrig = trOriginal.has(n.link);
     const tr = verOrig ? '' : trCache[n.link];
-    const traduzindo = intl && !tr && !verOrig && n.resumo && !trTentou.has(n.link);
-    const text = tr || limpaCorpo(n, n.resumo || '');
+    // 25/11/2026: a lista chega só com o 1º parágrafo (rp); o texto inteiro está sendo buscado (carregarTexto)
+    const carregando = !!n.rp;
+    const traduzindo = !carregando && intl && !tr && !verOrig && n.resumo && !trTentou.has(n.link);
+    const text = carregando ? '' : tr || limpaCorpo(n, n.resumo || '');
     // resumo em português que só repete a manchete não aparece
     const ledeBoa = n.trechoPt && newsSoLetras(n.trechoPt) !== newsSoLetras(n.titulo);
     const short = (n.palavras || 0) < 120;
@@ -3301,12 +3303,12 @@ function newsReadMins(n) {
         <button class="btn-sm${bionicOn ? ' on' : ''}" id="nr-bionic" title="Ativar/desativar Leitura Dinâmica (Bionic Reading)"><i class="fas fa-bolt"></i> Leitura Rápida</button>
         <button class="btn-sm${picked ? ' on' : ''}" id="nr-pick"><i class="fas fa-star"></i> ${picked ? 'Nas favoritas' : 'Favoritar'}</button>
         <button class="btn-sm" id="nr-copy"><i class="fab fa-whatsapp"></i> Copiar para WhatsApp</button>
-        ${intl && n.resumo && !tr && !traduzindo ? `<button class="btn-sm" id="nr-tr"><i class="fas fa-language"></i> ${verOrig ? 'Ver em português' : 'Traduzir texto completo'}</button>` : ''}
+        ${!carregando && intl && n.resumo && !tr && !traduzindo ? `<button class="btn-sm" id="nr-tr"><i class="fas fa-language"></i> ${verOrig ? 'Ver em português' : 'Traduzir texto completo'}</button>` : ''}
         ${intl && tr ? '<button class="btn-sm" id="nr-orig"><i class="fas fa-language"></i> Ver original em inglês</button>' : ''}
       </div>
       ${intl && ledeBoa && !tr && !traduzindo ? `<div class="nr-lede"><small>Resumo em português</small>${escapeHTML(n.trechoPt)}</div>` : ''}
-      <div class="nr-body" id="nr-body">${traduzindo ? nrTradBox() : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
-      ${!text && n._salva ? `<div class="nr-note"><i class="fas fa-star"></i><span>Notícia guardada nas suas Favoritas. O texto completo está no site de ${escapeHTML(srcOf(n))}: use “Abrir no site”.</span></div>`
+      <div class="nr-body" id="nr-body">${carregando ? '<div class="nr-skel"></div><div class="nr-skel" style="width:94%"></div><div class="nr-skel" style="width:86%"></div><div class="nr-skel" style="width:90%;margin-top:22px"></div><div class="nr-skel" style="width:72%"></div>' : traduzindo ? nrTradBox() : text ? (bionicOn ? applyBionic(bodyHTML(text)) : bodyHTML(text)) : ''}</div>
+      ${carregando ? '' : !text && n._salva ? `<div class="nr-note"><i class="fas fa-star"></i><span>Notícia guardada nas suas Favoritas. O texto completo está no site de ${escapeHTML(srcOf(n))}: use “Abrir no site”.</span></div>`
         : !text ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>${escapeHTML(srcOf(n))} envia só a manchete pelo feed, sem o texto. ${related.length ? 'Veja abaixo como outras fontes noticiaram o mesmo fato.' : ''}</span></div>`
         : short ? `<div class="nr-note"><i class="fas fa-info-circle"></i><span>Este é o trecho que ${escapeHTML(srcOf(n))} libera pelo feed. A matéria completa fica no site.</span></div>` : ''}
       ${related.length ? `<section class="nr-sec"><h3>Também noticiado por</h3>${related.map(r => `<button class="nr-link" data-id="${escapeHTML(r.id)}"><span>${escapeHTML(r.titulo)}</span><small>${escapeHTML(srcOf(r))} · ${timeAgoShort(r.data)}</small></button>`).join('')}</section>` : ''}
@@ -3388,6 +3390,15 @@ function newsReadMins(n) {
     navigator.clipboard?.writeText(msg).then(() => toast('Copiado para colar no WhatsApp', 'success'), () => toast('Não foi possível copiar', 'warning'));
   }
 
+  // texto completo da notícia, pedido só quando ela é aberta (a lista da aba vem com o 1º parágrafo)
+  function carregarTexto(n) {
+    if (!n.rp || n._buscando) return;
+    n._buscando = fetchT('/api/noticias/texto?link=' + encodeURIComponent(n.link), {}, 15000)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j && j.resumo) n.resumo = j.resumo; })
+      .catch(() => { /* fica o 1º parágrafo */ })
+      .finally(() => { delete n.rp; if (cur === n) render(); });
+  }
   function open(id, keepList = false) {
     const n = byId(id);
     if (!n) return;
@@ -3395,6 +3406,7 @@ function newsReadMins(n) {
     idx = list.findIndex(x => x.id === id);
     if (cur && cur.id !== n.id) pararOuvir();
     cur = n;
+    carregarTexto(n);
     AppState.addReadArticle(n.link);
     document.querySelectorAll(`.nc-card[data-id="${CSS.escape(id)}"]`).forEach(c => c.classList.add('read'));
     render();

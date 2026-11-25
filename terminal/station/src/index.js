@@ -289,7 +289,17 @@ export default {
         // rapida: responde na hora com a lista guardada e renova em segundo plano (X-Cache: STALE avisa o navegador)
         const { lista, cache, falharam } = await noticiasCache(ctx, { rapida: true, env });
         if (!lista.length) return json({ erro: 'Nenhum feed respondeu.' }, 503); // o navegador usa o worker antigo
-        return new Response(JSON.stringify(lista), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
+        // 25/11/2026: a lista vai sem o texto completo de cada notícia (só o primeiro parágrafo, para o cartão e a busca);
+        // o texto inteiro vem de /api/noticias/texto quando a pessoa abre "Ler aqui". A resposta caiu de ~1,6 MB para ~0,5 MB
+        return new Response(JSON.stringify(lista.map(noticiaLeve)), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Cache': cache, 'X-Falharam': falharam } });
+      }
+      if (p === '/api/noticias/texto') {
+        // pela notícia (link): o navegador refaz o id de cada notícia a partir do link (newsFixIds)
+        const link = (url.searchParams.get('link') || '').slice(0, 1000);
+        const { lista } = await noticiasCache(ctx, { rapida: true, env });
+        const n = link && lista.find((x) => String(x.link || '').trim().replace(/&amp;/g, '&') === link);
+        if (!n) return json({ erro: 'Notícia não encontrada.' }, 404);
+        return json({ resumo: n.resumo || '' }, 200, { 'Cache-Control': 'private, max-age=3600' });
       }
       if (p.startsWith('/api/admin/')) {
         if (!u.admin) return json({ erro: 'Sem permissão.' }, 403);
@@ -2531,6 +2541,13 @@ function protegerResposta(r) {
   return out;
 }
 const CSP_AMOSTRA = 0.1;
+// notícia da lista sem o texto completo: fica o primeiro parágrafo (até 320 letras) e o aviso rp (texto parcial)
+export function noticiaLeve(n) {
+  const r = String(n.resumo || '');
+  if (r.length <= 360) return n;
+  const p1 = r.split('\n\n')[0].slice(0, 320);
+  return { ...n, resumo: p1, rp: 1 };
+}
 // Turnstile: true = pessoa, false = recusado, null = a Cloudflare não respondeu (aí o cadastro segue, com os outros limites)
 async function conferirTurnstile(secreta, token, ip) {
   token = String(token || '');
