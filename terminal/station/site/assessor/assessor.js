@@ -121,7 +121,7 @@ function gauge(v) {
   const cor = v >= 80 ? '#15803d' : v >= 60 ? '#65a30d' : v >= 40 ? '#d97706' : '#dc2626';
   const ang = Math.PI * (1 - v / 100), cx = 75, cy = 78, r = 60;
   const x = cx + r * Math.cos(ang), y = cy - r * Math.sin(ang);
-  return `<svg class="gauge" viewBox="0 0 150 96" width="150" role="img" aria-label="Score ${v} de 100"><path d="M15 78 A60 60 0 0 1 135 78" fill="none" stroke="#e5e9f0" stroke-width="13" stroke-linecap="round"/><path d="M15 78 A60 60 0 ${v > 50 ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="13" stroke-linecap="round"/><text x="75" y="72" text-anchor="middle" font-size="30" font-weight="800" fill="#14213d">${v}</text><text x="75" y="92" text-anchor="middle" font-size="10" fill="#56627a">de 100</text></svg>`;
+  return `<svg class="gauge" viewBox="0 0 150 96" width="150" role="img" aria-label="Score ${v} de 100"><path d="M15 78 A60 60 0 0 1 135 78" fill="none" stroke="#e5e9f0" stroke-width="13" stroke-linecap="round"/><path d="M15 78 A60 60 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="13" stroke-linecap="round"/><text x="75" y="72" text-anchor="middle" font-size="30" font-weight="800" fill="#14213d">${v}</text><text x="75" y="92" text-anchor="middle" font-size="10" fill="#56627a">de 100</text></svg>`;
 }
 function graficoRegua(res, faixas) {
   const W = 640, L = 190, R = 52, linha = 30, H = CLASSES.length * linha + 26;
