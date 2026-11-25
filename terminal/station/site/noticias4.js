@@ -89,7 +89,10 @@
       num = (x > 0 ? '+' : '') + x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
       cls = x > 0 ? 'up' : x < 0 ? 'dn' : '';
     }
-    return `<i class="fas fa-chart-line" aria-hidden="true"></i> ${esc(a.rot)} <b class="${cls}">${num}</b> desde ${desde}`;
+    // 25/11/2026: "Ouro +1,00% desde 16h33" num título "O ouro cai…" parecia contradição; agora diz que é depois da
+    // notícia, e sem movimento (0,00%, mercado fechado) o selo não aparece
+    if (!cls) return '';
+    return `<i class="fas fa-chart-line" aria-hidden="true"></i> ${esc(a.rot)} <b class="${cls}">${num}</b> após a notícia (${desde})`;
   }
   async function precos() {
     const leads = window.__newsLeads || [];
@@ -103,10 +106,12 @@
       const quando = Math.min(n.data, ...(n.related || []).map((r) => r.data));
       const v = await variacao(a, quando);
       if (!v || !card.isConnected || card.querySelector('.nw4-px')) return;
+      const html = chip(a, v, quando);
+      if (!html) return;
       const el = document.createElement('div');
       el.className = 'nw4-px';
       el.title = 'Quanto o ativo citado se mexeu desde a primeira notícia sobre o assunto (cotação com atraso de até 15 min)';
-      el.innerHTML = chip(a, v, quando);
+      el.innerHTML = html;
       card.querySelector('.nc-title')?.after(el);
     }));
   }
@@ -222,7 +227,7 @@
     if (v && tags && tags.isConnected && !art.querySelector('.nw4-px')) {
       const el = document.createElement('div');
       el.className = 'nw4-px nw4-px-nr';
-      el.innerHTML = chip(a, v, quando);
+      el.innerHTML = html;
       tags.after(el);
     }
   });

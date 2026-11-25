@@ -75,3 +75,10 @@ body.nw2 #news-view.nw4-lista .nc-footer { border-top:0; padding-top:0; margin-t
 .jh-it .jh-lf { font-size:12.5px; line-height:1.45; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .jh-it em { font-style:normal; font-size:12.5px; font-weight:700; color:var(--accent); margin-top:2px; }
 @media (max-width:640px) { .jh-lista { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:84%; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:4px; } .jh-it { scroll-snap-align:start; } .jh-it .jh-lf { display:none; } }
+
+/* menu "Mais" da barra das Notícias (25/11/2026, jornal-faixa.js) */
+.mm-mais { position:relative; display:inline-flex; }
+.mm-mais-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:50; min-width:230px; display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 12px 30px rgba(0,0,0,.35); }
+.mm-mais-menu[hidden] { display:none; }
+.mm-mais-menu > .btn-sm { justify-content:flex-start; width:100%; height:34px; gap:8px; white-space:nowrap; }
+.mm-mais-bt span { font-weight:800; letter-spacing:.05em; }

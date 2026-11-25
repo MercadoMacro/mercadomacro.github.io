@@ -290,6 +290,16 @@ function newsTokens(t) {
     .replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 || /^\d+$/.test(w));
 }
 // Agrupa manchetes sobre o mesmo fato (palavras em comum, até 12 h de distância)
+// 25/11/2026: "Ibovespa tem alta de 1,58%" e "Ibovespa ganha 2,5 mil pontos" são o mesmo fato com palavras diferentes.
+// Manchete sobre o movimento do Ibovespa ou do dólar ganha uma chave; mesma chave em até 4 horas = mesmo assunto.
+const NEWS_MOV_RE = /\b(fecha|fechou|sobe|subiu|cai|caiu|recua|recuou|avança|avançou|ganha|ganhou|perde|perdeu|alta|queda|dispara|despenca|rises|falls|gains|drops|closes)\b/i;
+function newsMovKey(n) {
+  const t = String(n.titulo || '') + ' ' + String(n.tituloOriginal || '');
+  if (!NEWS_MOV_RE.test(t)) return '';
+  if (/\b(ibovespa|ibov|bovespa)\b/i.test(t)) return 'ibov';
+  if (/^(o )?(dólar|dolar)\b/i.test(String(n.titulo || ''))) return 'dolar';
+  return '';
+}
 function clusterNews(list) {
   const leads = [];
   newsJuntaFalas(list).sort((a, b) => newsRank(b) - newsRank(a)).forEach(n => {
@@ -300,12 +310,14 @@ function clusterNews(list) {
       // 16/11/2026: o servidor compara o sentido das manchetes (IA) e manda o mesmo "grupo" para o mesmo fato,
       // mesmo com palavras diferentes ou uma em inglês e outra em português
       if (n.grupo && (l.grupo === n.grupo || l.related.some(r => r.grupo === n.grupo))) return true;
+      const mk = newsMovKey(n);
+      if (mk && l._mk === mk && Math.abs(l.data - n.data) <= 4 * 3600 * 1000) return true;
       const common = l._tk.filter(w => set.has(w)).length;
       const ratio = common / Math.max(1, Math.min(l._tk.length, set.size));
       return (common >= 4 && ratio >= 0.6) || (common >= 3 && ratio >= 0.75);
     });
     if (lead) { lead.related.push(n); if (!lead.porque && n.porque) lead.porque = n.porque; }
-    else leads.push({ ...n, _tk: [...set], related: [] });
+    else leads.push({ ...n, _tk: [...set], _mk: newsMovKey(n), related: [] });
   });
   return leads;
 }
@@ -969,14 +981,19 @@ function renderNewsView() {
 
   const picked = new Set(getNewsFavs().map(p => p.id));
   window.__newsLeads = destaques;
-  // manchete principal: a mais relevante que tenha texto
-  const leadIdx = destaques.findIndex(n => (n.trechoPt || n.trecho) && n.impactScore >= 7);
-  // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
-  let criticos = 0, relevantes = 0;
   // Divisórias por horário (09/11/2026): Última hora, Hoje, Ontem e Antes, mantendo a ordem de relevância dentro de cada uma
   const diaBrt = (t) => new Date(t - 3 * 3600 * 1000).toISOString().slice(0, 10);
   const hojeBrt = diaBrt(Date.now()), ontemBrt = diaBrt(Date.now() - 86400000);
   const grupoDe = (n) => Date.now() - n.data < 60 * 60 * 1000 ? 0 : diaBrt(n.data) === hojeBrt ? 1 : diaBrt(n.data) === ontemBrt ? 2 : 3;
+  // manchete principal: a mais relevante que tenha texto, no primeiro bloco de horário da tela; 25/11/2026: se houver,
+  // uma sobre o Brasil ou de fonte brasileira (antes, às 20h30, a manchete era a decisão de juros da Coreia do Sul)
+  const g0 = Math.min(...destaques.map(grupoDe));
+  const temTexto = (n) => (n.trechoPt || n.trecho) && n.impactScore >= 7;
+  let leadIdx = destaques.findIndex(n => grupoDe(n) === g0 && temTexto(n) && (n.brasil || n._br));
+  if (leadIdx < 0) leadIdx = destaques.findIndex(n => grupoDe(n) === g0 && temTexto(n));
+  if (leadIdx < 0) leadIdx = destaques.findIndex(temTexto);
+  // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
+  let criticos = 0, relevantes = 0;
   const GRUPOS = ['Última hora', 'Hoje', 'Ontem', 'Antes'];
   const ordem = destaques.map((n, idx) => [n, idx]).sort((a, b) => grupoDe(a[0]) - grupoDe(b[0]) || a[1] - b[1]);
   const usados = new Set(ordem.map(([n]) => grupoDe(n)));
