@@ -35,7 +35,15 @@
     setTimeout(function () { $('acesso').scrollIntoView({ block: 'center' }); }, 50);
   }
   // veio de um link que pede login (ex.: Ver os planos do e-mail): abre o Entrar já visível, com o motivo
-  if (/[?&]volta=/.test(location.search) && !/[?&]aparelho=1/.test(location.search) && location.hash !== '#cadastrar') {
+  // 24/11/2026 (etapa 1 da nova vitrine): quem chega pelo anúncio do Google (gclid/gbraid/wbraid, inclusive dentro do
+  // ?volta=) quase nunca tem conta; abre direto o Criar conta, com o Entrar a um toque
+  var doAnuncio = /[?&](gclid|gbraid|wbraid)=/.test(location.search + '&' + decodeURIComponent((location.search.match(/[?&]volta=([^&]*)/) || [])[1] || ''));
+  if (doAnuncio && !/[?&]aparelho=1/.test(location.search) && location.hash !== '#cadastrar') {
+    aba(true);
+    var ava = fC.querySelector('.vt-msg');
+    if (ava) { ava.className = 'vt-msg'; ava.textContent = 'Já tem conta? Toque em Entrar, acima.'; }
+    setTimeout(function () { $('acesso').scrollIntoView({ block: 'center' }); }, 50);
+  } else if (/[?&]volta=/.test(location.search) && !/[?&]aparelho=1/.test(location.search) && location.hash !== '#cadastrar') {
     aba(false);
     var vv = new URLSearchParams(location.search).get('volta') || '';
     var avv = fE.querySelector('.vt-msg');
