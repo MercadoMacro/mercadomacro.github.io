@@ -229,7 +229,7 @@ const linha = (r) => ({ id: r.id, slug: r.slug, tipo: r.tipo, tipoNome: TIPOS[r.
   corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
 async function limparCache(slug) {
   if (typeof caches === 'undefined') return;
-  const ps = ['/jornal', '/jornal/rss.xml', '/sitemap.xml', ...(slug ? ['/jornal/' + slug] : [])];
+  const ps = ['/jornal', '/jornal/rss.xml', '/jornal/hoje.json', '/sitemap.xml', ...(slug ? ['/jornal/' + slug] : [])];
   await Promise.all(ps.map((p) => caches.default.delete(new Request(SITE + p)).catch(() => false)));
 }
 export async function apiAdminJornal(req, env, json) {
@@ -440,6 +440,14 @@ ${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="
     }
     const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Jornal Mercado Macro', url: `${SITE}/jornal` };
     return html(moldura({ titulo: 'Jornal Mercado Macro: economia e mercados hoje', descricao: 'Abertura, fechamento e o assunto do dia no mercado brasileiro e internacional, com dados do terminal Mercado Macro.', canonico: `${SITE}/jornal`, ld, corpo, faixa }));
+  }
+  // 25/11/2026: matérias de hoje (horário de Brasília) para a faixa "Jornal de hoje" na aba Notícias do terminal
+  if (p === '/jornal/hoje.json') {
+    const agora = Date.now(), br = new Date(agora - 3 * 3600e3);
+    const inicio = Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate()) + 3 * 3600e3;
+    const rs = (await env.DB.prepare("SELECT slug, tipo, secao, titulo, linha_fina, publicado FROM jornal WHERE status = 'publicada' AND publicado >= ? ORDER BY publicado ASC LIMIT 6").bind(inicio).all()).results;
+    const itens = rs.map((r) => ({ slug: r.slug, tipo: TIPOS[r.tipo] || r.tipo, secao: r.secao, titulo: r.titulo, linha_fina: r.linha_fina, publicado: r.publicado }));
+    return new Response(JSON.stringify({ itens }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
   }
   const slug = p.slice('/jornal/'.length).replace(/\/$/, '');
   const r = /^[a-z0-9-]{5,90}$/.test(slug) ? await env.DB.prepare("SELECT * FROM jornal WHERE slug = ? AND status = 'publicada'").bind(slug).first() : null;

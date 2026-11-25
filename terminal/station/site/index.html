@@ -24,7 +24,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <link rel="stylesheet" href="estilo.css?v=97">
 <link rel="stylesheet" href="noticias3.css?v=6">
-<link rel="stylesheet" href="noticias4.css?v=2">
+<link rel="stylesheet" href="noticias4.css?v=4">
 <link rel="stylesheet" href="watchlists-ui.css?v=3">
 <link rel="stylesheet" href="asset-search.css?v=2">
 <link rel="stylesheet" href="asset-history.css?v=4">
@@ -389,6 +389,9 @@
     <div class="refresh-bar">
       <div class="info" id="news-info"><span class="dot"></span>Carregando notícias...</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn-sm" id="news-jornal" href="/jornal?de=terminal" target="_blank" rel="noopener" style="text-decoration:none" title="Jornal Mercado Macro: abertura, assunto do dia e fechamento">
+          <i class="fas fa-newspaper" aria-hidden="true"></i> Jornal
+        </a>
         <a class="btn-sm" id="news-tg" href="/telegram?de=terminal" target="_blank" rel="noopener" style="text-decoration:none" title="Canal no Telegram: abertura às 8h00, fechamento às 18h e as notícias que mexem com o mercado" aria-label="Canal do Mercado Macro no Telegram">
           <i class="fab fa-telegram-plane" aria-hidden="true"></i>
         </a>
@@ -411,6 +414,8 @@
         </button>
       </div>
     </div>
+
+    <section class="jornal-hoje" id="jornal-hoje" hidden aria-label="Jornal de hoje"></section>
 
     <div class="news-layout">
       <aside class="source-sidebar" id="source-sidebar"></aside>
@@ -805,6 +810,7 @@
 <script src="noticias2.js?v=10"></script>
 <script src="noticias3.js?v=1"></script>
 <script src="noticias4.js?v=3"></script>
+<script src="jornal-faixa.js?v=3"></script>
 <script src="noticias-antigas.js?v=2"></script>
 <script src="popup-novidades.js?v=2" defer></script>
 <script src="navegacao-mobile.js?v=5"></script>
