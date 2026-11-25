@@ -292,12 +292,13 @@ function newsTokens(t) {
 // Agrupa manchetes sobre o mesmo fato (palavras em comum, até 12 h de distância)
 // 25/11/2026: "Ibovespa tem alta de 1,58%" e "Ibovespa ganha 2,5 mil pontos" são o mesmo fato com palavras diferentes.
 // Manchete sobre o movimento do Ibovespa ou do dólar ganha uma chave; mesma chave em até 4 horas = mesmo assunto.
-const NEWS_MOV_RE = /\b(fecha|fechou|sobe|subiu|cai|caiu|recua|recuou|avança|avançou|ganha|ganhou|perde|perdeu|alta|queda|dispara|despenca|rises|falls|gains|drops|closes)\b/i;
+const NEWS_MOV = '(fecha|fechou|sobe|subiu|cai|caiu|recua|recuou|avança|avançou|ganha|ganhou|perde|perdeu|tem alta|tem queda|dispara|disparou|despenca|volta|rises|falls|gains|drops|closes)';
+// o verbo tem de vir logo depois do Ibovespa ou do dólar ("IFIX sobe, acima do Ibovespa" é outro assunto)
+const NEWS_IBOV_RE = new RegExp('\\b(ibovespa|ibov|bovespa)\\b[^.;:]{0,25}?\\b' + NEWS_MOV + '\\b', 'i');
+const NEWS_DOLAR_RE = new RegExp('(^|\\be\\s)(o )?d[oó]lar\\b[^.;:]{0,25}?\\b' + NEWS_MOV + '\\b', 'i');
 function newsMovKey(n) {
-  const t = String(n.titulo || '') + ' ' + String(n.tituloOriginal || '');
-  if (!NEWS_MOV_RE.test(t)) return '';
-  if (/\b(ibovespa|ibov|bovespa)\b/i.test(t)) return 'ibov';
-  if (/^(o )?(dólar|dolar)\b/i.test(String(n.titulo || ''))) return 'dolar';
+  const t = String(n.titulo || '');
+  if (NEWS_IBOV_RE.test(t) || NEWS_DOLAR_RE.test(t)) return 'fechamento-br';
   return '';
 }
 function clusterNews(list) {
