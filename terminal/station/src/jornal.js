@@ -313,7 +313,8 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 .lado li{list-style:none;padding:10px 0;border-bottom:1px solid var(--fio)}.lado ul{margin:0;padding:0}
 .lado li a{font:700 17px/1.25 Georgia,serif}.hora{display:block;font:12px Inter,system-ui,sans-serif;color:var(--cinza);margin-top:4px}
 .grade{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:22px}
-.grade article{border-top:1px solid var(--tinta);padding-top:10px}
+.grade article{border-top:1px solid var(--tinta);padding-top:10px;position:relative}.grade h3 a::after{content:'';position:absolute;inset:0}.grade article:hover h3 a{text-decoration:underline}
+.ler{display:inline-block;margin:10px 0 2px;font:700 14px Inter,system-ui,sans-serif;color:var(--tinta);border-bottom:2px solid var(--tinta);padding-bottom:1px}.ler:hover{text-decoration:none;opacity:.75}
 .grade h3{font:700 21px/1.22 'Playfair Display',Georgia,serif;margin:0 0 6px}.grade p{margin:0;color:#333;font-size:15.5px}
 .vazio{text-align:center;color:var(--cinza);padding:40px 0}
 .mat{max-width:720px;margin:0 auto}
@@ -433,9 +434,9 @@ export async function paginaJornal(req, env, p) {
     else {
       const [l, ...resto] = ms;
       const lado = resto.slice(0, 6), grade = resto.slice(6);
-      corpo = `<section class="capa"><div class="lead"><p class="kick">${esc(l.secao)}</p><h2><a href="/jornal/${l.slug}">${esc(l.titulo)}</a></h2><p class="lf">${esc(l.linha_fina)}</p><p>${esc(l.corpo[0] || '')}</p><span class="hora">${esc(dataCurta(l.publicado))}</span></div>
+      corpo = `<section class="capa"><div class="lead"><p class="kick">${esc(l.secao)}</p><h2><a href="/jornal/${l.slug}">${esc(l.titulo)}</a></h2><p class="lf">${esc(l.linha_fina)}</p><p>${esc(l.corpo[0] || '')}</p><a class="ler" href="/jornal/${l.slug}">Ler matéria completa <span aria-hidden="true">→</span></a><span class="hora">${esc(dataCurta(l.publicado))}</span></div>
 <aside class="lado"><h3>Mais recentes</h3><ul>${lado.map((m) => `<li><a href="/jornal/${m.slug}">${esc(m.titulo)}</a><span class="hora">${esc(m.secao)} · ${esc(dataCurta(m.publicado))}</span></li>`).join('') || '<li class="hora">As próximas matérias aparecem aqui.</li>'}</ul></aside></section>
-${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="kick">${esc(m.secao)}</p><h3><a href="/jornal/${m.slug}">${esc(m.titulo)}</a></h3><p>${esc(m.linha_fina)}</p><span class="hora">${esc(dataCurta(m.publicado))}</span></article>`).join('')}</section>` : ''}`;
+${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="kick">${esc(m.secao)}</p><h3><a href="/jornal/${m.slug}">${esc(m.titulo)}</a></h3><p>${esc(m.linha_fina)}</p><a class="ler" href="/jornal/${m.slug}" tabindex="-1" aria-hidden="true">Ler matéria completa →</a><span class="hora">${esc(dataCurta(m.publicado))}</span></article>`).join('')}</section>` : ''}`;
     }
     const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Jornal Mercado Macro', url: `${SITE}/jornal` };
     return html(moldura({ titulo: 'Jornal Mercado Macro: economia e mercados hoje', descricao: 'Abertura, fechamento e o assunto do dia no mercado brasileiro e internacional, com dados do terminal Mercado Macro.', canonico: `${SITE}/jornal`, ld, corpo, faixa }));
