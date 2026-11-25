@@ -7,6 +7,8 @@ import { noticiaLeve } from '../src/index.js';
 test('entrevista e "últimas notícias e análises" não viram destaque', () => {
   assert.equal(ajustarImpacto('Venus Williams on WeWard Deal and Her Investor Mindset', 7, 'ALTO').nivel, 'NORMAL');
   assert.equal(ajustarImpacto('Latest news and analysis of oil market for Nov 26', 7, 'ALTO').impactScore, 0);
+  assert.equal(ajustarImpacto('Latest Oil Market News and Analysis for Nov. 26', 7, 'ALTO').impactScore, 0);
+  assert.equal(ajustarImpacto('Petrobras divulga notícias sobre dividendos', 7, 'ALTO').impactScore, 7);
 });
 test('banco central de fora desce um nível; Brasil e EUA não', () => {
   assert.equal(ajustarImpacto('South Korea interest rate decision due Wednesday', 10, 'CRITICO').nivel, 'ALTO');
