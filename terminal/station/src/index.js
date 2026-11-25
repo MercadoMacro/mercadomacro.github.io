@@ -1968,7 +1968,7 @@ async function paginaConfirmar(req, env, ctx) {
   ]);
   if (l.status === 'confirmar') ctx.waitUntil(avisar(env, 'Novo pedido de acesso', `${l.nome} pediu acesso ao Mercado Macro (e-mail confirmado).\nA pessoa vai escolher um plano; o aviso do pagamento chega aqui.`).catch(() => {}));
   return paginaLink('E-mail confirmado', '<div class="caixa"><p>Pronto, seu e-mail foi confirmado.</p><p>Agora é só entrar com seu e-mail e senha e escolher seu plano. Para conhecer, você pode começar com 48 horas grátis.</p>'
-    + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. O valor da assinatura é simbólico e ajuda a manter tudo no ar e a trazer novidades.</p>'
+    + '<p>Por trás do Mercado Macro tem gente de verdade, atualizando o painel todo dia. É a assinatura que mantém o painel no ar e traz as novidades.</p>'
     + '<a class="bt" href="/entrar?volta=%2Fassinar">Escolher meu plano</a></div>');
 }
 const JS_ESQUECI = `(function(){var f=document.getElementById('f'),m=document.getElementById('msg');

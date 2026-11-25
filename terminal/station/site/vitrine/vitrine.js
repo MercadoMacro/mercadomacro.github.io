@@ -411,7 +411,16 @@
     ['fa-graduation-cap', 'Educação', 'Trilhas de lições curtas, do primeiro investimento aos derivativos, com quiz e progresso salvo.'],
     ['fa-comments', 'Assistente', 'Tire dúvidas sobre o mercado e sobre o painel, com respostas na hora.']
   ];
-  $('feats').innerHTML = FEATS.map(function (f) { return '<div class="ft rv"><div class="ft-ic"><i class="fas ' + f[0] + '" aria-hidden="true"></i></div><h3>' + f[1] + '</h3><p>' + f[2] + '</p></div>'; }).join('');
+  // 25/11/2026: as 14 ferramentas em quatro grupos, para o visitante achar o que procura
+  var GRUPOS = [
+    ['Acompanhar', 'O pregão e os seus ativos, ao vivo', ['Mercado', 'Mesa', 'Watchlist', 'Mapa de calor']],
+    ['Entender', 'O que mexeu no mercado e por quê', ['Notícias', 'Resumo semanal', 'Calendário', 'Indicadores']],
+    ['Analisar', 'Empresas, fluxo e estratégias', ['Fundamentos', 'Macro e Fluxo', 'Opções']],
+    ['Planejar e aprender', 'Contas do seu dinheiro, o básico do mercado e suas dúvidas', ['Calculadoras', 'Educação', 'Assistente']]
+  ];
+  var porNome = {}; FEATS.forEach(function (f) { porNome[f[1]] = f; });
+  var cartao = function (f) { return '<div class="ft rv"><div class="ft-ic"><i class="fas ' + f[0] + '" aria-hidden="true"></i></div><h3>' + f[1] + '</h3><p>' + f[2] + '</p></div>'; };
+  $('feats').innerHTML = GRUPOS.map(function (g) { return '<div class="ft-grupo"><p class="ft-g-tit"><b>' + g[0] + '</b><span>' + g[1] + '</span></p></div>' + g[2].map(function (n) { return cartao(porNome[n]); }).join(''); }).join('');
 
   /* ---------------- celular ---------------- */
   var cel = new Image();
