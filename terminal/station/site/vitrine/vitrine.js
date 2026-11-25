@@ -118,7 +118,8 @@
     if (j.confirmar) { $('pronto-tit').textContent = 'Confirme seu e-mail'; $('pronto-entrar').firstChild.textContent = 'Já confirmei: entrar e escolher meu plano '; }
     if (j.msg) $('pronto-txt').textContent = j.msg;
     emailCad = $('c-email').value;
-    $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); tsReiniciar(); conviteCanal(); });
+    $('forms').hidden = true; $('pronto').hidden = false; fC.reset(); tsReiniciar(); conviteCanal();
+    try { if (window.mmAdsCadastro) window.mmAdsCadastro(); } catch (e) { /* medição do anúncio é opcional */ } });
   // depois do cadastro: entra e cai direto na escolha do plano (/assinar)
   $('pronto-entrar').onclick = function () {
     try { history.replaceState(null, '', location.pathname + '?volta=' + encodeURIComponent(volta)); } catch (e) { /* segue sem trocar o endereço */ }
