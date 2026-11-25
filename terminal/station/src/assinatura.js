@@ -557,7 +557,7 @@ export function perguntasVitrine(cartao = false) {
     ['Como cancelo?', 'No cartão ou no Pix Automático, você cancela quando quiser na página de assinatura (no Pix Automático, também pelo app do banco), sem multa, e o acesso continua até o fim do período pago. No Pix de pagamento único não há renovação: o acesso termina na data de validade. Na primeira assinatura, dá para pedir o reembolso integral em até 7 dias.'],
     ['Funciona no celular?', 'Sim. O painel se ajusta à tela do celular e pode ser instalado como aplicativo, no celular e no computador. A conta pode ficar aberta em até 2 aparelhos ao mesmo tempo.'],
     ['O Mercado Macro recomenda investimentos?', 'Não. O conteúdo é informativo: o painel organiza dados, notícias e ferramentas para você acompanhar o mercado, mas não faz recomendação de compra ou venda de ativos.'],
-    ['De onde vêm os dados?', 'De fontes oficiais e de mercado, como Banco Central, IBGE, B3, CVM, Tesouro Direto, FRED e Yahoo Finance. Algumas cotações podem ter atraso; quando uma fonte falha, o painel mostra o último dado conhecido e avisa.'],
+    ['De onde vêm os dados?', 'De fontes oficiais e de mercado, como Banco Central, IBGE, CVM, Tesouro Direto e FRED. Algumas cotações podem ter atraso; quando uma fonte falha, o painel mostra o último dado conhecido e avisa.'],
   ];
 }
 
