@@ -60,3 +60,18 @@ body.nw2 #news-view.nw4-lista .nc-footer { border-top:0; padding-top:0; margin-t
 }
 /* 17/11/2026: um cartão 1 px mais largo que a área fazia aparecer uma barra de rolagem horizontal embaixo das notícias */
 #news-panel > .news-wrap { overflow-x: hidden; }
+
+/* Jornal de hoje (25/11/2026, jornal-faixa.js) */
+.jornal-hoje { border:1px solid var(--line); background:var(--surface); border-radius:12px; padding:12px 14px; margin:0 0 14px; }
+.jornal-hoje header { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:10px; }
+.jornal-hoje header b { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
+.jornal-hoje header a { font-size:12.5px; color:var(--text-2); text-decoration:none; }
+.jornal-hoje header a:hover { color:var(--text); }
+.jh-lista { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; }
+.jh-it { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); text-decoration:none; color:inherit; transition:border-color .15s; }
+.jh-it:hover { border-color:var(--accent-line, var(--accent)); }
+.jh-it small { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; }
+.jh-it strong { font-size:14.5px; line-height:1.35; color:var(--text); }
+.jh-it .jh-lf { font-size:12.5px; line-height:1.45; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.jh-it em { font-style:normal; font-size:12.5px; font-weight:700; color:var(--accent); margin-top:2px; }
+@media (max-width:640px) { .jh-lista { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:84%; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:4px; } .jh-it { scroll-snap-align:start; } .jh-it .jh-lf { display:none; } }
