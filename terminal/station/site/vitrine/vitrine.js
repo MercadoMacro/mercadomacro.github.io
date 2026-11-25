@@ -269,7 +269,7 @@
     });
     var ts = Object.keys(Q).map(function (k) { return Q[k].t; }).filter(Boolean);
     $('hora-dados').textContent = ultima
-      ? 'Cotações do Yahoo Finance, consultadas às ' + new Date(ultima).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '. Cada ativo mostra o último preço do seu mercado; os fechados mostram o fechamento.'
+      ? 'Cotações consultadas às ' + new Date(ultima).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '. Cada ativo mostra o último preço do seu mercado; os fechados mostram o fechamento.'
       : 'Não foi possível buscar as cotações agora.';
   }
   // esqueleto enquanto carrega
