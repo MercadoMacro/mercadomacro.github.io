@@ -3224,7 +3224,7 @@ const JS_ADMIN = `(function(){
       // teste grátis/cortesia (23/11/2026): boas-vindas no começo, convite para assinar perto do fim
       var falta = Date.parse(u.expira) - Date.now();
       t = falta > 30 * 3600000
-        ? 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Vi que você começou o teste, seja bem-vindo!\\n\\nUma dica rápida: deixa a aba Notícias aberta durante o pregão. Ela traz as manchetes traduzidas na hora, e a Agenda mostra os dados econômicos do dia com horário. Se tiver qualquer dúvida ou sentir falta de algo, me chama por aqui mesmo.'
+        ? 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Vi que você começou o teste, seja bem-vindo!\\n\\nFiquei curioso: o que te fez testar o Mercado Macro? Pergunto porque estou sempre melhorando o terminal, e saber o que você procura me ajuda muito.\\n\\nUma dica: deixa a aba Notícias aberta durante o pregão. Ela traz as manchetes traduzidas na hora, com o porquê de cada uma importar.'
         : 'Oi, ' + n + ', tudo bem? Aqui é o Dante, do Mercado Macro. Seu teste termina ' + (falta < 0 ? 'hoje' : 'em ' + dia(u.expira)) + '.\\n\\nSe quiser continuar, o plano mensal sai por R$ 19,90 no cartão ou no Pix Automático, e dá para cancelar quando quiser: ' + site + '\\n\\nE se algo não te agradou, me conta? Sua opinião ajuda muito a melhorar o terminal.';
     }
     else if (u.status === 'ativo' && u.expira) t = 'Oi, ' + n + '! Aqui é o Dante, do Mercado Macro. Seu acesso vai até ' + dia(u.expira) + '. Para continuar sem interrupção, é só renovar em ' + site + ' (se renovar antes, o novo período começa depois dessa data). Uma novidade: agora dá para assinar no Pix Automático, por R$ 19,90 por mês, e ele renova sozinho.';
