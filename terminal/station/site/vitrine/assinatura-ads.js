@@ -7,6 +7,8 @@
   if (location.origin !== 'https://mercadomacro.com.br') return;
   const tag = 'AW-18587395504';
   const destino = tag + '/AyIBCNvuwrwdELDLlJ9F';
+  // 25/11/2026: conversão "Cadastro no site" (meta Inscrição; não entra nos lances enquanto a campanha usar só a meta Assinatura)
+  const destinoCadastro = tag + '/zAg2CJbIx78dELDLlJ9F';
   const chave = 'mm-ads-assinatura-v1';
   const agora = Date.now();
   const dias30 = 30 * 86400000;
@@ -57,6 +59,13 @@
     // com o "Permitir": libera os cookies de anúncio (personalização segue negada) e registra a página com o clique
     gtag('consent', 'update', { ad_storage: 'granted', ad_user_data: 'granted' });
     gtag('config', tag, { page_location: pagina.href, page_referrer: '', allow_ad_personalization_signals: false });
+    // chamado pela vitrine.js quando a conta é criada; só existe depois do "Permitir", uma vez por navegador
+    window.mmAdsCadastro = function () {
+      if (estado.cadastro) return;
+      estado.cadastro = 1;
+      salvar();
+      gtag('event', 'conversion', { send_to: destinoCadastro });
+    };
     window.mmAdsCheckout = function (sessao) {
       if (!/^cs_live_[A-Za-z0-9]+$/.test(sessao)) return;
       estado.sessao = sessao;
@@ -96,7 +105,7 @@
   if (estado.ate) { iniciar(); return; }
   const aviso = document.createElement('aside');
   aviso.setAttribute('aria-label', 'Medição de anúncios');
-  aviso.textContent = 'Permite usar cookies do Google Ads para associar este anúncio à sua primeira assinatura paga? O Google receberá o valor e o identificador da fatura. ';
+  aviso.textContent = 'Permite usar cookies do Google Ads para associar este anúncio ao seu cadastro e à sua primeira assinatura paga? O Google receberá só o aviso do cadastro e, na assinatura, o valor e o identificador da fatura. ';
   for (const [texto, permitir] of [['Permitir', true], ['Agora não', false]]) {
     const botao = document.createElement('button');
     botao.type = 'button';
