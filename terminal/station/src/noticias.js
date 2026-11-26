@@ -94,9 +94,13 @@ export const ENCHIMENTO_RE = /^(últimas notícias|latest news|latest [\w ]{0,30
 export const FORA_RE = /\b(coreia|corea|korea|korean|japão|japan|japanese|boj|bank of japan|banco do japão|boe|bank of england|banco da inglaterra|libra|pound|sterling|gbp|rba|reserve bank of australia|austrália|australia|nova zelândia|new zealand|rbnz|bank of canada|banco do canadá|canadá|canada|snb|suíça|swiss|rbi|índia|india|turquia|turkey|indonésia|indonesia|filipinas|philippines|tailândia|thailand|yen|iene|rupia|rupee|ringgit|zloty|lira)\b/i;
 export const BRASIL_RE = /\b(brasil|brazil|brazilian|brasileir[ao]s?|ibovespa|ibov|b3|selic|copom|haddad|galípolo|lula|petrobras|petr[34]|embraer|itaú|bradesco|banco do brasil|tesouro direto|ipca|real brasileiro|r\$|bovespa)\b/i;
 export const EUA_RE = /\b(fed|fomc|powell|treasury|treasuries|wall street|s&p|nasdaq|dow jones|eua|us |u\.s\.|trump|payroll|cpi|pce)\b/i;
+// 26/11/2026 (pedido do Dante): notícia de outra moeda (dólar australiano, iene, libra...) sem ligação com o real
+// fica no máximo como Relevante, mesmo citando CPI ou o Fed ("Australian Dollar ... hotter CPI" era Alto impacto)
+export const MOEDA_FORA_RE = /\b(australian|canadian|new zealand|aussie|kiwi|loonie|hong kong|singapore|taiwan) dollars?\b|\bd[oó]lar(es)? (australiano|canadense|neozeland[eê]s|de hong kong|de singapura|taiwan[eê]s)|\b(AUD|NZD|CAD|JPY|GBP|CHF|EUR)\/(USD|JPY|CAD|CHF|AUD|NZD|GBP)\b|\bUSD\/(JPY|CAD|CHF)\b|\b(yen|iene|libra esterlina|pound sterling|sterling|franco suíço|swiss franc)\b/i;
 export function ajustarImpacto(titulo, impactScore, nivel) {
   if (ENCHIMENTO_RE.test(titulo)) return { impactScore: 0, nivel: 'NORMAL', brasil: 0 };
   const brasil = BRASIL_RE.test(titulo) || VALE_RE.test(titulo) ? 1 : 0;
+  if (!brasil && MOEDA_FORA_RE.test(titulo) && (nivel === 'CRITICO' || nivel === 'ALTO')) return { impactScore: Math.min(impactScore, 4), nivel: 'MEDIO', brasil };
   if (!brasil && !EUA_RE.test(titulo) && FORA_RE.test(titulo)) {
     if (nivel === 'CRITICO') return { impactScore: 7, nivel: 'ALTO', brasil };
     if (nivel === 'ALTO') return { impactScore: 4, nivel: 'MEDIO', brasil };
