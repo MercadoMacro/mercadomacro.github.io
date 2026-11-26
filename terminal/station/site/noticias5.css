@@ -154,3 +154,15 @@ body.nw2 #news-panel .mm-mais-menu #briefing-btn :is(.nw2-n, #nw2-picks) { color
 .n6-sente small { font-size: 11.5px; color: var(--text-3); }
 .nc-tag.n6-etq.especulacao { border-style: dashed; border-color: color-mix(in srgb, #f59e0b 60%, transparent); color: #f59e0b; }
 .nc-tag.n6-etq.confirmado { border-color: color-mix(in srgb, var(--pos, #16c784) 60%, transparent); color: var(--pos-ink, #16c784); }
+
+/* 26/11/2026: no celular o cabeçalho do Jornal vazava para fora da caixa e a matéria única ficava em 84% da largura */
+@media (max-width: 640px) {
+  #news-panel .jornal-hoje header { gap: 10px; flex-wrap: nowrap; min-width: 0; }
+  #news-panel .jornal-hoje header b { font-size: 15px; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  #news-panel .jornal-hoje header b i { font-size: 15px; }
+  #news-panel .jornal-hoje header a { font-size: 13px; gap: 5px; flex: none; }
+  #news-panel .jornal-hoje header a span { font-size: 15px; }
+  #news-panel .jh-lista:has(> .jh-it:only-child) { grid-auto-columns: 100%; overflow-x: visible; }
+  #news-panel .jh-lista { grid-auto-columns: 88%; }
+  #news-panel .jh-it strong { font-size: 15px; }
+}
