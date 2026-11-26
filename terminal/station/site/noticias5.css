@@ -69,7 +69,7 @@ body.nw3 #news-panel .nc-sep span { font-size: 11px; font-weight: 600; letter-sp
 
 /* ---------- cartões ---------- */
 body.nw2 #news-panel .nc-grid { gap: 18px; }
-body.nw2 #news-panel .nc-card { border-radius: var(--nw5-r); padding: 18px 18px 16px; background: var(--nw5-marfim); box-shadow: var(--nw5-sombra); border-left-width: 3px; transition: transform .2s, box-shadow .2s, border-color .2s; }
+body.nw2 #news-panel .nc-card { border-radius: var(--nw5-r); padding: 16px; background: var(--nw5-marfim); box-shadow: var(--nw5-sombra); border-left-width: 3px; transition: transform .2s, box-shadow .2s, border-color .2s; }
 body.nw2 #news-panel .nc-card:hover { transform: translateY(-3px); box-shadow: var(--nw5-sombra-up); }
 body.nw2 #news-panel .nc-card.critico { border-left-color: var(--neg); }
 body.nw2 #news-panel .nc-card.alto { border-left-color: #c8952c; }
@@ -78,11 +78,14 @@ body.nw2 #news-panel .nc-card.read .nc-title { font-weight: 600; color: var(--te
 /* manchete principal: fundo marfim-dourado e um gráfico de área bem sutil no canto */
 body.nw2 #news-panel .nc-card.nc-lead { position: relative; border-left-color: #c8952c; border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 90' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23d4a03a' stop-opacity='.32'/%3E%3Cstop offset='1' stop-color='%23d4a03a' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 82 L30 74 L55 78 L85 62 L110 66 L140 46 L165 52 L195 28 L215 32 L240 6 L240 90 L0 90 Z' fill='url(%23g)'/%3E%3Cpath d='M0 82 L30 74 L55 78 L85 62 L110 66 L140 46 L165 52 L195 28 L215 32 L240 6' fill='none' stroke='%23d4a03a' stroke-opacity='.75' stroke-width='1.6'/%3E%3C/svg%3E") right bottom / 40% 44% no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 90' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23d4a03a' stop-opacity='.32'/%3E%3Cstop offset='1' stop-color='%23d4a03a' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 82 L30 74 L55 78 L85 62 L110 66 L140 46 L165 52 L195 28 L215 32 L240 6 L240 90 L0 90 Z' fill='url(%23g)'/%3E%3Cpath d='M0 82 L30 74 L55 78 L85 62 L110 66 L140 46 L165 52 L195 28 L215 32 L240 6' fill='none' stroke='%23d4a03a' stroke-opacity='.75' stroke-width='1.6'/%3E%3C/svg%3E") right 0 bottom 0 / 210px 64px no-repeat,
     linear-gradient(150deg, color-mix(in srgb, var(--accent) 11%, var(--nw5-marfim)) 0%, var(--nw5-marfim) 62%); }
 body.nw2 #news-panel .nc-card.nc-lead .nc-title { font-size: 24px; line-height: 1.22; letter-spacing: -.022em; }
 body.nw2 #news-panel .nc-kicker { display: inline-block; align-self: flex-start; padding: 3px 9px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--nw5-titulo); font-size: 10.5px; font-weight: 800; letter-spacing: .08em; }
-body.nw2 #news-panel .nc-card .nc-img { border-radius: 10px; }
+/* foto da notícia: encosta nas bordas do cartão (margens -16px do estilo base) e fica mais baixa */
+body.nw2 #news-panel .nc-card .nc-img { width: calc(100% + 32px); margin: -16px -16px 4px; height: 96px !important; max-height: 96px; border-radius: 13px 13px 0 0; object-fit: cover; }
+body.nw2 #news-panel .nc-card.nc-lead { padding: 20px 22px; }
+body.nw2 #news-panel .nc-card.nc-lead .nc-img { width: calc(100% + 44px); margin: -20px -22px 6px; height: 160px !important; max-height: 160px; }
 body.nw2 #news-panel .nc-star.on { color: #d4a03a; }
 
 @media (max-width: 900px) {
@@ -98,3 +101,6 @@ body.nw2 #news-panel .nc-star.on { color: #d4a03a; }
   body.nw3 #news-panel .nc-sep span { display: none; }
 }
 body.nw2 #news-panel .nc-card.nc-lead .nc-readhere { color: var(--nw5-titulo); font-weight: 700; position: relative; z-index: 1; }
+/* selo de preço compacto: não quebra em várias linhas nos cartões estreitos */
+#news-panel .nw4-px { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; align-self: flex-start; }
+#news-panel .nw4-px i { margin-right: 4px; }
