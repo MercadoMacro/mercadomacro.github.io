@@ -92,7 +92,7 @@
     // 25/11/2026: "Ouro +1,00% desde 16h33" num título "O ouro cai…" parecia contradição; agora diz que é depois da
     // notícia, e sem movimento (0,00%, mercado fechado) o selo não aparece
     if (!cls) return '';
-    return `<i class="fas fa-chart-line" aria-hidden="true"></i> ${esc(a.rot)} <b class="${cls}">${num}</b> após a notícia (${desde})`;
+    return `<i class="fas fa-chart-line" aria-hidden="true"></i> ${esc(a.rot)} <b class="${cls}">${num}</b> após ${desde}`;
   }
   async function precos() {
     const leads = window.__newsLeads || [];
