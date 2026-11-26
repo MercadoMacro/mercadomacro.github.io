@@ -116,3 +116,7 @@ body.nw2 #news-panel .nc-card.nc-lead .nc-readhere { color: var(--nw5-titulo); f
 #news-panel .ns-dot .mm-fic-dot { width: 15px; height: 15px; position: absolute; inset: 0; margin: auto; border-radius: 3px; }
 /* no escuro o bloco de texto fica um tom acima do cartão, para o "corte" sobre a foto aparecer */
 body:not(.light) #news-panel .jh-tx { background: color-mix(in srgb, #fff 4%, var(--surface)); }
+/* com "Todas as fontes" ligado, todas ficam marcadas: aí a lista fica neutra e o destaque é só do botão dourado */
+#news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active { background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+#news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot { box-shadow: none !important; }
+#news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-sub-name { font-weight: 500; }
