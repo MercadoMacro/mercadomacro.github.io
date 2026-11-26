@@ -199,3 +199,12 @@ body.light #news-panel .mm-fic { box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
   #news-panel .ns-dot.mm-com-ic { width: 24px !important; height: 24px !important; }
   #news-panel .mm-fic { width: 17px; height: 17px; }
 }
+
+/* 26/11/2026 (3): tema Terminal. Ele deixa tudo de canto reto e sem sombra, então o logo do cartão ficava quadrado
+   e sem aro. Aqui os logos seguem redondos, com um aro fino (contorno, que o tema não apaga) */
+html[data-term="on"] body #news-panel :is(.mm-fic, .mm-fic-dot) { border-radius: 50% !important; }
+html[data-term="on"] body #news-panel .mm-fic { outline: 1px solid rgba(255,255,255,.2); outline-offset: 0; }
+html[data-term="on"] body #news-panel .ns-dot.mm-com-ic { outline: 1px solid rgba(255,255,255,.2); outline-offset: 0; }
+html[data-term="on"] body #news-panel .ns-sub-bubble.active .ns-dot.mm-com-ic { outline: 1.5px solid var(--accent); }
+html[data-term="on"] body #news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot.mm-com-ic { outline: 1px solid rgba(255,255,255,.2); }
+html[data-term="on"] body.light #news-panel :is(.mm-fic, .ns-dot.mm-com-ic) { outline-color: rgba(0,0,0,.15); }
