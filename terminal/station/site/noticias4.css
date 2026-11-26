@@ -82,3 +82,7 @@ body.nw2 #news-view.nw4-lista .nc-footer { border-top:0; padding-top:0; margin-t
 .mm-mais-menu[hidden] { display:none; }
 .mm-mais-menu > .btn-sm { justify-content:flex-start; width:100%; height:34px; gap:8px; white-space:nowrap; }
 .mm-mais-bt span { font-weight:800; letter-spacing:.05em; }
+/* no celular o "Mais" fica à esquerda da faixa: o menu abre para a direita, dentro da tela */
+@media (max-width: 900px) {
+  .mm-mais-menu { left:0; right:auto; min-width:0; width:min(260px, calc(100vw - 32px)); }
+}
