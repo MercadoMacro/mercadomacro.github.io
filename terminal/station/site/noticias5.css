@@ -111,9 +111,23 @@ body.nw2 #news-panel .nc-card.nc-lead .nc-readhere { color: var(--nw5-titulo); f
 /* ícone da fonte (fontes-icones.js) */
 #news-panel .nc-source.mm-com-ic { display: inline-flex !important; align-items: center; gap: 6px; }
 #news-panel .nc-source.mm-com-ic::before { display: none; }
-#news-panel .mm-fic { width: 16px; height: 16px; border-radius: 4px; flex: none; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
-#news-panel .ns-dot.mm-com-ic { position: relative; font-size: 0 !important; background: #fff !important; overflow: hidden; }
-#news-panel .ns-dot .mm-fic-dot { width: 15px; height: 15px; position: absolute; inset: 0; margin: auto; border-radius: 3px; }
+/* 26/11/2026: logo ocupa a bolha inteira, em quadrado arredondado (o favicon é quadrado: no círculo ficava cortado e
+   torto, com a borda colorida antiga em volta). Mesma forma nos cartões e na lista de fontes, no computador e no celular */
+#news-panel .mm-fic { width: 18px; height: 18px; border-radius: 5px; flex: none; object-fit: cover; background: #fff; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent); }
+#news-panel .ns-dot.mm-com-ic { position: relative; display: block !important; font-size: 0 !important; width: 24px !important; height: 24px !important; border-radius: 7px !important; padding: 0 !important;
+  background: #fff !important; border: 0 !important; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent) !important; }
+#news-panel .ns-dot .mm-fic-dot { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+#news-panel .ns-sub-bubble.active .ns-dot.mm-com-ic { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 85%, transparent) !important; }
+#news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot.mm-com-ic { box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent) !important; }
+@media (max-width: 640px) {
+  #news-panel .mm-fic { width: 17px; height: 17px; border-radius: 5px; }
+  #news-panel .nc-source.mm-com-ic { gap: 5px; min-width: 0; }
+  #news-panel .ns-dot.mm-com-ic { width: 26px !important; height: 26px !important; }
+  /* com o grupo Local aberto, o botão "Todas as fontes" esticava até a altura da lista */
+  #source-sidebar .ns-all-btn { align-self: start; }
+  /* grupo aberto ocupa a largura toda, para os nomes e logos caberem */
+  #source-sidebar .ns-category:has(.ns-sub-list.open) { flex: 1 1 100% !important; width: 100%; max-width: 100%; }
+}
 /* no escuro o bloco de texto fica um tom acima do cartão, para o "corte" sobre a foto aparecer */
 body:not(.light) #news-panel .jh-tx { background: color-mix(in srgb, #fff 4%, var(--surface)); }
 /* com "Todas as fontes" ligado, todas ficam marcadas: aí a lista fica neutra e o destaque é só do botão dourado */

@@ -17,7 +17,7 @@
   var falhou = {};
   function img(dom, cls) {
     var i = document.createElement('img');
-    i.className = cls; i.alt = ''; i.width = 16; i.height = 16; i.loading = 'lazy'; i.decoding = 'async';
+    i.className = cls; i.alt = ''; i.width = 32; i.height = 32; i.loading = 'lazy'; i.decoding = 'async';
     i.src = '/fonte-icone/' + dom + '.png';
     i.onerror = function () { falhou[dom] = 1; var p = i.parentNode; i.remove(); if (p) p.classList.remove('mm-com-ic'); };
     return i;
