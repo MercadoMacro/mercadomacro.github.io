@@ -3,7 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { LIMITE_HORA, reais, ehInsiders } from '../../whatsapp/worker.js';
+import worker, { LIMITE_HORA, reais, ehInsiders, numeroConversa, PAUSA_MANUAL } from '../../whatsapp/worker.js';
 
 function d1() {
   const sql = new DatabaseSync(':memory:');
@@ -358,4 +358,16 @@ test('mensagem da equipe pelo aplicativo (eco) silencia a Jade nessa conversa, s
   // o cliente pode chamar a Jade de volta
   await mensagem(env, 'voltar para a jade');
   assert.match(enviadas[1], /Voltei/);
+});
+
+test('eco com o 9 do celular e mensagem sem o 9 são a mesma conversa (pausa vale por 7 dias)', async () => {
+  const { env, enviadas } = ambiente();
+  const corpo = JSON.stringify({ entry: [{ changes: [{ field: 'smb_message_echoes', value: { metadata: { phone_number_id: '1342951915577900' }, message_echoes: [{ from: '5511971787986', to: '5514997791234', id: 'eco9', type: 'text', text: { body: 'oi' } }] } }] }] });
+  await worker.fetch(new Request('https://x.workers.dev/webhook', { method: 'POST', body: corpo, headers: { 'X-Hub-Signature-256': await assinar(corpo) } }), env);
+  await mensagem(env, 'obrigado!', '551497791234');
+  assert.equal(enviadas.length, 0);
+  assert.equal(numeroConversa('5514997791234'), '551497791234');
+  assert.equal(numeroConversa('551497791234'), '551497791234');
+  assert.equal(numeroConversa('14155550000'), '14155550000');
+  assert.equal(PAUSA_MANUAL, 7 * 86400000);
 });

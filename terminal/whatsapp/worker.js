@@ -155,8 +155,15 @@ async function processar(event, env, ctx) {
 
           // 19/11/2026: código da conversa feito com chave secreta (HMAC). O SHA-256 puro do número dava para desfazer
           // testando os números de celular possíveis; a política de privacidade diz que não dá
-          const key = await chaveConversa(env, phoneId + ':' + message.from);
+          const key = await chaveConversa(env, phoneId + ':' + numeroConversa(message.from));
           const db = env.HANDOFF_DB;
+          // conversa gravada antes com o número cheio (com o 9): passa para o código novo, sem perder pausa nem origem
+          if (numeroConversa(message.from) !== message.from) {
+            try {
+              const antiga = await chaveConversa(env, phoneId + ':' + message.from);
+              await db.batch(['jade_handoff', 'jade_manual', 'jade_origem', 'jade_contexto'].map((t) => db.prepare(`UPDATE OR IGNORE ${t} SET conversation_key = ? WHERE conversation_key = ?`).bind(key, antiga)));
+            } catch (error) { /* tabelas ainda não existem: nada a passar */ }
+          }
           // a Meta às vezes entrega a mesma mensagem de novo: a repetida é ignorada (código da mensagem, guardado 2 dias)
           if (message.id && await jaVista(db, message.id).catch(() => false)) continue;
 
@@ -311,6 +318,12 @@ async function processar(event, env, ctx) {
     }
 }
 
+// 26/11/2026: celular do Brasil chega às vezes sem o 9 (551497791xxxx) e às vezes com (5514997791xxxx), conforme o
+// lado da conversa. Sem igualar, a mensagem do cliente e o eco da equipe viravam conversas diferentes e a pausa falhava.
+export function numeroConversa(n) {
+  const s = String(n || '');
+  return /^55\d{2}9[6-9]\d{7}$/.test(s) ? s.slice(0, 4) + s.slice(5) : s;
+}
 async function chaveConversa(env, texto) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode('jade-conversa:' + env.META_APP_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const s = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(texto));
@@ -390,16 +403,17 @@ async function funil(env, phoneId, origem, evento) {
   try { await env.JADE.funil(origem, evento); } catch (error) { console.warn('Jade: funil indisponível', error.name); }
 }
 
+export const PAUSA_MANUAL = 7 * 86400000; // 26/11/2026: era 24 h; o cliente voltava no dia seguinte e a Jade entrava no meio
 export async function pausarPorEco(env, phoneId, value) {
   const db = env.HANDOFF_DB;
   if (!db || (phoneId !== PRODUCAO && phoneId !== TESTE)) return 0;
   await prepararTabelas(db);
-  const ate = Date.now() + 86400000;
+  const ate = Date.now() + PAUSA_MANUAL;
   let n = 0;
   for (const eco of value?.message_echoes ?? []) {
     const cliente = String(eco?.to ?? '');
     if (!/^\d{8,15}$/.test(cliente)) continue;
-    const key = await chaveConversa(env, phoneId + ':' + cliente);
+    const key = await chaveConversa(env, phoneId + ':' + numeroConversa(cliente));
     await db.batch([
       db.prepare('INSERT INTO jade_handoff (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = MAX(jade_handoff.expires_at, excluded.expires_at)').bind(key, ate),
       db.prepare('INSERT INTO jade_manual (conversation_key, expires_at) VALUES (?, ?) ON CONFLICT(conversation_key) DO UPDATE SET expires_at = excluded.expires_at').bind(key, ate),
