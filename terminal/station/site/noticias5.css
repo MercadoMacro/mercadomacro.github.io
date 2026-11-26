@@ -31,9 +31,9 @@ body.light #news-panel {
 /* a foto ocupa a altura toda; o bloco de texto avança um pouco por cima dela, com canto arredondado e sombra */
 #news-panel .jh-it { position: relative; display: block; min-height: 178px; padding: 0; border-radius: var(--nw5-r); overflow: hidden; background: var(--nw5-marfim); border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line)); box-shadow: var(--nw5-sombra); transition: transform .2s, box-shadow .2s; }
 #news-panel .jh-it:hover { transform: translateY(-3px); box-shadow: var(--nw5-sombra-up); }
-#news-panel .jh-img { position: absolute; left: 0; top: 0; width: 108px; background: #0b0f18; height: 100%; object-fit: cover; transition: transform .5s; }
+#news-panel .jh-img { position: absolute; left: 0; top: 0; width: clamp(108px, 34%, 168px); background: #0b0f18; height: 100%; object-fit: cover; transition: transform .5s; }
 #news-panel .jh-it:hover .jh-img { transform: scale(1.05); }
-#news-panel .jh-tx { position: relative; margin-left: 94px; min-height: 178px; display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; background: var(--nw5-marfim); border-radius: 14px 0 0 14px; box-shadow: -10px 0 20px -12px rgba(0,0,0,.45); }
+#news-panel .jh-tx { position: relative; margin-left: calc(clamp(108px, 34%, 168px) - 16px); min-height: 178px; display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; background: var(--nw5-marfim); border-radius: 16px 0 0 16px; box-shadow: -12px 0 22px -10px rgba(0,0,0,.5); border-left: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
 #news-panel .jh-it small { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #news-panel .jh-it small::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--nw5-ouro); margin-right: 6px; vertical-align: 1px; }
 #news-panel .jh-it strong { font-size: 14.5px; line-height: 1.3; font-weight: 800; letter-spacing: -.01em; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -95,7 +95,7 @@ body.nw2 #news-panel .nc-star.on { color: #d4a03a; }
   #news-panel .jh-lista { grid-template-columns: none; }
   #news-panel .jh-it, #news-panel .jh-tx { min-height: 150px; }
   #news-panel .jh-img { width: 112px; }
-  #news-panel .jh-tx { margin-left: 98px; }
+  #news-panel .jh-tx { margin-left: 96px; }
   body.nw2 #news-panel .nc-card.nc-lead .nc-title { font-size: 20px; }
   body.nw3 #news-panel .nc-sep { font-size: 14px; margin: 18px 0 10px; }
   body.nw3 #news-panel .nc-sep span { display: none; }
@@ -110,3 +110,5 @@ body.nw2 #news-panel .nc-card.nc-lead .nc-readhere { color: var(--nw5-titulo); f
 #news-panel .mm-fic { width: 16px; height: 16px; border-radius: 4px; flex: none; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
 #news-panel .ns-dot.mm-com-ic { position: relative; font-size: 0 !important; background: #fff !important; overflow: hidden; }
 #news-panel .ns-dot .mm-fic-dot { width: 15px; height: 15px; position: absolute; inset: 0; margin: auto; border-radius: 3px; }
+/* no escuro o bloco de texto fica um tom acima do cartão, para o "corte" sobre a foto aparecer */
+body:not(.light) #news-panel .jh-tx { background: color-mix(in srgb, #fff 4%, var(--surface)); }
