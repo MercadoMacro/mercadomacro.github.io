@@ -120,3 +120,17 @@ body:not(.light) #news-panel .jh-tx { background: color-mix(in srgb, #fff 4%, va
 #news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active { background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 #news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot { box-shadow: none !important; }
 #news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-sub-name { font-weight: 500; }
+
+/* 26/11/2026: uma barra só do lado do card. Fica a faixa interna (::before, cor pelo impacto, aparece em todo modo);
+   a borda esquerda colorida, que somava uma segunda barra, volta a ser a borda comum do card */
+body.nw2 #news-panel .nc-card,
+body.nw2 #news-panel .nc-card.critico,
+body.nw2 #news-panel .nc-card.alto { border-left-width: 1px; border-left-color: var(--line); }
+body.nw2 #news-panel .nc-card.nc-lead { border-left-width: 1px; border-left-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+/* Briefing dentro do Mais: botão comum, sem o dourado da barra */
+body.nw2 #news-panel .mm-mais-menu #briefing-btn { background: transparent; color: var(--text); border: 1px solid transparent; text-shadow: none; font-weight: 600; box-shadow: none; }
+body.nw2 #news-panel .mm-mais-menu #briefing-btn :is(.nw2-n, #nw2-picks) { color: var(--text) !important; background: color-mix(in srgb, var(--accent) 18%, transparent); }
+/* sino dos avisos: só o ícone, aceso quando ligado */
+#news-panel #news-alert-btn.mm-sino { font-size: 0; gap: 0; width: 38px; min-width: 38px; padding: 0; justify-content: center; }
+#news-panel #news-alert-btn.mm-sino i { font-size: 15px; }
+#news-panel #news-alert-btn.mm-sino.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
