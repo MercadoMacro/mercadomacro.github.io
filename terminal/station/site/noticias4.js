@@ -226,6 +226,8 @@
     const v = await variacao(a, quando).catch(() => null);
     if (v && tags && tags.isConnected && !art.querySelector('.nw4-px')) {
       const el = document.createElement('div');
+      const html = chip(a, v, quando);
+      if (!html) return;
       el.className = 'nw4-px nw4-px-nr';
       el.innerHTML = html;
       tags.after(el);
