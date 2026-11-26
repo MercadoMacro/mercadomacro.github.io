@@ -296,9 +296,12 @@ const NEWS_MOV = '(fecha|fechou|sobe|subiu|cai|caiu|recua|recuou|avança|avanço
 // o verbo tem de vir logo depois do Ibovespa ou do dólar ("IFIX sobe, acima do Ibovespa" é outro assunto)
 const NEWS_IBOV_RE = new RegExp('\\b(ibovespa|ibov|bovespa)\\b[^.;:]{0,25}?\\b' + NEWS_MOV + '\\b', 'i');
 const NEWS_DOLAR_RE = new RegExp('(^|\\be\\s)(o )?d[oó]lar\\b[^.;:]{0,25}?\\b' + NEWS_MOV + '\\b', 'i');
+// 26/11/2026: "O dólar australiano ganha força" entrava no assunto do dólar no Brasil e herdava o "Por que importa" dele
+const NEWS_OUTRO_DOLAR_RE = /d[oó]lar(es)? (australiano|canadense|neozeland[eê]s|de hong kong|de singapura|taiwan[eê]s|da nova zel[aâ]ndia)|\b(australian|canadian|new zealand|aussie|kiwi|hong kong|singapore|taiwan) dollar|\b(AUD|NZD|CAD|USD)\/(USD|JPY|CAD|CHF|AUD|NZD)\b/i;
 function newsMovKey(n) {
   const t = String(n.titulo || '');
-  if (NEWS_IBOV_RE.test(t) || NEWS_DOLAR_RE.test(t)) return 'fechamento-br';
+  if (NEWS_IBOV_RE.test(t)) return 'fechamento-br';
+  if (NEWS_DOLAR_RE.test(t) && !NEWS_OUTRO_DOLAR_RE.test(t)) return 'fechamento-br';
   return '';
 }
 function clusterNews(list) {
