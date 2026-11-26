@@ -3873,4 +3873,20 @@ function newsReadMins(n) {
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }, { once: true });
+  // 26/11/2026: no celular a página fica aberta em segundo plano e não pegava a versão nova sem limpar o cache.
+  // Ao voltar para o app, procura versão nova; quando ela assume, recarrega sozinho (se a pessoa não estiver digitando).
+  const tinhaVersao = !!navigator.serviceWorker.controller;
+  let ultBusca = Date.now(), recarregou = false;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || Date.now() - ultBusca < 60 * 1000) return;
+    ultBusca = Date.now();
+    navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {});
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!tinhaVersao || recarregou) return;
+    const recarrega = () => { if (recarregou) return; recarregou = true; location.reload(); };
+    const digitando = () => { const a = document.activeElement; return a && (a.matches('input, textarea, select') || a.isContentEditable); };
+    if (!digitando()) return recarrega();
+    const espera = setInterval(() => { if (!digitando()) { clearInterval(espera); recarrega(); } }, 3000);
+  });
 }
