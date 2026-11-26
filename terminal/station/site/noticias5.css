@@ -134,3 +134,23 @@ body.nw2 #news-panel .mm-mais-menu #briefing-btn :is(.nw2-n, #nw2-picks) { color
 #news-panel #news-alert-btn.mm-sino { font-size: 0; gap: 0; width: 38px; min-width: 38px; padding: 0; justify-content: center; }
 #news-panel #news-alert-btn.mm-sino i { font-size: 15px; }
 #news-panel #news-alert-btn.mm-sino.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* noticias6 (26/11/2026): esperado x saiu, quem tende a sentir, especulação x confirmado */
+#news-panel .n6-esp, .n6-esp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 0 2px; padding: 6px 10px; border-radius: 10px; font-size: 12px; color: var(--text-2); background: color-mix(in srgb, var(--accent) 7%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); }
+.n6-esp .n6-tit { font-weight: 700; color: var(--text); letter-spacing: .02em; }
+.n6-esp b { color: var(--text); font-variant-numeric: tabular-nums; }
+.n6-esp .n6-acima, .n6-esp .n6-abaixo, .n6-esp .n6-linha { font-weight: 700; }
+.n6-esp .n6-acima { color: var(--accent); }
+.n6-esp .n6-abaixo { color: var(--info, #60a5fa); }
+.n6-esp .n6-linha { color: var(--text-2); }
+.n6-esp small { color: var(--text-3); }
+.n6-esp-nr { font-size: 14px; padding: 10px 14px; margin: 0 0 14px; }
+.n6-sente { margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%); }
+.n6-sente .n6-h { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.n6-sente ul { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.n6-sente li { font-size: 14px; color: var(--text); }
+.n6-sente .n6-fav b { color: var(--pos, #16c784); }
+.n6-sente .n6-pre b { color: var(--neg, #ff5d6c); }
+.n6-sente small { font-size: 11.5px; color: var(--text-3); }
+.nc-tag.n6-etq.especulacao { border-style: dashed; border-color: color-mix(in srgb, #f59e0b 60%, transparent); color: #f59e0b; }
+.nc-tag.n6-etq.confirmado { border-color: color-mix(in srgb, var(--pos, #16c784) 60%, transparent); color: var(--pos-ink, #16c784); }
