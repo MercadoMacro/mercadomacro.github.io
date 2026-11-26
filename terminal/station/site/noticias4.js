@@ -18,7 +18,13 @@
   const MACRO = [
     ['^BVSP', 'Ibovespa', /ibovespa|\bibov\b|bolsa brasileira/i],
     ['BRL=X', 'USD/BRL', /d[óo]lar.{0,40}(R\$|real|reais)|(R\$|real|reais).{0,40}d[óo]lar|d[óo]lar (sobe|cai|dispara|recua|fecha|abre|avança|opera)|c[âa]mbio/i, true],
-    ['DX-Y.NYB', 'Dólar global (DXY)', /\bDXY\b|\bdollar\b|greenback/i],
+    // 26/11/2026: "Australian Dollar" mostrava o DXY; as outras moedas têm o próprio par
+    ['AUDUSD=X', 'AUD/USD', /australian dollar|d[óo]lar australiano|\baussie\b|AUD\/USD/i],
+    ['NZDUSD=X', 'NZD/USD', /new zealand dollar|d[óo]lar neozeland[eê]s|\bkiwi\b|NZD\/USD/i],
+    ['CAD=X', 'USD/CAD', /canadian dollar|d[óo]lar canadense|\bloonie\b|USD\/CAD/i],
+    ['JPY=X', 'USD/JPY', /\bien(e)?\b|\byen\b|USD\/JPY/i],
+    ['GBPUSD=X', 'GBP/USD', /\blibra esterlina\b|\bpound\b|\bsterling\b|GBP\/USD/i],
+    ['DX-Y.NYB', 'Dólar global (DXY)', /\bDXY\b|(?<!(australian|canadian|zealand|kong|singapore|taiwan) )\bdollar\b|greenback/i],
     ['^IXIC', 'Nasdaq', /nasdaq/i],
     ['^GSPC', 'S&P 500', /S&P(?:\s?500)?(?![\w])(?! Global)|wall street|bolsas? (de|em) nova york/i],
     ['BZ=F', 'Petróleo Brent', /petr[óo]leo|\bbrent\b|\bwti\b|\bcrude\b|\boil\b|\bopep\b|\bopec\b/i],
