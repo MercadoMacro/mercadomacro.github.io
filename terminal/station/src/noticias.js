@@ -100,7 +100,7 @@ export const MOEDA_FORA_RE = /\b(australian|canadian|new zealand|aussie|kiwi|loo
 export function ajustarImpacto(titulo, impactScore, nivel) {
   if (ENCHIMENTO_RE.test(titulo)) return { impactScore: 0, nivel: 'NORMAL', brasil: 0 };
   const brasil = BRASIL_RE.test(titulo) || VALE_RE.test(titulo) ? 1 : 0;
-  if (!brasil && MOEDA_FORA_RE.test(titulo) && (nivel === 'CRITICO' || nivel === 'ALTO')) return { impactScore: Math.min(impactScore, 4), nivel: 'MEDIO', brasil };
+  if (!brasil && MOEDA_FORA_RE.test(titulo) && nivel === 'CRITICO') return { impactScore: 7, nivel: 'ALTO', brasil };
   if (!brasil && !EUA_RE.test(titulo) && FORA_RE.test(titulo)) {
     if (nivel === 'CRITICO') return { impactScore: 7, nivel: 'ALTO', brasil };
     if (nivel === 'ALTO') return { impactScore: 4, nivel: 'MEDIO', brasil };
