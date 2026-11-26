@@ -22,6 +22,7 @@ import { abrir, fechar, cifrarPendentes } from './cofre.js';
 import { CSP_SO_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
 import { receberErroJs, errosRecentes } from './erros-js.js';
 import { apiAssessorTexto } from './assessor.js';
+import { iconeFonte } from './fonte-icone.js';
 /* Mercado Macro: porteiro do site.
    Só entra quem tem cadastro liberado pelo administrador. Sem login, a pessoa vê apenas /entrar.
    Usuários e sessões ficam no banco D1 "mercadomacro-usuarios" (binding DB).
@@ -154,6 +155,7 @@ export default {
       if (p === '/api/publico/passe-chave') return json(await chavePublicaPasse(env), 200, { 'Cache-Control': 'public, max-age=3600' });
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       // Jornal Mercado Macro (src/jornal.js): matérias aprovadas no /admin, públicas
+      if (p.startsWith('/fonte-icone/') && req.method === 'GET') return await iconeFonte(req, ctx, p);
       if (p === '/jornal' || p.startsWith('/jornal/')) { if (navegacao(req) && p !== '/jornal/rss.xml') { contar(env, ctx, req, 'jornal'); if (!ROBO.test(req.headers.get('User-Agent') || '')) contarLeitura(env, ctx, p, url.searchParams.get('de') === 'terminal' ? 'Terminal' : origemDe(req.headers.get('Referer'), url.searchParams.get('utm_source')) || 'Dentro do site'); } return await naBorda(req, ctx, () => paginaJornal(req, env, p)); }
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
