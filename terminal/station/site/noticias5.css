@@ -29,11 +29,11 @@ body.light #news-panel {
 #news-panel .jornal-hoje header a span { color: var(--nw5-titulo); font-size: 18px; margin: 0; }
 #news-panel .jh-lista { grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr)); gap: 14px; }
 /* a foto ocupa a altura toda; o bloco de texto avança um pouco por cima dela, com canto arredondado e sombra */
-#news-panel .jh-it { position: relative; display: block; min-height: 178px; padding: 0; border-radius: var(--nw5-r); overflow: hidden; background: var(--nw5-marfim); border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line)); box-shadow: var(--nw5-sombra); transition: transform .2s, box-shadow .2s; }
+#news-panel .jh-it { position: relative; display: flex; min-height: 178px; padding: 0; border-radius: var(--nw5-r); overflow: hidden; background: var(--nw5-marfim); border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line)); box-shadow: var(--nw5-sombra); transition: transform .2s, box-shadow .2s; }
 #news-panel .jh-it:hover { transform: translateY(-3px); box-shadow: var(--nw5-sombra-up); }
 #news-panel .jh-img { position: absolute; left: 0; top: 0; width: clamp(108px, 34%, 168px); background: #0b0f18; height: 100%; object-fit: cover; transition: transform .5s; }
 #news-panel .jh-it:hover .jh-img { transform: scale(1.05); }
-#news-panel .jh-tx { position: relative; margin-left: calc(clamp(108px, 34%, 168px) - 16px); min-height: 178px; display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; background: var(--nw5-marfim); border-radius: 16px 0 0 16px; box-shadow: -12px 0 22px -10px rgba(0,0,0,.5); border-left: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+#news-panel .jh-tx { position: relative; flex: 1; align-self: stretch; margin-left: calc(clamp(108px, 34%, 168px) - 16px); min-height: 178px; display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 14px 16px; background: var(--nw5-marfim); border-radius: 16px 0 0 16px; box-shadow: -12px 0 22px -10px rgba(0,0,0,.5); border-left: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
 #news-panel .jh-it small { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #news-panel .jh-it small::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--nw5-ouro); margin-right: 6px; vertical-align: 1px; }
 #news-panel .jh-it strong { font-size: 14.5px; line-height: 1.3; font-weight: 800; letter-spacing: -.01em; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -53,6 +53,10 @@ body.nw2 #news-panel .nm-toggle button.active { background: color-mix(in srgb, v
 #news-panel .ns-all-btn.active { background: var(--nw5-ouro) !important; color: #fff8e6 !important; border: 1px solid #8a5c10 !important; text-shadow: 0 1px 0 rgba(0,0,0,.25); box-shadow: var(--nw5-ouro-brilho); letter-spacing: .06em; }
 #news-panel .ns-cat-btn.open { background: color-mix(in srgb, var(--accent) 14%, var(--nw5-marfim)); color: var(--nw5-titulo); }
 #news-panel .ns-sub-bubble { border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+/* fonte escolhida: contorno e fundo dourados, para a seleção aparecer (o ícone tirou a cor da bolinha) */
+#news-panel .ns-sub-bubble.active { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--text); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent); }
+#news-panel .ns-sub-bubble.active .ns-dot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 85%, transparent) !important; }
+#news-panel .ns-sub-bubble.active .ns-sub-name { font-weight: 700; }
 
 /* ---------- temas (pílulas) ---------- */
 #news-panel #news-assets .ecal-chip { border-radius: 999px; padding: 8px 18px; font-weight: 600; background: var(--nw5-marfim); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
