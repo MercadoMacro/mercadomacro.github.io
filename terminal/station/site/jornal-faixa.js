@@ -5,14 +5,40 @@
   if (!caixa) return;
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var hora = function (t) { try { return new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); } catch (e) { return ''; } };
+  // 25/11/2026: ilustração por assunto (biblioteca própria em /jornal-img, sem fotos de terceiros, rostos ou marcas)
+  // 25/11/2026: fotos do pacote do Dante (geradas por IA, /jornal-img/*.webp), escolhidas pelo assunto da matéria
+  var IMGS = [
+    [/petr[óo]leo|brent|opep|combust[íi]vel|petrobras/i, ['petroleo', 'petroleo2']],
+    [/bitcoin|cripto|ethereum/i, ['cripto', 'cripto2']],
+    [/\bouro\b|gold/i, ['ouro']],
+    [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, ['tecnologia']],
+    [/embraer|avi[ãa]o|aeronave|a[ée]rea/i, ['aviao']],
+    [/\bfed\b|powell|fomc|treasur/i, ['fed']],
+    [/(ibovespa|bolsa|a[çc][õo]es)[^\s,;:]*\s+(\S+\s+){0,2}(cai|caiu|recua|recuou|despenca|perde|afunda|fecha em (queda|baixa)|em queda|em baixa)/i, ['queda']],
+    [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, ['bolsa', 'mesa']],
+    [/fazenda|fiscal|congresso|governo|lula|haddad|bras[íi]lia|minist|\bpec\b|copom|selic|or[çc]amento/i, ['brasilia']],
+    [/d[óo]lar|c[âa]mbio|\breal\b/i, ['cambio', 'dolar']],
+    [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa|china|[áa]sia/i, ['wallstreet', 'nyse']]
+  ];
+  var SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'mesa', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2' };
+  function imagemDe(m, usadas) {
+    var t = m.titulo || '', op = null;
+    for (var i = 0; i < IMGS.length && !op; i++) if (IMGS[i][0].test(t)) op = IMGS[i][1];
+    if (!op) op = /abertura/i.test(m.tipo) ? ['nyse', 'wallstreet'] : /fechamento/i.test(m.tipo) ? ['mesa', 'bolsa'] : [SECAO[m.secao] || 'mesa'];
+    // não repete a mesma foto na faixa quando há outra opção para o assunto
+    for (var k = 0; k < op.length; k++) if (!usadas[op[k]]) { usadas[op[k]] = 1; return op[k]; }
+    return op[0];
+  }
   function montar(j) {
     var itens = (j && j.itens) || [];
     if (!itens.length) { caixa.hidden = true; caixa.innerHTML = ''; return; }
-    caixa.innerHTML = '<header><b><i class="fas fa-newspaper" aria-hidden="true"></i> Jornal de hoje</b><a href="/jornal" target="_blank" rel="noopener">Ver o Jornal <span aria-hidden="true">→</span></a></header>'
+    var usadas = {};
+    caixa.innerHTML = '<header><b><i class="fas fa-newspaper" aria-hidden="true"></i> Jornal de hoje</b><span class="jh-sub">Os principais movimentos do mercado, explicados</span><a href="/jornal" target="_blank" rel="noopener">Ver o Jornal <span aria-hidden="true">→</span></a></header>'
       + '<div class="jh-lista">' + itens.map(function (m) {
         return '<a class="jh-it" href="/jornal/' + encodeURIComponent(m.slug) + '?de=terminal" target="_blank" rel="noopener">'
-          + '<small>' + esc(m.tipo) + ' · ' + esc(hora(m.publicado)) + '</small><strong>' + esc(m.titulo) + '</strong><span class="jh-lf">' + esc(m.linha_fina) + '</span>'
-          + '<em>Ler matéria completa →</em></a>';
+          + '<img class="jh-img" src="/jornal-img/' + imagemDe(m, usadas) + '.webp?v=1" alt="" width="360" height="480" loading="lazy" decoding="async">'
+          + '<div class="jh-tx"><small>' + esc(m.tipo) + ' · ' + esc(hora(m.publicado)) + '</small><strong>' + esc(m.titulo) + '</strong><span class="jh-lf">' + esc(m.linha_fina) + '</span>'
+          + '<em>Ler matéria →</em></div></a>';
       }).join('') + '</div>';
     caixa.hidden = false;
   }

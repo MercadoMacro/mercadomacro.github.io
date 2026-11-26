@@ -996,6 +996,7 @@ function renderNewsView() {
   // "Alto impacto" só nas 5 mais fortes: quando quase tudo é crítico, o selo deixa de dizer alguma coisa
   let criticos = 0, relevantes = 0;
   const GRUPOS = ['Última hora', 'Hoje', 'Ontem', 'Antes'];
+  const GRUPOS_SUB = ['publicadas na última hora', 'as mais relevantes do dia', 'o que ficou de ontem', 'dias anteriores'];
   const ordem = destaques.map((n, idx) => [n, idx]).sort((a, b) => grupoDe(a[0]) - grupoDe(b[0]) || a[1] - b[1]);
   const usados = new Set(ordem.map(([n]) => grupoDe(n)));
   const visto = newsVistoAntes();
@@ -1024,7 +1025,7 @@ function renderNewsView() {
     const veic = n.veiculo && n.veiculo !== srcName ? `<span class="nc-veic">${escapeHTML(n.veiculo)}</span>` : '';
     const hora = new Date(n.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     const g = grupoDe(n);
-    const sep = usados.size > 1 && g !== grupoAtual ? `${grupoAtual === -1 ? '' : '</div>'}<div class="nc-sep">${GRUPOS[g]}</div><div class="nc-grid">` : '';
+    const sep = usados.size > 1 && g !== grupoAtual ? `${grupoAtual === -1 ? '' : '</div>'}<div class="nc-sep">${GRUPOS[g]}<span>${GRUPOS_SUB[g]}</span></div><div class="nc-grid">` : '';
     grupoAtual = g;
     return `${sep}
       <a href="${escapeHTML(n.link)}" target="_blank" rel="noopener noreferrer" class="nc-card ${nivel}${isLead ? ' nc-lead' : ''}${img ? ' com-img' : ''}${read}${novo}" data-id="${escapeHTML(n.id)}">

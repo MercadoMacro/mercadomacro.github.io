@@ -1,0 +1,31 @@
+/* Tema claro "creme e ouro" (25/11/2026, pedido do Dante a partir do esboço do painel em ouro e creme):
+   o tema claro deixa o cinza-azulado e passa a creme quente, com o dourado um pouco mais metálico e linhas
+   onduladas douradas bem suaves no alto da tela. Vale no site inteiro (todas as abas usam as mesmas cores).
+   O tema "Terminal" (terminal.css) segue com as cores dele. Para voltar: tirar este <link> do index.html. */
+html:not([data-term="on"]) body.light {
+  --bg: #f4efe6;
+  --bg-2: #eee7da;
+  --surface: #fffdf9;
+  --surface-2: #faf6ef;
+  --surface-3: #f3ede2;
+  --line: rgba(90,62,20,.10);
+  --line-2: rgba(90,62,20,.17);
+  --text: #1a140a;
+  --text-2: #554a39;
+  --text-3: #75695a;
+  --accent: #b07a1c;
+  --accent-2: #cf9a35;
+  --accent-soft: rgba(176,122,28,.11);
+  --accent-line: rgba(176,122,28,.34);
+  --glass: rgba(255,253,249,.82);
+  --card-hi: rgba(255,255,255,.92);
+  --shadow-sm: 0 1px 2px rgba(92,62,14,.06), 0 10px 24px -18px rgba(92,62,14,.28);
+  --shadow-lg: 0 24px 60px -30px rgba(92,62,14,.36);
+}
+html:not([data-term="on"]) body.light {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 260' fill='none' stroke='%23c9963a'%3E%3Cpath d='M0 200 C 120 140, 240 230, 360 170 S 540 110, 600 140' stroke-opacity='.22'/%3E%3Cpath d='M0 220 C 140 160, 260 250, 380 190 S 560 130, 600 160' stroke-opacity='.16'/%3E%3Cpath d='M0 180 C 110 120, 230 210, 350 150 S 530 90, 600 120' stroke-opacity='.14'/%3E%3Cpath d='M0 240 C 150 180, 280 270, 400 210 S 570 150, 600 180' stroke-opacity='.10'/%3E%3C/svg%3E") right -40px top -30px / 720px auto no-repeat fixed,
+    radial-gradient(900px 520px at 8% -8%, rgba(201,150,58,.10), transparent 62%),
+    var(--bg);
+}
+html:not([data-term="on"]) body.light::before { opacity: .35; }
