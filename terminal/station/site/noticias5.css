@@ -180,3 +180,22 @@ body.nw2 #news-panel .mm-mais-menu #briefing-btn :is(.nw2-n, #nw2-picks) { color
   #news-panel .jh-lista { grid-auto-columns: 88%; }
   #news-panel .jh-it strong { font-size: 15px; }
 }
+
+/* 26/11/2026 (2): bolinhas mais sutis e "cristalinas": círculo menor, logo inteiro dentro (sem corte), aro fino
+   translúcido e um brilho de vidro por cima. Sobrepõe o bloco anterior */
+#news-panel .ns-dot.mm-com-ic { width: 22px !important; height: 22px !important; border-radius: 50% !important;
+  background: radial-gradient(circle at 50% 35%, #fff 0%, #f3f5f8 70%, #e6eaf0 100%) !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 1px 3px rgba(0,0,0,.28), inset 0 0 0 1px rgba(0,0,0,.06) !important; }
+#news-panel .ns-dot .mm-fic-dot { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; border-radius: 50%; }
+#news-panel .ns-dot.mm-com-ic::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 38%, rgba(255,255,255,0) 55%); }
+#news-panel .ns-sub-bubble.active .ns-dot.mm-com-ic { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent), 0 1px 3px rgba(0,0,0,.28) !important; }
+#news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot.mm-com-ic { box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 1px 3px rgba(0,0,0,.28) !important; }
+body.light #news-panel .ns-dot.mm-com-ic, body.light #news-panel #source-sidebar:has(.ns-all-btn.active) .ns-sub-bubble.active .ns-dot.mm-com-ic { box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.12) !important; }
+#news-panel .mm-fic { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; padding: 0; background: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 1px 2px rgba(0,0,0,.25); }
+body.light #news-panel .mm-fic { box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+@media (max-width: 640px) {
+  #news-panel .ns-dot.mm-com-ic { width: 24px !important; height: 24px !important; }
+  #news-panel .mm-fic { width: 17px; height: 17px; }
+}
