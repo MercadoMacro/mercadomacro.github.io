@@ -232,6 +232,33 @@ async function limparCache(slug) {
   const ps = ['/jornal', '/jornal/rss.xml', '/jornal/hoje.json', '/sitemap.xml', ...(slug ? ['/jornal/' + slug] : [])];
   await Promise.all(ps.map((p) => caches.default.delete(new Request(SITE + p)).catch(() => false)));
 }
+// 25/11/2026 (Dante): leituras do Jornal por matéria e por origem (Google, Terminal, Telegram...), somadas por dia.
+// Só o endereço da matéria e o nome do site de origem; nada da pessoa.
+let leiturasProntas = false;
+export function contarLeitura(env, ctx, p, origem) {
+  const slug = p === '/jornal' || p === '/jornal/' ? '(capa)' : p.slice('/jornal/'.length).replace(/\/$/, '');
+  if (slug !== '(capa)' && !/^[a-z0-9-]{1,140}$/.test(slug)) return;
+  const dia = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  const run = async () => {
+    if (!leiturasProntas) { await env.DB.prepare('CREATE TABLE IF NOT EXISTS jornal_leituras (dia TEXT NOT NULL, slug TEXT NOT NULL, origem TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (dia, slug, origem))').run(); leiturasProntas = true; }
+    await env.DB.prepare('INSERT INTO jornal_leituras (dia, slug, origem, n) VALUES (?, ?, ?, 1) ON CONFLICT(dia, slug, origem) DO UPDATE SET n = n + 1').bind(dia, slug, String(origem).slice(0, 60)).run();
+  };
+  ctx.waitUntil(run().catch(() => {}));
+}
+async function leiturasJornal(env) {
+  try {
+    const desde = new Date(Date.now() - 3 * 3600e3 - 6 * 86400e3).toISOString().slice(0, 10);
+    const rs = (await env.DB.prepare('SELECT l.slug, l.origem, SUM(l.n) n, j.titulo, j.tipo FROM jornal_leituras l LEFT JOIN jornal j ON j.slug = l.slug WHERE l.dia >= ? GROUP BY l.slug, l.origem').bind(desde).all()).results;
+    const dias = (await env.DB.prepare('SELECT dia, SUM(n) n FROM jornal_leituras WHERE dia >= ? GROUP BY dia ORDER BY dia').bind(desde).all()).results;
+    const por = new Map(), origens = {};
+    for (const r of rs) {
+      const m = por.get(r.slug) || { slug: r.slug, titulo: r.slug === '(capa)' ? 'Capa do Jornal' : r.titulo || r.slug, tipo: TIPOS[r.tipo] || '', total: 0, origens: {} };
+      m.total += r.n; m.origens[r.origem] = (m.origens[r.origem] || 0) + r.n; por.set(r.slug, m);
+      origens[r.origem] = (origens[r.origem] || 0) + r.n;
+    }
+    return { desde, materias: [...por.values()].sort((a, b) => b.total - a.total).slice(0, 15), origens, dias };
+  } catch (e) { return { desde: null, materias: [], origens: {}, dias: [] }; }
+}
 export async function apiAdminJornal(req, env, json) {
   await tabela(env);
   const u = new URL(req.url);
@@ -245,7 +272,7 @@ export async function apiAdminJornal(req, env, json) {
     const lista = (await env.DB.prepare(`SELECT * FROM jornal WHERE status IN ('rascunho', 'publicada') OR criado > ? ORDER BY CASE status WHEN 'rascunho' THEN 0 ELSE 1 END, COALESCE(publicado, criado) DESC LIMIT 60`)
       .bind(Date.now() - 3 * 86400000).all()).results.map(linha);
     const pub = await env.DB.prepare("SELECT COUNT(*) n FROM jornal WHERE status = 'publicada'").first();
-    return json({ ligado: await ligado(env), publicadas: pub.n, materias: lista, tipos: TIPOS, secoes: SECOES, rodadas: await rodadas(env) });
+    return json({ ligado: await ligado(env), publicadas: pub.n, materias: lista, tipos: TIPOS, secoes: SECOES, rodadas: await rodadas(env), leituras: await leiturasJornal(env) });
   }
   const b = await req.json().catch(() => ({}));
   if (b.acao === 'ligar') {
