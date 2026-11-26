@@ -15,7 +15,7 @@ import { apiAssistente, apiAdminAssistente, ligarAssistente, apiResumoNoticias, 
 import { reciboAds, apiCartao, apiPix, pixStripeDisponivel, apiAdminStripe, webhookStripe, situacaoCartao, stripeLigado, ligarStripe } from './stripe.js';
 import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, emailsDeTeste, garantirAssinatura, contaDaSessao, apiAssinatura, apiAdminAssinatura, paginaAssinar, SCRIPT_ASSINAR, rotinaAssinaturas, GRATIS_DIAS, registrar, normalizarCelular } from './assinatura.js';
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
-import { ligarJornal, paginaJornal, apiAdminJornal, rodadaJornal, slugsParaSitemap } from './jornal.js';
+import { ligarJornal, paginaJornal, apiAdminJornal, rodadaJornal, slugsParaSitemap, contarLeitura } from './jornal.js';
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
@@ -154,7 +154,7 @@ export default {
       if (p === '/api/publico/passe-chave') return json(await chavePublicaPasse(env), 200, { 'Cache-Control': 'public, max-age=3600' });
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       // Jornal Mercado Macro (src/jornal.js): matérias aprovadas no /admin, públicas
-      if (p === '/jornal' || p.startsWith('/jornal/')) { if (navegacao(req) && p !== '/jornal/rss.xml') contar(env, ctx, req, 'jornal'); return await naBorda(req, ctx, () => paginaJornal(req, env, p)); }
+      if (p === '/jornal' || p.startsWith('/jornal/')) { if (navegacao(req) && p !== '/jornal/rss.xml') { contar(env, ctx, req, 'jornal'); if (!ROBO.test(req.headers.get('User-Agent') || '')) contarLeitura(env, ctx, p, url.searchParams.get('de') === 'terminal' ? 'Terminal' : origemDe(req.headers.get('Referer'), url.searchParams.get('utm_source')) || 'Dentro do site'); } return await naBorda(req, ctx, () => paginaJornal(req, env, p)); }
       if (p === '/balanca-comercial') { if (navegacao(req)) contar(env, ctx, req, 'balanca'); return await naBorda(req, ctx, paginaBalanca); }
       if (p === '/privacidade') return paginaFixa(req, env, '/vitrine/privacidade', 200);
       if (p === '/planos' || p === '/termos') return await paginaPlanos(req, env);
@@ -3640,6 +3640,18 @@ const JS_ADMIN = `(function(){
     }).catch(function(){ el.innerHTML = '<p class="vazio">Não foi possível carregar.</p>'; });
   }
   /* Jornal Mercado Macro (22/11/2026): rascunhos da IA, editar, aprovar, recusar, tirar do ar; chave liga/desliga */
+  function leiturasHtml(l){
+    if (!l || !l.materias || !l.materias.length) return '<div class="caixa" style="margin-bottom:16px"><p style="margin:0;font-weight:700">Leituras (7 dias)</p><p class="d" style="margin:4px 0 0">Ainda sem leituras contadas. A contagem por matéria e origem começou em 25/11/2026.</p></div>';
+    var tot = 0; Object.keys(l.origens).forEach(function(k){ tot += l.origens[k]; });
+    var orig = Object.keys(l.origens).sort(function(a, b){ return l.origens[b] - l.origens[a]; }).map(function(k){ return '<span style="display:inline-block;margin:0 6px 6px 0;padding:3px 9px;border:1px solid var(--line-2);border-radius:20px;font-size:12px">' + esc(k) + ' <b>' + l.origens[k] + '</b></span>'; }).join('');
+    var linhas = l.materias.map(function(m){ var o = Object.keys(m.origens).sort(function(a, b){ return m.origens[b] - m.origens[a]; }).map(function(k){ return esc(k) + ' ' + m.origens[k]; }).join(' · ');
+      return '<tr><td style="padding:6px 8px 6px 0">' + (m.slug === '(capa)' ? esc(m.titulo) : '<a href="/jornal/' + esc(m.slug) + '" target="_blank" rel="noopener" style="color:var(--text)">' + esc(m.titulo) + '</a>') + (m.tipo ? ' <span class="d">· ' + esc(m.tipo) + '</span>' : '') + '<div class="d" style="font-size:12px">' + o + '</div></td><td style="text-align:right;font-weight:700;padding:6px 0">' + m.total + '</td></tr>'; }).join('');
+    var dias = (l.dias || []).map(function(d){ return esc(d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7)) + ': <b>' + d.n + '</b>'; }).join(' · ');
+    return '<div class="caixa" style="margin-bottom:16px"><p style="margin:0 0 6px;font-weight:700">Leituras (7 dias): ' + tot + '</p>'
+      + '<p class="d" style="margin:0 0 8px">Cada abertura de página conta uma vez (não são pessoas únicas). Por dia: ' + dias + '</p>'
+      + '<div style="margin-bottom:6px">' + orig + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr><th style="text-align:left" class="d">Mais lidas</th><th style="text-align:right" class="d">Leituras</th></tr></thead><tbody>' + linhas + '</tbody></table></div>';
+  }
   function jornalAdm(){
     var raiz = document.getElementById('jor');
     var bt = 'border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;min-height:36px';
@@ -3667,6 +3679,7 @@ const JS_ADMIN = `(function(){
         + '<p class="msg" id="jor-msg" role="status"></p>'
         + ((j.rodadas || []).length ? '<details style="margin-top:8px"><summary class="d" style="cursor:pointer">Últimas rodadas automáticas</summary><ul class="d" style="margin:6px 0 0;padding-left:18px">' + j.rodadas.map(function(x){ return '<li>' + esc(new Date(x.quando).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + ' · ' + esc((j.tipos || {})[x.tipo] || x.tipo) + ' · ' + (x.ok ? 'gerou: ' + esc(x.titulo || '') : '<span style="color:var(--neg)">não gerou: ' + esc(x.erro || '') + '</span>') + '</li>'; }).join('') + '</ul></details>' : '')
         + '</div>'
+        + leiturasHtml(j.leituras)
         + '<h2>Para aprovar<b>' + rasc.length + '</b></h2>' + (rasc.length ? rasc.map(cartao).join('') : '<p class="vazio">Nenhuma matéria esperando.</p>')
         + '<h2 style="margin-top:22px">Publicadas</h2>' + (pub.length ? pub.map(cartao).join('') : '<p class="vazio">Nenhuma ainda.</p>');
       var msg = document.getElementById('jor-msg');
