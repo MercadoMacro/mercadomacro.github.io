@@ -99,6 +99,6 @@
   const botao = document.getElementById('resumo-ia-btn');
   // a barra das notícias é remontada pelo noticias2.js: o botão vai junto, ao lado do "Gerar Briefing"
   const brief = document.getElementById('briefing-btn');
-  if (botao && brief && brief.parentElement !== botao.parentElement) brief.before(botao);
+  if (botao && brief && !brief.closest('.mm-mais-menu') && brief.parentElement !== botao.parentElement) brief.before(botao);
   botao?.addEventListener('click', abrir);
 })();

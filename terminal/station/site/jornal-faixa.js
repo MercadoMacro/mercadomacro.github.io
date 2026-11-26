@@ -47,16 +47,18 @@
   }
   // 25/11/2026: a barra tinha 11 botões numa linha. WhatsApp, Telegram, Jornal e Avisos vão para um menu "Mais"
   (function menuMais() {
-    var ids = [['news-wa', 'Canal no WhatsApp'], ['news-tg', 'Canal no Telegram'], ['news-jornal', ''], ['news-alert-btn', '']];
+    // 26/11/2026: o Gerar Briefing entra no Mais; o sino dos avisos sai do Mais e fica ao lado do Resumo IA, só com o ícone
+    var ids = [['briefing-btn', ''], ['news-wa', 'Canal no WhatsApp'], ['news-tg', 'Canal no Telegram'], ['news-jornal', '']];
     var itens = ids.map(function (x) { return [document.getElementById(x[0]), x[1]]; }).filter(function (x) { return x[0]; });
     if (!itens.length) return;
     // vai para a faixa de botões que o noticias3.js monta (.nw3-acoes), antes do Resumo da IA / Briefing
     var acoes = document.querySelector('#news-panel .nw3-acoes');
-    var ref = acoes && (acoes.querySelector(':scope > #resumo-ia-btn') || acoes.querySelector(':scope > #briefing-btn'));
-    if (!ref) ref = acoes ? null : (document.getElementById('briefing-btn') || itens[0][0]);
+    var ria = document.getElementById('resumo-ia-btn');
+    var ref = acoes && acoes.querySelector(':scope > #resumo-ia-btn');
+    if (!ref) ref = acoes ? null : (ria || itens[0][0]);
     var caixa = document.createElement('div'); caixa.className = 'mm-mais';
     var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn-sm mm-mais-bt'; bt.id = 'news-mais';
-    bt.setAttribute('aria-haspopup', 'true'); bt.setAttribute('aria-expanded', 'false'); bt.title = 'WhatsApp, Telegram, Jornal e avisos';
+    bt.setAttribute('aria-haspopup', 'true'); bt.setAttribute('aria-expanded', 'false'); bt.title = 'Briefing, WhatsApp, Telegram e Jornal';
     bt.innerHTML = '<span aria-hidden="true">⋯</span> Mais';
     var menu = document.createElement('div'); menu.className = 'mm-mais-menu'; menu.hidden = true; menu.setAttribute('role', 'menu');
     itens.forEach(function (x) {
@@ -67,6 +69,10 @@
     });
     caixa.append(bt, menu);
     if (ref) ref.parentNode.insertBefore(caixa, ref); else acoes.prepend(caixa);
+    // o Resumo IA ainda está na barra de cima nessa hora: traz para a faixa, logo depois do Mais, e o sino ao lado
+    if (acoes && ria) caixa.after(ria);
+    var sino = document.getElementById('news-alert-btn');
+    if (sino && (ria || caixa).parentNode) { sino.classList.add('mm-sino'); (ria || caixa).after(sino); }
     var abre = function (sim) { menu.hidden = !sim; bt.setAttribute('aria-expanded', sim ? 'true' : 'false'); };
     bt.addEventListener('click', function (e) { e.stopPropagation(); abre(menu.hidden); });
     document.addEventListener('click', function (e) { if (!caixa.contains(e.target)) abre(false); });
