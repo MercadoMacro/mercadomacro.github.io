@@ -54,7 +54,7 @@
   function ativoDe(n) {
     const tit = [n.titulo, n.tituloOriginal].filter(Boolean);
     const naManchete = candidatos(n, tit.join(' \n ')).map((a) => ({ a, i: Math.min(...tit.map((x) => { const m = x.match(a.re); return m ? m.index : 1e9; })) }));
-    if (naManchete.length) return naManchete.sort((p, q) => p.i - q.i)[0].a;
+    if (naManchete.length) return { ...naManchete.sort((p, q) => p.i - q.i)[0].a, tit: true };
     return candidatos(n, textos(n))[0] || null;
   }
 
@@ -100,6 +100,70 @@
     if (!cls) return '';
     return `<i class="fas fa-chart-line" aria-hidden="true"></i> ${esc(a.rot)} <b class="${cls}">${num}</b> após ${desde}`;
   }
+  /* ---------- 26/11/2026: impacto medido pelo mercado ----------
+     O nível vinha só das palavras do título. Agora, quando o ativo da manchete se mexe forte nas 3 horas depois da
+     primeira notícia, o selo sobe ("Alto impacto"); quando a notícia era "Alto impacto" e o ativo ficou parado por
+     2 horas de negócio, desce para "Relevante". Só vale para o ativo citado no título, e só mexe no selo. */
+  const JANELA_REACAO = 3 * 3600e3;
+  // [Relevante, Alto impacto]: quanto o ativo precisa andar (em %, ou em pontos-base no juro americano)
+  function limites(a) {
+    if (a.bp) return [6, 12];
+    if (/^\^(BVSP|GSPC|IXIC)$/.test(a.sym)) return [0.6, 1.2];
+    if (a.sym === 'DX-Y.NYB') return [0.4, 0.8];
+    if (/=X$/.test(a.sym)) return [0.5, 1];
+    if (a.sym === 'BZ=F') return [1.5, 3];
+    if (a.sym === 'GC=F') return [1, 2];
+    if (/^(BTC|ETH)/.test(a.sym)) return [2.5, 5];
+    return [1.5, 3]; // ações
+  }
+  async function reacao(a, quando) {
+    const s = await serie(a.sym);
+    if (!s || quando < s.t[0] || quando > s.t[s.t.length - 1]) return null;
+    let i = 0; while (i + 1 < s.t.length && s.t[i + 1] <= quando) i++;
+    const p0 = s.c[i]; if (!p0) return null;
+    let maior = 0, pts = 0;
+    for (let j = i + 1; j < s.t.length && s.t[j] <= quando + JANELA_REACAO; j++) {
+      pts++;
+      const m = a.bp ? (s.c[j] - p0) * 100 : (s.c[j] / p0 - 1) * 100;
+      if (Math.abs(m) > Math.abs(maior)) maior = m;
+    }
+    return { maior, pts };
+  }
+  const niveis = new Map(); // id do assunto -> { nivel, motivo } já medido
+  const ROTULO = { critico: 'Alto impacto', alto: 'Relevante', medio: 'Mercado' };
+  function nivelDoCard(card) { return card.classList.contains('critico') ? 'critico' : card.classList.contains('alto') ? 'alto' : card.classList.contains('medio') ? 'medio' : 'normal'; }
+  function medirNivel(a, r, base) {
+    if (!a.tit || !r) return null;
+    const [rel, alto] = limites(a), x = Math.abs(r.maior);
+    const fmt = a.bp ? `${r.maior > 0 ? '+' : ''}${Math.round(r.maior)} bp` : `${r.maior > 0 ? '+' : ''}${r.maior.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+    if (r.pts >= 2 && x >= alto && base !== 'critico') return { nivel: 'critico', motivo: `Subiu para Alto impacto: ${a.rot} chegou a ${fmt} nas 3 horas depois da notícia` };
+    if (r.pts >= 2 && x >= rel && (base === 'medio' || base === 'normal')) return { nivel: 'alto', motivo: `Subiu para Relevante: ${a.rot} chegou a ${fmt} nas 3 horas depois da notícia` };
+    if (r.pts >= 8 && x < rel * 0.3 && base === 'critico') return { nivel: 'alto', motivo: `Desceu para Relevante: ${a.rot} quase não se mexeu (${fmt}) nas horas depois da notícia` };
+    return null;
+  }
+  function aplicaNivel(alvo, m, card) {
+    const velho = alvo.querySelector('.nc-impact');
+    const novo = document.createElement('span');
+    novo.className = 'nc-impact ' + m.nivel + ' nw4-medido';
+    novo.textContent = ROTULO[m.nivel];
+    novo.title = m.motivo + ' (cotação com atraso de até 15 min)';
+    if (velho) velho.replaceWith(novo);
+    else if (card) card.querySelector('.nc-footer')?.prepend(novo);
+    else alvo.prepend(novo);
+    if (card) { card.classList.remove('critico', 'alto', 'medio', 'normal'); card.classList.add(m.nivel); }
+  }
+  async function medir(card, n, a, quando) {
+    let m = niveis.get(n.id);
+    if (m === undefined) {
+      const r = await reacao(a, quando).catch(() => null);
+      const base = nivelDoCard(card);
+      m = medirNivel(a, r, base);
+      // dentro das 3 h a nota ainda pode mudar: guarda só a subida (que não volta) ou o resultado da janela fechada
+      if (Date.now() - quando > JANELA_REACAO || (m && m.nivel !== 'alto') || (m && base !== 'critico')) niveis.set(n.id, m);
+    }
+    if (m && card.isConnected && !card.querySelector('.nw4-medido')) aplicaNivel(card, m, card);
+  }
+
   async function precos() {
     const leads = window.__newsLeads || [];
     const cards = [...view.querySelectorAll('.nc-card[data-id]')];
@@ -110,6 +174,7 @@
       if (!a) return;
       // a hora do assunto é a da primeira fonte que noticiou
       const quando = Math.min(n.data, ...(n.related || []).map((r) => r.data));
+      medir(card, n, a, quando).catch(() => {});
       const v = await variacao(a, quando);
       if (!v || !card.isConnected || card.querySelector('.nw4-px')) return;
       const html = chip(a, v, quando);
@@ -216,6 +281,8 @@
       if (vistos.has(k)) return; vistos.add(k); linha.push(x);
     });
     const tags = art.querySelector('.nr-tags');
+    const med = niveis.get(n.id);
+    if (med && tags) aplicaNivel(tags, med, null);
     const quando = Math.min(n.data, ...(n.related || []).map((r) => r.data));
     if (linha.length >= 2) {
       const sec = document.createElement('section');
