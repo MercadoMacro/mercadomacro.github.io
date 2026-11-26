@@ -60,12 +60,19 @@
     // faixa de cotações do topo
     let tkVivo = document.getElementById('ticker'), tkCopia = null;
     if (tkVivo) {
+      // 26/11/2026: a faixa corre sozinha (carrossel). A cópia parava a animação do zero e seguia andando;
+      // agora fica parada exatamente onde estava na hora do clique
+      const trilhoVivo = tkVivo.querySelector('.tk-track');
+      const posicao = trilhoVivo ? getComputedStyle(trilhoVivo).transform : 'none';
       tkCopia = copiar(tkVivo);
+      const trilho = tkCopia.querySelector('.tk-track');
+      if (trilho) { trilho.style.animation = 'none'; trilho.style.transform = posicao && posicao !== 'none' ? posicao : ''; }
       tkCopia.removeAttribute('id');
       tkCopia.classList.add('mm-congelada');
       tkCopia.title = `Cotações congeladas às ${h}`;
       travar(tkCopia);
-      tkVivo.style.display = 'none';
+      // o carrossel usa display:flex !important: sem o important aqui a faixa ao vivo continuava aparecendo e andando
+      tkVivo.style.setProperty('display', 'none', 'important');
       tkVivo.after(tkCopia);
       rolar(tkCopia);
     }
@@ -81,7 +88,7 @@
     vivo.id = 'mesa-root';
     vivo.hidden = false;
     if (tkCopia) tkCopia.remove();
-    if (tkVivo) tkVivo.style.display = '';
+    if (tkVivo) tkVivo.style.removeProperty('display');
     document.documentElement.classList.remove('mm-cg-on');
     estado = null;
     pintarFaixa();
@@ -141,6 +148,7 @@
   .qbanner .qb-cg.ativo .qb-cg-sep { opacity:.6; }
   @media (max-width:640px) { .qbanner .qb-cg:not(.ativo) .qb-cg-t { display:none; } }
   .ticker.mm-congelada { box-shadow: inset 0 -2px 0 #7dd3fc; }
+  .ticker.mm-congelada .tk-track { animation: none !important; }
   `;
   document.head.append(css);
 })();
