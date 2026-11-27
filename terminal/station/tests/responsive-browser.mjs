@@ -81,7 +81,7 @@ try{
        let parent=e.parentElement,scrollable=false;while(parent&&parent!==p){if(/auto|scroll/.test(getComputedStyle(parent).overflowX)){scrollable=true;break;}parent=parent.parentElement;}
        if(!scrollable)outside.push({tag:e.tagName,cls:e.className,text:e.textContent.trim().slice(0,65),left:Math.round(r.left),right:Math.round(r.right)});
       }
-      return {bodyLight:document.body.classList.contains('light'),pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,panelTop:Math.round(p.getBoundingClientRect().top),panelWidth:p.clientWidth,panelScrollWidth:p.scrollWidth,navVisible:visible(nav),summaryVisible:visible(document.getElementById('fab-summary')),assistantVisible:visible(document.getElementById('ia-fab')),outside:outside.slice(0,12),previewText:p.innerText.slice(0,240)};
+      return {bodyLight:document.body.classList.contains('light'),pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,panelTop:Math.round(p.getBoundingClientRect().top),panelWidth:p.clientWidth,panelScrollWidth:p.scrollWidth,navVisible:visible(nav),summaryVisible:!!document.getElementById('mn-summary'),assistantVisible:visible(document.getElementById('ia-fab')),outside:outside.slice(0,12),previewText:p.innerText.slice(0,240)};
      },id));
      if(id==='mesa-panel') {
       const first=page.locator('.ms-fold-toggle').first();
@@ -136,13 +136,18 @@ try{
    // Tema e engrenagem devem continuar acessíveis sem sobreposição entre si.
    results.push({orientation,theme,header:await page.locator('.topbar-right').evaluate(e=>Array.from(e.querySelectorAll('button')).filter(x=>x.getBoundingClientRect().width>0&&getComputedStyle(x).display!=='none').map(x=>({id:x.id,rect:{x:x.getBoundingClientRect().x,y:x.getBoundingClientRect().y,w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height}}))),errors});
    // Exercita as abas recolhíveis com o assistente local de respostas prontas.
-   for(const id of ['fab-summary','ia-fab']){
-    const button=page.locator('#'+id);await button.waitFor({state:'visible'});
-    await button.click();if(!(await button.getAttribute('class')).includes('aba-aberta'))throw Error('Primeiro toque não expandiu '+id);
+   // 27/11/2026: no celular só a Jade fica como aba na borda; o Resumo para cliente abre por Todas > Atalhos
+   {
+    const button=page.locator('#ia-fab');await button.waitFor({state:'visible'});
+    await button.click();if(!(await button.getAttribute('class')).includes('aba-aberta'))throw Error('Primeiro toque não expandiu ia-fab');
     await button.click();
-    const modal=id==='ia-fab'?'#ia-painel.aberto':'#summary-modal.visible';
-    await page.locator(modal).waitFor({state:'visible'});
-    if(id==='ia-fab')await page.locator('#ia-painel [data-ia="fechar"]').click();else await page.locator('#summary-close').click();
+    await page.locator('#ia-painel.aberto').waitFor({state:'visible'});
+    await page.locator('#ia-painel [data-ia="fechar"]').click();
+    if(await page.locator('#fab-summary').isVisible())throw Error('Botão flutuante do Resumo ainda aparece no celular');
+    await page.locator('#mobile-navigation .mn-all').click();
+    await page.locator('#mn-summary').click();
+    await page.locator('#summary-modal.visible').waitFor({state:'visible'});
+    await page.locator('#summary-close').click();
    }
    await ctx.close();
   }
