@@ -32,6 +32,10 @@ test('somente a Macro 12 autenticada pode abrir em iframe da mesma origem', asyn
     const macro12 = path.startsWith('/hp12');
     assert.equal(response.status, 200, path);
     assert.equal(response.headers.get('X-Frame-Options'), macro12 ? 'SAMEORIGIN' : 'DENY', path);
-    assert.equal(response.headers.get('Content-Security-Policy'), macro12 ? "frame-ancestors 'self'" : "frame-ancestors 'none'", path);
+    // 26/11/2026: a regra de scripts passou a valer e vem num segundo cabeçalho (o navegador aplica os dois)
+    const csp = response.headers.get('Content-Security-Policy');
+    assert.ok(csp.startsWith(macro12 ? "frame-ancestors 'self'" : "frame-ancestors 'none'"), path);
+    assert.match(csp, /script-src 'self'/, path);
+    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), null, path);
   }
 });
