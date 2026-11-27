@@ -6,8 +6,9 @@
   if (!tabs || document.getElementById('mobile-navigation')) return;
   const originals = [...tabs.querySelectorAll('button[data-tab]')];
   const byId = new Map(originals.map(b => [b.dataset.tab, b]));
-  const PIN_KEY = 'trader_mobile_nav_v1', PIN_MAX = 3;
-  const DEFAULT_PINS = ['market-panel', 'watch-panel', 'news-panel'];
+  // 27/11/2026 (auditoria): até 4 áreas fixas e a Mesa entra no padrão; antes ela aparecia como "Todas" + "Mesa"
+  const PIN_KEY = 'trader_mobile_nav_v1', PIN_MAX = 4;
+  const DEFAULT_PINS = ['market-panel', 'mesa-panel', 'watch-panel', 'news-panel'];
   // plano grátis (plano-livre.js): a barra padrão traz as áreas abertas
   const GRATIS_PINS = ['mesa-panel', 'news-panel', 'edu-panel'];
   let gratis = false, escolheu = false;
@@ -116,6 +117,14 @@
       row.append(b, pin); list.appendChild(row);
     }
   }
+  // Resumo para cliente (27/11/2026): no celular saiu do botão flutuante laranja (ficava empilhado com o da Jade,
+  // cobrindo o conteúdo) e vem para cá. O plano grátis continua barrado em plano-livre.js (#mn-summary)
+  const resumoT = document.createElement('h3'); resumoT.textContent = 'Atalhos'; list.appendChild(resumoT);
+  const resumo = document.createElement('button');
+  resumo.type = 'button'; resumo.id = 'mn-summary'; resumo.className = 'mn-atalho';
+  resumo.innerHTML = '<i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Resumo para cliente</span>';
+  resumo.addEventListener('click', () => { close(); if (typeof openSummaryModal === 'function') openSummaryModal(); else document.getElementById('fab-summary')?.click(); });
+  const resumoRow = document.createElement('div'); resumoRow.className = 'mn-row'; resumoRow.appendChild(resumo); list.appendChild(resumoRow);
   list.appendChild(live);
   syncPins();
   const current = document.createElement('div');

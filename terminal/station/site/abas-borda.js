@@ -18,6 +18,10 @@
     body .aba-borda.aba-aberta .fab-txt,body .aba-borda.aba-aberta .ia-fab-txt{opacity:1}
     body #fab-summary.aba-borda{bottom:calc(14px + env(safe-area-inset-bottom)) !important}
     body #ia-fab.aba-borda{bottom:calc(66px + env(safe-area-inset-bottom)) !important;padding-left:8px !important;border-right:0 !important}
+    /* 27/11/2026 (auditoria): um botão flutuante só. O Resumo foi para "Todas" e a Jade desce para o canto */
+    body #fab-summary, body #fab-summary.aba-borda{display:none !important}
+    body #ia-fab.aba-borda{bottom:calc(14px + env(safe-area-inset-bottom)) !important}
+    body.mobile-nav-ready{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
     body #ia-fab.aba-borda .ia-fab-txt small{display:none}
   }`;
   document.head.appendChild(css);

@@ -55,7 +55,7 @@
     document.body.appendChild(f);
     f.querySelector('a')?.focus();
   }
-  const RESUMO = '#fab-summary, #side-summary, [data-topbar-action="summary-btn"], #summary-btn';
+  const RESUMO = '#fab-summary, #side-summary, #mn-summary, [data-topbar-action="summary-btn"], #summary-btn';
   document.addEventListener('click', (e) => {
     const b = gratis && e.target.closest?.(RESUMO);
     // no celular o primeiro toque só abre a aba da borda (abas-borda.js)
