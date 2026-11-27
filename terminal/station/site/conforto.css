@@ -32,3 +32,8 @@ html body.light {
   --text-3: #5d6674;
   --glass: rgba(255,254,251,.88);
 }
+
+/* 27/11/2026 (auditoria): nada de texto abaixo de 11px. Etiquetas de impacto estavam em 9px, contagens em 8,5-10px */
+html body :is(.nc-impact, .nw2-c, #nw2-total, #nw2-fontes, .nc-time, .nc-kicker, .ms-jn, .ms-hsub, td.tm, .side-group, .si-kbd) { font-size: 11px !important; }
+html body .ticker .item .label { font-size: 11px !important; }
+html body .mn-row > .mn-atalho { flex: 1; min-width: 0; }

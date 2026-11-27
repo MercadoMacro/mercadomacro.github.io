@@ -85,3 +85,17 @@ tr.mv-sel>td{background:var(--accent-soft)!important}tr.mv-sel>td:first-child{bo
 .ms-custom-layout.ms-janelas>.ms-tb[data-mesa-block] .ms-tw[data-vis],.mj-gs .ms-tb[data-mesa-block] .ms-tw[data-vis]{flex:1 1 auto;min-height:0;max-height:none!important}
 /* o aviso de rolagem não encosta na bolinha de cor do vínculo */
 .ms-tb[data-mv] .ms-head .ms-hsub{margin-right:16px}
+
+/* 27/11/2026 (auditoria): no celular, nomes curtos nos cartões e os botões numa linha só
+   (Temperatura, Congelar e o ícone de Atualizar); no computador continua o nome inteiro e o texto */
+#mesa-root .ms-nc, #mesa-root .ms-ri { display:none; }
+#mesa-root .ms-ct b { font-weight:inherit; }
+@media (max-width: 900px) {
+  html body #mesa-root .ms-nl, html body #mesa-root .ms-tl, html body #mesa-root .ms-rt { display:none; }
+  html body #mesa-root .ms-nc, html body #mesa-root .ms-ri { display:inline; }
+  html body #mesa-root .ms-bar { gap:8px; }
+  html body #mesa-root .ms-bar .ms-bar-acoes { flex-wrap:nowrap; gap:6px; margin-left:auto; }
+  html body #mesa-root .ms-bar :is(.ms-refresh, .ms-temp-btn) { padding:0 12px; white-space:nowrap; }
+  html body #mesa-root .ms-bar .ms-refresh { width:42px; padding:0; justify-content:center; }
+  html body #mesa-root .ms-bar .ms-sub { white-space:nowrap; font-size:12px; }
+}

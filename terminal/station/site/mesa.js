@@ -44,15 +44,17 @@
     ['XRP-USD', 'XRP', 'X', '#3b4a5e'], ['BNB-USD', 'BNB', 'B', '#c99a0e'], ['DOGE-USD', 'Dogecoin', 'D', '#b39b3a'], ['ADA-USD', 'Cardano', 'A', '#1f4ec4'],
     ['BTC-BRL', 'Bitcoin em reais', 'R$', '#f7931a']];
   const CARDS = [
+    // nc: nome curto, usado no celular, onde o nome inteiro cortava ("Dólar (USD/…") (27/11/2026)
     { s: '^BVSP', n: 'Ibovespa', d: 0, pre: '' },
-    { s: 'BRL=X', n: 'Dólar (USD/BRL)', d: 4, pre: 'R$ ' },
-    { s: 'DX-Y.NYB', n: 'Índice dólar (DXY)', d: 2, pre: '' },
-    { s: 'ES=F', n: 'S&P 500 futuro', d: 2, pre: '' },
-    { s: 'BZ=F', n: 'Petróleo Brent', d: 2, pre: 'US$ ' },
+    { s: 'BRL=X', n: 'Dólar (USD/BRL)', nc: 'Dólar', d: 4, pre: 'R$ ' },
+    { s: 'DX-Y.NYB', n: 'Índice dólar (DXY)', nc: 'DXY', d: 2, pre: '' },
+    { s: 'ES=F', n: 'S&P 500 futuro', nc: 'S&P fut.', d: 2, pre: '' },
+    { s: 'BZ=F', n: 'Petróleo Brent', nc: 'Brent', d: 2, pre: 'US$ ' },
     // minério na bolsa de Dalian (DCE), contrato principal, em US$/t: rota /minerio?m=dce do worker (pedido de 12/11/2026)
-    { s: '__dce', n: 'Minério (Dalian)', d: 2, pre: 'US$ ' },
-    { s: '__juros', n: 'Juros: Fed e Selic' }
+    { s: '__dce', n: 'Minério (Dalian)', nc: 'Minério', d: 2, pre: 'US$ ' },
+    { s: '__juros', n: 'Juros: Fed e Selic', nc: 'Juros' }
   ];
+  const nomeCard = (c) => c.nc ? `<b class="ms-nl">${esc(c.n)}</b><b class="ms-nc">${esc(c.nc)}</b>` : esc(c.n);
   const TABLES = [
     { id: 'am', col: 1, t: 'Índices das Américas', rows: [['^BVSP', 'Ibovespa', 'BR', 2], ['^GSPC', 'S&P 500', 'US'], ['^DJI', 'Dow Jones', 'US'], ['^IXIC', 'Nasdaq', 'US'],
       ['^RUT', 'Russell 2000', 'US'], ['^VIX', 'VIX (volatilidade)', 'US'], ['^GSPTSE', 'S&P/TSX', 'CA'], ['^MXX', 'S&P/BMV IPC', 'MX'], ['^MERV', 'Merval', 'AR']] },
@@ -563,7 +565,7 @@
       const nextF = FOMC.find((d) => d >= today), nextC = (typeof COPOM_DECISIONS !== 'undefined' ? COPOM_DECISIONS : []).find((d) => d >= today);
       const dm = (d) => d ? d.split('-').reverse().slice(0, 2).join('/') : '—';
       return `<div class="ms-card ms-jur">
-        <div class="ms-ct"><span>${esc(c.n)}</span></div>
+        <div class="ms-ct"><span>${nomeCard(c)}</span></div>
         <div class="ms-jr"><em>Fed</em><b>${f ? `${nf(f.lo, 2)}–${nf(f.up, 2)}%` : '—'}</b></div>
         <div class="ms-jr"><em>Selic</em><b>${s ? `${nf(s.v, 2)}%` : '—'}</b></div>
         <div class="ms-jn" title="Próximas decisões de juros: Fed (FOMC) e Copom">FOMC ${dm(nextF)} · Copom ${dm(nextC)}</div>
@@ -573,7 +575,7 @@
       const m = X.dce, has = !!m;
       const dica = 'Bolsa de Dalian (China), contrato principal do minério de ferro, convertido para US$ por tonelada' + (has && m.cny != null && m.cambio != null ? ` (¥ ${nf(m.cny, 1)} a ${nf(m.cambio, 4)} yuan por dólar)` : '') + '. A variação é a do contrato, em yuan.';
       return `<div class="ms-card ms-dce ${has ? cls(m.c) : ''}" title="${esc(dica)}">
-        <div class="ms-ct"><span>${esc(c.n)}</span><em class="${cls(has ? m.c : null)}">${has && m.c != null ? pct(m.c) : '—'}</em></div>
+        <div class="ms-ct"><span>${nomeCard(c)}</span><em class="${cls(has ? m.c : null)}">${has && m.c != null ? pct(m.c) : '—'}</em></div>
         <div class="ms-cv">${has ? esc(c.pre) + nf(m.v, c.d) : '—'}</div>
         <div class="ms-jn">${has && m.cny != null ? `¥ ${nf(m.cny, 1)} por tonelada` : 'por tonelada'}${has ? ' · ' + hhmm(m.ts) : ''}</div>
       </div>`;
@@ -583,7 +585,7 @@
     if (fq && fq.source !== 'Yahoo') q = { ...(q || {}), v: fq.value, ...(fq.change != null && isFinite(fq.change) ? { c: fq.change } : {}), live: true };
     const has = q && q.v != null && isFinite(q.v);
     return `<div class="ms-card ${has ? cls(q.c) : ''} ${has && !q.live ? 'old' : ''}" data-sym="${esc(c.s)}" data-name="${esc(c.n)}" role="button" tabindex="0" title="Abrir o gráfico de ${esc(c.n)}">
-      <div class="ms-ct"><span>${esc(c.n)}</span><em class="${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</em></div>
+      <div class="ms-ct"><span>${nomeCard(c)}</span><em class="${cls(has ? q.c : null)}">${has ? pct(q.c) : '—'}</em></div>
       <div class="ms-cv">${has ? esc(c.pre) + nf(q.v, c.d) : '—'}</div>
       <div class="ms-cs">${has ? spark(q.sp, q.c >= 0) : ''}</div>
     </div>`;
@@ -787,9 +789,9 @@
   }
   const barraHTML = () => `<div class="ms-bar">
         <div><h2>Mesa</h2><span class="ms-sub">${errMsg ? `<span class="ms-err">${esc(errMsg)}</span>` : lastTs ? `Atualizado às ${new Date(lastTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : busy ? 'Carregando cotações…' : 'Últimos valores salvos'}</span></div>
-        <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura do mercado <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
+        <span class="ms-bar-acoes"><button type="button" class="ms-temp-btn" data-mm-temp title="Risk-on ou risk-off: termômetro do apetite a risco com as cotações do dia">Temperatura<span class="ms-tl"> do mercado</span> <span data-mm-temp-v>${window.MMTemp?.badge?.() || ''}</span></button>
         <button type="button" class="ms-temp-btn mm-cg-btn" data-mm-congelar aria-pressed="false" title="Para as cotações na tela para apresentar a alguém; por trás continuam atualizando"><i class="fas fa-snowflake" aria-hidden="true"></i> Congelar</button>
-        <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo">Atualizar</button></span>
+        <button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="1" aria-label="Mesa 1, a de sempre">1</button><button type="button" class="ms-mj-btn ms-mj-n" data-mj-modo="2" aria-label="Mesa 2, a nova">2</button><button type="button" class="ms-mj-btn ms-montar" data-mj-montar title="Arrastar e redimensionar as janelas da Mesa">Montar mesa</button><button type="button" class="ms-mj-btn" data-mj-restaurar hidden title="Volta as janelas para a organização padrão">Restaurar</button><button type="button" class="ms-refresh ${busy ? 'busy' : ''}" title="Atualizar tudo" aria-label="Atualizar tudo"><i class="fas fa-rotate-right ms-ri" aria-hidden="true"></i><span class="ms-rt">Atualizar</span></button></span>
       </div>`;
   // o que a Mesa 2 (mesa2.js) usa daqui: cotações já com câmbio e cripto ao vivo, listas, curva e formatação
   function qAgora(s) {
