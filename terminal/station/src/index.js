@@ -19,7 +19,7 @@ import { ligarJornal, paginaJornal, apiAdminJornal, rodadaJornal, slugsParaSitem
 import { paginaBalanca } from './balanca-publica.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
-import { CSP_SO_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
+import { CSP_VALENDO, CSP_COM_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
 import { receberErroJs, errosRecentes } from './erros-js.js';
 import { apiAssessorTexto } from './assessor.js';
 import { iconeFonte } from './fonte-icone.js';
@@ -2536,10 +2536,11 @@ function protegerResposta(r) {
   if (!r || r.status === 101 || r.webSocket) return r;
   const out = new Response(r.body, r);
   for (const [k, v] of Object.entries(PROTECAO)) if (!out.headers.has(k)) out.headers.set(k, v);
-  // regra de scripts no modo "só avisar" (src/csp.js): o navegador não bloqueia nada, só conta o que bloquearia
-  // 16/11/2026: só em 1 de cada 10 páginas. Cada página gerava vários avisos e /api/csp virou ~1/4 dos chamados ao
-  // servidor; uma amostra de 10% já mostra o que precisa ser corrigido (os números do admin passam a ser 1/10 do total)
-  if ((out.headers.get('Content-Type') || '').includes('text/html') && !out.headers.has('Content-Security-Policy-Report-Only') && !/script-src/.test(out.headers.get('Content-Security-Policy') || '') && Math.random() < CSP_AMOSTRA) out.headers.set('Content-Security-Policy-Report-Only', CSP_SO_AVISO);
+  // regra de scripts (src/csp.js). 26/11/2026: passou de "só avisar" para BLOQUEAR, em todas as páginas HTML.
+  // O aviso para /api/csp segue só em 1 de cada 10 páginas (16/11: cada página gerava vários avisos).
+  // append, não set: a página pode já ter um Content-Security-Policy só com frame-ancestors, e os dois valem juntos.
+  // Para voltar ao modo só avisar: trocar 'Content-Security-Policy' por 'Content-Security-Policy-Report-Only' e usar CSP_COM_AVISO.
+  if ((out.headers.get('Content-Type') || '').includes('text/html') && !/script-src/.test(out.headers.get('Content-Security-Policy') || '')) out.headers.append('Content-Security-Policy', Math.random() < CSP_AMOSTRA ? CSP_COM_AVISO : CSP_VALENDO);
   return out;
 }
 const CSP_AMOSTRA = 0.1;

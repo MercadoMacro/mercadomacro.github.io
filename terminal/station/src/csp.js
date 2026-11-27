@@ -36,12 +36,15 @@ const LISTA = {
   'object-src': ["'none'"],
   'base-uri': ["'self'"],
   'form-action': ["'self'"],
-  'report-uri': ['/api/csp'],
 };
 // caixa fechada das Notícias Agrícolas (/vitrine/na-caixa, aberta pela aba Notícias num quadro com sandbox):
 // regra própria e já valendo, só com o widget deles e o na-ponte.js
 export const CSP_CAIXA_NA = "default-src 'none'; script-src 'self' https://www.noticiasagricolas.com.br; style-src 'unsafe-inline'; img-src https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
-export const CSP_SO_AVISO = Object.entries(LISTA).map(([k, v]) => k + ' ' + v.join(' ')).join('; ');
+// Etapa 2 (26/11/2026, com o sim do Dante): a regra passa a BLOQUEAR. Uma em cada 10 páginas leva também o
+// report-uri, para continuar vendo no admin o que for barrado. CSP_SO_AVISO fica com o mesmo texto avisando (testes).
+export const CSP_VALENDO = Object.entries(LISTA).map(([k, v]) => k + ' ' + v.join(' ')).join('; ');
+export const CSP_COM_AVISO = CSP_VALENDO + '; report-uri /api/csp';
+export const CSP_SO_AVISO = CSP_COM_AVISO;
 
 const MAX_LINHAS = 3000; // teto de linhas por segurança (um site hostil poderia mandar avisos sem parar)
 let tabelaPronta = false;
