@@ -37,7 +37,7 @@ const LIMITE_APARELHOS = 2;
 const ALERTA_TROCAS = 4; // trocas de aparelho em 7 dias que aparecem no /admin como possível senha dividida
 const ITER = 100000; // rodadas do PBKDF2 (o máximo que a Cloudflare aceita); senhas antigas, de 30 mil, são refeitas no próximo login
 // arquivos que podem ser vistos sem login (vitrine, ícones, logos, prévia de link e o service worker)
-const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
+const PUBLICO = /^\/(vitrine\/[\w./-]*|icone-[\w-]+\.png|logo-[\w-]+\.png|previa-link-mercado-macro\.png|jornal-img\/(?:og\/)?[\w-]+\.(?:jpg|webp)|manifest\.webmanifest|sw\.js|favicon\.ico|robots\.txt)$/;
 // ferramentas abertas ao público (sem login): endereço -> [arquivo na pasta vitrine, nome no contador de visitas]
 const PUBLICAS = {
   '/calculadora-renda-fixa': ['/vitrine/calculadora', 'calculadora'],
