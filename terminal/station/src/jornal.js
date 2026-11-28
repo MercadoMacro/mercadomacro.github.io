@@ -525,7 +525,12 @@ ${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="
     return new Response(JSON.stringify({ itens }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
   }
   const slug = p.slice('/jornal/'.length).replace(/\/$/, '');
-  const r = /^[a-z0-9-]{5,90}$/.test(slug) ? await env.DB.prepare("SELECT * FROM jornal WHERE slug = ? AND status = 'publicada'").bind(slug).first() : null;
+  const r = /^[a-z0-9-]{5,140}$/.test(slug) ? await env.DB.prepare("SELECT * FROM jornal WHERE slug = ? AND status = 'publicada'").bind(slug).first() : null;
+  if (!r && /^\d{4}-\d{2}-\d{2}-[a-z0-9-]{10,130}$/.test(slug)) {
+    // 28/11/2026: link antigo ou cortado (endereço encurtado depois, link colado pela metade): manda para a matéria do mesmo dia que começa igual
+    const par = await env.DB.prepare("SELECT slug FROM jornal WHERE status = 'publicada' AND substr(slug, 1, 11) = ? AND (? LIKE slug || '%' OR slug LIKE ? || '%') ORDER BY publicado DESC LIMIT 1").bind(slug.slice(0, 11), slug, slug).first();
+    if (par) return new Response(null, { status: 301, headers: { Location: `/jornal/${par.slug}`, 'Cache-Control': 'public, max-age=3600' } });
+  }
   if (!r) return html(moldura({ titulo: 'Matéria não encontrada | Jornal Mercado Macro', descricao: 'Matéria não encontrada.', canonico: `${SITE}/jornal`, corpo: '<p class="vazio">Matéria não encontrada. <a href="/jornal">Ver as últimas</a>.</p>' }), 404);
   const outras = (await env.DB.prepare("SELECT slug, titulo, secao, publicado FROM jornal WHERE status = 'publicada' AND id != ? ORDER BY publicado DESC LIMIT 3").bind(r.id).all()).results;
   return html(paginaMateria(linha(r), false, outras));
