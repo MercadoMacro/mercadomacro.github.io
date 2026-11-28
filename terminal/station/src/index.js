@@ -17,6 +17,7 @@ import { PLANOS, planosVitrine, menorPorMes, perguntasVitrine, ligarAssinatura, 
 import { salvarFechamento, paginaFechamentoPublico, diasParaSitemap, completarJuros } from './fechamento-publico.js';
 import { ligarJornal, paginaJornal, apiAdminJornal, rodadaJornal, slugsParaSitemap, contarLeitura } from './jornal.js';
 import { paginaBalanca } from './balanca-publica.js';
+import { PAGINAS_HOJE, paginaHoje, JS_HOJE } from './paginas-hoje.js';
 import { fotografarFechamento } from './foto-fechamento.js';
 import { abrir, fechar, cifrarPendentes } from './cofre.js';
 import { CSP_VALENDO, CSP_COM_AVISO, CSP_CAIXA_NA, receberAvisoCsp } from './csp.js';
@@ -153,6 +154,8 @@ export default {
       if (p === '/api/publico/selic') return await respostaSelic(req, ctx);
       if (p === '/api/publico/serie') return await serieCincoDias(req, ctx);
       if (p === '/api/publico/passe-chave') return json(await chavePublicaPasse(env), 200, { 'Cache-Control': 'public, max-age=3600' });
+      // 27/11/2026 (SEO): dólar, Ibovespa, Selic e CDI hoje
+      if (Object.hasOwn(PAGINAS_HOJE, p)) return await naBorda(req, ctx, () => paginaHoje(req, env, p));
       if (p === '/fechamento-do-mercado' || p.startsWith('/fechamento-do-mercado/')) return await naBorda(req, ctx, () => paginaFechamentoPublico(req, env, ctx, p, dadosFechamento, jurosTesouro, () => paginaFixa(req, env, '/vitrine/404', 404)));
       // Jornal Mercado Macro (src/jornal.js): matérias aprovadas no /admin, públicas
       if (p.startsWith('/fonte-icone/') && req.method === 'GET') return await iconeFonte(req, ctx, p);
@@ -1923,7 +1926,7 @@ async function emailConfirmar(env, req, id, nome, email) {
 // scripts das páginas (ver JS_TEMA): [conteúdo, quem pode baixar]
 const SCRIPTS_PAGINA = () => ({
   tema: [JS_TEMA, 'todos'], esqueci: [JS_ESQUECI, 'todos'], 'nova-senha': [JS_NOVA_SENHA, 'todos'],
-  conta: [JS_CONTA, 'conta'], assinar: [SCRIPT_ASSINAR, 'conta'], admin: [JS_ADMIN, 'admin'],
+  conta: [JS_CONTA, 'conta'], assinar: [SCRIPT_ASSINAR, 'conta'], admin: [JS_ADMIN, 'admin'], hoje: [JS_HOJE, 'todos'],
 });
 // testes: os scripts das páginas precisam ser JavaScript válido (um \n errado num texto quebra o /admin inteiro)
 export const scriptsDasPaginas = () => Object.fromEntries(Object.entries(SCRIPTS_PAGINA()).map(([k, v]) => [k, v[0]]));
@@ -2703,6 +2706,7 @@ Disallow: /conta
 Disallow: /telegram
 
 Sitemap: https://mercadomacro.com.br/sitemap.xml
+Sitemap: https://mercadomacro.com.br/jornal/sitemap-news.xml
 `;
 const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -2711,6 +2715,10 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://mercadomacro.com.br/calculadora-juros-compostos</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/calculadora-aposentadoria</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mercadomacro.com.br/indicadores-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/dolar-hoje</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mercadomacro.com.br/ibovespa-hoje</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mercadomacro.com.br/selic-e-cdi-hoje</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mercadomacro.com.br/jornal/sobre</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://mercadomacro.com.br/planos</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://mercadomacro.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://mercadomacro.com.br/fechamento-do-mercado</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
@@ -2722,7 +2730,7 @@ async function sitemap(env) {
   const dias = await diasParaSitemap(env);
   const jor = await slugsParaSitemap(env);
   // o jornal entra no sitemap quando tiver a primeira matéria publicada
-  return SITEMAP.replace('</urlset>', (jor.length ? '  <url><loc>https://mercadomacro.com.br/jornal</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>\n' : '') + jor.map((m) => `  <url><loc>https://mercadomacro.com.br/jornal/${m.slug}</loc><lastmod>${new Date(m.publicado).toISOString().slice(0, 10)}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>\n`).join('') + dias.map((d) => `  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado/${d}</loc><lastmod>${d}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>\n`).join('') + '</urlset>');
+  return SITEMAP.replace('</urlset>', (jor.length ? '  <url><loc>https://mercadomacro.com.br/jornal</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>\n' : '') + jor.map((m) => `  <url><loc>https://mercadomacro.com.br/jornal/${m.slug}</loc><lastmod>${new Date(m.atualizado || m.publicado).toISOString().slice(0, 10)}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>\n`).join('') + dias.map((d) => `  <url><loc>https://mercadomacro.com.br/fechamento-do-mercado/${d}</loc><lastmod>${d}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>\n`).join('') + '</urlset>');
 }
 
 /* ---------------- páginas ---------------- */

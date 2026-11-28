@@ -156,12 +156,12 @@ export function resumoGoogle(t, max = 155) {
   if (s.length <= max) return s;
   return s.slice(0, max - 1).replace(/[\s,;:.]+\S*$/, '') + '…';
 }
-export function pagina({ titulo, descricao, canonico, h1, data, corpo, ld, rodape }) {
+export function pagina({ titulo, descricao, canonico, h1, data, corpo, ld, rodape, imagem, script }) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
-<meta name="robots" content="index,follow"><meta name="theme-color" content="#070b14"><link rel="icon" href="/icone-192.png">
+<meta name="robots" content="index,follow,max-image-preview:large"><meta name="theme-color" content="#070b14"><link rel="icon" href="/icone-192.png">
 <meta property="og:type" content="article"><meta property="og:title" content="${esc(titulo)}"><meta property="og:description" content="${esc(descricao)}">
-<meta property="og:url" content="${canonico}"><meta property="og:image" content="${SITE}/previa-link-mercado-macro.png?v=3"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:url" content="${canonico}"><meta property="og:image" content="${imagem || SITE + '/previa-link-mercado-macro.png?v=3'}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image">
 ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}
 <style>${CSS}</style></head><body><main>
 <div class="top"><a href="/" aria-label="Mercado Macro"><picture><source media="(prefers-color-scheme: light)" srcset="/logo-mercado-macro-claro.png"><img src="/logo-mercado-macro-340.png" alt="Mercado Macro" width="340" height="70"></picture></a><a class="cta" href="/entrar">Ver o painel ao vivo</a></div>
@@ -171,7 +171,7 @@ ${corpo}
 <div class="box"><strong>Acompanhe o mercado ao vivo.</strong> No Mercado Macro você vê cotações em tempo real, mapa de calor, agenda econômica, fluxo do estrangeiro e notícias num só lugar. <a href="/#cadastrar">Testar grátis por 48 horas</a></div>
 <footer>${rodape || 'Dados de fontes públicas (Banco Central, Tesouro Direto e dados de mercado), registrados após o fechamento. Podem ter atraso ou diferenças em relação à fonte oficial.'} Conteúdo informativo, não é recomendação de investimento.
 <br><a href="${BASE}">Todos os fechamentos</a> · <a href="/indicadores-hoje">Indicadores de hoje</a> · <a href="/balanca-comercial">Balança comercial</a> · <a href="/calculadora-renda-fixa">Calculadora de renda fixa</a> · <a href="/telegram?de=rodape" target="_blank" rel="noopener">Canal no Telegram</a> · <a href="/radar?de=rodape" target="_blank" rel="noopener">Radar no WhatsApp</a> · <a href="https://open.spotify.com/show/4qRUZmmORVnr9dSowJXhIs" target="_blank" rel="noopener">Podcast no Spotify</a> · <a href="/privacidade">Privacidade</a></footer>
-</main></body></html>`;
+</main>${script ? `<script src="${script}"></script>` : ''}</body></html>`;
 }
 
 export function resposta(s, status = 200) {

@@ -39,6 +39,8 @@ async function tabela(env) {
   // 23/11/2026: números do terminal guardados com a matéria (quadro "Números do terminal")
   const cols = (await env.DB.prepare('PRAGMA table_info(jornal)').all()).results.map((c) => c.name);
   if (!cols.includes('dados')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN dados TEXT').run();
+  // 27/11/2026 (SEO): quando uma matéria publicada é editada, a data de atualização vai para o Google (dateModified)
+  if (!cols.includes('atualizado')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN atualizado INTEGER').run();
   tabelaOk = true;
 }
 async function ligado(env) {
@@ -226,10 +228,10 @@ async function rodadas(env) {
 
 /* ---------------- administrador: /api/admin/jornal ---------------- */
 const linha = (r) => ({ id: r.id, slug: r.slug, tipo: r.tipo, tipoNome: TIPOS[r.tipo] || r.tipo, secao: r.secao, titulo: r.titulo, linha_fina: r.linha_fina,
-  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
+  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, atualizado: r.atualizado || null, dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
 async function limparCache(slug) {
   if (typeof caches === 'undefined') return;
-  const ps = ['/jornal', '/jornal/rss.xml', '/jornal/hoje.json', '/sitemap.xml', ...(slug ? ['/jornal/' + slug] : [])];
+  const ps = ['/jornal', '/jornal/rss.xml', '/jornal/hoje.json', '/jornal/sitemap-news.xml', '/sitemap.xml', '/dolar-hoje', '/ibovespa-hoje', '/selic-e-cdi-hoje', ...(slug ? ['/jornal/' + slug] : [])];
   await Promise.all(ps.map((p) => caches.default.delete(new Request(SITE + p)).catch(() => false)));
 }
 // 25/11/2026 (Dante): leituras do Jornal por matéria e por origem (Google, Terminal, Telegram...), somadas por dia.
@@ -292,7 +294,7 @@ export async function apiAdminJornal(req, env, json) {
     const pars = String(b.corpo || '').split(/\n\s*\n/).map((p) => p.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 12);
     const secao = SECOES.includes(b.secao) ? b.secao : r.secao;
     if (titulo.length < 10 || !pars.length) return json({ erro: 'Título e texto não podem ficar vazios.' }, 400);
-    await env.DB.prepare('UPDATE jornal SET titulo = ?, linha_fina = ?, corpo = ?, secao = ? WHERE id = ?').bind(titulo, linhaFina, JSON.stringify(pars), secao, id).run();
+    await env.DB.prepare("UPDATE jornal SET titulo = ?, linha_fina = ?, corpo = ?, secao = ?, atualizado = CASE WHEN status = 'publicada' THEN ? ELSE atualizado END WHERE id = ?").bind(titulo, linhaFina, JSON.stringify(pars), secao, Date.now(), id).run();
     if (r.status === 'publicada') await limparCache(r.slug);
     return json({ ok: true });
   }
@@ -372,11 +374,11 @@ footer{max-width:1180px;margin:0 auto;padding:18px 16px 30px;border-top:3px doub
 @media (max-width:560px){.grade{grid-template-columns:1fr}.topo .lema-topo{display:none}.mat .corpo p{font-size:18px}}
 `;
 
-function moldura({ titulo, descricao, canonico, ld, corpo, faixa = '', tipoOg = 'website' }) {
+function moldura({ titulo, descricao, canonico, ld, corpo, faixa = '', tipoOg = 'website', imagem = '' }) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
 <meta property="og:type" content="${tipoOg}"><meta property="og:site_name" content="Mercado Macro"><meta property="og:title" content="${esc(titulo)}"><meta property="og:description" content="${esc(descricao)}">
-<meta property="og:url" content="${canonico}"><meta property="og:image" content="${SITE}/previa-link-mercado-macro.png?v=3"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:url" content="${canonico}"><meta property="og:image" content="${imagem || SITE + '/previa-link-mercado-macro.png?v=3'}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary_large_image"><meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="alternate" type="application/rss+xml" title="Jornal Mercado Macro" href="${SITE}/jornal/rss.xml">
 <link rel="icon" href="/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700&display=swap">
@@ -386,7 +388,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <header class="cab"><div class="nome"><a href="/jornal">Jornal Mercado Macro</a></div><div class="lema">Economia e mercados, todo dia útil</div></header>
 ${faixa}
 <main>${corpo}</main>
-<footer><span>© Mercado Macro · Conteúdo informativo, não é recomendação de investimento.</span><span><a href="/jornal/rss.xml">RSS</a> · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a></span></footer>
+<footer><span>© Mercado Macro · Conteúdo informativo, não é recomendação de investimento.</span><span><a href="/jornal/sobre">Quem somos e política editorial</a> · <a href="/jornal/rss.xml">RSS</a> · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a></span></footer>
 </body></html>`;
 }
 
@@ -430,16 +432,35 @@ export function quadroHtml(q) {
   return `<section class="quadro sans"><h2>${esc(q.rotulo || 'Números do terminal')}</h2><table><tbody>${q.itens.map((i) => `<tr><th scope="row">${esc(i.nome)}</th><td>${num(i.v, i.cas ?? 2)}</td><td>${varp(i.ch)}</td></tr>`).join('')}</tbody></table>${acoes('Maiores altas do Ibovespa', q.altas)}${acoes('Maiores baixas do Ibovespa', q.baixas)}<p class="qn">Dados do terminal Mercado Macro no momento da matéria. <a href="/indicadores-hoje">Ver indicadores de agora</a></p></section>`;
 }
 
+// imagem de compartilhamento por assunto, 1200x630 (27/11/2026, SEO): mesma regra de site/jornal-faixa.js, primeira opção
+const IMG_ASSUNTO = [
+  [/petr[óo]leo|brent|opep|combust[íi]vel|petrobras/i, 'petroleo'], [/bitcoin|cripto|ethereum/i, 'cripto'], [/\bouro\b|gold/i, 'ouro'],
+  [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, 'tecnologia'], [/embraer|avi[ãa]o|aeronave|a[ée]rea/i, 'aviao'],
+  [/\bfed\b|powell|fomc|treasur/i, 'fed'],
+  [/(ibovespa|bolsa|a[çc][õo]es)[^\s,;:]*\s+(\S+\s+){0,2}(cai|caiu|recua|recuou|despenca|perde|afunda|fecha em (queda|baixa)|em queda|em baixa)/i, 'queda'],
+  [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, 'bolsa'], [/fazenda|fiscal|congresso|governo|lula|haddad|bras[íi]lia|minist|\bpec\b|copom|selic|or[çc]amento/i, 'brasilia'],
+  [/d[óo]lar|c[âa]mbio|\breal\b/i, 'cambio'], [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa|china|[áa]sia/i, 'wallstreet']];
+const IMG_SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'mesa', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2' };
+export function imagemMateria(m) {
+  const t = m.titulo || '';
+  const a = IMG_ASSUNTO.find(([re]) => re.test(t));
+  const nome = a ? a[1] : m.tipo === 'abertura' ? 'nyse' : m.tipo === 'fechamento' ? 'mesa' : IMG_SECAO[m.secao] || 'mesa';
+  return `${SITE}/jornal-img/og/${nome}.jpg`;
+}
+
 export function paginaMateria(m, previa = false, outras = []) {
   const url = `${SITE}/jornal/${m.slug}`;
   const quando = m.publicado || m.criado;
   const enc = encodeURIComponent;
+  const imagem = imagemMateria(m);
+  const mudou = m.atualizado && m.atualizado > quando + 10 * 60000 ? m.atualizado : null;
   const ld = { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: m.titulo, description: m.linha_fina, datePublished: new Date(quando).toISOString(),
-    dateModified: new Date(quando).toISOString(), mainEntityOfPage: url, image: [`${SITE}/previa-link-mercado-macro.png?v=3`], articleSection: m.secao,
-    author: { '@type': 'Organization', name: 'Redação Mercado Macro', url: SITE }, publisher: { '@type': 'Organization', name: 'Mercado Macro', logo: { '@type': 'ImageObject', url: `${SITE}/logo-mercado-macro.png` } } };
+    dateModified: new Date(mudou || quando).toISOString(), mainEntityOfPage: url, image: [imagem], articleSection: m.secao, inLanguage: 'pt-BR', isAccessibleForFree: true,
+    author: { '@type': 'Organization', name: 'Redação Mercado Macro', url: `${SITE}/jornal/sobre` },
+    publisher: { '@type': 'NewsMediaOrganization', name: 'Mercado Macro', url: SITE, publishingPrinciples: `${SITE}/jornal/sobre`, logo: { '@type': 'ImageObject', url: `${SITE}/logo-mercado-macro.png` } } };
   const corpo = `<article class="mat">${previa ? '<div class="previa">Prévia: esta matéria ainda não foi publicada.</div>' : ''}
 <p class="kick">${esc(m.secao)} · ${esc(TIPOS[m.tipo] || '')}</p><h1>${esc(m.titulo)}</h1><p class="lf">${esc(m.linha_fina)}</p>
-<p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar.</p>
+<p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}${mudou ? ` · atualizado ${esc(dataCurta(mudou))}` : ''}<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar. <a href="/jornal/sobre">Como fazemos</a></p>
 <div class="corpo">${corpoComLinks(m.corpo)}</div>
 ${quadroHtml(m.dados)}
 ${m.fontes.length ? `<section class="fontes"><h2>Fontes</h2><ul>${m.fontes.map((f) => `<li>${esc(f.f)}: <a href="${esc(f.link)}" rel="noopener nofollow" target="_blank">${esc(f.t)}</a></li>`).join('')}</ul></section>` : ''}
@@ -447,12 +468,14 @@ ${m.fontes.length ? `<section class="fontes"><h2>Fontes</h2><ul>${m.fontes.map((
 <div class="cta"><b>Acompanhe o mercado ao vivo</b>Cotações, notícias traduzidas na hora, agenda econômica e a Jade, assistente de IA, num só terminal. Teste grátis por 48 horas, sem cartão.<br><a href="/entrar?origem=jornal">Testar grátis</a></div>
 ${outras.length ? `<section class="leia sans"><h2>Leia também</h2><ul>${outras.map((o) => `<li><a href="/jornal/${esc(o.slug)}">${esc(o.titulo)}</a><span class="hora">${esc(o.secao)} · ${esc(dataCurta(o.publicado))}</span></li>`).join('')}</ul></section>` : ''}
 <p class="aviso">Conteúdo informativo, sem recomendação de compra ou venda de ativos. Números de fontes públicas e de mercado, sujeitos a revisão.</p></article>`;
-  return moldura({ titulo: `${m.titulo} | Jornal Mercado Macro`, descricao: m.linha_fina, canonico: url, ld, corpo, tipoOg: 'article' });
+  return moldura({ titulo: `${m.titulo} | Jornal Mercado Macro`, descricao: m.linha_fina, canonico: url, ld, corpo, tipoOg: 'article', imagem });
 }
 
 export async function paginaJornal(req, env, p) {
   await tabela(env);
   if (p === '/jornal/rss.xml') return rss(env);
+  if (p === '/jornal/sitemap-news.xml') return sitemapNoticias(env);
+  if (p === '/jornal/sobre' || p === '/jornal/sobre/') return paginaSobre();
   if (p === '/jornal' || p === '/jornal/') {
     const ms = (await env.DB.prepare("SELECT * FROM jornal WHERE status = 'publicada' ORDER BY publicado DESC LIMIT 31").all()).results.map(linha);
     const faixa = await faixaCotacoes(env);
@@ -492,5 +515,43 @@ async function rss(env) {
 
 // sitemap: matérias publicadas
 export async function slugsParaSitemap(env) {
-  try { await tabela(env); return (await env.DB.prepare("SELECT slug, publicado FROM jornal WHERE status = 'publicada' ORDER BY publicado DESC LIMIT 1000").all()).results; } catch (e) { return []; }
+  try { await tabela(env); return (await env.DB.prepare("SELECT slug, publicado, atualizado FROM jornal WHERE status = 'publicada' ORDER BY publicado DESC LIMIT 1000").all()).results; } catch (e) { return []; }
+}
+
+/* Sitemap de notícias do Google (27/11/2026, SEO): só as matérias dos últimos 2 dias, como o Google News pede */
+async function sitemapNoticias(env) {
+  const r = (await env.DB.prepare("SELECT slug, titulo, publicado FROM jornal WHERE status = 'publicada' AND publicado > ? ORDER BY publicado DESC LIMIT 1000").bind(Date.now() - 2 * 86400000).all()).results;
+  const x = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+${r.map((m) => `  <url><loc>${SITE}/jornal/${x(m.slug)}</loc><news:news><news:publication><news:name>Jornal Mercado Macro</news:name><news:language>pt</news:language></news:publication><news:publication_date>${new Date(m.publicado).toISOString()}</news:publication_date><news:title>${x(m.titulo)}</news:title></news:news></url>`).join('\n')}
+</urlset>`;
+  return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=600' } });
+}
+
+/* Quem somos e política editorial (27/11/2026, SEO e transparência): como as matérias são feitas, com IA e revisão,
+   de onde vêm os números, como corrigimos erros e o aviso de que não é recomendação de investimento */
+function paginaSobre() {
+  const url = `${SITE}/jornal/sobre`;
+  const ld = { '@context': 'https://schema.org', '@type': 'AboutPage', name: 'Quem somos e política editorial', url,
+    about: { '@type': 'NewsMediaOrganization', name: 'Mercado Macro', url: SITE, publishingPrinciples: url, correctionsPolicy: url + '#correcoes', email: 'contato@mercadomacro.com.br', logo: `${SITE}/logo-mercado-macro.png` } };
+  const corpo = `<article class="mat"><p class="kick">Institucional</p><h1>Quem somos e política editorial</h1>
+<p class="lf">O Jornal Mercado Macro explica, todo dia útil, o que mexeu com a bolsa, o dólar, os juros e a economia, em português direto.</p>
+<div class="corpo">
+<h2>Quem somos</h2>
+<p>O Mercado Macro é um terminal financeiro brasileiro que reúne cotações, indicadores, notícias e ferramentas de análise num só lugar. O Jornal Mercado Macro é a parte editorial do projeto: abertura e fechamento do mercado, os assuntos do dia e explicações sobre economia.</p>
+<h2>Como as matérias são feitas</h2>
+<p>As matérias são escritas com apoio de inteligência artificial, a partir de duas bases: os números registrados pelo próprio terminal no momento da matéria (cotações, juros, indicadores) e notícias de vários veículos, sempre listados no fim de cada texto, na seção Fontes, com link.</p>
+<p>Antes de publicar, cada matéria passa por revisão da equipe do Mercado Macro, que confere os números com os dados do terminal, retira afirmações sem fonte e ajusta o texto. Matérias que não passam na revisão não são publicadas.</p>
+<h2>De onde vêm os números</h2>
+<p>Banco Central, IBGE, Tesouro Direto, B3 e dados de mercado de bolsas do Brasil e do exterior. Quando um número vem de outro veículo, a matéria diz qual. Os números de mercado podem ter atraso de alguns minutos e são revisados pelas fontes oficiais.</p>
+<h2 id="correcoes">Correções</h2>
+<p>Se encontrar um erro, escreva para <a href="mailto:contato@mercadomacro.com.br">contato@mercadomacro.com.br</a>. Erros de informação são corrigidos na própria matéria, que passa a mostrar a data de atualização.</p>
+<h2>Independência e investimentos</h2>
+<p>O conteúdo é informativo e não é recomendação de compra ou venda de ativos. O Jornal não publica conteúdo pago disfarçado de notícia. Antes de investir, avalie seu perfil e, se precisar, procure um profissional certificado.</p>
+<h2>Contato</h2>
+<p><a href="mailto:contato@mercadomacro.com.br">contato@mercadomacro.com.br</a> · <a href="/">Terminal Mercado Macro</a> · <a href="/privacidade">Política de privacidade</a></p>
+</div></article>`;
+  return new Response(moldura({ titulo: 'Quem somos e política editorial | Jornal Mercado Macro', descricao: 'Como o Jornal Mercado Macro faz as matérias: dados do terminal, fontes citadas, apoio de inteligência artificial e revisão antes de publicar.', canonico: url, ld, corpo }),
+    { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
 }
