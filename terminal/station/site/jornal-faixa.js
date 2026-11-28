@@ -6,21 +6,31 @@
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var hora = function (t) { try { return new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }); } catch (e) { return ''; } };
   // 25/11/2026: ilustração por assunto (biblioteca própria em /jornal-img, sem fotos de terceiros, rostos ou marcas)
+  // 27/11/2026: +12 fotos (porto, indústria, B3, agência, agro, China, Congresso, chip, data center, soja, supermercado)
   // 25/11/2026: fotos do pacote do Dante (geradas por IA, /jornal-img/*.webp), escolhidas pelo assunto da matéria
   var IMGS = [
     [/petr[óo]leo|brent|opep|combust[íi]vel|petrobras/i, ['petroleo', 'petroleo2']],
     [/bitcoin|cripto|ethereum/i, ['cripto', 'cripto2']],
     [/\bouro\b|gold/i, ['ouro']],
-    [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, ['tecnologia']],
+    [/data ?cent(er|ro)|nuvem|\bcloud\b/i, ['datacenter', 'chip']],
+    [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, ['chip', 'tecnologia', 'datacenter']],
     [/embraer|avi[ãa]o|aeronave|a[ée]rea/i, ['aviao']],
     [/\bfed\b|powell|fomc|treasur/i, ['fed']],
+    [/china|chin[êe]s|chinesa|pequim|xangai|yuan|[áa]sia/i, ['china']],
+    [/agro|safra|soja|milho|gr[ãa]os|caf[ée]|conab|colheita|lavoura/i, ['agro', 'soja']],
+    [/porto|export|import|balan[çc]a comercial|com[ée]rcio exterior|frete|min[ée]rio/i, ['porto']],
+    [/ind[úu]stria|industrial|\bpmi\b|f[áa]brica|montadora|ve[íi]culos|manufatura/i, ['industria']],
+    [/ipca|infla[çc][ãa]o|pre[çc]os|alimentos|supermercado|varejo|consumo|vendas/i, ['mercado']],
     [/(ibovespa|bolsa|a[çc][õo]es)[^\s,;:]*\s+(\S+\s+){0,2}(cai|caiu|recua|recuou|despenca|perde|afunda|fecha em (queda|baixa)|em queda|em baixa)/i, ['queda']],
-    [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, ['bolsa', 'mesa']],
-    [/fazenda|fiscal|congresso|governo|lula|haddad|bras[íi]lia|minist|\bpec\b|copom|selic|or[çc]amento/i, ['brasilia']],
+    [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, ['bolsa', 'b3', 'mesa']],
+    [/congresso|c[âa]mara|senado|\bpec\b|vota[çc][ãa]o|deputad|senador/i, ['congresso', 'brasilia']],
+    [/bancos?\b|banc[áa]ri|cr[ée]dito|itaú|bradesco|santander|nubank|inadimpl/i, ['agencia', 'reuniao']],
+    [/fazenda|fiscal|governo|lula|haddad|bras[íi]lia|minist|copom|selic|or[çc]amento/i, ['brasilia', 'congresso']],
     [/d[óo]lar|c[âa]mbio|\breal\b/i, ['cambio', 'dolar']],
-    [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa|china|[áa]sia/i, ['wallstreet', 'nyse']]
+    [/fus[ãa]o|aquisi[çc][ãa]o|balan[çc]o|lucro|resultado|\bceo\b|empresa/i, ['reuniao']],
+    [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa/i, ['wallstreet', 'nyse']]
   ];
-  var SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'mesa', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2' };
+  var SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'reuniao', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2', Agro: 'agro' };
   function imagemDe(m, usadas) {
     var t = m.titulo || '', op = null;
     for (var i = 0; i < IMGS.length && !op; i++) if (IMGS[i][0].test(t)) op = IMGS[i][1];
