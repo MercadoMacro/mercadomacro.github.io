@@ -46,7 +46,7 @@
     caixa.innerHTML = '<header><b><i class="fas fa-newspaper" aria-hidden="true"></i> Jornal de hoje</b><span class="jh-sub">Os principais movimentos do mercado, explicados</span><a href="/jornal" target="_blank" rel="noopener">Ver o Jornal <span aria-hidden="true">→</span></a></header>'
       + '<div class="jh-lista">' + itens.map(function (m) {
         return '<a class="jh-it" href="/jornal/' + encodeURIComponent(m.slug) + '?de=terminal" target="_blank" rel="noopener">'
-          + '<img class="jh-img" src="/jornal-img/' + imagemDe(m, usadas) + '.webp?v=1" alt="" width="360" height="480" loading="lazy" decoding="async">'
+          + '<img class="jh-img" src="/jornal-img/' + imagemDe(m, usadas) + '.webp?v=2" alt="" width="360" height="480" loading="lazy" decoding="async">'
           + '<div class="jh-tx"><small>' + esc(m.tipo) + ' · ' + esc(hora(m.publicado)) + '</small><strong>' + esc(m.titulo) + '</strong><span class="jh-lf">' + esc(m.linha_fina) + '</span>'
           + '<em>Ler matéria →</em></div></a>';
       }).join('') + '</div>';
