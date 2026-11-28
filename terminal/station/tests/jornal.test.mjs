@@ -126,7 +126,7 @@ test('links internos só na primeira vez e no máximo 3; quadro com os números 
   const t = quadroHtml(q);
   assert.ok(t.includes('128.501') && t.includes('5,412') && t.includes('+1,23%') && t.includes('-0,50%') && t.includes('PETR4'));
   assert.equal(quadroHtml(null), '');
-  assert.ok(INSTRUCOES_JORNAL.includes('Ibovespa hoje:'));
+  assert.ok(INSTRUCOES_JORNAL.includes('NÃO use prefixo') && INSTRUCOES_JORNAL.includes('impacto'));
 });
 
 test('Gemini sobrecarregado: a matéria sai pela IA de reserva da Cloudflare', async () => {
@@ -139,4 +139,18 @@ test('Gemini sobrecarregado: a matéria sai pela IA de reserva da Cloudflare', a
   assert.ok(r.ok, JSON.stringify(r));
   assert.equal(pedidos.length, 1);
   assert.match(db.prepare('SELECT modelo FROM jornal WHERE id = ?').get(r.id).modelo, /reserva/);
+});
+
+test('capa nova: título sem prefixo, impacto e termômetro', async () => {
+  const { tituloLimpo, lerImpacto, termometro, impactoDe } = await import('../src/jornal.js');
+  assert.equal(tituloLimpo('Ibovespa hoje: Índice encerra estável e dólar despenca com efeito Trabuco'), 'Índice encerra estável e dólar despenca com efeito Trabuco');
+  assert.equal(tituloLimpo('Petrobras: Confirmação de Trabuco na Fazenda derruba dólar e pressiona ações'), 'Confirmação de Trabuco na Fazenda derruba dólar e pressiona ações');
+  assert.equal(tituloLimpo('Quebra de banco nos EUA: ok'), 'Quebra de banco nos EUA: ok');
+  assert.equal(tituloLimpo('Dólar cai 6,6% na semana'), 'Dólar cai 6,6% na semana');
+  assert.deepEqual(lerImpacto({ bolsa: 'alta', dolar: 'sobe', juros: 'queda' }), { bolsa: 'alta', juros: 'queda' });
+  assert.equal(lerImpacto({}), null);
+  assert.deepEqual(impactoDe({ dados: { itens: [{ nome: 'Ibovespa', ch: 1.2 }, { nome: 'Dólar', ch: -0.1 }] } }), { bolsa: 'alta' });
+  const t = termometro({ pregaoDia: '2026-11-26', cards: { ibov: { ch: 6.07 }, dolar: { ch: -2.92 }, sp: { ch: -0.25, dia: '2026-11-25' } }, juros: { pre: { taxa: 14.82 } } }, { juros: { pre: { taxa: 15.15 } } });
+  assert.ok(t.nota >= 80 && t.rotulo === 'Apetite por risco' && t.vet.length === 3);
+  assert.equal(termometro({ cards: { ibov: { ch: 1 } } }, null), null);
 });
