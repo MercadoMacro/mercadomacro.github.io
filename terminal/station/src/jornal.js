@@ -434,13 +434,27 @@ export function quadroHtml(q) {
 
 // imagem de compartilhamento por assunto, 1200x630 (27/11/2026, SEO): mesma regra de site/jornal-faixa.js, primeira opção
 const IMG_ASSUNTO = [
-  [/petr[óo]leo|brent|opep|combust[íi]vel|petrobras/i, 'petroleo'], [/bitcoin|cripto|ethereum/i, 'cripto'], [/\bouro\b|gold/i, 'ouro'],
-  [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, 'tecnologia'], [/embraer|avi[ãa]o|aeronave|a[ée]rea/i, 'aviao'],
+  [/petr[óo]leo|brent|opep|combust[íi]vel|petrobras/i, 'petroleo'],
+  [/bitcoin|cripto|ethereum/i, 'cripto'],
+  [/\bouro\b|gold/i, 'ouro'],
+  [/data ?cent(er|ro)|nuvem|\bcloud\b/i, 'datacenter'],
+  [/nvidia|intelig[êe]ncia artificial|\bias?\b|chip|semicondutor|big techs?|tecnologia/i, 'chip'],
+  [/embraer|avi[ãa]o|aeronave|a[ée]rea/i, 'aviao'],
   [/\bfed\b|powell|fomc|treasur/i, 'fed'],
+  [/china|chin[êe]s|chinesa|pequim|xangai|yuan|[áa]sia/i, 'china'],
+  [/agro|safra|soja|milho|gr[ãa]os|caf[ée]|conab|colheita|lavoura/i, 'agro'],
+  [/porto|export|import|balan[çc]a comercial|com[ée]rcio exterior|frete|min[ée]rio/i, 'porto'],
+  [/ind[úu]stria|industrial|\bpmi\b|f[áa]brica|montadora|ve[íi]culos|manufatura/i, 'industria'],
+  [/ipca|infla[çc][ãa]o|pre[çc]os|alimentos|supermercado|varejo|consumo|vendas/i, 'mercado'],
   [/(ibovespa|bolsa|a[çc][õo]es)[^\s,;:]*\s+(\S+\s+){0,2}(cai|caiu|recua|recuou|despenca|perde|afunda|fecha em (queda|baixa)|em queda|em baixa)/i, 'queda'],
-  [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, 'bolsa'], [/fazenda|fiscal|congresso|governo|lula|haddad|bras[íi]lia|minist|\bpec\b|copom|selic|or[çc]amento/i, 'brasilia'],
-  [/d[óo]lar|c[âa]mbio|\breal\b/i, 'cambio'], [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa|china|[áa]sia/i, 'wallstreet']];
-const IMG_SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'mesa', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2' };
+  [/ibovespa|bolsa|a[çc][õo]es|\bb3\b/i, 'bolsa'],
+  [/congresso|c[âa]mara|senado|\bpec\b|vota[çc][ãa]o|deputad|senador/i, 'congresso'],
+  [/bancos?\b|banc[áa]ri|cr[ée]dito|itaú|bradesco|santander|nubank|inadimpl/i, 'agencia'],
+  [/fazenda|fiscal|governo|lula|haddad|bras[íi]lia|minist|copom|selic|or[çc]amento/i, 'brasilia'],
+  [/d[óo]lar|c[âa]mbio|\breal\b/i, 'cambio'],
+  [/fus[ãa]o|aquisi[çc][ãa]o|balan[çc]o|lucro|resultado|\bceo\b|empresa/i, 'reuniao'],
+  [/eua|trump|tarifa|wall street|nova york|\bny\b|s&p|nasdaq|europa/i, 'wallstreet']];
+const IMG_SECAO = { Mercados: 'bolsa', Economia: 'brasilia', Juros: 'brasilia', 'Câmbio': 'cambio', Empresas: 'reuniao', Internacional: 'wallstreet', Cripto: 'cripto', Commodities: 'petroleo2' };
 export function imagemMateria(m) {
   const t = m.titulo || '';
   const a = IMG_ASSUNTO.find(([re]) => re.test(t));
