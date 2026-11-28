@@ -31,7 +31,29 @@ export async function salvarFechamento(env, d) {
   delete dados.texto; delete dados.legenda; delete dados.modo;
   const r = await env.DB.prepare('INSERT OR IGNORE INTO fechamentos (dia, dados, criado) VALUES (?, ?, ?)')
     .bind(d.pregaoDia, JSON.stringify(dados), Date.now()).run();
+  if (r.meta?.changes) { try { await corrigirAnterior(env, dados); } catch (e) { /* fica como está */ } }
   return !!r.meta?.changes;
+}
+
+// 28/11/2026: o fechamento é gravado às 18h, às vezes antes do número final (em 26/11 o Ibovespa ficou 175.467, o oficial foi 176.799).
+// No pregão seguinte, o "fechamento anterior" de cada cotação é o número final: corrige o dia anterior gravado com ele.
+export function corrigirComFinal(ant, hoje) {
+  let mudou = false;
+  const cards = { ...(ant.cards || {}) };
+  for (const [k, c] of Object.entries(hoje.cards || {})) {
+    const v = cards[k];
+    if (!v || v.v == null || c?.a == null || !isFinite(c.a) || c.dia !== hoje.pregaoDia || v.dia !== ant.pregaoDia) continue;
+    if (Math.abs(c.a - v.v) / c.a < 0.0005) continue;
+    cards[k] = { ...v, v: c.a, ch: v.a ? (c.a / v.a - 1) * 100 : v.ch, corrigido: true };
+    mudou = true;
+  }
+  return mudou ? { ...ant, cards } : null;
+}
+async function corrigirAnterior(env, hoje) {
+  const r = await env.DB.prepare('SELECT dia, dados FROM fechamentos WHERE dia < ? ORDER BY dia DESC LIMIT 1').bind(hoje.pregaoDia).first();
+  if (!r) return;
+  const novo = corrigirComFinal(JSON.parse(r.dados), hoje);
+  if (novo) await env.DB.prepare('UPDATE fechamentos SET dados = ? WHERE dia = ?').bind(JSON.stringify(novo), r.dia).run();
 }
 
 // se o fechamento de hoje foi gravado sem a taxa do Tesouro, completa na mesma noite (as taxas do dia ficam até a manhã seguinte)

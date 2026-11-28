@@ -41,6 +41,7 @@ async function tabela(env) {
   if (!cols.includes('dados')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN dados TEXT').run();
   // 27/11/2026 (SEO): quando uma matéria publicada é editada, a data de atualização vai para o Google (dateModified)
   if (!cols.includes('atualizado')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN atualizado INTEGER').run();
+  if (!cols.includes('impacto')) await env.DB.prepare('ALTER TABLE jornal ADD COLUMN impacto TEXT').run();
   tabelaOk = true;
 }
 async function ligado(env) {
@@ -52,11 +53,12 @@ async function ligado(env) {
 export const INSTRUCOES_JORNAL = `Você é editor do Jornal Mercado Macro, a redação de um terminal financeiro brasileiro. Escreve matérias curtas, claras e neutras, no estilo de um jornal de economia (Wall Street Journal, Valor Econômico), para o público brasileiro.
 Você recebe: o tipo de matéria, números e agenda vindos do próprio terminal (quando houver) e uma lista numerada de manchetes de vários veículos, com horário de Brasília.
 Responda SOMENTE com um objeto JSON, sem nada antes ou depois, neste formato:
-{"secao": "Mercados", "titulo": "...", "linha_fina": "...", "paragrafos": ["...", "..."], "fontes": [3, 7, 12]}
+{"secao": "Mercados", "titulo": "...", "linha_fina": "...", "paragrafos": ["...", "..."], "fontes": [3, 7, 12], "impacto": {"bolsa": "alta", "dolar": "queda", "juros": "queda"}}
 Regras:
-- secao: uma destas: Mercados, Economia, Juros, Câmbio, Empresas, Internacional, Cripto, Commodities.
+- secao: uma destas: Mercados (bolsa e dólar no dia), Economia (atividade, inflação, contas públicas, governo), Juros (Selic, Copom, Tesouro, juros futuros), Câmbio, Empresas (uma empresa ou setor específico), Internacional (EUA, Europa, China e o resto do mundo), Cripto, Commodities (petróleo, minério, agro). Escolha a que mais combina com o assunto, não use Mercados por padrão.
 - titulo: até 90 caracteres, informativo, sem ponto final, sem pergunta, sem exagero nem sensacionalismo. Pode ter número.
-- O título precisa ser achado no Google: comece pelo termo que as pessoas pesquisam. No FECHAMENTO, comece com "Ibovespa hoje:" ou "Dólar hoje:" (o que mais se destacou no dia). Na ABERTURA, comece com "Mercado hoje:". No ASSUNTO DO DIA, comece pelo nome do assunto (a empresa, o indicador ou o tema, como "Petrobras", "Copom", "Inflação", "Bitcoin"). Escreva os nomes como as pessoas escrevem (Ibovespa, dólar, Selic, IPCA, Petrobras, Vale).
+- Comece o título pelo fato que mexeu com o mercado (por exemplo: "Trabuco na Fazenda faz Bolsa disparar e derruba o dólar"). NÃO use prefixo com dois-pontos como "Ibovespa hoje:", "Mercado hoje:" ou "Petrobras:": o tipo da matéria já aparece numa etiqueta acima do título. Cite no título o ativo ou indicador principal com o nome que as pessoas pesquisam (Ibovespa, dólar, Selic, IPCA, Petrobras, Vale).
+- impacto: a direção do dia para bolsa brasileira, dólar e juros, SOMENTE quando os dados ou as manchetes mostram essa direção ("alta" ou "queda"). Deixe de fora a chave sem direção clara; se nenhuma tiver, mande {}.
 - linha_fina: uma frase de 120 a 200 caracteres que completa o título.
 - paragrafos: de 4 a 6 parágrafos, de 2 a 4 frases cada, de 280 a 480 palavras no total. O primeiro diz o mais importante (o quê, quanto, por quê). Os outros dão contexto, números e o que vem pela frente na agenda.
 - Use SOMENTE os números, nomes, datas e fatos recebidos. Não invente nada, não arredonde de outro jeito e não calcule números novos. Se não tiver um dado, não fale dele.
@@ -91,7 +93,13 @@ export function lerMateria(texto, ms) {
   const nums = [...new Set((Array.isArray(j.fontes) ? j.fontes : []).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= ms.length))].slice(0, 8);
   const fontes = nums.map((n) => { const m = ms[n - 1]; return { t: m.titulo, f: m.fonte === 'Google News' && m.veiculo ? m.veiculo : m.fonte, link: m.link }; })
     .filter((x) => /^https?:\/\//i.test(x.link || ''));
-  return { secao: SECOES.includes(j.secao) ? j.secao : 'Mercados', titulo: titulo.slice(0, 120), linha_fina: linha.slice(0, 260), paragrafos: pars, fontes };
+  return { secao: SECOES.includes(j.secao) ? j.secao : 'Mercados', titulo: titulo.slice(0, 120), linha_fina: linha.slice(0, 260), paragrafos: pars, fontes, impacto: lerImpacto(j.impacto) };
+}
+// 28/11/2026: selo "Impacto: Bolsa ↑ · Dólar ↓ · Juros ↓" (só alta/queda; o resto é ignorado)
+export function lerImpacto(x) {
+  const o = {};
+  if (x && typeof x === 'object') for (const k of ['bolsa', 'dolar', 'juros']) if (x[k] === 'alta' || x[k] === 'queda') o[k] = x[k];
+  return Object.keys(o).length ? o : null;
 }
 
 // números do fechamento em linhas simples
@@ -177,9 +185,9 @@ export async function gerarMateria(env, tipo, { agora = Date.now(), chave = null
   if (!m) return { erro: 'a IA respondeu fora do formato' };
   let slug = `${dia}-${slugify(m.titulo)}`;
   if (await env.DB.prepare('SELECT 1 FROM jornal WHERE slug = ?').bind(slug).first()) slug += '-' + String(agora).slice(-4);
-  const ins = await env.DB.prepare(`INSERT OR IGNORE INTO jornal (slug, chave, tipo, secao, titulo, linha_fina, corpo, fontes, status, criado, modelo, dados)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'rascunho', ?, ?, ?)`)
-    .bind(slug, chave, tipo, m.secao, m.titulo, m.linha_fina, JSON.stringify(m.paragrafos), JSON.stringify(m.fontes), agora, r.modelo || null, quadro ? JSON.stringify(quadro) : null).run();
+  const ins = await env.DB.prepare(`INSERT OR IGNORE INTO jornal (slug, chave, tipo, secao, titulo, linha_fina, corpo, fontes, status, criado, modelo, dados, impacto)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'rascunho', ?, ?, ?, ?)`)
+    .bind(slug, chave, tipo, m.secao, m.titulo, m.linha_fina, JSON.stringify(m.paragrafos), JSON.stringify(m.fontes), agora, r.modelo || null, quadro ? JSON.stringify(quadro) : null, m.impacto ? JSON.stringify(m.impacto) : null).run();
   if (!ins.meta.changes) return { erro: 'já gerada', ja: true };
   if (avisar && deps.avisar) await deps.avisar(env, 'Jornal: matéria para aprovar', `${TIPOS[tipo]} · ${m.titulo}\n\nVeja, edite e aprove em ${SITE}/admin#jornal`).catch(() => {});
   return { ok: true, id: ins.meta.last_row_id, slug, titulo: m.titulo };
@@ -228,10 +236,10 @@ async function rodadas(env) {
 
 /* ---------------- administrador: /api/admin/jornal ---------------- */
 const linha = (r) => ({ id: r.id, slug: r.slug, tipo: r.tipo, tipoNome: TIPOS[r.tipo] || r.tipo, secao: r.secao, titulo: r.titulo, linha_fina: r.linha_fina,
-  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, atualizado: r.atualizado || null, dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
+  corpo: JSON.parse(r.corpo || '[]'), fontes: JSON.parse(r.fontes || '[]'), status: r.status, criado: r.criado, publicado: r.publicado, atualizado: r.atualizado || null, impacto: (() => { try { return r.impacto ? JSON.parse(r.impacto) : null; } catch (e) { return null; } })(), dados: (() => { try { return r.dados ? JSON.parse(r.dados) : null; } catch (e) { return null; } })() });
 async function limparCache(slug) {
   if (typeof caches === 'undefined') return;
-  const ps = ['/jornal', '/jornal/rss.xml', '/jornal/hoje.json', '/jornal/sitemap-news.xml', '/sitemap.xml', '/dolar-hoje', '/ibovespa-hoje', '/selic-e-cdi-hoje', ...(slug ? ['/jornal/' + slug] : [])];
+  const ps = ['/jornal', ...['Mercados', 'Economia', 'Juros', 'Empresas', 'Internacional', 'Commodities'].map((f) => '/jornal?secao=' + encodeURIComponent(f)), '/jornal/rss.xml', '/jornal/hoje.json', '/jornal/sitemap-news.xml', '/sitemap.xml', '/dolar-hoje', '/ibovespa-hoje', '/selic-e-cdi-hoje', ...(slug ? ['/jornal/' + slug] : [])];
   await Promise.all(ps.map((p) => caches.default.delete(new Request(SITE + p)).catch(() => false)));
 }
 // 25/11/2026 (Dante): leituras do Jornal por matéria e por origem (Google, Terminal, Telegram...), somadas por dia.
@@ -346,6 +354,23 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 .ler{display:inline-block;margin:10px 0 2px;font:700 14px Inter,system-ui,sans-serif;color:var(--tinta);border-bottom:2px solid var(--tinta);padding-bottom:1px}.ler:hover{text-decoration:none;opacity:.75}
 .grade h3{font:700 21px/1.22 'Playfair Display',Georgia,serif;margin:0 0 6px}.grade p{margin:0;color:#333;font-size:15.5px}
 .vazio{text-align:center;color:var(--cinza);padding:40px 0}
+.est::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#c58a00;margin:0 5px 1px 0}.est.on::before{background:#0a7a3d}
+.imp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;font-size:12px}.imp span{font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cinza);font-size:10.5px}
+.imp b{border:1px solid currentColor;border-radius:4px;padding:2px 7px;font-weight:700;font-variant-numeric:tabular-nums}
+.grade .imp{margin:10px 0 0;position:relative;z-index:1}
+.termo{background:var(--tinta);color:#f3efe6;border-radius:8px;padding:16px;margin:0 0 20px}
+.termo .tk{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#d9b15a;margin:0}.termo h3{font:700 19px/1.2 'Playfair Display',Georgia,serif;letter-spacing:0;text-transform:none;border:0;margin:2px 0 0;padding:0;color:#fff}
+.termo .td{font-size:12px;color:#b9b3a6;margin:2px 0 10px}.termo .tn b{font:700 34px/1 Inter,system-ui,sans-serif}.termo .tn span{font-size:13px;color:#d8d2c4;margin-left:6px}
+.termo .tb{height:8px;border-radius:99px;background:linear-gradient(90deg,#b4231b,#c58a00 50%,#0a7a3d);margin:10px 0 12px;position:relative}.termo .tb i{position:absolute;left:0;top:-3px;bottom:-3px;border-right:3px solid #fff;border-radius:2px}
+.termo ul{margin:0 0 12px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}.termo li{list-style:none;border:1px solid #3a3a3a;border-radius:6px;padding:6px 8px;font-size:11.5px;color:#b9b3a6;display:flex;justify-content:space-between;gap:6px}
+.termo li b{color:#f3efe6}.termo li b.up{color:#4cc38a}.termo li b.dn{color:#ff7a70}.termo a{display:block;text-align:center;border:1px solid #d9b15a;color:#f0d28a;border-radius:6px;padding:8px;font-weight:700;font-size:13px}
+.pregao .tag{display:inline-block;font:700 10px Inter,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;background:var(--tinta);color:#fff;border-radius:3px;padding:2px 6px;margin:0 0 5px}.pregao li a{display:block}
+.lado h3+ul+h3,.lado .termo+h3{margin-top:6px}.lado ul+h3{margin-top:18px}
+section.cta.cta-capa{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin:22px 0 4px;background:var(--tinta);color:#e9e4d8;border:0;border-radius:8px}
+section.cta-capa b{color:#fff}section.cta-capa div:first-child{max-width:640px}section.cta.cta-capa a{background:#d9b15a;color:var(--tinta);margin:0}section.cta-capa span{display:block;font-size:12px;color:#b9b3a6;margin-top:6px;text-align:center}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 0}.filtros a{border:1px solid var(--fio);background:#fff;border-radius:999px;padding:6px 13px;font-size:13px;font-weight:600}.filtros a.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}.filtros a:hover{text-decoration:none;border-color:var(--tinta)}
+.canal{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;border:1px solid var(--fio);background:#fff;border-radius:8px;padding:18px;margin:28px 0 0;font-size:15px;line-height:1.5}
+.canal b{display:block;font:700 20px/1.3 'Playfair Display',Georgia,serif;margin:4px 0}.canal a{background:#229ED9;color:#fff;border-radius:6px;padding:11px 16px;font-weight:700}
 .mat{max-width:720px;margin:0 auto}
 .mat h1{font:700 clamp(28px,4.4vw,44px)/1.12 'Playfair Display',Georgia,serif;margin:4px 0 12px}
 .mat .lf{font-size:20px;line-height:1.45;color:#333;margin:0 0 16px}
@@ -378,7 +403,9 @@ footer{max-width:1180px;margin:0 auto;padding:18px 16px 30px;border-top:3px doub
 @media (max-width:560px){.grade{grid-template-columns:1fr}.topo .lema-topo{display:none}.mat .corpo p{font-size:18px}}
 `;
 
-function moldura({ titulo, descricao, canonico, ld, corpo, faixa = '', tipoOg = 'website', imagem = '' }) {
+function moldura({ titulo, descricao, canonico, ld, corpo, faixa = '', tipoOg = 'website', imagem = '', ultima = null }) {
+  const agora = Date.now();
+  const estado = `${esc(estadoMercado(agora))}${ultima ? `<span class="lema-topo"> · última matéria ${esc(dataCurta(ultima))}</span>` : ''}`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(titulo)}</title><meta name="description" content="${esc(descricao)}"><link rel="canonical" href="${canonico}">
 <meta property="og:type" content="${tipoOg}"><meta property="og:site_name" content="Mercado Macro"><meta property="og:title" content="${esc(titulo)}"><meta property="og:description" content="${esc(descricao)}">
@@ -388,7 +415,7 @@ function moldura({ titulo, descricao, canonico, ld, corpo, faixa = '', tipoOg = 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700&display=swap">
 ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}
 <style>${CSS}</style></head><body>
-<div class="topo sans"><span><span class="lema-topo">${esc(dataLonga(Date.now()))} · </span><a href="/jornal">Últimas</a> · <a href="/fechamento-do-mercado">Fechamento</a> · <a href="/indicadores-hoje">Indicadores</a></span><a class="bt" href="/?origem=jornal">Abrir o terminal</a></div>
+<div class="topo sans"><span><span class="lema-topo">${esc(dataLonga(agora))} · </span><span class="est${estadoMercado(agora) === 'Mercado aberto' ? ' on' : ''}">${estado}</span> · <a href="/jornal">Últimas</a> · <a href="/fechamento-do-mercado">Fechamento</a> · <a href="/indicadores-hoje">Indicadores</a></span><a class="bt" href="/?origem=jornal">Abrir o terminal</a></div>
 <header class="cab"><div class="nome"><a href="/jornal">Jornal Mercado Macro</a></div><div class="lema">Economia e mercados, todo dia útil</div></header>
 ${faixa}
 <main>${corpo}</main>
@@ -472,6 +499,65 @@ export function imagemMateria(m) {
   return `${SITE}/jornal-img/og/${nome}.jpg`;
 }
 
+/* ---------- capa nova (28/11/2026): etiqueta, título sem prefixo, selo de impacto, termômetro, filtros ---------- */
+// link do canal público do Telegram (vazio = o bloco "Receba às 8h e às 18h" não aparece)
+export const CANAL_TELEGRAM = 'https://t.me/mercado_macro';
+// "Ibovespa hoje: Bolsa dispara" vira "Bolsa dispara" (o tipo já aparece na etiqueta); o título guardado fica igual (Google)
+export function tituloLimpo(t) {
+  const s = String(t || '');
+  const m = s.match(/^([^:]{2,28}):\s+(\S.*)$/);
+  if (!m || m[2].length < 20) return s;
+  return m[2].charAt(0).toUpperCase() + m[2].slice(1);
+}
+export function etiqueta(m) { return m.tipo === 'abertura' || m.tipo === 'fechamento' ? TIPOS[m.tipo] : m.secao || 'Mercados'; }
+// direção do dia: a que a IA indicou ou, na abertura e no fechamento, a dos números guardados com a matéria
+export function impactoDe(m) {
+  if (m.impacto) return m.impacto;
+  const it = m.dados?.itens || [];
+  const ch = (re) => { const x = it.find((i) => re.test(i.nome)); return x && x.ch != null && Math.abs(x.ch) >= 0.2 ? (x.ch > 0 ? 'alta' : 'queda') : null; };
+  const o = {}, b = ch(/^ibovespa/i), d = ch(/^d[óo]lar/i);
+  if (b) o.bolsa = b; if (d) o.dolar = d;
+  return Object.keys(o).length ? o : null;
+}
+export function seloImpacto(m) {
+  const i = impactoDe(m);
+  if (!i) return '';
+  const nomes = { bolsa: 'Bolsa', dolar: 'Dólar', juros: 'Juros' };
+  return `<p class="imp sans"><span>Impacto:</span>${Object.entries(i).map(([k, v]) => `<b class="${v === 'alta' ? 'up' : 'dn'}">${nomes[k]} ${v === 'alta' ? '↑' : '↓'}</b>`).join('')}</p>`;
+}
+const minutosLeitura = (m) => Math.max(1, Math.round((m.corpo || []).join(' ').split(/\s+/).length / 200));
+// mercado aberto: dias úteis, 10h às 17h de Brasília (feriados da B3 ficam como "fechado" pela falta de matéria nova)
+export function estadoMercado(agora) {
+  const d = brt(agora), dia = d.getUTCDay(), h = d.getUTCHours();
+  return dia >= 1 && dia <= 5 && h >= 10 && h < 17 ? 'Mercado aberto' : 'Mercado fechado';
+}
+// termômetro do último pregão: bolsa, real, juros do Tesouro e Nova York viram uma nota de 0 a 100
+export function termometro(hoje, ontem) {
+  const c = hoje?.cards || {};
+  const lim = (v, a) => Math.max(-a, Math.min(a, v));
+  const vet = [];
+  if (c.ibov?.ch != null) vet.push({ nome: 'Ações Brasil', v: c.ibov.ch, pts: lim(c.ibov.ch * 6, 15) });
+  if (c.dolar?.ch != null) vet.push({ nome: 'Real', v: -c.dolar.ch, pts: lim(-c.dolar.ch * 8, 15) });
+  const pre = hoje?.juros?.pre?.taxa, preA = ontem?.juros?.pre?.taxa;
+  if (pre != null && preA != null) vet.push({ nome: 'Juros', v: preA - pre, pts: lim((preA - pre) * 30, 10), juros: true });
+  if (c.sp?.ch != null && c.sp.dia === hoje.pregaoDia) vet.push({ nome: 'Nova York', v: c.sp.ch, pts: lim(c.sp.ch * 5, 10) });
+  if (vet.length < 2) return null;
+  const nota = Math.round(Math.max(0, Math.min(100, 50 + vet.reduce((a, x) => a + x.pts, 0))));
+  const rotulo = nota >= 60 ? 'Apetite por risco' : nota <= 40 ? 'Aversão a risco' : 'Neutro';
+  return { nota, rotulo, vet: vet.map((x) => ({ nome: x.nome, estado: x.juros ? (x.v > 0.05 ? 'Alívio' : x.v < -0.05 ? 'Pressão' : 'Estável') : x.v > 0.3 ? 'Forte' : x.v < -0.3 ? 'Fraco' : 'Estável', bom: x.v > (x.juros ? 0.05 : 0.3), ruim: x.v < (x.juros ? -0.05 : -0.3) })) };
+}
+function blocoTermometro(t, dia) {
+  if (!t) return '';
+  return `<div class="termo sans"><p class="tk">Amostra do terminal</p><h3>Termômetro do mercado</h3><p class="td">Último pregão · ${dia.slice(8, 10)}/${dia.slice(5, 7)}</p>
+<div class="tn"><b>${t.nota}</b><span>/100 · ${esc(t.rotulo)}</span></div><div class="tb" role="img" aria-label="Nota ${t.nota} de 100"><i style="width:${t.nota}%"></i></div>
+<ul>${t.vet.map((x) => `<li><span>${esc(x.nome)}</span><b class="${x.bom ? 'up' : x.ruim ? 'dn' : ''}">${esc(x.estado)}</b></li>`).join('')}</ul>
+<a href="/?origem=jornal-termometro">Ver ao vivo no terminal →</a></div>`;
+}
+const FILTROS = ['Mercados', 'Economia', 'Juros', 'Empresas', 'Internacional', 'Commodities'];
+function cartao(m) {
+  return `<article><p class="kick">${esc(etiqueta(m))}</p><h3><a href="/jornal/${m.slug}">${esc(tituloLimpo(m.titulo))}</a></h3><p>${esc(m.linha_fina)}</p>${seloImpacto(m)}<span class="hora">${esc(dataCurta(m.publicado))} · ${minutosLeitura(m)} min de leitura</span></article>`;
+}
+
 export function paginaMateria(m, previa = false, outras = []) {
   const url = `${SITE}/jornal/${m.slug}`;
   const quando = m.publicado || m.criado;
@@ -483,9 +569,9 @@ export function paginaMateria(m, previa = false, outras = []) {
     author: { '@type': 'Organization', name: 'Redação Mercado Macro', url: `${SITE}/jornal/sobre` },
     publisher: { '@type': 'NewsMediaOrganization', name: 'Mercado Macro', url: SITE, publishingPrinciples: `${SITE}/jornal/sobre`, logo: { '@type': 'ImageObject', url: `${SITE}/logo-mercado-macro.png` } } };
   const corpo = `<article class="mat">${previa ? '<div class="previa">Prévia: esta matéria ainda não foi publicada.</div>' : ''}
-<p class="kick">${esc(m.secao)} · ${esc(TIPOS[m.tipo] || '')}</p><h1>${esc(m.titulo)}</h1><p class="lf">${esc(m.linha_fina)}</p>
+<p class="kick">${esc(etiqueta(m))}${m.tipo === 'tema' ? '' : ` · ${esc(m.secao)}`}</p><h1>${esc(tituloLimpo(m.titulo))}</h1><p class="lf">${esc(m.linha_fina)}</p>${seloImpacto(m)}
 <img class="foto" src="${imagem.replace(SITE, '')}" alt="" width="1200" height="630" decoding="async" fetchpriority="high">
-<p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}${mudou ? ` · atualizado ${esc(dataCurta(mudou))}` : ''}<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar. <a href="/jornal/sobre">Como fazemos</a></p>
+<p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}${mudou ? ` · atualizado ${esc(dataCurta(mudou))}` : ''} · ${minutosLeitura(m)} min de leitura<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar. <a href="/jornal/sobre">Como fazemos</a></p>
 <div class="corpo">${corpoComLinks(m.corpo)}</div>
 ${quadroHtml(m.dados)}
 ${m.fontes.length ? `<section class="fontes"><h2>Fontes</h2><ul>${m.fontes.map((f) => `<li>${esc(f.f)}: <a href="${esc(f.link)}" rel="noopener nofollow" target="_blank">${esc(f.t)}</a></li>`).join('')}</ul></section>` : ''}
@@ -502,19 +588,41 @@ export async function paginaJornal(req, env, p) {
   if (p === '/jornal/sitemap-news.xml') return sitemapNoticias(env);
   if (p === '/jornal/sobre' || p === '/jornal/sobre/') return paginaSobre();
   if (p === '/jornal' || p === '/jornal/') {
-    const ms = (await env.DB.prepare("SELECT * FROM jornal WHERE status = 'publicada' ORDER BY publicado DESC LIMIT 31").all()).results.map(linha);
+    const u = new URL(req.url), filtro = FILTROS.includes(u.searchParams.get('secao')) ? u.searchParams.get('secao') : null;
+    const ms = (await env.DB.prepare("SELECT * FROM jornal WHERE status = 'publicada' ORDER BY publicado DESC LIMIT 60").all()).results.map(linha);
     const faixa = await faixaCotacoes(env);
+    const chips = `<nav class="filtros sans" aria-label="Editorias"><a href="/jornal"${filtro ? '' : ' class="on"'}>Todas</a>${FILTROS.map((f) => `<a href="/jornal?secao=${encodeURIComponent(f)}"${f === filtro ? ' class="on"' : ''}>${f}</a>`).join('')}</nav>`;
+    const cta = `<section class="cta cta-capa sans"><div><b>Do noticiário à decisão em segundos</b>Dólar, juros, bolsas do mundo, notícias traduzidas com o impacto no mercado e a Jade, assistente de IA, num só terminal.</div><div><a href="/entrar?origem=jornal-capa">Testar grátis por 48h</a><span>Sem cartão de crédito</span></div></section>`;
+    const canal = CANAL_TELEGRAM ? `<section class="canal sans"><div><span class="kick">Canal grátis no Telegram</span><b>O mercado no seu celular, sem ruído</b>Siga o canal do Mercado Macro no Telegram e acompanhe as matérias do Jornal e os destaques do dia.</div><a href="${esc(CANAL_TELEGRAM)}" target="_blank" rel="noopener">Entrar no canal do Telegram</a></section>` : '';
     let corpo;
     if (!ms.length) corpo = '<p class="vazio">As primeiras matérias saem em breve.</p>';
-    else {
+    else if (filtro) {
+      const lst = ms.filter((m) => m.secao === filtro || (filtro === 'Commodities' && m.secao === 'Cripto') || (filtro === 'Mercados' && m.secao === 'Câmbio'));
+      corpo = `${chips}${lst.length ? `<section class="grade">${lst.map(cartao).join('')}</section>` : '<p class="vazio">Ainda não há matérias desta editoria. <a href="/jornal">Ver todas</a>.</p>'}${cta}`;
+    } else {
+      let fech = null, ant = null;
+      try {
+        const fs = (await env.DB.prepare('SELECT dia, dados FROM fechamentos ORDER BY dia DESC LIMIT 2').all()).results;
+        if (fs[0]) fech = { dia: fs[0].dia, d: JSON.parse(fs[0].dados) };
+        if (fs[1]) ant = JSON.parse(fs[1].dados);
+      } catch (e) { /* sem termômetro */ }
       const [l, ...resto] = ms;
-      const lado = resto.slice(0, 6), grade = resto.slice(6);
-      corpo = `<section class="capa"><div class="lead"><a href="/jornal/${l.slug}" tabindex="-1" aria-hidden="true"><img class="foto" src="${imagemMateria(l).replace(SITE, '')}" alt="" width="1200" height="630" decoding="async"></a><p class="kick">${esc(l.secao)}</p><h2><a href="/jornal/${l.slug}">${esc(l.titulo)}</a></h2><p class="lf">${esc(l.linha_fina)}</p><p>${esc(l.corpo[0] || '')}</p><a class="ler" href="/jornal/${l.slug}">Ler matéria completa <span aria-hidden="true">→</span></a><span class="hora">${esc(dataCurta(l.publicado))}</span></div>
-<aside class="lado"><h3>Mais recentes</h3><ul>${lado.map((m) => `<li><a href="/jornal/${m.slug}">${esc(m.titulo)}</a><span class="hora">${esc(m.secao)} · ${esc(dataCurta(m.publicado))}</span></li>`).join('') || '<li class="hora">As próximas matérias aparecem aqui.</li>'}</ul></aside></section>
-${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="kick">${esc(m.secao)}</p><h3><a href="/jornal/${m.slug}">${esc(m.titulo)}</a></h3><p>${esc(m.linha_fina)}</p><a class="ler" href="/jornal/${m.slug}" tabindex="-1" aria-hidden="true">Ler matéria completa →</a><span class="hora">${esc(dataCurta(m.publicado))}</span></article>`).join('')}</section>` : ''}`;
+      const diaL = diaBR(l.publicado);
+      const pregao = ['abertura', 'fechamento'].map((t) => ms.find((m) => m.tipo === t && diaBR(m.publicado) === diaL)).filter(Boolean);
+      const usados = new Set([l.slug, ...pregao.map((m) => m.slug)]);
+      const lado = resto.filter((m) => !usados.has(m.slug)).slice(0, 5);
+      lado.forEach((m) => usados.add(m.slug));
+      const grade = ms.filter((m) => !usados.has(m.slug)).slice(0, 24);
+      corpo = `<section class="capa"><div class="lead"><a href="/jornal/${l.slug}" tabindex="-1" aria-hidden="true"><img class="foto" src="${imagemMateria(l).replace(SITE, '')}" alt="" width="1200" height="630" decoding="async" fetchpriority="high"></a><p class="kick">${esc(etiqueta(l))}</p><h2><a href="/jornal/${l.slug}">${esc(tituloLimpo(l.titulo))}</a></h2><p class="lf">${esc(l.linha_fina)}</p>${seloImpacto(l)}<p>${esc(l.corpo[0] || '')}</p><a class="ler" href="/jornal/${l.slug}">Ler matéria completa <span aria-hidden="true">→</span></a><span class="hora">Por Redação Mercado Macro · ${esc(dataCurta(l.publicado))} · ${minutosLeitura(l)} min de leitura</span></div>
+<aside class="lado">${fech ? blocoTermometro(termometro(fech.d, ant), fech.dia) : ''}
+${pregao.length ? `<h3>Pregão de ${diaL.slice(8, 10)}/${diaL.slice(5, 7)}</h3><ul class="pregao">${pregao.map((m) => `<li><span class="tag">${esc(TIPOS[m.tipo])}</span><a href="/jornal/${m.slug}">${esc(tituloLimpo(m.titulo))}</a><span class="hora">${esc(dataCurta(m.publicado))}</span></li>`).join('')}</ul>` : ''}
+<h3>Mais recentes</h3><ul>${lado.map((m) => `<li><a href="/jornal/${m.slug}">${esc(tituloLimpo(m.titulo))}</a><span class="hora">${esc(etiqueta(m))} · ${esc(dataCurta(m.publicado))}</span></li>`).join('') || '<li class="hora">As próximas matérias aparecem aqui.</li>'}</ul></aside></section>
+${cta}
+${grade.length ? `${chips}<section class="grade">${grade.map(cartao).join('')}</section>` : chips}
+${canal}`;
     }
-    const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Jornal Mercado Macro', url: `${SITE}/jornal` };
-    return html(moldura({ titulo: 'Jornal Mercado Macro: economia e mercados hoje', descricao: 'Abertura, fechamento e o assunto do dia no mercado brasileiro e internacional, com dados do terminal Mercado Macro.', canonico: `${SITE}/jornal`, ld, corpo, faixa }));
+    const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: filtro ? `Jornal Mercado Macro: ${filtro}` : 'Jornal Mercado Macro', url: `${SITE}/jornal${filtro ? '?secao=' + encodeURIComponent(filtro) : ''}` };
+    return html(moldura({ titulo: filtro ? `${filtro} | Jornal Mercado Macro` : 'Jornal Mercado Macro: economia e mercados hoje', descricao: 'Abertura, fechamento e o assunto do dia no mercado brasileiro e internacional, com dados do terminal Mercado Macro.', canonico: `${SITE}/jornal${filtro ? '?secao=' + encodeURIComponent(filtro) : ''}`, ld, corpo, faixa, ultima: ms[0]?.publicado || null }));
   }
   // 25/11/2026: matérias de hoje (horário de Brasília) para a faixa "Jornal de hoje" na aba Notícias do terminal
   if (p === '/jornal/hoje.json') {

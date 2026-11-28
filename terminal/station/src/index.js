@@ -335,7 +335,10 @@ export default {
 // páginas públicas iguais para todos: guarda 10 minutos no servidor da Cloudflare (poupa leituras do banco)
 async function naBorda(req, ctx, gerar) {
   if (req.method !== 'GET') return gerar();
-  const chave = new Request(new URL(req.url).origin + new URL(req.url).pathname);
+  const u = new URL(req.url);
+  // 28/11/2026: o filtro de editoria do Jornal (?secao=) é outra página; os demais parâmetros (utm, de=terminal) não mudam a página
+  const sec = u.searchParams.get('secao');
+  const chave = new Request(u.origin + u.pathname + (sec ? '?secao=' + encodeURIComponent(sec) : ''));
   const salvo = await caches.default.match(chave);
   if (salvo) return salvo;
   const r = await gerar();
