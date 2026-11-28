@@ -349,6 +349,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 .mat{max-width:720px;margin:0 auto}
 .mat h1{font:700 clamp(28px,4.4vw,44px)/1.12 'Playfair Display',Georgia,serif;margin:4px 0 12px}
 .mat .lf{font-size:20px;line-height:1.45;color:#333;margin:0 0 16px}
+.foto{display:block;width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:6px;margin:0 0 16px;background:#e9e6df}
 .assin{font:13px/1.5 Inter,system-ui,sans-serif;color:var(--cinza);border-top:1px solid var(--fio);border-bottom:1px solid var(--fio);padding:10px 0;margin:0 0 22px}
 .assin b{color:var(--tinta)}
 .mat .corpo p{font-size:19px;line-height:1.7;margin:0 0 18px}
@@ -474,6 +475,7 @@ export function paginaMateria(m, previa = false, outras = []) {
     publisher: { '@type': 'NewsMediaOrganization', name: 'Mercado Macro', url: SITE, publishingPrinciples: `${SITE}/jornal/sobre`, logo: { '@type': 'ImageObject', url: `${SITE}/logo-mercado-macro.png` } } };
   const corpo = `<article class="mat">${previa ? '<div class="previa">Prévia: esta matéria ainda não foi publicada.</div>' : ''}
 <p class="kick">${esc(m.secao)} · ${esc(TIPOS[m.tipo] || '')}</p><h1>${esc(m.titulo)}</h1><p class="lf">${esc(m.linha_fina)}</p>
+<img class="foto" src="${imagem.replace(SITE, '')}" alt="" width="1200" height="630" decoding="async" fetchpriority="high">
 <p class="assin">Por <b>Redação Mercado Macro</b> · ${esc(dataCurta(quando))}${mudou ? ` · atualizado ${esc(dataCurta(mudou))}` : ''}<br>Texto produzido com apoio de inteligência artificial a partir dos dados do terminal e de notícias de vários veículos, e revisado antes de publicar. <a href="/jornal/sobre">Como fazemos</a></p>
 <div class="corpo">${corpoComLinks(m.corpo)}</div>
 ${quadroHtml(m.dados)}
@@ -498,7 +500,7 @@ export async function paginaJornal(req, env, p) {
     else {
       const [l, ...resto] = ms;
       const lado = resto.slice(0, 6), grade = resto.slice(6);
-      corpo = `<section class="capa"><div class="lead"><p class="kick">${esc(l.secao)}</p><h2><a href="/jornal/${l.slug}">${esc(l.titulo)}</a></h2><p class="lf">${esc(l.linha_fina)}</p><p>${esc(l.corpo[0] || '')}</p><a class="ler" href="/jornal/${l.slug}">Ler matéria completa <span aria-hidden="true">→</span></a><span class="hora">${esc(dataCurta(l.publicado))}</span></div>
+      corpo = `<section class="capa"><div class="lead"><a href="/jornal/${l.slug}" tabindex="-1" aria-hidden="true"><img class="foto" src="${imagemMateria(l).replace(SITE, '')}" alt="" width="1200" height="630" decoding="async"></a><p class="kick">${esc(l.secao)}</p><h2><a href="/jornal/${l.slug}">${esc(l.titulo)}</a></h2><p class="lf">${esc(l.linha_fina)}</p><p>${esc(l.corpo[0] || '')}</p><a class="ler" href="/jornal/${l.slug}">Ler matéria completa <span aria-hidden="true">→</span></a><span class="hora">${esc(dataCurta(l.publicado))}</span></div>
 <aside class="lado"><h3>Mais recentes</h3><ul>${lado.map((m) => `<li><a href="/jornal/${m.slug}">${esc(m.titulo)}</a><span class="hora">${esc(m.secao)} · ${esc(dataCurta(m.publicado))}</span></li>`).join('') || '<li class="hora">As próximas matérias aparecem aqui.</li>'}</ul></aside></section>
 ${grade.length ? `<section class="grade">${grade.map((m) => `<article><p class="kick">${esc(m.secao)}</p><h3><a href="/jornal/${m.slug}">${esc(m.titulo)}</a></h3><p>${esc(m.linha_fina)}</p><a class="ler" href="/jornal/${m.slug}" tabindex="-1" aria-hidden="true">Ler matéria completa →</a><span class="hora">${esc(dataCurta(m.publicado))}</span></article>`).join('')}</section>` : ''}`;
     }
