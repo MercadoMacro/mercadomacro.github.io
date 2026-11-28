@@ -362,3 +362,14 @@ main { width: 100%; }
 }
 .vt-ts { margin: 12px 0 0; }
 .vt-ts:empty { display: none; }
+
+/* 01/12/2026 (etapa 2 da vitrine): subtítulo em 3 tópicos, para ler em 3 segundos */
+.vt-lead-lista { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.vt-lead-lista li { display: flex; align-items: flex-start; gap: 12px; line-height: 1.4; }
+.vt-lead-lista li i { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 14px; margin-top: -3px;
+  color: #f0b90b; background: rgba(240,185,11,.1); border: 1px solid rgba(240,185,11,.25); }
+.vt-lead-lista b { color: var(--text); font-weight: 600; }
+@media (max-width: 640px) {
+  .vt-lead-lista { gap: 8px; margin-bottom: 18px; font-size: 15px; }
+  .vt-lead-lista li i { width: 26px; height: 26px; font-size: 12px; border-radius: 8px; margin-top: -2px; }
+}
