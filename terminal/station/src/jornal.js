@@ -349,6 +349,9 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 .mat{max-width:720px;margin:0 auto}
 .mat h1{font:700 clamp(28px,4.4vw,44px)/1.12 'Playfair Display',Georgia,serif;margin:4px 0 12px}
 .mat .lf{font-size:20px;line-height:1.45;color:#333;margin:0 0 16px}
+.mat .corpo h2{font:700 21px/1.3 Georgia,serif;margin:26px 0 10px}
+.lista{margin:0 0 18px;padding-left:20px;font-size:17px;line-height:1.55}
+.lista li{margin:0 0 6px}
 .foto{display:block;width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;border-radius:6px;margin:0 0 16px;background:#e9e6df}
 .assin{font:13px/1.5 Inter,system-ui,sans-serif;color:var(--cinza);border-top:1px solid var(--fio);border-bottom:1px solid var(--fio);padding:10px 0;margin:0 0 22px}
 .assin b{color:var(--tinta)}
@@ -417,6 +420,12 @@ const LINKS_INTERNOS = [
 export function corpoComLinks(pars) {
   const usados = new Set();
   return pars.map((p) => {
+    // 27/11/2026: "## Título" vira subtítulo e um bloco de linhas começando com "- " vira lista (ex.: agenda da semana)
+    if (/^##\s+/.test(p)) return `<h2>${esc(p.replace(/^##\s+/, ''))}</h2>`;
+    const linhas = String(p).split('\n').map((l) => l.trim()).filter(Boolean);
+    if (linhas.length > 1 && linhas.every((l) => /^[-•]\s+/.test(l))) {
+      return `<ul class="lista">${linhas.map((l) => { const t = esc(l.replace(/^[-•]\s+/, '')); const i = t.indexOf(': '); return `<li>${i > 0 && i < 40 ? `<b>${t.slice(0, i)}</b>${t.slice(i)}` : t}</li>`; }).join('')}</ul>`;
+    }
     let h = esc(p);
     for (const [re, url] of LINKS_INTERNOS) {
       if (usados.has(url) || usados.size >= 3) continue;
