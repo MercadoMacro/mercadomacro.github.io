@@ -3699,7 +3699,7 @@ const JS_ADMIN = `(function(){
       document.getElementById('jor-lig').onclick = function(){ post('/api/admin/jornal', { acao: 'ligar', ligado: !j.ligado }).then(jornalAdm, erro); };
       raiz.querySelectorAll('[data-gera]').forEach(function(b){ b.onclick = function(){
         b.disabled = true; diz(true, 'A IA está escrevendo… leva até 1 minuto.');
-        post('/api/admin/jornal', { acao: 'gerar', tipo: b.dataset.gera }).then(function(){ jornalAdm(); }, function(e){ b.disabled = false; erro(e); });
+        post('/api/admin/jornal', { acao: 'gerar', tipo: b.dataset.gera }).then(function(r){ jornalAdm(); var t = 0, iv = setInterval(function(){ var mm = document.getElementById('jor-msg'), cx = r && r.id ? document.querySelector('[data-id="' + r.id + '"]') : null; if (mm && (cx || ++t > 20)) { clearInterval(iv); mm.className = 'msg ok'; mm.textContent = 'Rascunho pronto' + (r && r.titulo ? ': ' + r.titulo : '') + '. Está mais abaixo, esperando o seu Aprovar.'; if (cx) { cx.scrollIntoView({ behavior: 'smooth', block: 'center' }); cx.style.outline = '2px solid #b8860b'; setTimeout(function(){ cx.style.outline = ''; }, 4000); } } else if (++t > 20) clearInterval(iv); }, 250); }, function(e){ b.disabled = false; erro(e); });
       }; });
       raiz.querySelectorAll('[data-id]').forEach(function(cx){
         var id = Number(cx.dataset.id), m = j.materias.filter(function(x){ return x.id === id; })[0];
